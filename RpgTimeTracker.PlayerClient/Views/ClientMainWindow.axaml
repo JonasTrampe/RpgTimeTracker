@@ -1,0 +1,232 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RpgTimeTracker.PlayerClient.ViewModels"
+        xmlns:network="using:RpgTimeTracker.PlayerClient.Network"
+        xmlns:views="using:RpgTimeTracker.Shared.Views"
+        x:Class="RpgTimeTracker.PlayerClient.Views.ClientMainWindow"
+        x:DataType="vm:ClientMainWindowViewModel"
+        Title="RPG Zeitverfolgung — Remote Spieleranzeige"
+        Width="1050" Height="720" MinWidth="820" MinHeight="520"
+        Background="{DynamicResource WindowBackgroundBrush}">
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+
+        <!-- Nur Werte, die hier bewusst vom gemeinsamen Chrome abweichen: der Remote-Client
+             zeigt Zustände (aktiv/fertig/blinkend) rein über die Rahmenfarbe statt über
+             gefüllte Hintergründe, deshalb bleiben diese Modifier-Klassen lokal. -->
+        <Style Selector="Border.windowframe">
+            <Setter Property="Background" Value="#20000000" />
+            <Setter Property="Padding" Value="14" />
+        </Style>
+
+        <Style Selector="Border.item">
+            <Setter Property="BorderBrush" Value="{DynamicResource InnerFrameBrush}" />
+        </Style>
+
+        <Style Selector="Border.item.active">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <Style Selector="Border.item.completed">
+            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CompletedBrush}" />
+        </Style>
+
+        <Style Selector="Border.item.blink">
+            <Setter Property="Opacity" Value="0.65" />
+        </Style>
+
+        <Style Selector="TextBlock.heroTitle">
+            <Setter Property="FontSize" Value="30" />
+        </Style>
+
+        <Style Selector="TextBlock.clockValue">
+            <Setter Property="FontSize" Value="28" />
+        </Style>
+
+        <Style Selector="Button">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource PrimaryButtonBrush}" />
+        </Style>
+
+        <Style Selector="TextBox, NumericUpDown, ComboBox">
+            <Setter Property="Padding" Value="8,6" />
+        </Style>
+
+        <!-- ListBox ist nicht Teil des gemeinsamen Eingabefeld-Styles (siehe AppStyles.axaml),
+             soll hier aber wie ein Eingabefeld aussehen (z.B. für die Serverliste). -->
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="8,6" />
+        </Style>
+
+        <Style Selector="ProgressBar.timerbar">
+            <Setter Property="Height" Value="7" />
+            <Setter Property="Background" Value="#33000000" />
+        </Style>
+
+        <Style Selector="Button.calendarToggle">
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="MinWidth" Value="96" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="Button.calendarDay">
+            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InnerFrameBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.outside">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.today">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.selected">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.hasEntries">
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+    </Window.Styles>
+
+    <Panel>
+        <Border Background="{DynamicResource WindowBackgroundImageBrush}" />
+        <Border Background="{DynamicResource WindowOverlayImageBrush}" />
+
+        <Grid RowDefinitions="Auto,Auto,Auto,*">
+            <views:PlayerHeaderView Grid.Row="0" Margin="12" />
+
+            <Border Grid.Row="1" Classes="card" Padding="10" Margin="12,0,12,12">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="{Binding ConnectionStatus}" Classes="muted" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding CurrentTheme, StringFormat='Design: {0}'}" Classes="muted"
+                                   FontSize="11" Opacity="0.7" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="{Binding MediaFullscreenLabel}"
+                            Command="{Binding ToggleMediaFullscreenCommand}" VerticalAlignment="Center"
+                            Margin="0,0,8,0"
+                            ToolTip.Tip="Ob das Medien-Fenster (Bild/Video) im Vollbild oder als normales Fenster geöffnet wird" />
+                    <Button Grid.Column="2" Content="{Binding ConnectionToggleLabel}"
+                            Command="{Binding ToggleConnectionSettingsCommand}" Margin="0,0,8,0" />
+                    <Button Grid.Column="3" Content="Trennen" Command="{Binding DisconnectCommand}"
+                            IsVisible="{Binding IsConnected}" Margin="0,0,8,0" />
+                    <Button Grid.Column="4" Content="&#8505; Über" Click="OnOpenAboutClick" />
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="2"
+                    Classes="card"
+                    Padding="16"
+                    Margin="12,0,12,12"
+                    IsVisible="{Binding ShowConnectionSettings}">
+                <Grid ColumnDefinitions="340,*">
+                    <StackPanel Grid.Column="0" Spacing="14">
+                        <TextBlock Text="Manuell verbinden" FontWeight="Bold" />
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Host / IP-Adresse" Classes="muted" />
+                            <TextBox Text="{Binding Host, Mode=TwoWay}" PlaceholderText="z. B. 192.168.178.42" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Port" Classes="muted" />
+                            <NumericUpDown Value="{Binding Port, Mode=TwoWay}" Minimum="1" Maximum="65535"
+                                           FormatString="0" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="PIN (falls vom Host verlangt)" Classes="muted" />
+                            <TextBox Text="{Binding Pin, Mode=TwoWay}" PasswordChar="•" PlaceholderText="Kein PIN"
+                                      MaxLength="32" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Classes="primary" Content="Verbinden" Command="{Binding ConnectCommand}" />
+                            <Button Command="{Binding DiscoverCommand}" IsEnabled="{Binding !IsDiscovering}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="🔄" IsVisible="{Binding IsDiscovering}" />
+                                    <TextBlock Text="LAN/mDNS suchen" />
+                                </StackPanel>
+                            </Button>
+                            <Button Content="Trennen" Command="{Binding DisconnectCommand}" />
+                        </StackPanel>
+                        <TextBlock Classes="muted"
+                                   Text="Server vorher in der Haupt-App starten: Konfiguration → Netzwerk-Spieleranzeige → Server starten."
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Border Grid.Column="1"
+                            Background="{DynamicResource TextInputHeaderBrush}"
+                            BorderBrush="{DynamicResource InnerFrameBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12"
+                            Margin="16,0,0,0">
+                        <DockPanel LastChildFill="True">
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                                <TextBlock Grid.Column="0" Text="Gefundene Server" FontWeight="Bold" />
+                                <TextBlock Grid.Column="1" Classes="muted" Text="🔄 Suche läuft…"
+                                           IsVisible="{Binding IsDiscovering}" />
+                                <TextBlock Grid.Column="1" Classes="muted" Text="Auswahl übernimmt Host/Port"
+                                           IsVisible="{Binding !IsDiscovering}" />
+                            </Grid>
+                            <TextBlock DockPanel.Dock="Top"
+                                       Classes="muted"
+                                       Text="Noch keine Server gefunden. Klicke auf „LAN/mDNS suchen“ oder gib Host und Port manuell ein."
+                                       IsVisible="{Binding HasNoDiscoveredServers}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,8" />
+                            <ListBox ItemsSource="{Binding DiscoveredServers}"
+                                     SelectedItem="{Binding SelectedServer}"
+                                     MinHeight="145">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="network:DiscoveredRpgTimeTrackerServer">
+                                        <Border Padding="8" Margin="0,0,0,6"
+                                                BorderBrush="{DynamicResource InnerFrameBrush}" BorderThickness="1"
+                                                CornerRadius="6">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel Grid.Column="0">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" />
+                                                        <Border Background="{DynamicResource TextInputHeaderBrush}"
+                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="4"
+                                                                Padding="6,1"
+                                                                ToolTip.Tip="Erkannt über">
+                                                            <TextBlock Text="{Binding SourceLabel}" Classes="muted"
+                                                                       FontSize="11" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Display}" Classes="muted" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="verwenden" Classes="muted"
+                                                           VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <views:PlayerTimelineListView Grid.Row="3" Margin="12,0,12,12" />
+        </Grid>
+    </Panel>
+</Window>
