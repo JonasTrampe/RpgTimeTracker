@@ -1,0 +1,143 @@
+{
+  "Id": "postapocalyptic",
+  "DisplayName": "WASTELAND // ROSTZEIT",
+  "DisplaySubtitle": "Staub, Rost, Warnstreifen und Überlebenslager",
+  "PickerLabel": "Postapokalypse",
+  "HeaderFontFamily": "Segoe UI,Arial,sans-serif",
+  "BodyFontFamily": "Segoe UI,Arial,sans-serif",
+  "FrameCornerRadius": 6,
+  "CardCornerRadius": 6,
+  "ItemCornerRadius": 6,
+  "ButtonCornerRadius": 6,
+  "Colors": {
+    "AccentBrush": "#D98832",
+    "AccentAltBrush": "#F0C065",
+    "SurfaceBrush": "#D21C1712",
+    "SurfaceAltBrush": "#DE2D2117",
+    "InputBrush": "#C51A1510",
+    "WarnBrush": "#FF6B33",
+    "OkBrush": "#C2B05A",
+    "WindowBackgroundBrush": "#050505",
+    "WindowOverlayBrush": "#48000000",
+    "TextBrush": "#F2D7B0",
+    "ButtonTextBrush": "#F3DEC0",
+    "PrimaryButtonTextBrush": "#FFF0CC",
+    "PrimaryButtonBorderBrush": "#FFFFB55A",
+    "BorderBrush": "#C0B06A38",
+    "CompletedBrush": "#D13C2618",
+    "PulseBrush": "#D09C4A18",
+    "PulseBorderBrush": "#FFFFB55A",
+    "PulseTextBrush": "#FFFFE6B0",
+    "MutedTextBrush": "#D8D6C0A0",
+    "WindowFrameBrush": "#D0D98832",
+    "InnerFrameBrush": "#A0905730",
+    "CornerOrnamentBrush": "#F0C065"
+  },
+  "Gradients": {
+    "PrimaryActionBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#FF32170A"
+        },
+        {
+          "Offset": 0.52,
+          "Color": "#FF9C4A18"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#FF20120A"
+        }
+      ]
+    },
+    "WindowChromeBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#E02E2118"
+        },
+        {
+          "Offset": 0.5,
+          "Color": "#D81A1510"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#E0462A17"
+        }
+      ]
+    },
+    "PanelHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#C0C06A2B"
+        },
+        {
+          "Offset": 0.45,
+          "Color": "#80261B12"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#B0D98832"
+        }
+      ]
+    },
+    "TabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#A036281A"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D019130E"
+        }
+      ]
+    },
+    "SelectedTabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#C05A351C"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D02A1A12"
+        }
+      ]
+    },
+    "TextInputHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#44D98832"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#44F0C065"
+        }
+      ]
+    }
+  },
+  "Backgrounds": [
+    {
+      "Name": "Standard",
+      "FileName": "background.png"
+    }
+  ],
+  "OverlayImageFile": "overlay.png",
+  "ButtonImageFile": "button.png",
+  "PrimaryButtonImageFile": "button-primary.png"
+}

@@ -1,0 +1,143 @@
+{
+  "Id": "warhammer40k",
+  "DisplayName": "IMPERIALES CHRONOLOGIUM",
+  "DisplaySubtitle": "Gothic-Metallbuttons, Blutrot, Nietenstahl und Reliquiengold",
+  "PickerLabel": "Warhammer 40k",
+  "HeaderFontFamily": "Segoe UI,Arial,sans-serif",
+  "BodyFontFamily": "Segoe UI,Arial,sans-serif",
+  "FrameCornerRadius": 6,
+  "CardCornerRadius": 6,
+  "ItemCornerRadius": 6,
+  "ButtonCornerRadius": 6,
+  "Colors": {
+    "AccentBrush": "#C9A227",
+    "AccentAltBrush": "#8C1E1E",
+    "SurfaceBrush": "#D0141010",
+    "SurfaceAltBrush": "#E0201616",
+    "InputBrush": "#C70E0A0A",
+    "WarnBrush": "#E62222",
+    "OkBrush": "#D0B15A",
+    "WindowBackgroundBrush": "#050505",
+    "WindowOverlayBrush": "#45000000",
+    "TextBrush": "#F2DFC0",
+    "ButtonTextBrush": "#F2E6C8",
+    "PrimaryButtonTextBrush": "#FFF1D2",
+    "PrimaryButtonBorderBrush": "#FFFFD56A",
+    "BorderBrush": "#D0B08936",
+    "CompletedBrush": "#D12A1414",
+    "PulseBrush": "#D07E1E1E",
+    "PulseBorderBrush": "#FFFFD56A",
+    "PulseTextBrush": "#FFFFE2B0",
+    "MutedTextBrush": "#D8D6C1A8",
+    "WindowFrameBrush": "#D0C9A227",
+    "InnerFrameBrush": "#B08A3030",
+    "CornerOrnamentBrush": "#C9A227"
+  },
+  "Gradients": {
+    "PrimaryActionBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#FF2A0909"
+        },
+        {
+          "Offset": 0.52,
+          "Color": "#FF7E1E1E"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#FF160707"
+        }
+      ]
+    },
+    "WindowChromeBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#E01D1414"
+        },
+        {
+          "Offset": 0.5,
+          "Color": "#D8130E0E"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#E0261414"
+        }
+      ]
+    },
+    "PanelHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#C07E1E1E"
+        },
+        {
+          "Offset": 0.45,
+          "Color": "#90170E0E"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#C0C9A227"
+        }
+      ]
+    },
+    "TabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#A02A1E1E"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D0151010"
+        }
+      ]
+    },
+    "SelectedTabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#B07C2525"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D01C1212"
+        }
+      ]
+    },
+    "TextInputHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#44C9A227"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#447E1E1E"
+        }
+      ]
+    }
+  },
+  "Backgrounds": [
+    {
+      "Name": "Standard",
+      "FileName": "background.png"
+    }
+  ],
+  "OverlayImageFile": "overlay.png",
+  "ButtonImageFile": "button.png",
+  "PrimaryButtonImageFile": "button-primary.png"
+}

@@ -1,0 +1,147 @@
+{
+  "Id": "medieval",
+  "DisplayName": "KÖNIGLICHE ZEIT-CHRONIK",
+  "DisplaySubtitle": "Geschnitzte Holz-/Messingbuttons, Pergamentflächen und Burgpanorama",
+  "PickerLabel": "Mittelalter",
+  "HeaderFontFamily": "Segoe UI,Arial,sans-serif",
+  "BodyFontFamily": "Segoe UI,Arial,sans-serif",
+  "FrameCornerRadius": 6,
+  "CardCornerRadius": 6,
+  "ItemCornerRadius": 6,
+  "ButtonCornerRadius": 6,
+  "Colors": {
+    "AccentBrush": "#A96A2A",
+    "AccentAltBrush": "#F0D394",
+    "SurfaceBrush": "#CF3A2B1A",
+    "SurfaceAltBrush": "#DD4E3722",
+    "InputBrush": "#C72A1C11",
+    "WarnBrush": "#E46A3C",
+    "OkBrush": "#9FC36D",
+    "WindowBackgroundBrush": "#050505",
+    "WindowOverlayBrush": "#34000000",
+    "TextBrush": "#FFF1D0",
+    "ButtonTextBrush": "#4A2B12",
+    "PrimaryButtonTextBrush": "#2B1708",
+    "PrimaryButtonBorderBrush": "#FF6F3711",
+    "BorderBrush": "#B9853F",
+    "CompletedBrush": "#D95A432A",
+    "PulseBrush": "#D0B9853F",
+    "PulseBorderBrush": "#FFFFD88A",
+    "PulseTextBrush": "#FF2A1708",
+    "MutedTextBrush": "#D8EED8B6",
+    "WindowFrameBrush": "#D7B16A",
+    "InnerFrameBrush": "#9C6131",
+    "CornerOrnamentBrush": "#FFE3A0"
+  },
+  "Gradients": {
+    "PrimaryActionBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#FFFFE6A8"
+        },
+        {
+          "Offset": 0.52,
+          "Color": "#FFE0B05B"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#FF8A5424"
+        }
+      ]
+    },
+    "WindowChromeBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#DD5B371C"
+        },
+        {
+          "Offset": 0.5,
+          "Color": "#D9452E1C"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#DD2F2117"
+        }
+      ]
+    },
+    "PanelHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#D08B5428"
+        },
+        {
+          "Offset": 0.45,
+          "Color": "#A04C301C"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D7C28A48"
+        }
+      ]
+    },
+    "TabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#A05E3A20"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D03A291B"
+        }
+      ]
+    },
+    "SelectedTabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#D39A642E"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#C25A3A22"
+        }
+      ]
+    },
+    "TextInputHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#50E4BD70"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#30643F24"
+        }
+      ]
+    }
+  },
+  "Backgrounds": [
+    {
+      "Name": "Tag",
+      "FileName": "background.png"
+    },
+    {
+      "Name": "Nacht",
+      "FileName": "background-night.png"
+    }
+  ],
+  "OverlayImageFile": "overlay.png",
+  "ButtonImageFile": "button.png",
+  "PrimaryButtonImageFile": "button-primary.png"
+}

@@ -1,0 +1,143 @@
+{
+  "Id": "gothicvampire",
+  "DisplayName": "GOTHIC VAMPIRE // BLOOD MOON",
+  "DisplaySubtitle": "Mondlicht, Samt, Kerzenschein und dunkle Schlossromantik",
+  "PickerLabel": "Gothic Vampire",
+  "HeaderFontFamily": "Segoe UI,Arial,sans-serif",
+  "BodyFontFamily": "Segoe UI,Arial,sans-serif",
+  "FrameCornerRadius": 6,
+  "CardCornerRadius": 6,
+  "ItemCornerRadius": 6,
+  "ButtonCornerRadius": 6,
+  "Colors": {
+    "AccentBrush": "#C01845",
+    "AccentAltBrush": "#D0C0E0",
+    "SurfaceBrush": "#D20D0A12",
+    "SurfaceAltBrush": "#DE1B0D18",
+    "InputBrush": "#C50A0710",
+    "WarnBrush": "#E04E68",
+    "OkBrush": "#C8B8D8",
+    "WindowBackgroundBrush": "#050505",
+    "WindowOverlayBrush": "#42000000",
+    "TextBrush": "#F0E3F3",
+    "ButtonTextBrush": "#F4E7F6",
+    "PrimaryButtonTextBrush": "#FFF0F8",
+    "PrimaryButtonBorderBrush": "#FFE2BCD4",
+    "BorderBrush": "#B0A88AB8",
+    "CompletedBrush": "#D1240B18",
+    "PulseBrush": "#C05A0D24",
+    "PulseBorderBrush": "#FFE2BCD4",
+    "PulseTextBrush": "#FFFFEAF4",
+    "MutedTextBrush": "#D8CDB9D8",
+    "WindowFrameBrush": "#C0A88AB8",
+    "InnerFrameBrush": "#A0C01845",
+    "CornerOrnamentBrush": "#D0C0E0"
+  },
+  "Gradients": {
+    "PrimaryActionBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#FF15050C"
+        },
+        {
+          "Offset": 0.52,
+          "Color": "#FF5A0D24"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#FF09030A"
+        }
+      ]
+    },
+    "WindowChromeBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#E0160A15"
+        },
+        {
+          "Offset": 0.5,
+          "Color": "#D80A0710"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#E0230B1A"
+        }
+      ]
+    },
+    "PanelHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#A0C01845"
+        },
+        {
+          "Offset": 0.45,
+          "Color": "#70100A14"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#90A88AB8"
+        }
+      ]
+    },
+    "TabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#A01D0C18"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D00A0710"
+        }
+      ]
+    },
+    "SelectedTabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#B0360D24"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D0150B16"
+        }
+      ]
+    },
+    "TextInputHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#44C01845"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#40A88AB8"
+        }
+      ]
+    }
+  },
+  "Backgrounds": [
+    {
+      "Name": "Standard",
+      "FileName": "background.png"
+    }
+  ],
+  "OverlayImageFile": "overlay.png",
+  "ButtonImageFile": "button.png",
+  "PrimaryButtonImageFile": "button-primary.png"
+}

@@ -1,0 +1,143 @@
+{
+  "Id": "alien",
+  "DisplayName": "USCSS MOTION TRACKER",
+  "DisplaySubtitle": "Shipboard-Terminalbuttons, Grün-/Amberleuchten und Retro-Sci-Fi",
+  "PickerLabel": "Alien",
+  "HeaderFontFamily": "Segoe UI,Arial,sans-serif",
+  "BodyFontFamily": "Segoe UI,Arial,sans-serif",
+  "FrameCornerRadius": 6,
+  "CardCornerRadius": 6,
+  "ItemCornerRadius": 6,
+  "ButtonCornerRadius": 6,
+  "Colors": {
+    "AccentBrush": "#56FFB0",
+    "AccentAltBrush": "#E8F54A",
+    "SurfaceBrush": "#CA07100D",
+    "SurfaceAltBrush": "#D90E1713",
+    "InputBrush": "#B8060B09",
+    "WarnBrush": "#FFB15A",
+    "OkBrush": "#56FFB0",
+    "WindowBackgroundBrush": "#050505",
+    "WindowOverlayBrush": "#3C000000",
+    "TextBrush": "#D9FFE9",
+    "ButtonTextBrush": "#D8FFF0",
+    "PrimaryButtonTextBrush": "#DFFFF0",
+    "PrimaryButtonBorderBrush": "#FF56FFB0",
+    "BorderBrush": "#B056FFB0",
+    "CompletedBrush": "#D014231E",
+    "PulseBrush": "#C08ED9B4",
+    "PulseBorderBrush": "#FF8ED9B4",
+    "PulseTextBrush": "#FF06170F",
+    "MutedTextBrush": "#B8C9FFE2",
+    "WindowFrameBrush": "#C056FFB0",
+    "InnerFrameBrush": "#A0E8F54A",
+    "CornerOrnamentBrush": "#E8F54A"
+  },
+  "Gradients": {
+    "PrimaryActionBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#FF02100A"
+        },
+        {
+          "Offset": 0.52,
+          "Color": "#FF0C3A25"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#FF030806"
+        }
+      ]
+    },
+    "WindowChromeBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#DD050A08"
+        },
+        {
+          "Offset": 0.5,
+          "Color": "#D80A120F"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#DD050A08"
+        }
+      ]
+    },
+    "PanelHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#B056FFB0"
+        },
+        {
+          "Offset": 0.45,
+          "Color": "#70101815"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#A0E8F54A"
+        }
+      ]
+    },
+    "TabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#A0101714"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D0080D0B"
+        }
+      ]
+    },
+    "SelectedTabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#B012201A"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D01A2212"
+        }
+      ]
+    },
+    "TextInputHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#4056FFB0"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#40E8F54A"
+        }
+      ]
+    }
+  },
+  "Backgrounds": [
+    {
+      "Name": "Standard",
+      "FileName": "background.png"
+    }
+  ],
+  "OverlayImageFile": "overlay.png",
+  "ButtonImageFile": "button.png",
+  "PrimaryButtonImageFile": "button-primary.png"
+}

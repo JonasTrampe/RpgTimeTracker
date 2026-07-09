@@ -1,0 +1,143 @@
+{
+  "Id": "eldritchhorror",
+  "DisplayName": "ELDRITCH // OCCULT DOSSIER",
+  "DisplaySubtitle": "Nebel, okkulte Zeichen, kaltes Teal und investigative Horror-Ästhetik",
+  "PickerLabel": "Eldritch Horror",
+  "HeaderFontFamily": "Segoe UI,Arial,sans-serif",
+  "BodyFontFamily": "Segoe UI,Arial,sans-serif",
+  "FrameCornerRadius": 6,
+  "CardCornerRadius": 6,
+  "ItemCornerRadius": 6,
+  "ButtonCornerRadius": 6,
+  "Colors": {
+    "AccentBrush": "#69D9B8",
+    "AccentAltBrush": "#BDEBD2",
+    "SurfaceBrush": "#D2051113",
+    "SurfaceAltBrush": "#DE0B1B1E",
+    "InputBrush": "#C5040B0D",
+    "WarnBrush": "#C99A54",
+    "OkBrush": "#69D9B8",
+    "WindowBackgroundBrush": "#050505",
+    "WindowOverlayBrush": "#4D000000",
+    "TextBrush": "#DDF4EA",
+    "ButtonTextBrush": "#DDF6EF",
+    "PrimaryButtonTextBrush": "#E6FFF5",
+    "PrimaryButtonBorderBrush": "#FF69D9B8",
+    "BorderBrush": "#A069D9B8",
+    "CompletedBrush": "#D10A2420",
+    "PulseBrush": "#C069D9B8",
+    "PulseBorderBrush": "#FF69D9B8",
+    "PulseTextBrush": "#FF061613",
+    "MutedTextBrush": "#B8C9E8DC",
+    "WindowFrameBrush": "#B069D9B8",
+    "InnerFrameBrush": "#9076B8A2",
+    "CornerOrnamentBrush": "#BDEBD2"
+  },
+  "Gradients": {
+    "PrimaryActionBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#FF031012"
+        },
+        {
+          "Offset": 0.52,
+          "Color": "#FF0C413A"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#FF03080B"
+        }
+      ]
+    },
+    "WindowChromeBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#E0030B0D"
+        },
+        {
+          "Offset": 0.5,
+          "Color": "#D8081518"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#E0061014"
+        }
+      ]
+    },
+    "PanelHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#9069D9B8"
+        },
+        {
+          "Offset": 0.45,
+          "Color": "#70101815"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#A076B8A2"
+        }
+      ]
+    },
+    "TabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#A00B1718"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D0050D0F"
+        }
+      ]
+    },
+    "SelectedTabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#B0102424"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D00A181A"
+        }
+      ]
+    },
+    "TextInputHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#4069D9B8"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#4076B8A2"
+        }
+      ]
+    }
+  },
+  "Backgrounds": [
+    {
+      "Name": "Standard",
+      "FileName": "background.png"
+    }
+  ],
+  "OverlayImageFile": "overlay.png",
+  "ButtonImageFile": "button.png",
+  "PrimaryButtonImageFile": "button-primary.png"
+}

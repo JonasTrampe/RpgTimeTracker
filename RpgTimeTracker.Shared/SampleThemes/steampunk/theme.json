@@ -1,0 +1,143 @@
+{
+  "Id": "steampunk",
+  "DisplayName": "STEAMPUNK // CHRONOWERK",
+  "DisplaySubtitle": "Messing, Zahnräder, Gaslicht und Uhrmacher-Maschinenraum",
+  "PickerLabel": "Steampunk",
+  "HeaderFontFamily": "Segoe UI,Arial,sans-serif",
+  "BodyFontFamily": "Segoe UI,Arial,sans-serif",
+  "FrameCornerRadius": 6,
+  "CardCornerRadius": 6,
+  "ItemCornerRadius": 6,
+  "ButtonCornerRadius": 6,
+  "Colors": {
+    "AccentBrush": "#D9A33D",
+    "AccentAltBrush": "#F6C66A",
+    "SurfaceBrush": "#D22E2115",
+    "SurfaceAltBrush": "#DE3D2A18",
+    "InputBrush": "#C4231A12",
+    "WarnBrush": "#E67D35",
+    "OkBrush": "#B8C26A",
+    "WindowBackgroundBrush": "#050505",
+    "WindowOverlayBrush": "#39000000",
+    "TextBrush": "#FFE8B8",
+    "ButtonTextBrush": "#F5E4BE",
+    "PrimaryButtonTextBrush": "#271607",
+    "PrimaryButtonBorderBrush": "#FFFFD487",
+    "BorderBrush": "#D0C48645",
+    "CompletedBrush": "#D14A341F",
+    "PulseBrush": "#D0D9A33D",
+    "PulseBorderBrush": "#FFFFD487",
+    "PulseTextBrush": "#FF271607",
+    "MutedTextBrush": "#D8E8D0A8",
+    "WindowFrameBrush": "#D0D9A33D",
+    "InnerFrameBrush": "#A08C5526",
+    "CornerOrnamentBrush": "#F6C66A"
+  },
+  "Gradients": {
+    "PrimaryActionBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#FFFFC96B"
+        },
+        {
+          "Offset": 0.52,
+          "Color": "#FFD08A32"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#FF6E3F18"
+        }
+      ]
+    },
+    "WindowChromeBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#E0412A18"
+        },
+        {
+          "Offset": 0.5,
+          "Color": "#D8241A12"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#E052351C"
+        }
+      ]
+    },
+    "PanelHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#C0D9A33D"
+        },
+        {
+          "Offset": 0.45,
+          "Color": "#80432B17"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#B0A96B30"
+        }
+      ]
+    },
+    "TabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "0,1",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#A047301D"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D0251B12"
+        }
+      ]
+    },
+    "SelectedTabBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#C06D431E"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#D03A2415"
+        }
+      ]
+    },
+    "TextInputHeaderBrush": {
+      "StartPoint": "0,0",
+      "EndPoint": "1,0",
+      "Stops": [
+        {
+          "Offset": 0.0,
+          "Color": "#44F6C66A"
+        },
+        {
+          "Offset": 1.0,
+          "Color": "#308C5526"
+        }
+      ]
+    }
+  },
+  "Backgrounds": [
+    {
+      "Name": "Standard",
+      "FileName": "background.png"
+    }
+  ],
+  "OverlayImageFile": "overlay.png",
+  "ButtonImageFile": "button.png",
+  "PrimaryButtonImageFile": "button-primary.png"
+}
