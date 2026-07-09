@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <RootNamespace>RpgTimeTracker.PlayerClient</RootNamespace>
+        <AssemblyName>RpgTimeTracker.PlayerClient</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**"/>
+        <!-- SL-Design-Vorlagen als JSON liegen jetzt einmalig in RpgTimeTracker.Shared/SampleThemes
+             und werden per ProjectReference-Content-Propagation automatisch hierher kopiert (siehe
+             RpgTimeTracker.Shared.csproj) - kein eigener Content-Eintrag hier mehr nötig. -->
+        <!-- Eigener About-Inhalt (Markdown), eingebettet statt als lose Datei - anders als SampleThemes
+             nicht zum Bearbeiten durch die Nutzerin gedacht, siehe About/AboutWindow.axaml.cs. -->
+        <AvaloniaResource Include="About\AboutContent.md"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.0.5"/>
+        <PackageReference Include="Avalonia.Desktop" Version="12.0.5"/>
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.5"/>
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.5"/>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
+        <PackageReference Include="LibVLCSharp" Version="3.10.0"/>
+        <PackageReference Include="LibVLCSharp.Avalonia" Version="3.10.0"/>
+        <!-- Bündelt native libvlc-DLLs nur für Windows. Unter Linux wird die system-installierte
+             VLC-Bibliothek verwendet (siehe README-Hinweis in ClientVideoService). -->
+        <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" Condition="'$(OS)' == 'Windows_NT'"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\RpgTimeTracker.Shared\RpgTimeTracker.Shared.csproj"/>
+    </ItemGroup>
+</Project>

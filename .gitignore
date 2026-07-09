@@ -1,0 +1,10 @@
+bin/
+obj/
+*.user
+.vs/
+.vscode/
+.idea/
+publish/
+
+# Lokale Claude-Code-Einstellungen (Maschinen-/Nutzer-spezifisch, kein Projektzustand).
+.claude/settings.local.json

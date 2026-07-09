@@ -1,0 +1,17 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="RpgTimeTracker.PlayerClient.App"
+             RequestedThemeVariant="Dark">
+    <Application.Styles>
+        <FluentTheme />
+    </Application.Styles>
+    <!--
+        WICHTIG: Hier dürfen keine Keys direkt (als Kind-Elemente) in Application.Resources
+        stehen. In Avalonia gewinnen direkt gesetzte Keys eines ResourceDictionary immer gegen
+        dessen MergedDictionaries - das würde jedes von ClientThemeService.Apply() nachgeladene
+        Design überdecken. Die eigentlichen Farb-/Schrift-/Radius-Ressourcen kommen daher
+        ausschließlich zur Laufzeit aus einem per JSON geladenen Design (siehe App.axaml.cs).
+    -->
+    <Application.Resources>
+    </Application.Resources>
+</Application>

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <RootNamespace>RpgTimeTracker.Shared</RootNamespace>
+        <AssemblyName>RpgTimeTracker.Shared</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <AvaloniaResource Include="Styles\**\*.axaml" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Einzige physische Kopie der Lizenzhinweise (Repo-Wurzel); wird per ProjectReference-
+             Content-Propagation automatisch auch ins Host- und Client-Ausgabeverzeichnis kopiert,
+             sodass der About-Screen (AboutViewModel) sie zur Laufzeit von beiden Apps aus laden kann,
+             ohne den Text zu duplizieren. -->
+        <Content Include="..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+        <!-- Eigene Projektlizenz, ebenso einmalig an der Repo-Wurzel gepflegt (siehe oben) - als
+             .txt-Link kopiert, da die Original-Datei keine Endung hat. -->
+        <Content Include="..\LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+        <!-- Einzige physische Kopie der SL-Design-Vorlagen (vorher pro App dupliziert und
+             manuell synchron gehalten); Content-Propagation kopiert sie automatisch ins Host-
+             und Client-Ausgabeverzeichnis (siehe ThemeDefinitionLoader.SampleThemesDirectory,
+             das relativ zu AppContext.BaseDirectory sucht - funktioniert für beide Apps gleich). -->
+        <Content Include="SampleThemes\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.0.5" />
+        <PackageReference Include="ClassIsland.Markdown.Avalonia" Version="12.0.0" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+        <PackageReference Include="LibVLCSharp" Version="3.10.0" />
+        <PackageReference Include="Serilog" Version="4.2.0" />
+        <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    </ItemGroup>
+
+</Project>
