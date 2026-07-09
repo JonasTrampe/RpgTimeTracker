@@ -18,9 +18,10 @@
         <!-- SL-Design-Vorlagen als JSON liegen jetzt einmalig in RpgTimeTracker.Shared/SampleThemes
              und werden per ProjectReference-Content-Propagation automatisch hierher kopiert (siehe
              RpgTimeTracker.Shared.csproj) - kein eigener Content-Eintrag hier mehr nötig. -->
-        <!-- Eigener About-Inhalt (Markdown), eingebettet statt als lose Datei - anders als SampleThemes
-             nicht zum Bearbeiten durch die Nutzerin gedacht, siehe About/AboutWindow.axaml.cs. -->
-        <AvaloniaResource Include="About\AboutContent.md"/>
+        <!-- Own About content (Markdown), embedded instead of a loose file - unlike SampleThemes
+             not meant to be edited by the user. One file per language (see About/AboutWindow.axaml.cs,
+             which picks the one matching LocalizationService.CurrentLanguage). -->
+        <AvaloniaResource Include="About\AboutContent.*.md"/>
     </ItemGroup>
 
     <ItemGroup>

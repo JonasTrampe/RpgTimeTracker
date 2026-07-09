@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using RpgTimeTracker.Shared.Services.Localization;
 
 namespace RpgTimeTracker.Shared.ViewModels;
 
@@ -44,7 +45,9 @@ public sealed class AboutViewModel
         if (!string.IsNullOrWhiteSpace(informational)) return informational;
 
         var version = assembly.GetName().Version;
-        return version is null ? "unbekannt" : $"{version.Major}.{version.Minor}.{version.Build}";
+        return version is null
+            ? LocalizationService.Get("About.UnknownVersion")
+            : $"{version.Major}.{version.Minor}.{version.Build}";
     }
 
     private static string LoadTextFile(string fileName)
@@ -54,13 +57,9 @@ public sealed class AboutViewModel
         {
             return File.ReadAllText(path);
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return $"Konnte nicht geladen werden ({fileName} fehlt im Anwendungsverzeichnis).";
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return $"Konnte nicht geladen werden ({fileName} fehlt im Anwendungsverzeichnis).";
+            return string.Format(LocalizationService.Get("About.FileNotFound"), fileName);
         }
     }
 }

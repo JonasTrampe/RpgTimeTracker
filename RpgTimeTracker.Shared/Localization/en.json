@@ -3,6 +3,8 @@
   "About.VersionLabel": "Version",
   "About.OwnLicenseHeader": "🔓 Own License (MIT)",
   "About.ThirdPartyHeader": "📚 Libraries & Licenses (Third-Party)",
+  "About.UnknownVersion": "unknown",
+  "About.FileNotFound": "Could not be loaded ({0} is missing from the application directory).",
   "Settings.Language": "Language",
 
   "MainWindow.WindowTitle": "RPG Time Tracker",

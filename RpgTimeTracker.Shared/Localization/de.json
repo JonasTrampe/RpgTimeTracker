@@ -3,6 +3,8 @@
   "About.VersionLabel": "Version",
   "About.OwnLicenseHeader": "🔓 Eigene Lizenz (MIT)",
   "About.ThirdPartyHeader": "📚 Bibliotheken & Lizenzen (Drittanbieter)",
+  "About.UnknownVersion": "unbekannt",
+  "About.FileNotFound": "Konnte nicht geladen werden ({0} fehlt im Anwendungsverzeichnis).",
   "Settings.Language": "Sprache",
 
   "MainWindow.WindowTitle": "RPG Zeitverfolgung",
