@@ -7,8 +7,9 @@
 - [`design-decisions.md`](design-decisions.md) — why specific things are built
   the way they are, including a few decisions that reversed earlier ones once
   the actual behavior turned out to be wrong.
-- [`todo.md`](todo.md) — open feature/robustness/tooling ideas, including the
-  Android client/host feasibility notes.
+- Open feature/robustness/tooling ideas now live as
+  [GitHub Issues](https://github.com/JonasTrampe/RpgTimeTracker/issues)
+  instead of a local todo list.
 - [`legal-todo.md`](legal-todo.md) — open licensing/attribution tasks (About
   dialog, third-party notices) and the checklist to run through whenever a
   new dependency is added.
