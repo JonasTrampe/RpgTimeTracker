@@ -1,0 +1,207 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Gemeinsames Fenster-Chrome für SL-App und Spieler-Client. Enthält nur die
+        Basis-/Struktur-Styles, die über beide Apps hinweg identisch sind (Farben, Rahmen,
+        Eingabefelder, Buttons, Karten-Layout). Zustandsabhängige Modifier-Klassen
+        (.completed/.pulse/.blink/.active) bleiben bewusst je Fenster lokal, weil SL/Spieler-
+        Fenster (gefüllter Hintergrund) und der Remote-Client (reine Rahmenfarbe) dafür ein
+        unterschiedliches visuelles Vokabular verwenden.
+    -->
+
+    <Style Selector="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe UI,Arial,sans-serif" />
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <Style Selector="TextBlock.h1">
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <Style Selector="TextBlock.h2">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Opacity" Value="0.9" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <Style Selector="TextBlock.heroTitle">
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <Style Selector="TextBlock.muted">
+        <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        <Setter Property="Opacity" Value="0.82" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <!-- Monospace-Zahlen-/Zeit-Anzeigen. Größe/Breite bleiben pro Fenster lokal (Sidebar vs. Großbildschirm). -->
+    <Style Selector="TextBlock.clockValue, TextBlock.statusValue, TextBlock.timeInline, TextBlock.timeValue">
+        <Setter Property="FontFamily" Value="Consolas,Cascadia Mono,Courier New,monospace" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <Style Selector="Border.windowframe">
+        <Setter Property="BorderBrush" Value="{DynamicResource WindowFrameBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="CornerRadius" Value="{DynamicResource FrameCornerRadius}" />
+    </Style>
+
+    <Style Selector="Border.chrome">
+        <Setter Property="Background" Value="{DynamicResource WindowChromeBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InnerFrameBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="18,12" />
+    </Style>
+
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="CornerRadius" Value="{DynamicResource CardCornerRadius}" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style Selector="Border.sectionheader">
+        <Setter Property="Background" Value="{DynamicResource PanelHeaderBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InnerFrameBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="14,8" />
+        <Setter Property="Height" Value="42" />
+    </Style>
+
+    <Style Selector="Border.item">
+        <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource ItemCornerRadius}" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+
+    <Style Selector="Button">
+        <Setter Property="FontFamily" Value="Segoe UI,Arial,sans-serif" />
+        <Setter Property="Background" Value="{DynamicResource ButtonBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource ButtonTextBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="CornerRadius" Value="{DynamicResource ButtonCornerRadius}" />
+        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="Height" Value="38" />
+        <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+
+    <Style Selector="Button:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+    <Style Selector="Button:pressed">
+        <Setter Property="Opacity" Value="0.88" />
+    </Style>
+
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="{DynamicResource PrimaryActionBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryButtonBorderBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="Height" Value="38" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <Style Selector="Button.iconsquare">
+        <Setter Property="Width" Value="38" />
+        <Setter Property="Height" Value="38" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- Für Icon-Toggle-Buttons, deren "an"-Zustand sichtbar sein soll (z.B. Vollbild-Schalter
+         in der Statusleiste) - Klasse wird per Classes.active="{Binding ...}" gesetzt. -->
+    <Style Selector="Button.iconsquare.active">
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+    <!-- Eingabefelder. ListBox bewusst ausgenommen: SL-Icon-Liste und Client-Serverliste
+         wollen unterschiedliche Hintergründe (Panel- vs. Eingabefeld-Optik). -->
+    <Style Selector="TextBox, ComboBox, NumericUpDown">
+        <Setter Property="FontFamily" Value="Segoe UI,Arial,sans-serif" />
+        <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="Height" Value="36" />
+    </Style>
+
+    <!-- Tabs sollen als zusammenhängender Reiterstreifen erkennbar sein statt als lose
+         Buttons nebeneinander: flach/unauffällig im Ruhezustand, mit farbiger Unterlinie +
+         angehobenem "Karteikarten"-Hintergrund nur beim aktiven Tab (browser-/IDE-typisches
+         Muster). Ein durchgehender BorderBrush unter dem ganzen Streifen sorgt zusätzlich für
+         eine klare Trennlinie zum Inhalt darunter, egal welcher Tab gerade aktiv ist. -->
+    <Style Selector="TabControl">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="TabControl WrapPanel">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="TabItem">
+        <Setter Property="FontFamily" Value="Segoe UI,Arial,sans-serif" />
+        <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,2" />
+        <Setter Property="CornerRadius" Value="6,6,0,0" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="Height" Value="38" />
+        <Setter Property="Margin" Value="0,0,2,0" />
+    </Style>
+
+    <Style Selector="TabItem:pointerover">
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        <Setter Property="Background" Value="{DynamicResource TabBrush}" />
+    </Style>
+
+    <Style Selector="TabItem:selected">
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Background" Value="{DynamicResource SelectedTabBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,3" />
+    </Style>
+
+    <Style Selector="Separator">
+        <Setter Property="Opacity" Value="0.55" />
+    </Style>
+
+    <Style Selector="ProgressBar.timerbar">
+        <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+    <Style Selector="ProgressBar.timerbar.completed">
+        <Setter Property="Foreground" Value="{DynamicResource OkBrush}" />
+    </Style>
+</Styles>

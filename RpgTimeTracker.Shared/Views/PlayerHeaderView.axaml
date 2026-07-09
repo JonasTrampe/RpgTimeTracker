@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:viewModels="using:RpgTimeTracker.Shared.ViewModels"
+             x:Class="RpgTimeTracker.Shared.Views.PlayerHeaderView"
+             x:DataType="viewModels:IPlayerDisplayContext">
+    <!--
+        Gemeinsame Kopfzeile für Host-PlayerWindow und Client-ClientMainWindow: Titel/Untertitel
+        links, aktuelle Spielzeit + Geschwindigkeit rechts. Größen/Schriftarten kommen bewusst
+        weiterhin aus den lokalen Window.Styles jedes Fensters (Classes "heroTitle"/"clockValue"),
+        nicht von hier - nur die Struktur/Bindungen sind geteilt.
+    -->
+    <Border Classes="chrome">
+        <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="3">
+                <TextBlock Classes="heroTitle" Text="{Binding PlayerHeaderTitle}" />
+                <TextBlock Classes="muted" Text="{Binding PlayerHeaderSubtitle}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Spacing="2" HorizontalAlignment="Right">
+                <TextBlock Classes="muted" Text="Aktuelle Spielzeit" HorizontalAlignment="Right" />
+                <TextBlock Classes="clockValue" Text="{Binding CurrentGameTimeText}" HorizontalAlignment="Right" />
+                <TextBlock Classes="muted" Text="{Binding SpeedMultiplierDisplay, StringFormat='Geschwindigkeit: {0}'}"
+                           HorizontalAlignment="Right" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

@@ -1,0 +1,190 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:viewModels="clr-namespace:RpgTimeTracker.Shared.ViewModels"
+             x:Class="RpgTimeTracker.Shared.Views.PlayerTimelineListView"
+             x:DataType="viewModels:IPlayerDisplayContext">
+    <!--
+        Gemeinsame Zeitlisten-Karte für Host-PlayerWindow und Client-ClientMainWindow. Die
+        Zustands-Modifier-Klassen (Classes.active/.completed/.blink) bleiben bewusst nur
+        Klassennamen hier - wie sie AUSSEHEN (gefüllter Hintergrund beim Host vs. reine
+        Rahmenfarbe beim Client) legt weiterhin jedes Fenster in seinen eigenen
+        Window.Styles fest (siehe design-decisions.md: unterschiedliches visuelles Vokabular
+        ist beabsichtigt, nur die Markup-Struktur soll nicht dupliziert sein).
+    -->
+    <Border Classes="card">
+        <DockPanel LastChildFill="True">
+            <StackPanel DockPanel.Dock="Top" Spacing="10">
+                <Border Classes="sectionheader">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <TextBlock Classes="h1"
+                                   Text="Kalender"
+                                   IsVisible="{Binding ShowPlayerCalendarView}" />
+                        <TextBlock Classes="h1" Text="Zeitliste" IsVisible="{Binding ShowPlayerTimelineView}" />
+
+                        <Border Grid.Column="1"
+                                Background="{DynamicResource TextInputHeaderBrush}"
+                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                BorderThickness="1"
+                                CornerRadius="16"
+                                Padding="4"
+                                IsVisible="{Binding HasPlayerVisibleCalendarEntries}">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <Button Classes="calendarToggle"
+                                        Command="{Binding ShowPlayerTimelineCommand}"
+                                        Content="Zeitliste"
+                                        IsEnabled="{Binding ShowPlayerCalendarView}" />
+                                <Button Classes="calendarToggle"
+                                        Command="{Binding ShowPlayerCalendarCommand}"
+                                        Content="Kalender"
+                                        IsEnabled="{Binding ShowPlayerTimelineView}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Grid IsVisible="{Binding ShowPlayerCalendarView}"
+                      ColumnDefinitions="Auto,*"
+                      ColumnSpacing="14"
+                      Margin="14,0,14,0">
+                    <StackPanel Grid.Column="0" Width="332" Spacing="10">
+                        <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                            <Button Grid.Column="0"
+                                    Classes="iconsquare"
+                                    Command="{Binding PreviousPlayerCalendarMonthCommand}"
+                                    Content="&#8249;" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding PlayerCalendarMonthLabel}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Bold" />
+                            <Button Grid.Column="2"
+                                    Classes="iconsquare"
+                                    Command="{Binding NextPlayerCalendarMonthCommand}"
+                                    Content="&#8250;" />
+                        </Grid>
+
+                        <UniformGrid Columns="7">
+                            <TextBlock Text="Mo" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="Di" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="Mi" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="Do" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="Fr" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="Sa" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="So" HorizontalAlignment="Center" Classes="muted" />
+                        </UniformGrid>
+
+                        <ItemsControl ItemsSource="{Binding CalendarMonthDays}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="7" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="viewModels:PlayerCalendarDayViewModel">
+                                    <Button Classes="calendarDay"
+                                            Classes.outside="{Binding !IsCurrentMonth}"
+                                            Classes.selected="{Binding IsSelected}"
+                                            Classes.today="{Binding IsToday}"
+                                            Classes.hasEntries="{Binding HasEntries}"
+                                            Command="{Binding SelectCommand}"
+                                            Margin="2"
+                                            MinHeight="44"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            Padding="0">
+                                        <TextBlock Text="{Binding DayNumber}" HorizontalAlignment="Center" />
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <Border Grid.Column="1"
+                            Background="{DynamicResource SurfaceAltBrush}"
+                            BorderBrush="{DynamicResource InnerFrameBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding PlayerCalendarSelectedDateLabel}" FontWeight="Bold" />
+                            <TextBlock Classes="muted"
+                                       Text="Keine Einträge."
+                                       IsVisible="{Binding !HasPlayerCalendarEntriesForSelectedDate}" />
+                            <ItemsControl ItemsSource="{Binding CalendarEntries}"
+                                          IsVisible="{Binding HasPlayerCalendarEntriesForSelectedDate}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="viewModels:PlayerCalendarEntryViewModel">
+                                        <Border Classes="item" Margin="0,0,0,8">
+                                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
+                                                <Border Grid.Column="0"
+                                                        Width="6"
+                                                        CornerRadius="3"
+                                                        Background="{Binding ColorBrush}" />
+                                                <PathIcon Grid.Column="1"
+                                                          Data="{Binding IconGeometry}"
+                                                          Width="18"
+                                                          Height="18"
+                                                          VerticalAlignment="Top"
+                                                          Foreground="{DynamicResource TextBrush}" />
+                                                <StackPanel Grid.Column="2" Spacing="3">
+                                                    <TextBlock Text="{Binding Title}" FontWeight="Bold" />
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Classes="muted"
+                                                               TextWrapping="Wrap"
+                                                               IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="3"
+                                                           Text="{Binding TimeText}"
+                                                           Classes="muted"
+                                                           VerticalAlignment="Top" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </StackPanel>
+
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding ShowPlayerTimelineView}">
+                <ItemsControl ItemsSource="{Binding TimelineEntries}" Margin="14">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="viewModels:IPlayerTimelineEntry">
+                            <Border Classes="item" Classes.active="{Binding IsActive}"
+                                    Classes.completed="{Binding IsCompleted}" Classes.blink="{Binding IsBlinkActive}">
+                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+                                    <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Width="8" CornerRadius="4"
+                                            Margin="0,0,12,0" Background="{Binding ItemBorderBrush}" />
+
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"
+                                                Orientation="Horizontal" Spacing="10">
+                                        <PathIcon Data="{Binding IconGeometry}" Width="22" Height="22"
+                                                  Foreground="{DynamicResource TextBrush}" />
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" />
+                                        <Border Background="{DynamicResource TextInputHeaderBrush}"
+                                                BorderBrush="{DynamicResource InnerFrameBrush}" BorderThickness="1"
+                                                CornerRadius="4" Padding="8,2">
+                                            <TextBlock Text="{Binding KindLabel}" Classes="muted" />
+                                        </Border>
+                                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource OkBrush}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                                Orientation="Horizontal" Spacing="14" Margin="0,8,0,0">
+                                        <TextBlock Classes="timeValue" Text="{Binding PrimaryValue}" MinWidth="130" />
+                                        <TextBlock Classes="muted" Text="{Binding DetailText}" />
+                                    </StackPanel>
+
+                                    <ProgressBar Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Classes="timerbar"
+                                                 IsVisible="{Binding HasProgress}" Minimum="0" Maximum="1"
+                                                 Value="{Binding Progress}" Margin="0,10,0,0" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</UserControl>
