@@ -3,17 +3,15 @@
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/) once it
-reaches 1.0.0 (see the alpha note in [README.md](README.md) — before that,
-the protocol and save format may still change between alpha releases).
+and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [1.0.0-alpha] - 2026-07-10
+## [1.0.0] - 2026-07-10
 
-Initial public alpha: a GM-side control app (`RpgTimeTracker`) and a
-read-only player display app (`RpgTimeTracker.PlayerClient`), communicating
-over a length-prefixed JSON-RPC protocol on the local network.
+Initial release: a GM-side control app (`RpgTimeTracker`) and a read-only
+player display app (`RpgTimeTracker.PlayerClient`), communicating over a
+length-prefixed JSON-RPC protocol on the local network.
 
 ### Added
 

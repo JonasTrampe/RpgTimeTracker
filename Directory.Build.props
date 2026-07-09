@@ -1,13 +1,14 @@
 <Project>
 
-    <!-- Von allen Projekten geerbt (Host, Client, Shared), damit die Versionsnummer nur an
-         einer Stelle gepflegt werden muss statt in jedem .csproj einzeln - siehe About-Screen
-         (RpgTimeTracker.Shared/ViewModels/AboutViewModel.cs), der sie per Assembly-Reflection ausliest. -->
+    <!-- Inherited by all projects (Host, Client, Shared), so the version number only
+         needs to be maintained in one place instead of in every .csproj - see the About
+         screen (RpgTimeTracker.Shared/ViewModels/AboutViewModel.cs), which reads it via
+         assembly reflection. -->
     <PropertyGroup>
-        <Version>1.0.0-alpha</Version>
-        <!-- Der .NET-SDK hängt in einem Git-Repo sonst automatisch "+<Commit-SHA>" an die
-             InformationalVersion an (siehe AboutViewModel.FormatVersion) - für den About-Screen
-             einer Endnutzer-App ist das nur Rauschen, nicht die Commit-Zuordnung wert. -->
+        <Version>1.0.0</Version>
+        <!-- In a git repo, the .NET SDK otherwise automatically appends "+<commit-SHA>" to
+             the InformationalVersion (see AboutViewModel.FormatVersion) - for the About
+             screen of an end-user app that's just noise, not worth the commit reference. -->
         <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     </PropertyGroup>
 
