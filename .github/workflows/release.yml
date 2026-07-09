@@ -1,0 +1,73 @@
+name: Release
+
+# Builds self-contained publish artifacts for both apps on Windows and Linux
+# and attaches them to a GitHub Release. Triggered by pushing a version tag
+# (e.g. "v1.0.0") - unlike build.yml (compile check on every push/PR), this
+# only runs when a release is actually being cut.
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and attach artifacts to (e.g. v1.0.0)'
+        required: true
+
+jobs:
+  publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore
+        run: dotnet restore RpgTimeTracker.sln
+
+      - name: Publish Host
+        run: >
+          dotnet publish RpgTimeTracker/RpgTimeTracker.csproj
+          -c Release -r ${{ matrix.rid }} --self-contained true
+          -o publish/${{ matrix.rid }}/Host
+
+      - name: Publish PlayerClient
+        run: >
+          dotnet publish RpgTimeTracker.PlayerClient/RpgTimeTracker.PlayerClient.csproj
+          -c Release -r ${{ matrix.rid }} --self-contained true
+          -o publish/${{ matrix.rid }}/PlayerClient
+
+      - name: Zip artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path publish/${{ matrix.rid }}/Host/* -DestinationPath RpgTimeTracker-Host-${{ matrix.rid }}.zip
+          Compress-Archive -Path publish/${{ matrix.rid }}/PlayerClient/* -DestinationPath RpgTimeTracker-PlayerClient-${{ matrix.rid }}.zip
+
+      - name: Zip artifacts (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          (cd publish/${{ matrix.rid }}/Host && zip -r ../../../RpgTimeTracker-Host-${{ matrix.rid }}.zip .)
+          (cd publish/${{ matrix.rid }}/PlayerClient && zip -r ../../../RpgTimeTracker-PlayerClient-${{ matrix.rid }}.zip .)
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: |
+            RpgTimeTracker-Host-${{ matrix.rid }}.zip
+            RpgTimeTracker-PlayerClient-${{ matrix.rid }}.zip

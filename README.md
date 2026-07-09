@@ -240,6 +240,10 @@ dotnet publish RpgTimeTracker.PlayerClient/RpgTimeTracker.PlayerClient.csproj -c
 
 For Linux, use `-r linux-x64` accordingly.
 
+Prebuilt `win-x64`/`linux-x64` archives for both apps are attached to each
+[GitHub Release](https://github.com/JonasTrampe/RpgTimeTracker/releases),
+built the same way by `.github/workflows/release.yml`.
+
 ## Project structure
 
 ```
