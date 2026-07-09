@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:visuals="using:RpgTimeTracker.Shared.Services.Visuals"
+        x:Class="RpgTimeTracker.Views.IconPickerWindow"
+        Title="Bootstrap Icon auswählen"
+        Width="420" Height="520"
+        MinWidth="360" MinHeight="420"
+        Background="{DynamicResource WindowBackgroundBrush}">
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+
+        <!-- ListBox bewusst lokal: Icon-Liste soll wie eine Panel-Fläche aussehen,
+             nicht wie ein Eingabefeld (anders als z.B. die Serverliste im Client). -->
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="14" LastChildFill="True">
+        <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,10">
+            <TextBlock Text="Bootstrap Icons durchsuchen" FontWeight="Bold" FontSize="16" />
+            <TextBlock Text="Doppelklick auf ein Icon übernimmt es für das Element." Opacity="0.75" />
+            <TextBox Name="SearchBox"
+                     PlaceholderText="Suche, z.B. clock, fire, warning..."
+                     TextChanged="OnSearchTextChanged" />
+        </StackPanel>
+
+        <ListBox Name="IconList" DoubleTapped="OnIconDoubleTapped">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="visuals:BootstrapIconChoice">
+                    <Grid ColumnDefinitions="Auto,*" Margin="6">
+                        <PathIcon Grid.Column="0"
+                                  Data="{Binding Geometry}"
+                                  Width="22" Height="22"
+                                  Foreground="{DynamicResource TextBrush}"
+                                  Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding Name}"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</Window>

@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="RpgTimeTracker.Views.ConfirmTriggerMediaDeleteWindow"
+        Title="RPG Zeitverfolgung"
+        Width="460" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackgroundBrush}">
+    <!--
+        Warnt beim Löschen eines Medienbibliothek-Bilds/Videos, das noch als Event-Medium
+        zugewiesen ist (siehe MainWindowViewModel.RemoveMediaLibraryItemAsync) - Vorbild ist
+        RpgTimeTracker.PlayerClient's ConfirmCleanupWindow, hier aber mit drei statt zwei
+        Optionen, da neben Abbrechen zwei grundverschiedene Fortsetzungen sinnvoll sind (Datei
+        wirklich weg vs. Datei bleibt für die Elemente erhalten).
+    -->
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+    </Window.Styles>
+
+    <Border Classes="card" Padding="20">
+        <StackPanel Spacing="16">
+            <TextBlock Classes="h2" Text="Medium ist noch zugewiesen" />
+            <TextBlock Name="UsageText" TextWrapping="Wrap" />
+            <TextBlock TextWrapping="Wrap" Classes="muted"
+                       Text="Soll die Zuweisung bei diesen Elementen entfernt und die Datei gelöscht werden, oder soll die Datei erhalten bleiben, damit die Elemente ihr Event-Medium behalten (dann bleibt sie aber nicht mehr in der Bibliothek verwaltbar)?" />
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                <Button Content="Abbrechen" Click="OnCancelClick" />
+                <Button Content="Datei behalten" Click="OnKeepClick" />
+                <Button Classes="primary" Content="Aus Elementen entfernen + löschen" Click="OnRemoveAndDeleteClick" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

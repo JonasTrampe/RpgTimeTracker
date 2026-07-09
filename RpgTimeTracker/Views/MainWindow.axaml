@@ -1,0 +1,1998 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RpgTimeTracker.ViewModels"
+        xmlns:controls="using:RpgTimeTracker.Views.Controls"
+        xmlns:conv="using:RpgTimeTracker.Views.Converters"
+        xmlns:viewModels="clr-namespace:RpgTimeTracker.Shared.ViewModels;assembly=RpgTimeTracker.Shared"
+        x:Class="RpgTimeTracker.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="RPG Zeitverfolgung"
+        Width="1150" Height="740" MinWidth="900" MinHeight="600"
+        Background="{DynamicResource WindowBackgroundBrush}">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+
+        <!-- Nur Werte, die hier bewusst vom gemeinsamen Chrome abweichen bzw. Klassen,
+             die ausschließlich in dieser App verwendet werden. -->
+        <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+
+        <Style Selector="Border.windowframe">
+            <Setter Property="Background" Value="#15000000" />
+            <Setter Property="BoxShadow" Value="0 24 48 0 #AA000000" />
+            <Setter Property="Padding" Value="10" />
+        </Style>
+
+        <Style Selector="Border.cornerMark">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CornerOrnamentBrush}" />
+            <Setter Property="BorderThickness" Value="3" />
+            <Setter Property="Opacity" Value="0.82" />
+        </Style>
+
+        <Style Selector="Border.dataChip">
+            <Setter Property="Background" Value="{DynamicResource TextInputHeaderBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InnerFrameBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="Height" Value="30" />
+        </Style>
+
+        <Style Selector="Border.chrome">
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="Height" Value="96" />
+        </Style>
+
+        <Style Selector="Border.card">
+            <Setter Property="BoxShadow" Value="0 18 36 0 #99000000" />
+        </Style>
+
+        <Style Selector="Border.addArea">
+            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,14,12" />
+        </Style>
+
+        <Style Selector="Border.item">
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+
+        <Style Selector="Border.item.completed">
+            <Setter Property="Background" Value="{DynamicResource CompletedBrush}" />
+        </Style>
+
+        <Style Selector="Border.item.pulse">
+            <Setter Property="Background" Value="{DynamicResource PulseBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PulseBorderBrush}" />
+        </Style>
+
+        <Style Selector="Border.item.blink">
+            <Setter Property="Opacity" Value="0.62" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PulseBorderBrush}" />
+        </Style>
+
+        <Style Selector="Border.sectionheader">
+            <Setter Property="Margin" Value="-2 0 0 0" />
+        </Style>
+
+        <Style Selector="TextBlock.clockValue">
+            <Setter Property="Width" Value="252" />
+        </Style>
+
+        <Style Selector="TextBlock.clockValue.large">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Width" Value="300" />
+        </Style>
+
+        <Style Selector="TextBlock.statusValue">
+            <Setter Property="Width" Value="170" />
+        </Style>
+
+        <Style Selector="TextBlock.timeInline">
+            <Setter Property="Width" Value="130" />
+        </Style>
+
+        <Style Selector="Button.startButton">
+            <Setter Property="Height" Value="46" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Padding" Value="14,8" />
+        </Style>
+
+        <Style Selector="ProgressBar.timerbar">
+            <Setter Property="Height" Value="10" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+
+        <Style Selector="TabControl.subtabs">
+            <Setter Property="Padding" Value="0,2,0,0" />
+        </Style>
+
+        <Style Selector="TabControl.subtabs TabItem">
+            <Setter Property="Height" Value="30" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="12,4" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+        </Style>
+
+        <Style Selector="TabControl.subtabs TabItem:selected">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}" />
+        </Style>
+
+        <!-- Eine thematisch abgegrenzte Karte im "Einstellungen"-Tab (Darstellung/Audio/
+             Vorwarnung/Netzwerk/Protokoll) - jede Gruppe bekommt so einen sichtbaren Rahmen
+             statt nur einer grauen Zwischenüberschrift in einer langen Liste. -->
+        <Style Selector="Border.settingsGroup">
+            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InnerFrameBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{DynamicResource CardCornerRadius}" />
+            <Setter Property="Padding" Value="14" />
+        </Style>
+
+        <Style Selector="TextBlock.settingsGroupTitle">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+
+        <Style Selector="Button.calendarToggle">
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="MinWidth" Value="96" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="Button.calendarDay">
+            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InnerFrameBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.outside">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.today">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.selected">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.hasEntries">
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+    </Window.Styles>
+
+    <Panel>
+        <Rectangle Fill="{DynamicResource WindowBackgroundImageBrush}" />
+        <Rectangle Fill="{DynamicResource WindowOverlayBrush}" />
+        <Rectangle Fill="{DynamicResource WindowOverlayImageBrush}" Opacity="0.16" />
+
+        <Border Classes="windowframe" Margin="10">
+            <Panel>
+                <Border Classes="cornerMark" HorizontalAlignment="Left" VerticalAlignment="Top"
+                        BorderThickness="3,3,0,0" />
+                <Border Classes="cornerMark" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        BorderThickness="0,3,3,0" />
+                <Border Classes="cornerMark" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                        BorderThickness="3,0,0,3" />
+                <Border Classes="cornerMark" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        BorderThickness="0,0,3,3" />
+
+                <Grid RowDefinitions="Auto,Auto,*,Auto">
+                    <Border Classes="chrome" Grid.Row="0" Margin="0,0,0,14">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <StackPanel Spacing="3" Width="610">
+                                <TextBlock Classes="heroTitle" Text="{DynamicResource ThemeDisplayName}" />
+                                <TextBlock Classes="muted" Text="{DynamicResource ThemeDisplaySubtitle}" />
+                                <WrapPanel Height="26">
+                                    <Border Classes="dataChip" Margin="0,0,6,0">
+                                        <TextBlock Classes="muted" Text="RUNNING CLOCK" />
+                                    </Border>
+                                    <Border Classes="dataChip" Margin="0,0,6,0">
+                                        <TextBlock Classes="muted" Text="TIMERS" />
+                                    </Border>
+                                    <Border Classes="dataChip">
+                                        <TextBlock Classes="muted" Text="ALARMS" />
+                                    </Border>
+                                </WrapPanel>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10"
+                                        VerticalAlignment="Center" HorizontalAlignment="Right" Height="52">
+                                <Border Classes="dataChip" Width="280" Height="60">
+                                    <StackPanel Spacing="1">
+                                        <TextBlock Classes="muted" Text="Aktive Spielzeit" />
+                                        <TextBlock Classes="clockValue"
+                                                   Text="{Binding CurrentGameTimeText, Mode=TwoWay}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Classes="dataChip" Width="180" Height="60">
+                                    <StackPanel Spacing="1">
+                                        <TextBlock Classes="muted" Text="Status" />
+                                        <TextBlock Classes="statusValue" Text="{Binding ClockStatusText, Mode=TwoWay}" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Spacing="8" Margin="0,0,0,14">
+                        <Border
+                            IsVisible="{Binding HeadsUpMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                            Background="{DynamicResource PulseBrush}"
+                            BorderBrush="{DynamicResource PulseBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12,8">
+                            <TextBlock Text="{Binding HeadsUpMessage}" FontWeight="Bold" HorizontalAlignment="Center" />
+                        </Border>
+                    </StackPanel>
+
+                    <Grid Grid.Row="2" ColumnDefinitions="400,*">
+                        <Border Classes="card" Grid.Column="0" Margin="0,0,0,0">
+                            <DockPanel LastChildFill="True">
+                                <Border Classes="sectionheader" DockPanel.Dock="Top">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                                        <TextBlock Classes="h1" Text="Chronometer-Steuerung" />
+                                        <Button Grid.Column="1" Classes="iconsquare" Content="&#128101;"
+                                                ToolTip.Tip="Spielerfenster öffnen" Click="OnOpenPlayerWindowClick"
+                                                Margin="0,0,4,0" />
+                                        <Button Grid.Column="2" Classes="iconsquare" Content="&#128190;"
+                                                ToolTip.Tip="Spielstand speichern" Click="OnSaveClick" Margin="0,0,4,0" />
+                                        <Button Grid.Column="3" Classes="iconsquare" Content="&#128194;"
+                                                ToolTip.Tip="Spielstand laden" Click="OnLoadClick" Margin="0,0,4,0" />
+                                        <Button Grid.Column="4" Classes="iconsquare" Content="&#8505;"
+                                                ToolTip.Tip="Über RPG Zeitverfolgung" Click="OnOpenAboutClick" />
+                                    </Grid>
+                                </Border>
+
+                                <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
+                                              VerticalScrollBarVisibility="Visible" Margin="12,8,12,0">
+                                    <StackPanel Spacing="16" Margin="4,14,13,16">
+                                        <Border Background="{DynamicResource TextInputHeaderBrush}"
+                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="12">
+                                            <StackPanel Spacing="4" HorizontalAlignment="Center">
+                                                <TextBlock Classes="muted" Text="Aktuelle Spielzeit" />
+                                                <TextBlock Classes="clockValue large"
+                                                           Text="{Binding CurrentGameTimeText, Mode=TwoWay}"
+                                                           HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Button Classes="primary startButton"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Center"
+                                                Command="{Binding ToggleClockCommand}"
+                                                Content="{Binding ToggleClockLabel}" />
+                                        <TextBlock Classes="statusValue"
+                                                   Text="{Binding ClockStatusText, Mode=TwoWay}"
+                                                   HorizontalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   Opacity="0.8" />
+
+                                        <Separator Background="{DynamicResource BorderBrush}" />
+
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Classes="h2" Text="Geschwindigkeit" />
+
+                                            <NumericUpDown
+                                                Value="{Binding SpeedMultiplierInput}"
+                                                Minimum="0.1"
+                                                Maximum="100"
+                                                Increment="0.1"
+                                                FormatString="0.0"
+                                                HorizontalAlignment="Center" Width="300"
+                                                HorizontalContentAlignment="Center"
+                                                Margin="0,0,8,0" />
+
+                                            <TextBlock Text="Spielzeitfaktor pro Echtzeit-Sekunde"
+                                                       Classes="muted" />
+                                        </StackPanel>
+
+                                        <Separator Background="{DynamicResource BorderBrush}" />
+
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Classes="h2" Text="Datum / Uhrzeit manuell setzen" />
+                                            <controls:DateTimeInput Text="{Binding ManualDateTimeText, Mode=TwoWay}"/>
+                                            <Button Content="Übernehmen" Command="{Binding ApplyManualDateTimeCommand}"
+                                                    HorizontalAlignment="Center" />
+                                        </StackPanel>
+
+                                        <Separator Background="{DynamicResource BorderBrush}" />
+
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Classes="h2" Text="Zeitsprung" />
+                                            <controls:TimeSpanInput Text="{Binding JumpAmountText, Mode=TwoWay}"
+                                                                    HorizontalAlignment="Center" />
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
+                                                <Button
+                                                    Classes="primary"
+                                                    Content="Vor Springen"
+                                                    Command="{Binding JumpForwardCommand}"
+                                                    HorizontalAlignment="Stretch" Width="165" />
+                                                <Button
+                                                    Classes="primary"
+                                                    Content="Zurück Springen"
+                                                    Command="{Binding JumpBackwardCommand}"
+                                                    HorizontalAlignment="Stretch" Width="165" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
+                                                <Button Content="↩ Rückgängig"
+                                                        Command="{Binding UndoJumpCommand}"
+                                                        IsEnabled="{Binding CanUndoJump}"
+                                                        HorizontalAlignment="Stretch" Width="165"
+                                                        ToolTip.Tip="Macht den letzten Zeitsprung rückgängig - mehrfach klickbar, um mehrere Sprünge nacheinander zurückzunehmen (auch Schnellauswahl-Buttons, Sprungmarken und manuell gesetzte Zeit)" />
+                                                <Button Content="↪ Wiederholen"
+                                                        Command="{Binding RedoJumpCommand}"
+                                                        IsEnabled="{Binding CanRedoJump}"
+                                                        HorizontalAlignment="Stretch" Width="165"
+                                                        ToolTip.Tip="Stellt einen per 'Rückgängig' zurückgenommenen Zeitsprung wieder her - verfügbar bis zum nächsten neuen Sprung" />
+                                            </StackPanel>
+                                            <Grid ColumnDefinitions="175,175">
+                                                <WrapPanel Grid.Column="0">
+                                                    <Button Content="-1 Std" Command="{Binding QuickJumpCommand}"
+                                                            CommandParameter="-01:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button Content="-2 Std" Command="{Binding QuickJumpCommand}"
+                                                            CommandParameter="-02:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button Content="-1 Tag" Command="{Binding QuickJumpCommand}"
+                                                            CommandParameter="-1.00:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button Content="-8 Std" Command="{Binding QuickJumpCommand}"
+                                                            CommandParameter="-08:00:00" Margin="0,0,4,4" Width="83" />
+                                                </WrapPanel>
+                                                <WrapPanel Grid.Column="1">
+                                                    <Button Content="+2 Std" Command="{Binding QuickJumpCommand}"
+                                                            CommandParameter="02:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button Content="+1 Std" Command="{Binding QuickJumpCommand}"
+                                                            CommandParameter="01:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button Content="+8 Std" Command="{Binding QuickJumpCommand}"
+                                                            CommandParameter="08:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button Content="+1 Tag" Command="{Binding QuickJumpCommand}"
+                                                            CommandParameter="1.00:00:00" Margin="0,0,4,4" Width="83" />
+                                                </WrapPanel>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <Separator Background="{DynamicResource BorderBrush}" />
+
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Classes="h2" Text="Sprungmarken" />
+                                            <TextBlock Classes="muted"
+                                                       Text="Springt zur nächsten (rechter Pfeil) oder vorherigen (linker Pfeil) dieser Uhrzeiten."
+                                                       TextWrapping="Wrap" />
+
+                                            <ItemsControl ItemsSource="{Binding JumpMarkers}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:JumpMarkerItemViewModel">
+                                                        <Border Classes="item">
+                                                            <StackPanel Spacing="8">
+                                                                <Grid ColumnDefinitions="*,Auto">
+                                                                    <TextBox Grid.Column="0"
+                                                                             Text="{Binding Name, Mode=TwoWay}"
+                                                                             Margin="0,0,8,0" />
+                                                                    <Button Grid.Column="1" Classes="iconsquare"
+                                                                            Content="&#10005;"
+                                                                            Command="{Binding DeleteCommand}" />
+                                                                </Grid>
+                                                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                                                                    <TextBox Grid.Column="0"
+                                                                             Text="{Binding TimeOfDayText, Mode=TwoWay}"
+                                                                             Width="64" PlaceholderText="hh:mm" />
+                                                                    <Button Grid.Column="2" Classes="iconsquare"
+                                                                            Content="&#10003;"
+                                                                            ToolTip.Tip="Uhrzeit übernehmen"
+                                                                            Command="{Binding ApplyTimeCommand}"
+                                                                            Margin="4,0,0,0" />
+                                                                    <Button Grid.Column="3" Classes="iconsquare"
+                                                                            Content="&#9664;"
+                                                                            ToolTip.Tip="Vorheriges Vorkommen"
+                                                                            Command="{Binding JumpToPreviousCommand}"
+                                                                            Margin="4,0,0,0" />
+                                                                    <Button Grid.Column="4" Classes="iconsquare"
+                                                                            Content="&#9654;"
+                                                                            ToolTip.Tip="Nächstes Vorkommen"
+                                                                            Command="{Binding JumpToNextCommand}"
+                                                                            Margin="4,0,0,0" />
+                                                                </Grid>
+                                                                <TextBlock Text="{Binding ErrorMessage}"
+                                                                           Foreground="{DynamicResource WarnBrush}"
+                                                                           TextWrapping="Wrap"
+                                                                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                                <TextBox Grid.Column="0" Text="{Binding NewMarkerName, Mode=TwoWay}"
+                                                         PlaceholderText="Name" Margin="0,0,6,0" />
+                                                <TextBox Grid.Column="1" Text="{Binding NewMarkerTime, Mode=TwoWay}"
+                                                         PlaceholderText="hh:mm" Width="64" Margin="0,0,6,0" />
+                                                <Button Grid.Column="2" Classes="primary" Content="+ Marke"
+                                                        Command="{Binding AddMarkerCommand}" />
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <TextBlock Text="{Binding ClockErrorMessage, Mode=TwoWay}"
+                                                   Foreground="{DynamicResource WarnBrush}"
+                                                   TextWrapping="Wrap"
+                                                   IsVisible="{Binding ClockErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+
+                        <Border Classes="card" Grid.Column="1">
+                            <DockPanel LastChildFill="True">
+                                <Border Classes="sectionheader" DockPanel.Dock="Top">
+                                    <TextBlock Classes="h2" Text="Elemente &amp; Medien" />
+                                </Border>
+
+                                <TabControl Padding="12,8,12,0">
+                                    <TabItem Header="Element Anlegen">
+                                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Visible" AllowAutoHide="false">
+                                            <TabControl Classes="subtabs" Padding="12">
+                                                <TabItem Header="+ Timer">
+                                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
+                                                        <controls:NewItemBasicsEditor Grid.Row="0"
+                                                                DataContext="{Binding NewTimerBasics}"
+                                                                Margin="0,0,0,10" />
+
+                                                        <Border Grid.Row="1"
+                                                                Background="{DynamicResource TextInputHeaderBrush}"
+                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6"
+                                                                Padding="10"
+                                                                Margin="0,0,0,10">
+                                                            <Grid ColumnDefinitions="Auto,Auto,*">
+                                                                <TextBlock Grid.Column="0" Classes="muted" Text="Dauer"
+                                                                           VerticalAlignment="Center" Margin="0,0,10,0" />
+                                                                <controls:TimeSpanInput Grid.Column="1"
+                                                                        Text="{Binding NewTimerDuration, Mode=TwoWay}"
+                                                                        LimitDays="120"
+                                                                        LimitHours="23" LimitMinutes="59"
+                                                                        LimitSeconds="59" />
+                                                            </Grid>
+                                                        </Border>
+
+                                                        <Border Grid.Row="2"
+                                                                Background="{DynamicResource TextInputHeaderBrush}"
+                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6"
+                                                                Padding="10"
+                                                                Margin="0,0,0,10">
+                                                            <StackPanel Spacing="6">
+                                                                <TextBlock Classes="muted"
+                                                                           Text="Event-Medium (optional, wird bei Ablauf automatisch an Spieler gesendet)"
+                                                                           TextWrapping="Wrap" />
+                                                                <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                                                                    <Button Grid.Column="0"
+                                                                            Content="Aus Bibliothek…"
+                                                                            Click="OnChooseTimerTriggerMediaClick"
+                                                                            ToolTip.Tip="Bild/Video aus der Medienbibliothek wählen" />
+                                                                    <TextBlock Grid.Column="2" Classes="muted"
+                                                                               Text="{Binding NewTimerTriggerMedia.FileName}"
+                                                                               VerticalAlignment="Center" Margin="8,0"
+                                                                               TextTrimming="CharacterEllipsis" />
+                                                                    <Button Grid.Column="3" Classes="iconsquare"
+                                                                            Content="&#10005;"
+                                                                            Command="{Binding NewTimerTriggerMedia.ClearCommand}"
+                                                                            IsVisible="{Binding NewTimerTriggerMedia.HasMedia}"
+                                                                            ToolTip.Tip="Event-Medium entfernen" />
+                                                                </Grid>
+                                                                <StackPanel Orientation="Horizontal" Spacing="12"
+                                                                            IsVisible="{Binding NewTimerTriggerMedia.HasMedia}">
+                                                                    <CheckBox Content="⛶ Vollbild bei Auslösung"
+                                                                              IsChecked="{Binding NewTimerTriggerMedia.Fullscreen}" />
+                                                                    <CheckBox
+                                                                        Content="⏸ Spielzeit während Video pausieren"
+                                                                        IsChecked="{Binding NewTimerTriggerMedia.PauseClockDuringVideo}"
+                                                                        IsVisible="{Binding NewTimerTriggerMedia.IsVideo}" />
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </Border>
+
+                                                        <Button Grid.Row="3" Classes="primary"
+                                                                Content="+ Timer anlegen"
+                                                                Command="{Binding AddTimerCommand}"
+                                                                HorizontalAlignment="Right" />
+                                                    </Grid>
+                                                </TabItem>
+
+                                                <TabItem Header="+ Wecker">
+                                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
+                                                        <controls:NewItemBasicsEditor Grid.Row="0"
+                                                                DataContext="{Binding NewAlarmBasics}"
+                                                                Margin="0,0,0,10" />
+
+                                                        <Border Grid.Row="1"
+                                                                Background="{DynamicResource TextInputHeaderBrush}"
+                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6"
+                                                                Padding="10"
+                                                                Margin="0,0,0,10">
+                                                            <Grid RowDefinitions="Auto,Auto">
+                                                                <Grid Grid.Row="0" ColumnDefinitions="Auto,260,*"
+                                                                      Margin="0,0,0,8">
+                                                                    <TextBlock Grid.Column="0" Classes="muted"
+                                                                               Text="Zielzeit"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="0,0,10,0" />
+                                                                    <StackPanel Grid.Column="1"
+                                                                            Orientation="Horizontal"
+                                                                            Spacing="8">
+                                                                        <controls:DateTimeInput
+                                                                            Text="{Binding NewAlarmDateTime, Mode=TwoWay}" />
+                                                                    </StackPanel>
+                                                                </Grid>
+                                                                <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*">
+                                                                    <TextBlock Grid.Column="0" Classes="muted"
+                                                                               Text="Wiederholung"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="0,0,10,0" />
+                                                                    <controls:TimeSpanInput Grid.Column="1"
+                                                                            Text="{Binding NewAlarmRepeatInterval, Mode=TwoWay}"
+                                                                            AllowEmpty="True" LimitDays="120"
+                                                                            LimitHours="23"
+                                                                            LimitMinutes="59" LimitSeconds="59" />
+                                                                    <TextBlock Grid.Column="2" Classes="muted"
+                                                                               Text="Leer lassen = einmalig"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="10,0,0,0" />
+                                                                </Grid>
+                                                            </Grid>
+                                                        </Border>
+
+                                                        <Border Grid.Row="2"
+                                                                Background="{DynamicResource TextInputHeaderBrush}"
+                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6"
+                                                                Padding="10"
+                                                                Margin="0,0,0,10">
+                                                            <StackPanel Spacing="6">
+                                                                <TextBlock Classes="muted"
+                                                                           Text="Event-Medium (optional, wird bei Auslösung automatisch an Spieler gesendet)"
+                                                                           TextWrapping="Wrap" />
+                                                                <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                                                                    <Button Grid.Column="0"
+                                                                            Content="Aus Bibliothek…"
+                                                                            Click="OnChooseAlarmTriggerMediaClick"
+                                                                            ToolTip.Tip="Bild/Video aus der Medienbibliothek wählen" />
+                                                                    <TextBlock Grid.Column="2" Classes="muted"
+                                                                               Text="{Binding NewAlarmTriggerMedia.FileName}"
+                                                                               VerticalAlignment="Center" Margin="8,0"
+                                                                               TextTrimming="CharacterEllipsis" />
+                                                                    <Button Grid.Column="3" Classes="iconsquare"
+                                                                            Content="&#10005;"
+                                                                            Command="{Binding NewAlarmTriggerMedia.ClearCommand}"
+                                                                            IsVisible="{Binding NewAlarmTriggerMedia.HasMedia}"
+                                                                            ToolTip.Tip="Event-Medium entfernen" />
+                                                                </Grid>
+                                                                <StackPanel Orientation="Horizontal" Spacing="12"
+                                                                            IsVisible="{Binding NewAlarmTriggerMedia.HasMedia}">
+                                                                    <CheckBox Content="⛶ Vollbild bei Auslösung"
+                                                                              IsChecked="{Binding NewAlarmTriggerMedia.Fullscreen}" />
+                                                                    <CheckBox
+                                                                        Content="⏸ Spielzeit während Video pausieren"
+                                                                        IsChecked="{Binding NewAlarmTriggerMedia.PauseClockDuringVideo}"
+                                                                        IsVisible="{Binding NewAlarmTriggerMedia.IsVideo}" />
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </Border>
+
+                                                        <Button Grid.Row="3" Classes="primary"
+                                                                Content="+ Wecker anlegen"
+                                                                Command="{Binding AddAlarmCommand}"
+                                                                HorizontalAlignment="Right" />
+                                                    </Grid>
+                                                </TabItem>
+
+                                                <TabItem Header="+ OnTime">
+                                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
+                                                        <controls:NewItemBasicsEditor Grid.Row="0"
+                                                                DataContext="{Binding NewIntervalBasics}"
+                                                                Margin="0,0,0,10" />
+
+                                                        <Border Grid.Row="1"
+                                                                Background="{DynamicResource TextInputHeaderBrush}"
+                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6"
+                                                                Padding="10"
+                                                                Margin="0,0,0,10">
+                                                            <Grid RowDefinitions="Auto,Auto">
+                                                                <Grid Grid.Row="0"
+                                                                      ColumnDefinitions="Auto,Auto,Auto,Auto,*"
+                                                                      Margin="0,0,0,8">
+                                                                    <TextBlock Grid.Column="0" Classes="muted"
+                                                                               Text="Alle"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="0,0,10,0" />
+                                                                    <controls:TimeSpanInput Grid.Column="1"
+                                                                            Text="{Binding NewIntervalInterval, Mode=TwoWay}"
+                                                                            LimitDays="120"
+                                                                            LimitHours="23" LimitMinutes="59"
+                                                                            LimitSeconds="59" />
+                                                                    <TextBlock Grid.Column="2" Classes="muted"
+                                                                               Text="Aktiv für"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="18,0,10,0" />
+                                                                    <controls:TimeSpanInput Grid.Column="3"
+                                                                            Text="{Binding NewIntervalActiveDuration, Mode=TwoWay}"
+                                                                            LimitDays="120"
+                                                                            LimitHours="23" LimitMinutes="59"
+                                                                            LimitSeconds="59" />
+                                                                </Grid>
+                                                                <Grid Grid.Row="1" ColumnDefinitions="Auto,100,*">
+                                                                    <TextBlock Grid.Column="0" Classes="muted"
+                                                                               Text="max"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="0,0,10,0" />
+                                                                    <TextBox Grid.Column="1"
+                                                                             Text="{Binding NewIntervalMaxRepeats, Mode=TwoWay}"
+                                                                             PlaceholderText="∞" />
+                                                                    <TextBlock Grid.Column="2" Classes="muted"
+                                                                               Text="Leer oder 0 = unbegrenzt"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="10,0,0,0" />
+                                                                </Grid>
+                                                            </Grid>
+                                                        </Border>
+
+                                                        <Border Grid.Row="2"
+                                                                Background="{DynamicResource TextInputHeaderBrush}"
+                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6"
+                                                                Padding="10"
+                                                                Margin="0,0,0,10">
+                                                            <StackPanel Spacing="6">
+                                                                <TextBlock Classes="muted"
+                                                                           Text="Event-Medium (optional, wird bei Aktivierung automatisch an Spieler gesendet)"
+                                                                           TextWrapping="Wrap" />
+                                                                <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                                                                    <Button Grid.Column="0"
+                                                                            Content="Aus Bibliothek…"
+                                                                            Click="OnChooseIntervalTriggerMediaClick"
+                                                                            ToolTip.Tip="Bild/Video aus der Medienbibliothek wählen" />
+                                                                    <TextBlock Grid.Column="2" Classes="muted"
+                                                                               Text="{Binding NewIntervalTriggerMedia.FileName}"
+                                                                               VerticalAlignment="Center" Margin="8,0"
+                                                                               TextTrimming="CharacterEllipsis" />
+                                                                    <Button Grid.Column="3" Classes="iconsquare"
+                                                                            Content="&#10005;"
+                                                                            Command="{Binding NewIntervalTriggerMedia.ClearCommand}"
+                                                                            IsVisible="{Binding NewIntervalTriggerMedia.HasMedia}"
+                                                                            ToolTip.Tip="Event-Medium entfernen" />
+                                                                </Grid>
+                                                                <StackPanel Orientation="Horizontal" Spacing="12"
+                                                                            IsVisible="{Binding NewIntervalTriggerMedia.HasMedia}">
+                                                                    <CheckBox Content="⛶ Vollbild bei Auslösung"
+                                                                              IsChecked="{Binding NewIntervalTriggerMedia.Fullscreen}" />
+                                                                    <CheckBox
+                                                                        Content="⏸ Spielzeit während Video pausieren"
+                                                                        IsChecked="{Binding NewIntervalTriggerMedia.PauseClockDuringVideo}"
+                                                                        IsVisible="{Binding NewIntervalTriggerMedia.IsVideo}" />
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </Border>
+
+                                                        <Button Grid.Row="3" Classes="primary"
+                                                                Content="+ OnTime anlegen"
+                                                                Command="{Binding AddIntervalEventCommand}"
+                                                                HorizontalAlignment="Right" />
+                                                    </Grid>
+                                                </TabItem>
+                                            </TabControl>
+                                        </ScrollViewer>
+                                    </TabItem>
+
+                                    <TabItem Header="Elementliste">
+                                        <DockPanel LastChildFill="True">
+                                            <Border Classes="sectionheader" DockPanel.Dock="Top">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <TextBlock Grid.Column="0" Classes="h2" Text="Gemeinsame Zeitliste" />
+                                                    <Button Grid.Column="1"
+                                                            Classes="primary"
+                                                            Content="{Binding NextEventJumpLabel}"
+                                                            Command="{Binding JumpToNextEventCommand}"
+                                                            VerticalAlignment="Center" />
+                                                </Grid>
+                                            </Border>
+
+                                            <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false">
+                                                <ItemsControl ItemsSource="{Binding TimelineItems}"
+                                                              Margin="16,14,16,16">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:TimelineDisplayItemViewModel">
+                                                            <Border Classes="item"
+                                                                    Classes.completed="{Binding IsCompleted}"
+                                                                    Classes.pulse="{Binding IsActive}"
+                                                                    Classes.blink="{Binding IsBlinkActive}">
+                                                                <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                                                                      ColumnDefinitions="Auto,*,Auto">
+                                                                    <Border Grid.Row="0" Grid.RowSpan="3"
+                                                                            Grid.Column="0"
+                                                                            Width="8" CornerRadius="4"
+                                                                            Margin="0,0,10,0"
+                                                                            Background="{Binding ItemBorderBrush}" />
+
+                                                                    <StackPanel Grid.Row="0" Grid.Column="1"
+                                                                            Orientation="Horizontal" Spacing="10">
+                                                                        <PathIcon Data="{Binding IconGeometry}"
+                                                                                Width="20" Height="20"
+                                                                                Foreground="{DynamicResource TextBrush}"
+                                                                                PointerPressed="OnTimelineIconPointerPressed"
+                                                                                ToolTip.Tip="Doppelklick: Bootstrap Icon auswählen" />
+                                                                        <TextBlock Text="{Binding Name}"
+                                                                                FontWeight="Bold"
+                                                                                VerticalAlignment="Center" />
+                                                                        <Border Classes="dataChip" Height="28"
+                                                                                Padding="8,3">
+                                                                            <TextBlock Text="{Binding KindLabel}"
+                                                                                    Classes="muted" />
+                                                                        </Border>
+                                                                        <TextBlock Text="SL-only"
+                                                                                Foreground="{DynamicResource WarnBrush}"
+                                                                                VerticalAlignment="Center"
+                                                                                IsVisible="{Binding IsSlOnly}" />
+                                                                        <TextBlock Text="{Binding StatusText}"
+                                                                                Foreground="{DynamicResource OkBrush}"
+                                                                                VerticalAlignment="Center" />
+                                                                    </StackPanel>
+
+                                                                    <StackPanel Grid.Row="0" Grid.Column="2"
+                                                                            Orientation="Horizontal" Spacing="6">
+                                                                        <Button Content="{Binding StartPauseLabel}"
+                                                                                Command="{Binding ToggleRunCommand}"
+                                                                                IsVisible="{Binding CanStartPause}" />
+                                                                        <Button Content="Reset"
+                                                                                Command="{Binding ResetCommand}"
+                                                                                IsVisible="{Binding CanReset}" />
+                                                                        <Button Content="Bestätigen"
+                                                                                Command="{Binding DismissCommand}"
+                                                                                IsVisible="{Binding CanDismiss}" />
+                                                                        <Button Content="Einstellungen"
+                                                                                Command="{Binding ToggleConfigCommand}" />
+                                                                        <Button Classes="iconsquare" Content="&#10005;"
+                                                                                Command="{Binding DeleteCommand}" />
+                                                                    </StackPanel>
+
+                                                                    <StackPanel Grid.Row="1" Grid.Column="1"
+                                                                            Grid.ColumnSpan="2"
+                                                                            Orientation="Horizontal" Spacing="12"
+                                                                            Margin="0,8,0,0">
+                                                                        <TextBlock Classes="timeInline"
+                                                                                Text="{Binding PrimaryValue}"
+                                                                                MinWidth="130" />
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="{Binding DetailText}" />
+                                                                        <TextBlock Text="{Binding ErrorMessage}"
+                                                                                Foreground="{DynamicResource WarnBrush}"
+                                                                                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                                    </StackPanel>
+
+                                                                    <Border Grid.Row="2" Grid.Column="1"
+                                                                            Grid.ColumnSpan="2"
+                                                                            IsVisible="{Binding IsConfigVisible}"
+                                                                            Background="{DynamicResource TextInputHeaderBrush}"
+                                                                            BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                            BorderThickness="1"
+                                                                            CornerRadius="6"
+                                                                            Padding="10"
+                                                                            Margin="0,10,0,0">
+                                                                        <StackPanel Spacing="12">
+                                                                            <Border
+                                                                                Background="{DynamicResource SurfaceBrush}"
+                                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                BorderThickness="1"
+                                                                                CornerRadius="6"
+                                                                                Padding="10">
+                                                                                <Grid
+                                                                                    ColumnDefinitions="Auto,*,Auto,Auto"
+                                                                                    RowDefinitions="Auto,Auto">
+                                                                                    <TextBlock Grid.Row="0"
+                                                                                        Grid.Column="0" Classes="muted"
+                                                                                        Text="Name"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Margin="0,0,10,8" />
+                                                                                    <TextBox Grid.Row="0"
+                                                                                        Grid.Column="1"
+                                                                                        Text="{Binding EditName, Mode=TwoWay}"
+                                                                                        MinWidth="220"
+                                                                                        Margin="0,0,12,8" />
+                                                                                    <TextBlock Grid.Row="0"
+                                                                                        Grid.Column="2" Classes="muted"
+                                                                                        Text="Sound"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Margin="0,0,10,8" />
+                                                                                    <StackPanel Grid.Row="0"
+                                                                                        Grid.Column="3"
+                                                                                        Orientation="Horizontal"
+                                                                                        Spacing="6" Margin="0,0,0,8">
+                                                                                        <ComboBox
+                                                                                            ItemsSource="{Binding SoundOptions}"
+                                                                                            SelectedItem="{Binding EditSound, Mode=TwoWay}"
+                                                                                            Width="150" />
+                                                                                        <NumericUpDown
+                                                                                            Value="{Binding EditSoundRepeatCount, Mode=TwoWay}"
+                                                                                            Minimum="0" Maximum="20"
+                                                                                            FormatString="0" Width="90"
+                                                                                            ToolTip.Tip="Wie oft der Sound hintereinander abgespielt wird (0 = endlos, bis das Element zurückgesetzt wird)" />
+                                                                                    </StackPanel>
+
+                                                                                    <TextBlock Grid.Row="1"
+                                                                                        Grid.Column="0" Classes="muted"
+                                                                                        Text="Farbe"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Margin="0,0,10,0" />
+                                                                                    <ColorPicker Grid.Row="1"
+                                                                                        Grid.Column="1"
+                                                                                        Color="{Binding EditColorHex, Mode=TwoWay, Converter={x:Static conv:HexColorConverter.Instance}}"
+                                                                                        HorizontalAlignment="Left" />
+                                                                                    <StackPanel Grid.Row="1"
+                                                                                        Grid.Column="2"
+                                                                                        Grid.ColumnSpan="2"
+                                                                                        Orientation="Horizontal"
+                                                                                        Spacing="12">
+                                                                                        <CheckBox Content="⚡ Blinken"
+                                                                                            IsChecked="{Binding EditBlink, Mode=TwoWay}"
+                                                                                            VerticalAlignment="Center" />
+                                                                                        <CheckBox
+                                                                                            Content="👁 Spieler sichtbar"
+                                                                                            IsChecked="{Binding EditIsPlayerVisible, Mode=TwoWay}"
+                                                                                            VerticalAlignment="Center" />
+                                                                                    </StackPanel>
+                                                                                </Grid>
+                                                                            </Border>
+
+                                                                            <Border IsVisible="{Binding IsTimer}"
+                                                                                    Background="{DynamicResource SurfaceBrush}"
+                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                    BorderThickness="1"
+                                                                                    CornerRadius="6" Padding="10">
+                                                                                <Grid ColumnDefinitions="Auto,Auto,*">
+                                                                                    <TextBlock Grid.Column="0"
+                                                                                        Classes="muted" Text="Dauer"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Margin="0,0,10,0" />
+                                                                                    <controls:TimeSpanInput
+                                                                                        Grid.Column="1"
+                                                                                        Text="{Binding DurationText, Mode=TwoWay}"
+                                                                                        LimitDays="120"
+                                                                                        LimitHours="23"
+                                                                                        LimitMinutes="59"
+                                                                                        LimitSeconds="59" />
+                                                                                    <TextBlock Grid.Column="2"
+                                                                                        Classes="muted"
+                                                                                        Text="Std / Min / Sek"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Margin="10,0,0,0" />
+                                                                                </Grid>
+                                                                            </Border>
+
+                                                                            <Border IsVisible="{Binding IsAlarm}"
+                                                                                    Background="{DynamicResource SurfaceBrush}"
+                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                    BorderThickness="1"
+                                                                                    CornerRadius="6" Padding="10">
+                                                                                <StackPanel Spacing="8">
+                                                                                    <Grid
+                                                                                        ColumnDefinitions="Auto,Auto,*">
+                                                                                        <TextBlock Grid.Column="0"
+                                                                                            Classes="muted"
+                                                                                            Text="Zielzeit"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="0,0,10,0" />
+                                                                                        <controls:DateTimeInput
+                                                                                            Grid.Column="1"
+                                                                                            Text="{Binding TriggerAtDateTimeText, Mode=TwoWay}"
+                                                                                            MinYear="1" MaxYear="9999"
+                                                                                            LimitHours="23"
+                                                                                            LimitMinutes="59"
+                                                                                            LimitSeconds="59" />
+                                                                                        <TextBlock Grid.Column="2"
+                                                                                            Classes="muted"
+                                                                                            Text="Mausrad auf jedem Feld"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="10,0,0,0" />
+                                                                                    </Grid>
+                                                                                    <Grid
+                                                                                        ColumnDefinitions="Auto,Auto,*">
+                                                                                        <TextBlock Grid.Column="0"
+                                                                                            Classes="muted"
+                                                                                            Text="Wiederholung"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="0,0,10,0" />
+                                                                                        <controls:TimeSpanInput
+                                                                                            Grid.Column="1"
+                                                                                            Text="{Binding RepeatIntervalTextEdit, Mode=TwoWay}"
+                                                                                            AllowEmpty="True"
+                                                                                            LimitDays="120"
+                                                                                            LimitHours="23"
+                                                                                            LimitMinutes="59"
+                                                                                            LimitSeconds="59" />
+                                                                                        <TextBlock Grid.Column="2"
+                                                                                            Classes="muted"
+                                                                                            Text="Leer lassen = einmalig"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="10,0,0,0" />
+                                                                                    </Grid>
+                                                                                </StackPanel>
+                                                                            </Border>
+
+                                                                            <Border IsVisible="{Binding IsInterval}"
+                                                                                    Background="{DynamicResource SurfaceBrush}"
+                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                    BorderThickness="1"
+                                                                                    CornerRadius="6" Padding="10">
+                                                                                <StackPanel Spacing="8">
+                                                                                    <Grid
+                                                                                        ColumnDefinitions="Auto,Auto,Auto,Auto,*">
+                                                                                        <TextBlock Grid.Column="0"
+                                                                                            Classes="muted" Text="Alle"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="0,0,10,0" />
+                                                                                        <controls:TimeSpanInput
+                                                                                            Grid.Column="1"
+                                                                                            Text="{Binding IntervalText, Mode=TwoWay}"
+                                                                                            LimitDays="120"
+                                                                                            LimitHours="23"
+                                                                                            LimitMinutes="59"
+                                                                                            LimitSeconds="59" />
+                                                                                        <TextBlock Grid.Column="2"
+                                                                                            Classes="muted"
+                                                                                            Text="aktiv für"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="18,0,10,0" />
+                                                                                        <controls:TimeSpanInput
+                                                                                            Grid.Column="3"
+                                                                                            Text="{Binding ActiveDurationText, Mode=TwoWay}"
+                                                                                            LimitDays="120"
+                                                                                            LimitHours="23"
+                                                                                            LimitMinutes="59"
+                                                                                            LimitSeconds="59" />
+                                                                                    </Grid>
+                                                                                    <Grid
+                                                                                        ColumnDefinitions="Auto,100,*">
+                                                                                        <TextBlock Grid.Column="0"
+                                                                                            Classes="muted" Text="max"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="0,0,10,0" />
+                                                                                        <TextBox Grid.Column="1"
+                                                                                            Text="{Binding MaxRepeatsText, Mode=TwoWay}"
+                                                                                            PlaceholderText="∞" />
+                                                                                        <TextBlock Grid.Column="2"
+                                                                                            Classes="muted"
+                                                                                            Text="Leer oder 0 = unbegrenzt"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="10,0,0,0" />
+                                                                                    </Grid>
+                                                                                </StackPanel>
+                                                                            </Border>
+
+                                                                            <Border
+                                                                                Background="{DynamicResource SurfaceBrush}"
+                                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                BorderThickness="1" CornerRadius="6"
+                                                                                Padding="10">
+                                                                                <StackPanel Spacing="6">
+                                                                                    <TextBlock Classes="muted"
+                                                                                        Text="Event-Medium (optional, wird bei Auslösung automatisch an Spieler gesendet)"
+                                                                                        TextWrapping="Wrap" />
+                                                                                    <Grid
+                                                                                        ColumnDefinitions="Auto,Auto,*,Auto">
+                                                                                        <Button Grid.Column="0"
+                                                                                            Content="Aus Bibliothek…"
+                                                                                            Click="OnChooseItemTriggerMediaClick"
+                                                                                            ToolTip.Tip="Bild/Video aus der Medienbibliothek wählen" />
+                                                                                        <TextBlock Grid.Column="2"
+                                                                                            Classes="muted"
+                                                                                            Text="{Binding TriggerMedia.FileName}"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="8,0"
+                                                                                            TextTrimming="CharacterEllipsis" />
+                                                                                        <Button Grid.Column="3"
+                                                                                            Classes="iconsquare"
+                                                                                            Content="&#10005;"
+                                                                                            Command="{Binding TriggerMedia.ClearCommand}"
+                                                                                            IsVisible="{Binding TriggerMedia.HasMedia}"
+                                                                                            ToolTip.Tip="Event-Medium entfernen" />
+                                                                                    </Grid>
+                                                                                    <StackPanel
+                                                                                        Orientation="Horizontal"
+                                                                                        Spacing="12"
+                                                                                        IsVisible="{Binding TriggerMedia.HasMedia}">
+                                                                                        <CheckBox
+                                                                                            Content="⛶ Vollbild bei Auslösung"
+                                                                                            IsChecked="{Binding TriggerMedia.Fullscreen}" />
+                                                                                        <CheckBox
+                                                                                            Content="⏸ Spielzeit während Video pausieren"
+                                                                                            IsChecked="{Binding TriggerMedia.PauseClockDuringVideo}"
+                                                                                            IsVisible="{Binding TriggerMedia.IsVideo}" />
+                                                                                    </StackPanel>
+                                                                                </StackPanel>
+                                                                            </Border>
+
+                                                                            <Button Classes="primary"
+                                                                                    Content="Änderungen übernehmen"
+                                                                                    Command="{Binding ApplyEditsCommand}"
+                                                                                    HorizontalAlignment="Right"
+                                                                                    MinWidth="230" />
+                                                                        </StackPanel>
+                                                                    </Border>
+
+                                                                    <ProgressBar Grid.Row="3" Grid.Column="1"
+                                                                            Grid.ColumnSpan="2"
+                                                                            Classes="timerbar"
+                                                                            IsVisible="{Binding HasProgress}"
+                                                                            Minimum="0" Maximum="1"
+                                                                            Value="{Binding Progress}" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </DockPanel>
+                                    </TabItem>
+
+                                    <TabItem Header="Bibliothek">
+                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
+                                                      VerticalScrollBarVisibility="Visible">
+                                            <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
+                                                <!-- Linke Spalte: Senden + persistente Bibliothek. -->
+                                                <Border Grid.Column="0" Classes="settingsGroup" Margin="0 0 4 0">
+                                                    <controls:LibraryPanelView x:Name="MediaLibraryPanel"
+                                                                               Title="Medienbibliothek"
+                                                                               Description="Vorausgewählte Bilder/Videos."
+                                                                               EmptyStateText="Noch keine Medien in der Bibliothek."
+                                                                               HasNoItems="{Binding HasNoMediaLibraryItems}"
+                                                                               ErrorMessage="{Binding MediaErrorMessage, Mode=TwoWay}"
+                                                                               ItemsSource="{Binding MediaLibrary}">
+                                                        <controls:LibraryPanelView.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:MediaLibraryItemViewModel">
+                                                                <Border Classes="item" Width="120"
+                                                                        Margin="0,0,10,10"
+                                                                        DoubleTapped="OnMediaLibraryItemDoubleTapped"
+                                                                        ToolTip.Tip="Doppelklick zum Anzeigen">
+                                                                    <StackPanel Spacing="6">
+                                                                        <Panel>
+                                                                            <Border Width="96" Height="96"
+                                                                                    CornerRadius="6"
+                                                                                    ClipToBounds="True"
+                                                                                    Background="{DynamicResource SurfaceAltBrush}"
+                                                                                    HorizontalAlignment="Center">
+                                                                                <Panel>
+                                                                                    <Image
+                                                                                        Source="{Binding Thumbnail}"
+                                                                                        Stretch="UniformToFill"
+                                                                                        IsVisible="{Binding HasThumbnail}" />
+                                                                                    <TextBlock
+                                                                                        Text="{Binding FallbackIcon}"
+                                                                                        FontSize="28"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        IsVisible="{Binding !HasThumbnail}" />
+                                                                                </Panel>
+                                                                            </Border>
+                                                                            <StackPanel Orientation="Horizontal"
+                                                                                    Spacing="2"
+                                                                                    HorizontalAlignment="Right"
+                                                                                    VerticalAlignment="Top"
+                                                                                    Margin="0,-4,-4,0">
+                                                                                <Button Classes="iconsquare"
+                                                                                    Content="⚙" Width="22"
+                                                                                    Height="22"
+                                                                                    FontSize="11"
+                                                                                    ToolTip.Tip="Umbenennen">
+                                                                                    <Button.Flyout>
+                                                                                        <Flyout Placement="Bottom">
+                                                                                            <StackPanel Spacing="8"
+                                                                                                Width="200">
+                                                                                                <TextBlock
+                                                                                                    Classes="muted"
+                                                                                                    Text="Name" />
+                                                                                                <TextBox
+                                                                                                    Text="{Binding Name, Mode=TwoWay}" />
+                                                                                            </StackPanel>
+                                                                                        </Flyout>
+                                                                                    </Button.Flyout>
+                                                                                </Button>
+                                                                                <Button Classes="iconsquare"
+                                                                                    Content="&#10005;"
+                                                                                    Command="{Binding DeleteCommand}"
+                                                                                    ToolTip.Tip="Aus Bibliothek entfernen"
+                                                                                    Width="22" Height="22"
+                                                                                    FontSize="10" />
+                                                                            </StackPanel>
+                                                                        </Panel>
+                                                                        <TextBlock Text="{Binding Name}"
+                                                                                FontWeight="Bold" FontSize="12"
+                                                                                TextTrimming="CharacterEllipsis"
+                                                                                HorizontalAlignment="Center" />
+                                                                        <StackPanel Orientation="Horizontal"
+                                                                                Spacing="6"
+                                                                                HorizontalAlignment="Center">
+                                                                            <TextBlock Text="{Binding KindLabel}"
+                                                                                    Classes="muted" FontSize="11"
+                                                                                    VerticalAlignment="Center" />
+                                                                            <CheckBox Content="🔁"
+                                                                                    IsChecked="{Binding Loop}"
+                                                                                    IsVisible="{Binding SupportsLoop}"
+                                                                                    ToolTip.Tip="Am Ende von vorn beginnen"
+                                                                                    Padding="4,0" FontSize="11" />
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </controls:LibraryPanelView.ItemTemplate>
+                                                    </controls:LibraryPanelView>
+                                                </Border>
+                                                <Border Grid.Column="1" Classes="settingsGroup">
+                                                    <StackPanel Spacing="8" Margin="10,0,0,0">
+
+                                                        <StackPanel Spacing="4" IsVisible="False">
+                                                            <TextBlock Classes="muted"
+                                                                       Text="Bild/Video an Spieler senden" />
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <Button Grid.Column="0" Content="+ Medium senden"
+                                                                        Click="OnSendMediaClick"
+                                                                        HorizontalAlignment="Stretch" Margin="0,0,8,0" />
+                                                                <CheckBox Grid.Column="1" Content="🔁 Loop"
+                                                                          IsChecked="{Binding SendMediaLoop}"
+                                                                          VerticalAlignment="Center"
+                                                                          ToolTip.Tip="Video am Ende von vorn beginnen, statt es zu schließen" />
+                                                            </Grid>
+                                                            <TextBlock Classes="muted"
+                                                                       Text="Bilder: PNG/JPG/GIF/BMP/WebP · Videos: MP4/WebM/MKV/MOV/AVI (max. 1900 MB)"
+                                                                       TextWrapping="Wrap" />
+                                                            <Separator Background="{DynamicResource BorderBrush}" />
+                                                        </StackPanel>
+                                                        <TextBlock Classes="h2"
+                                                                   Text="Aktuell gesendete Bilder/Videos (Galerie)" />
+                                                        <TextBlock Classes="muted" Text="Noch nichts gesendet."
+                                                                   IsVisible="{Binding HasNoSentMediaItems}" />
+                                                        <ItemsControl ItemsSource="{Binding SentMediaItems}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <WrapPanel Orientation="Horizontal" />
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:SentMediaItemViewModel">
+                                                                    <Border Classes="item" Width="120" Margin="0,0,10,10" PointerPressed="OnSentMediaItemPointerPressed" ToolTip.Tip="Klick: bei SL und allen Spielern hervorheben">
+                                                                        <StackPanel Spacing="6">
+                                                                            <Panel>
+                                                                                <Border Width="96" Height="96" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource SurfaceAltBrush}" HorizontalAlignment="Center">
+                                                                                    <Panel>
+                                                                                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" IsVisible="{Binding HasThumbnail}"/>
+                                                                                        <TextBlock Text="{Binding FallbackIcon}" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasThumbnail}"/>
+                                                                                    </Panel>
+                                                                                </Border>
+                                                                                <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,-4,0">
+                                                                                   <Button  Classes="iconsquare" Content="&#10005;" Command="{Binding RetractCommand}" ToolTip.Tip="Aus der Galerie entfernen" Width="22" Height="22" FontSize="10"/>
+                                                                                </StackPanel>
+                                                                            </Panel>
+                                                                            <TextBlock Text="{Binding Name}"
+                                                                                    FontWeight="Bold" FontSize="12"
+                                                                                    TextTrimming="CharacterEllipsis"
+                                                                                    HorizontalAlignment="Center" />
+                                                                            <StackPanel Orientation="Horizontal"
+                                                                                    Spacing="6"
+                                                                                    HorizontalAlignment="Center">
+                                                                                <TextBlock Text="{Binding KindLabel}"
+                                                                                    Classes="muted" FontSize="11"
+                                                                                    VerticalAlignment="Center" />
+                                                                            </StackPanel>
+                                                                        </StackPanel>
+                                                                    </Border>
+
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+                                        </ScrollViewer>
+                                    </TabItem>
+
+                                    <TabItem Header="Sounds">
+                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
+                                                      VerticalScrollBarVisibility="Visible">
+                                            <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
+                                                <Border Grid.Column="0" Classes="settingsGroup" Margin="0 0 4 0">
+                                                    <controls:LibraryPanelView x:Name="SoundLibraryPanel"
+                                                                               Title="Sound-Bibliothek"
+                                                                               Description="Vorausgewählte Sounds"
+                                                                               EmptyStateText="Noch keine Sounds in der Bibliothek."
+                                                                               HasNoItems="{Binding HasNoSoundLibraryItems}"
+                                                                               ErrorMessage="{Binding MediaErrorMessage, Mode=TwoWay}"
+                                                                               ItemsSource="{Binding SoundLibrary}">
+                                                        <controls:LibraryPanelView.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:SoundLibraryItemViewModel">
+                                                                <Border Classes="item" Width="140"
+                                                                        Margin="0,0,10,10"
+                                                                        PointerPressed="OnSoundLibraryItemPointerPressed"
+                                                                        ToolTip.Tip="Einfachklick: an Spieler senden">
+                                                                    <StackPanel Spacing="6">
+                                                                        <Grid ColumnDefinitions="*,Auto,Auto">
+                                                                            <PathIcon Grid.Column="0"
+                                                                                    Data="{Binding IconGeometry}"
+                                                                                    Width="20" Height="20"
+                                                                                    HorizontalAlignment="Left"
+                                                                                    Foreground="{DynamicResource TextBrush}"
+                                                                                    PointerPressed="OnSoundIconPointerPressed"
+                                                                                    ToolTip.Tip="Doppelklick: Bootstrap Icon auswählen" />
+                                                                            <Button Grid.Column="1"
+                                                                                    Classes="iconsquare" Content="⚙"
+                                                                                    Width="22" Height="22"
+                                                                                    FontSize="11"
+                                                                                    ToolTip.Tip="Sound-Einstellungen">
+                                                                                <Button.Flyout>
+                                                                                    <Flyout Placement="Bottom">
+                                                                                        <StackPanel Spacing="8"
+                                                                                            Width="240">
+                                                                                            <TextBlock
+                                                                                                Classes="muted"
+                                                                                                Text="Name" />
+                                                                                            <TextBox
+                                                                                                Text="{Binding Name, Mode=TwoWay}" />
+
+                                                                                            <TextBlock
+                                                                                                Classes="muted"
+                                                                                                Text="Lautstärke" />
+                                                                                            <Slider Minimum="0"
+                                                                                                Maximum="100"
+                                                                                                Value="{Binding Volume}" />
+
+                                                                                            <CheckBox
+                                                                                                Content="🔁 Endlosschleife"
+                                                                                                IsChecked="{Binding Loop}" />
+
+                                                                                            <StackPanel Spacing="2"
+                                                                                                IsVisible="{Binding !Loop}">
+                                                                                                <TextBlock
+                                                                                                    Classes="muted"
+                                                                                                    Text="Wiederholungen" />
+                                                                                                <NumericUpDown
+                                                                                                    Value="{Binding RepeatCount}"
+                                                                                                    Minimum="1"
+                                                                                                    Maximum="20"
+                                                                                                    FormatString="0"
+                                                                                                    HorizontalAlignment="Stretch" />
+                                                                                            </StackPanel>
+
+                                                                                            <Separator
+                                                                                                Background="{DynamicResource BorderBrush}" />
+                                                                                            <TextBlock
+                                                                                                Classes="muted"
+                                                                                                Text="Zurechtschneiden (Sekunden, 0 = aus)"
+                                                                                                TextWrapping="Wrap" />
+                                                                                            <Grid
+                                                                                                ColumnDefinitions="*,*"
+                                                                                                ColumnSpacing="8">
+                                                                                                <StackPanel
+                                                                                                    Grid.Column="0"
+                                                                                                    Spacing="2">
+                                                                                                    <TextBlock
+                                                                                                        Classes="muted"
+                                                                                                        Text="Start"
+                                                                                                        FontSize="11" />
+                                                                                                    <NumericUpDown
+                                                                                                        Value="{Binding TrimStartSeconds}"
+                                                                                                        Minimum="0"
+                                                                                                        FormatString="0.0"
+                                                                                                        Increment="0.5"
+                                                                                                        HorizontalAlignment="Stretch" />
+                                                                                                </StackPanel>
+                                                                                                <StackPanel
+                                                                                                    Grid.Column="1"
+                                                                                                    Spacing="2">
+                                                                                                    <TextBlock
+                                                                                                        Classes="muted"
+                                                                                                        Text="Ende"
+                                                                                                        FontSize="11"
+                                                                                                        ToolTip.Tip="0 = bis zum Dateiende" />
+                                                                                                    <NumericUpDown
+                                                                                                        Value="{Binding TrimEndSeconds}"
+                                                                                                        Minimum="0"
+                                                                                                        FormatString="0.0"
+                                                                                                        Increment="0.5"
+                                                                                                        HorizontalAlignment="Stretch" />
+                                                                                                </StackPanel>
+                                                                                            </Grid>
+
+                                                                                            <Button
+                                                                                                Content="▶ SL-Test"
+                                                                                                Command="{Binding TestCommand}"
+                                                                                                HorizontalAlignment="Stretch"
+                                                                                                ToolTip.Tip="Nur lokal beim SL testen (nicht senden)" />
+                                                                                        </StackPanel>
+                                                                                    </Flyout>
+                                                                                </Button.Flyout>
+                                                                            </Button>
+                                                                            <Button Grid.Column="2"
+                                                                                    Classes="iconsquare"
+                                                                                    Content="&#10005;"
+                                                                                    Command="{Binding DeleteCommand}"
+                                                                                    ToolTip.Tip="Aus Bibliothek entfernen"
+                                                                                    Width="22" Height="22"
+                                                                                    FontSize="10" />
+                                                                        </Grid>
+                                                                        <TextBlock Text="{Binding Name}"
+                                                                                FontWeight="Bold" FontSize="12"
+                                                                                TextTrimming="CharacterEllipsis" />
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </controls:LibraryPanelView.ItemTemplate>
+                                                    </controls:LibraryPanelView>
+                                                </Border>
+                                                <Border Grid.Column="1" Classes="settingsGroup">
+                                                    <StackPanel Spacing="4">
+
+                                                        <StackPanel IsVisible="False">
+                                                            <TextBlock Classes="muted"
+                                                                       Text="Sound an Spieler senden (ohne Bibliothek)" />
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <Button Grid.Column="0" Content="+ Sound senden"
+                                                                        Click="OnSendSoundClick"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        Margin="0,0,8,0" />
+                                                                <CheckBox Grid.Column="1" Content="🔁 Loop"
+                                                                          IsChecked="{Binding SendSoundLoop}"
+                                                                          VerticalAlignment="Center"
+                                                                          ToolTip.Tip="Sound am Ende von vorn beginnen, statt natürlich zu enden" />
+                                                            </Grid>
+                                                            <TextBlock Classes="muted"
+                                                                       Text="MP3, WAV, OGG, FLAC, AIFF, M4A/AAC (max. 1900 MB)"
+                                                                       TextWrapping="Wrap" />
+
+                                                            <Separator Background="{DynamicResource BorderBrush}" />
+
+
+                                                        </StackPanel>
+
+                                                        <StackPanel Spacing="8" Margin="10,0,0,0">
+                                                            <TextBlock
+                                                                Classes="h2"
+                                                                Text="Aktuell abgespielte Sounds"
+                                                                VerticalAlignment="Center" />
+                                                            <TextBlock Classes="muted"
+                                                                       Text="Keine Sounds aktiv."
+                                                                       IsVisible="{Binding HasNoActivePlayingSounds}" />
+
+                                                            <ItemsControl ItemsSource="{Binding ActivePlayingSounds}"
+                                                                          IsVisible="{Binding !HasNoActivePlayingSounds}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <WrapPanel Orientation="Horizontal" />
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:ActiveSoundViewModel">
+                                                                        <Border Classes="item"
+                                                                                Width="160"
+                                                                                Margin="0,0,10,10">
+                                                                            <StackPanel Spacing="8">
+                                                                                <Grid ColumnDefinitions="*,Auto">
+                                                                                    <StackPanel Grid.Column="0"
+                                                                                        Spacing="2">
+                                                                                        <TextBlock
+                                                                                            Text="{Binding Name}"
+                                                                                            FontWeight="Bold"
+                                                                                            FontSize="12"
+                                                                                            TextTrimming="CharacterEllipsis" />
+                                                                                        <TextBlock Text="🔁 Loop"
+                                                                                            Classes="muted"
+                                                                                            FontSize="11"
+                                                                                            IsVisible="{Binding Loop}" />
+                                                                                    </StackPanel>
+                                                                                    <Button Grid.Column="1"
+                                                                                        Classes="iconsquare"
+                                                                                        Content="⏹"
+                                                                                        Command="{Binding StopCommand}"
+                                                                                        ToolTip.Tip="Diesen Sound stoppen"
+                                                                                        Width="22"
+                                                                                        Height="22"
+                                                                                        FontSize="10"
+                                                                                        VerticalAlignment="Top" />
+                                                                                </Grid>
+                                                                                <StackPanel Spacing="2">
+                                                                                    <TextBlock Classes="muted"
+                                                                                        Text="Lautstärke"
+                                                                                        FontSize="11" />
+                                                                                    <Slider Minimum="0"
+                                                                                        Maximum="100"
+                                                                                        Value="{Binding Volume}"
+                                                                                        ToolTip.Tip="Lautstärke live anpassen" />
+                                                                                </StackPanel>
+                                                                            </StackPanel>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+                                        </ScrollViewer>
+                                    </TabItem>
+
+                                    <TabItem Header="Kalender">
+                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
+                                                      VerticalScrollBarVisibility="Visible">
+                                            <StackPanel Spacing="14" Margin="4,14,13,16">
+                                                <Border Classes="settingsGroup">
+                                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                                                        <StackPanel Grid.Column="0" Spacing="4">
+                                                            <TextBlock Classes="h2" Text="Kalender" />
+                                                            <TextBlock Classes="muted"
+                                                                       Text="Monatsansicht mit Tagesliste. Im Spielerfenster erscheint die Umschaltung nur, wenn spielersichtbare Einträge existieren."
+                                                                       TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1"
+                                                                Content="+ Eintrag"
+                                                                Command="{Binding AddCalendarEntryCommand}" />
+                                                        <Button Grid.Column="2"
+                                                                Content="Exportieren…"
+                                                                Click="OnExportCalendarClick" />
+                                                        <Button Grid.Column="3"
+                                                                Content="Importieren…"
+                                                                Click="OnImportCalendarClick" />
+                                                    </Grid>
+                                                </Border>
+
+                                                <Grid ColumnDefinitions="360,*" ColumnSpacing="14">
+                                                    <Border Grid.Column="0" Classes="settingsGroup">
+                                                        <StackPanel Spacing="10">
+                                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                                <Button Grid.Column="0"
+                                                                        Classes="iconsquare"
+                                                                        Command="{Binding PreviousPlayerCalendarMonthCommand}"
+                                                                        Content="&#8249;" />
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding PlayerCalendarMonthLabel}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"
+                                                                           FontWeight="Bold" />
+                                                                <Button Grid.Column="2"
+                                                                        Classes="iconsquare"
+                                                                        Command="{Binding NextPlayerCalendarMonthCommand}"
+                                                                        Content="&#8250;" />
+                                                            </Grid>
+
+                                                            <UniformGrid Columns="7">
+                                                                <TextBlock Text="Mo" HorizontalAlignment="Center"
+                                                                           Classes="muted" />
+                                                                <TextBlock Text="Di" HorizontalAlignment="Center"
+                                                                           Classes="muted" />
+                                                                <TextBlock Text="Mi" HorizontalAlignment="Center"
+                                                                           Classes="muted" />
+                                                                <TextBlock Text="Do" HorizontalAlignment="Center"
+                                                                           Classes="muted" />
+                                                                <TextBlock Text="Fr" HorizontalAlignment="Center"
+                                                                           Classes="muted" />
+                                                                <TextBlock Text="Sa" HorizontalAlignment="Center"
+                                                                           Classes="muted" />
+                                                                <TextBlock Text="So" HorizontalAlignment="Center"
+                                                                           Classes="muted" />
+                                                            </UniformGrid>
+
+                                                            <ItemsControl ItemsSource="{Binding PlayerCalendarDays}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <UniformGrid Columns="7" />
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate
+                                                                        x:DataType="viewModels:PlayerCalendarDayViewModel">
+                                                                        <Button Classes="calendarDay"
+                                                                                Classes.outside="{Binding !IsCurrentMonth}"
+                                                                                Classes.selected="{Binding IsSelected}"
+                                                                                Classes.today="{Binding IsToday}"
+                                                                                Classes.hasEntries="{Binding HasEntries}"
+                                                                                Command="{Binding SelectCommand}"
+                                                                                Margin="2"
+                                                                                MinHeight="44"
+                                                                                HorizontalAlignment="Stretch"
+                                                                                VerticalAlignment="Stretch"
+                                                                                Padding="0">
+                                                                            <TextBlock Text="{Binding DayNumber}"
+                                                                                    HorizontalAlignment="Center" />
+                                                                        </Button>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </Border>
+
+                                                    <StackPanel Grid.Column="1"
+                                                                Spacing="14"
+                                                                IsVisible="{Binding HasCalendarEntries}">
+                                                        <Border Classes="settingsGroup"
+                                                                IsVisible="{Binding HasSelectedCalendarEntry}">
+                                                            <StackPanel Spacing="8">
+                                                                <TextBlock Classes="settingsGroupTitle"
+                                                                           Text="{Binding PlayerCalendarSelectedDateLabel}" />
+                                                                <TextBlock Classes="muted"
+                                                                           Text="Keine Einträge für den ausgewählten Tag."
+                                                                           IsVisible="{Binding !HasCalendarEntriesForSelectedDate}" />
+                                                                <ListBox
+                                                                    ItemsSource="{Binding CalendarEntriesForSelectedDate}"
+                                                                    SelectedItem="{Binding SelectedCalendarEntry}"
+                                                                    IsVisible="{Binding HasCalendarEntriesForSelectedDate}"
+                                                                    MinHeight="120">
+                                                                    <ListBox.ItemTemplate>
+                                                                        <DataTemplate
+                                                                            x:DataType="viewModels:CalendarEntryViewModel">
+                                                                            <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+                                                                                    ColumnSpacing="10">
+                                                                                <Border Grid.Column="0"
+                                                                                    Width="6"
+                                                                                    CornerRadius="3"
+                                                                                    Background="{Binding ColorBrush}" />
+                                                                                <PathIcon Grid.Column="1"
+                                                                                    Data="{Binding IconGeometry}"
+                                                                                    Width="18"
+                                                                                    Height="18"
+                                                                                    VerticalAlignment="Top" />
+                                                                                <StackPanel Grid.Column="2" Spacing="3">
+                                                                                    <TextBlock Text="{Binding Title}"
+                                                                                        FontWeight="Bold" />
+                                                                                    <TextBlock
+                                                                                        Text="{Binding StartDateTimeText}"
+                                                                                        Classes="muted" />
+                                                                                </StackPanel>
+                                                                                <TextBlock Grid.Column="3"
+                                                                                    Text="Spieler"
+                                                                                    Classes="muted"
+                                                                                    IsVisible="{Binding IsPlayerVisible}" />
+                                                                            </Grid>
+                                                                        </DataTemplate>
+                                                                    </ListBox.ItemTemplate>
+                                                                </ListBox>
+                                                            </StackPanel>
+                                                        </Border>
+
+                                                        <Border Classes="settingsGroup">
+                                                            <StackPanel Spacing="10">
+                                                                <TextBlock Classes="settingsGroupTitle" Text="Eintrag" />
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{Binding SelectedCalendarEntry.ValidationMessage}"
+                                                                           Foreground="{DynamicResource WarnBrush}"
+                                                                           IsVisible="{Binding SelectedCalendarEntry.ValidationMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                                           TextWrapping="Wrap" />
+
+                                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                                                    <StackPanel Grid.Column="0" Spacing="4">
+                                                                        <TextBlock Classes="muted" Text="Titel" />
+                                                                        <TextBox
+                                                                            Text="{Binding SelectedCalendarEntry.Title, Mode=TwoWay}" />
+                                                                    </StackPanel>
+                                                                    <StackPanel Grid.Column="1" Spacing="4">
+                                                                        <TextBlock Classes="muted" Text="Icon" />
+                                                                        <ComboBox ItemsSource="{Binding IconOptions}"
+                                                                                SelectedItem="{Binding SelectedCalendarEntry.Icon, Mode=TwoWay}"
+                                                                                Width="170" />
+                                                                    </StackPanel>
+                                                                </Grid>
+
+                                                                <StackPanel Spacing="4">
+                                                                    <TextBlock Classes="muted" Text="Beschreibung" />
+                                                                    <TextBox
+                                                                        Text="{Binding SelectedCalendarEntry.Description, Mode=TwoWay}"
+                                                                        AcceptsReturn="True"
+                                                                        TextWrapping="Wrap"
+                                                                        MinHeight="84" />
+                                                                </StackPanel>
+
+                                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                                                    <StackPanel Grid.Column="0" Spacing="4">
+                                                                        <TextBlock Classes="muted" Text="Start" />
+                                                                        <controls:DateTimeInput
+                                                                            Text="{Binding SelectedCalendarEntry.StartDateTimeText, Mode=TwoWay}" />
+                                                                    </StackPanel>
+                                                                    <StackPanel Grid.Column="1" Spacing="4">
+                                                                        <TextBlock Classes="muted" Text="Enddatum" />
+                                                                        <TextBox
+                                                                            Text="{Binding SelectedCalendarEntry.RepeatUntilText, Mode=TwoWay}"
+                                                                            PlaceholderText="YYYY-MM-DD" />
+                                                                    </StackPanel>
+                                                                </Grid>
+
+                                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                                                    <StackPanel Grid.Column="0" Spacing="4">
+                                                                        <TextBlock Classes="muted" Text="Wiederholung" />
+                                                                        <ComboBox
+                                                                            ItemsSource="{Binding CalendarRecurrenceOptions}"
+                                                                            SelectedItem="{Binding SelectedCalendarEntry.Recurrence, Mode=TwoWay}"
+                                                                            HorizontalAlignment="Stretch" />
+                                                                    </StackPanel>
+                                                                    <StackPanel Grid.Column="1" Spacing="4">
+                                                                        <TextBlock Classes="muted" Text="Farbe" />
+                                                                        <ColorPicker
+                                                                            Color="{Binding SelectedCalendarEntry.ColorHex, Converter={x:Static conv:HexColorConverter.Instance}, Mode=TwoWay}"
+                                                                            ToolTip.Tip="Rahmenfarbe dieses Eintrags im Kalender" />
+                                                                    </StackPanel>
+                                                                </Grid>
+
+                                                                <CheckBox Content="Für Spieler sichtbar"
+                                                                          IsChecked="{Binding SelectedCalendarEntry.IsPlayerVisible, Mode=TwoWay}" />
+
+                                                                <Border Background="{DynamicResource SurfaceBrush}"
+                                                                        BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="6"
+                                                                        Padding="10">
+                                                                    <StackPanel Spacing="8">
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="Bild/Video auslösen" />
+                                                                        <ComboBox ItemsSource="{Binding MediaLibrary}"
+                                                                                SelectedItem="{Binding SelectedCalendarTriggerMediaItem, Mode=TwoWay}">
+                                                                            <ComboBox.ItemTemplate>
+                                                                                <DataTemplate
+                                                                                    x:DataType="vm:MediaLibraryItemViewModel">
+                                                                                    <TextBlock Text="{Binding Name}" />
+                                                                                </DataTemplate>
+                                                                            </ComboBox.ItemTemplate>
+                                                                        </ComboBox>
+
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="Sound auslösen" />
+                                                                        <ComboBox ItemsSource="{Binding SoundLibrary}"
+                                                                                SelectedItem="{Binding SelectedCalendarTriggerSoundItem, Mode=TwoWay}">
+                                                                            <ComboBox.ItemTemplate>
+                                                                                <DataTemplate
+                                                                                    x:DataType="vm:SoundLibraryItemViewModel">
+                                                                                    <TextBlock Text="{Binding Name}" />
+                                                                                </DataTemplate>
+                                                                            </ComboBox.ItemTemplate>
+                                                                        </ComboBox>
+
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="{Binding SelectedCalendarEntry.TriggerSummary}"
+                                                                                TextWrapping="Wrap" />
+
+                                                                        <StackPanel Orientation="Horizontal"
+                                                                                Spacing="12"
+                                                                                IsVisible="{Binding SelectedCalendarEntry.TriggerMedia.HasMedia}">
+                                                                            <CheckBox Content="⛶ Vollbild"
+                                                                                    IsChecked="{Binding SelectedCalendarEntry.TriggerMedia.Fullscreen, Mode=TwoWay}" />
+                                                                            <CheckBox Content="⏸ Spielzeit pausieren"
+                                                                                    IsChecked="{Binding SelectedCalendarEntry.TriggerMedia.PauseClockDuringVideo, Mode=TwoWay}"
+                                                                                    IsVisible="{Binding SelectedCalendarEntry.TriggerMedia.IsVideo}" />
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </Border>
+
+                                                                <Button Content="Eintrag löschen"
+                                                                        Command="{Binding SelectedCalendarEntry.DeleteCommand}"
+                                                                        HorizontalAlignment="Right" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </StackPanel>
+                                        </ScrollViewer>
+                                    </TabItem>
+
+                                    <TabItem Header="Einstellungen">
+                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                                      VerticalScrollBarVisibility="Visible" AllowAutoHide="false">
+                                            <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
+                                                <!-- Linke Spalte: Dinge, die man einmal pro Kampagne einstellt. -->
+                                                <StackPanel Grid.Column="0" Spacing="14" Margin="0,0,10,0">
+                                                    <Border Classes="settingsGroup">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="🎨 Darstellung" />
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="muted" Text="Stil" />
+                                                                <ComboBox ItemsSource="{Binding ThemeOptions}"
+                                                                          SelectedItem="{Binding SelectedThemeOption}"
+                                                                          HorizontalAlignment="Stretch" />
+                                                                <CheckBox
+                                                                    Content="Ambiente-Automatik (Hintergrund nach Tageszeit wechseln)"
+                                                                    IsChecked="{Binding AmbienceAutomationEnabled, Mode=TwoWay}"
+                                                                    IsEnabled="{Binding HasAmbienceBackgrounds}"
+                                                                    ToolTip.Tip="Nur wirksam, wenn das gewählte Design (JSON) mehr als einen benannten Hintergrund hat" />
+                                                            </StackPanel>
+                                                            <Separator Background="{DynamicResource BorderBrush}" />
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="muted" Text="Spielerfenster-Titel" />
+                                                                <TextBox
+                                                                    Text="{Binding PlayerHeaderTitle, Mode=TwoWay}"
+                                                                    PlaceholderText="Titel im Spielerfenster" />
+                                                                <TextBox
+                                                                    Text="{Binding PlayerHeaderSubtitle, Mode=TwoWay}"
+                                                                    PlaceholderText="Untertitel im Spielerfenster" />
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+
+                                                    <Border Classes="settingsGroup">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="🔔 Vorwarnung" />
+                                                            <StackPanel Spacing="4">
+                                                                <CheckBox
+                                                                    Content="Vorwarnen, bevor ein Timer/Wecker/OnTime auslöst"
+                                                                    IsChecked="{Binding HeadsUpWarningEnabled, Mode=TwoWay}" />
+                                                                <Grid ColumnDefinitions="Auto,Auto"
+                                                                      IsEnabled="{Binding HeadsUpWarningEnabled}">
+                                                                    <TextBlock Grid.Column="0" Classes="muted"
+                                                                               Text="Vorlauf (Minuten)"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="0,0,10,0" />
+                                                                    <NumericUpDown Grid.Column="1"
+                                                                            Value="{Binding HeadsUpLeadMinutes, Mode=TwoWay}"
+                                                                            Minimum="0.1" Maximum="60" Increment="0.5"
+                                                                            FormatString="0.0" Width="110" />
+                                                                </Grid>
+                                                                <TextBlock Classes="muted"
+                                                                           Text="Wird nie an Spieler gesendet - erscheint nur hier im SL-Fenster."
+                                                                           TextWrapping="Wrap" />
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <!-- Rechte Spalte: Dinge mit Listen, die während der Sitzung mitwachsen. -->
+                                                <StackPanel Grid.Column="1" Spacing="14" Margin="10,0,0,0">
+                                                    <Border Classes="settingsGroup">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="🌐 Netzwerk-Spieleranzeige" />
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="muted"
+                                                                           Text="Servername (im Announcement, für Spieler sichtbar)" />
+                                                                <TextBox Text="{Binding ServerName, Mode=TwoWay}"
+                                                                         PlaceholderText="RpgTimeTracker"
+                                                                         MaxLength="60" />
+                                                                <TextBlock Classes="muted"
+                                                                           Text="PIN (optional, leer = kein PIN erforderlich)" />
+                                                                <TextBox Text="{Binding ConnectionPin, Mode=TwoWay}"
+                                                                         PasswordChar="•"
+                                                                         PlaceholderText="Kein PIN"
+                                                                         MaxLength="32" />
+                                                                <Grid ColumnDefinitions="*,Auto">
+                                                                    <NumericUpDown Grid.Column="0"
+                                                                            Value="{Binding NetworkServerPort}"
+                                                                            Minimum="1"
+                                                                            Maximum="65535"
+                                                                            FormatString="0"
+                                                                            Margin="0,0,8,0" />
+                                                                    <Button Grid.Column="1"
+                                                                            Content="{Binding ToggleNetworkServerLabel}"
+                                                                            Command="{Binding ToggleNetworkServerCommand}" />
+                                                                </Grid>
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{Binding NetworkServerStatus}"
+                                                                           TextWrapping="Wrap" />
+                                                                <TextBlock Classes="muted"
+                                                                           Text="Startet TCP + mDNS/LAN-Suche nur bei Bedarf. Servername wird beim nächsten Serverstart übernommen."
+                                                                           TextWrapping="Wrap" />
+                                                            </StackPanel>
+                                                            <Separator Background="{DynamicResource BorderBrush}" />
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="muted" Text="Verbundene Clients" />
+                                                                <TextBlock Classes="muted"
+                                                                           Text="Keine Clients verbunden."
+                                                                           IsVisible="{Binding HasNoConnectedClients}"
+                                                                           FontStyle="Italic" />
+                                                                <ItemsControl
+                                                                    ItemsSource="{Binding ConnectedClientItems}">
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate
+                                                                            x:DataType="vm:ConnectedClientItemViewModel">
+                                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                                    Margin="0,2">
+                                                                                <StackPanel Grid.Column="0"
+                                                                                    Orientation="Horizontal"
+                                                                                    Spacing="8"
+                                                                                    VerticalAlignment="Center">
+                                                                                    <TextBlock
+                                                                                        Text="{Binding RemoteEndpoint}" />
+                                                                                    <TextBlock Classes="muted"
+                                                                                        Text="{Binding ConnectedSinceDisplay, StringFormat='seit {0}'}" />
+                                                                                </StackPanel>
+                                                                                <Button Grid.Column="1"
+                                                                                    Content="Trennen"
+                                                                                    Command="{Binding DisconnectCommand}"
+                                                                                    ToolTip.Tip="Diesen Client vom Server trennen" />
+                                                                            </Grid>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="settingsGroup">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="📋 Diashow Geschwindigkeit" />
+                                                            <StackPanel Spacing="4">
+                                                                <Grid ColumnDefinitions="Auto,*">
+                                                                    <TextBlock Grid.Column="0" Classes="muted"
+                                                                               Text="Sek./Bild:"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="0,0,8,0" />
+                                                                    <NumericUpDown Grid.Column="1"
+                                                                            Value="{Binding SlideshowSecondsPerImage}"
+                                                                            Minimum="0" FormatString="0"
+                                                                            HorizontalAlignment="Stretch"
+                                                                            ToolTip.Tip="Automatische Weiterschaltung - 0 = manuell. Gilt nie für Videos." />
+                                                                </Grid>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="settingsGroup">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="📋 Sitzungsprotokoll" />
+                                                            <StackPanel Spacing="4">
+                                                                <CheckBox
+                                                                    Content="Ereignisse aufzeichnen (Zeitsprünge, Auslösungen, gesendete Medien)"
+                                                                    IsChecked="{Binding RecordSessionLog, Mode=TwoWay}" />
+                                                                <Grid ColumnDefinitions="*,Auto">
+                                                                    <Button Grid.Column="0"
+                                                                            Content="Protokoll exportieren…"
+                                                                            Click="OnExportSessionLogClick"
+                                                                            IsEnabled="{Binding HasSessionLogEntries}"
+                                                                            HorizontalAlignment="Stretch"
+                                                                            Margin="0,0,6,0" />
+                                                                    <Button Grid.Column="1" Content="Leeren"
+                                                                            Command="{Binding ClearSessionLogCommand}"
+                                                                            IsEnabled="{Binding HasSessionLogEntries}" />
+                                                                </Grid>
+                                                                <Border Background="{DynamicResource SurfaceBrush}"
+                                                                        BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="6"
+                                                                        Padding="8"
+                                                                        MaxHeight="140"
+                                                                        IsVisible="{Binding HasSessionLogEntries}">
+                                                                    <ScrollViewer VerticalScrollBarVisibility="Auto" AllowAutoHide="false">
+                                                                        <ItemsControl
+                                                                            ItemsSource="{Binding SessionLogEntries}">
+                                                                            <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="x:String">
+                                                                                    <TextBlock Text="{Binding}"
+                                                                                        Classes="muted"
+                                                                                        TextWrapping="Wrap" />
+                                                                                </DataTemplate>
+                                                                            </ItemsControl.ItemTemplate>
+                                                                        </ItemsControl>
+                                                                    </ScrollViewer>
+                                                                </Border>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </StackPanel>
+                                            </Grid>
+                                        </ScrollViewer>
+                                    </TabItem>
+                                </TabControl>
+                            </DockPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Statusleiste: bleibt bei jedem Tab-Wechsel gleich hoch (siehe design-decisions.md
+                     "Statusleiste statt reflow-anfälliger Tab-Inhalte") - Serverstatus, aktuelles
+                     Bild/Video (mit Schließen-Button) und Benachrichtigungen, damit hier nie etwas
+                     "springt". -->
+                    <Border Grid.Row="3" Classes="card" MinHeight="50" Margin="0,12,0,0" Padding="14,8">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Ellipse Width="9" Height="9" Fill="{DynamicResource OkBrush}"
+                                         IsVisible="{Binding IsNetworkServerRunning}" />
+                                <Ellipse Width="9" Height="9" Fill="{DynamicResource BorderBrush}"
+                                         IsVisible="{Binding !IsNetworkServerRunning}" />
+                                <TextBlock Text="{Binding ServerStatusSummary}" Classes="muted"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Classes="muted"
+                                           Text="{Binding MediaErrorMessage}"
+                                           IsVisible="{Binding MediaErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                           Foreground="{DynamicResource WarnBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"
+                                        IsVisible="{Binding HasMedia}" Margin="16,0">
+                                <TextBlock Text="🖼" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                <Button Classes="iconsquare" Content="&#8249;" Width="22" Height="22" FontSize="12"
+                                        Command="{Binding PreviousGalleryItemCommand}"
+                                        ToolTip.Tip="Vorheriges Galerie-Element hervorheben"
+                                        IsVisible="{Binding !HasNoSentMediaItems}" />
+                                <TextBlock Text="{Binding CurrentMediaFileName}" Classes="muted" MaxWidth="200"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <Button Classes="iconsquare" Content="&#8250;" Width="22" Height="22" FontSize="12"
+                                        Command="{Binding NextGalleryItemCommand}"
+                                        ToolTip.Tip="Nächstes Galerie-Element hervorheben"
+                                        IsVisible="{Binding !HasNoSentMediaItems}" />
+                                <Button Classes="iconsquare" Content="&#10005;" Width="22" Height="22" FontSize="10"
+                                        Command="{Binding ClearMediaCommand}" ToolTip.Tip="Medium schließen"
+                                        Margin="6,0,0,0" />
+                            </StackPanel>
+
+                            <!-- Immer sichtbar (nicht IsVisible-gebunden) und fest 22x22 - eine feste
+                             Spaltenbreite, die sich nie ändert, egal ob/wie viele Benachrichtigungen
+                             es gibt. Der Punkt zeigt nur an, ob gerade eine neue (noch nicht
+                             abgelaufene) Meldung ansteht; der Verlauf im Flyout bleibt unabhängig
+                             davon erhalten. -->
+                            <Button Grid.Column="3" Classes="iconsquare" Width="22" Height="22" FontSize="12"
+                                    Margin="10,0,0,0"
+                                    ToolTip.Tip="Benachrichtigungen">
+                                <Panel>
+                                    <TextBlock Text="🔔" />
+                                    <Ellipse Width="7" Height="7" Fill="{DynamicResource OkBrush}"
+                                             HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-2,-2,0"
+                                             IsVisible="{Binding ActionStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                </Panel>
+                                <Button.Flyout>
+                                    <Flyout Placement="TopEdgeAlignedRight">
+                                        <StackPanel Spacing="8" Width="300" Margin="4">
+                                            <TextBlock Classes="h2" Text="Benachrichtigungen" />
+                                            <ItemsControl ItemsSource="{Binding ActionStatusHistory}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="x:String">
+                                                        <TextBlock Text="{Binding}" Classes="muted" TextWrapping="Wrap"
+                                                                   Margin="0,0,0,4" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Classes="muted" Text="Noch keine Benachrichtigungen."
+                                                       IsVisible="{Binding HasNoActionStatusHistory}" />
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+
+                            <!-- Ein gemeinsamer Vollbild-Schalter für lokales Spielerfenster und
+                             Remote-Clients; was tatsächlich geschaltet wird, entscheidet das
+                             ViewModel anhand der gerade verfügbaren Ziele. -->
+                            <Button Grid.Column="4"
+                                    Classes="iconsquare"
+                                    Classes.active="{Binding IsDisplayFullscreenActive}"
+                                    Width="22"
+                                    Height="22"
+                                    FontSize="12"
+                                    Margin="10,0,0,0"
+                                    Content="&#9974;"
+                                    Command="{Binding ToggleDisplayFullscreenCommand}"
+                                    IsEnabled="{Binding CanToggleDisplayFullscreen}"
+                                    ToolTip.Tip="{Binding DisplayFullscreenLabel}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Panel>
+        </Border>
+    </Panel>
+</Window>

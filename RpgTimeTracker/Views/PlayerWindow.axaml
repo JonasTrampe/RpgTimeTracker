@@ -1,0 +1,156 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RpgTimeTracker.ViewModels"
+        xmlns:views="using:RpgTimeTracker.Shared.Views"
+        xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+        x:Class="RpgTimeTracker.Views.PlayerWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="RPG Zeitverfolgung — Spieleranzeige"
+        Width="1050" Height="640" MinWidth="780" MinHeight="460"
+        Background="{DynamicResource WindowBackgroundBrush}">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+
+        <!-- Nur Werte, die hier bewusst vom gemeinsamen Chrome abweichen (größere Schrift
+             für ein Fenster, das aus größerer Entfernung gelesen wird). -->
+        <Style Selector="Border.windowframe">
+            <Setter Property="Background" Value="#20000000" />
+            <Setter Property="Padding" Value="14" />
+        </Style>
+
+        <Style Selector="Border.chrome">
+            <Setter Property="Height" Value="98" />
+        </Style>
+
+        <Style Selector="Border.item.completed">
+            <Setter Property="Background" Value="{DynamicResource CompletedBrush}" />
+        </Style>
+
+        <Style Selector="Border.item.active">
+            <Setter Property="Background" Value="{DynamicResource PulseBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PulseBorderBrush}" />
+        </Style>
+
+        <Style Selector="Border.item.blink">
+            <Setter Property="Opacity" Value="0.62" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PulseBorderBrush}" />
+        </Style>
+
+        <Style Selector="TextBlock.heroTitle">
+            <Setter Property="FontSize" Value="24" />
+            <Setter Property="Height" Value="32" />
+        </Style>
+
+        <Style Selector="TextBlock.clockValue">
+            <Setter Property="FontSize" Value="20" />
+        </Style>
+
+        <Style Selector="TextBlock.timeValue">
+            <Setter Property="FontSize" Value="18" />
+        </Style>
+
+        <Style Selector="ProgressBar.timerbar">
+            <Setter Property="Height" Value="12" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+
+        <Style Selector="Button.calendarToggle">
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="MinWidth" Value="96" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="Button.calendarDay">
+            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InnerFrameBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.outside">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.today">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.selected">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryButtonTextBrush}" />
+        </Style>
+
+        <Style Selector="Button.calendarDay.hasEntries">
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+    </Window.Styles>
+
+    <Panel>
+        <Rectangle Fill="{DynamicResource WindowBackgroundImageBrush}" />
+        <Rectangle Fill="{DynamicResource WindowOverlayBrush}" />
+        <Rectangle Fill="{DynamicResource WindowOverlayImageBrush}" Opacity="0.12" />
+
+        <Border Classes="windowframe" Margin="10">
+            <Grid RowDefinitions="Auto,*">
+                <views:PlayerHeaderView Grid.Row="0" />
+                <views:PlayerTimelineListView Grid.Row="1" Margin="0,14,0,0" />
+            </Grid>
+        </Border>
+
+        <!-- Nur sichtbar, wenn kein Client verbunden ist (bzw. der Server aus ist) UND dieses
+             Fenster offen ist - läuft ein Client mit, zeigt der ohnehin dasselbe Medium an. -->
+        <Panel IsVisible="{Binding ShouldShowMediaLocally}" Background="Black"
+               PointerPressed="OnMediaPanelPointerPressed"
+               ToolTip.Tip="Klick: nächstes Bild/Video (Galerie) - Pfeiltasten funktionieren auch">
+            <Image Source="{Binding CurrentMediaBitmap}" Stretch="Uniform" IsVisible="{Binding ShowLocalImage}" />
+            <vlc:VideoView MediaPlayer="{Binding MediaPlayer}" IsVisible="{Binding ShowLocalVideo}" />
+
+            <!-- Aktuelle Spielzeit bleibt sichtbar, auch wenn das Medium den Rest des Fensters
+                 (inkl. der Kopfzeile mit der Uhr) komplett überdeckt. -->
+            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12"
+                    Background="#66000000" CornerRadius="6" Padding="10,6">
+                <TextBlock Text="{Binding CurrentGameTimeText}" Foreground="White" FontWeight="Bold" FontSize="14" />
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Margin="12">
+                <Button Click="OnMinimizeClick"
+                        Content="&#8722;"
+                        Width="28" Height="28"
+                        CornerRadius="14"
+                        Background="#66000000"
+                        Foreground="White"
+                        BorderThickness="0"
+                        FontSize="16"
+                        ToolTip.Tip="Fenster minimieren" />
+                <Button Command="{Binding ClearMediaCommand}"
+                        Content="&#10005;"
+                        Width="28" Height="28"
+                        CornerRadius="14"
+                        Background="#66000000"
+                        Foreground="White"
+                        BorderThickness="0"
+                        FontSize="13"
+                        ToolTip.Tip="Medium schließen" />
+            </StackPanel>
+        </Panel>
+
+        <!-- Nur sichtbar, solange dieses Fenster tatsächlich fullscreen ist (siehe PlayerWindow.axaml.cs) -
+             lokaler Notausstieg, falls das SL-weite Vollbild-Umschalten hängen bleibt oder Escape
+             nicht ankommt (z.B. weil ein anderes Steuerelement den Fokus hat). -->
+        <Button x:Name="ExitFullscreenButton"
+                Content="Vollbild beenden (Esc)"
+                Click="OnExitFullscreenClick"
+                IsVisible="False"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="16"
+                Padding="12,8"
+                CornerRadius="6"
+                Background="#66000000"
+                Foreground="White"
+                BorderThickness="0"
+                ToolTip.Tip="Beendet nur lokal das Vollbild dieses Fensters" />
+    </Panel>
+</Window>

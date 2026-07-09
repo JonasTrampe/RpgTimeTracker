@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RpgTimeTracker.ViewModels"
+        x:Class="RpgTimeTracker.Views.MediaLibraryPickerWindow"
+        Title="Bild/Video aus Bibliothek wählen"
+        Width="420" Height="520"
+        MinWidth="360" MinHeight="420"
+        Background="{DynamicResource WindowBackgroundBrush}">
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+
+        <!-- ListBox bewusst lokal, analog IconPickerWindow: soll wie eine Panel-Fläche
+             aussehen, nicht wie ein Eingabefeld. -->
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="14" LastChildFill="True">
+        <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,10">
+            <TextBlock Text="Medienbibliothek" FontWeight="Bold" FontSize="16" />
+            <TextBlock Text="Doppelklick übernimmt das Bild/Video als Event-Medium. Event-Medien kommen nur noch aus der Bibliothek - dort zuerst hinzufügen, falls es fehlt."
+                       TextWrapping="Wrap" Opacity="0.75" />
+            <TextBlock Name="EmptyText" Text="Die Bibliothek ist leer." IsVisible="False"
+                       Opacity="0.75" FontStyle="Italic" />
+        </StackPanel>
+
+        <ListBox Name="MediaList" DoubleTapped="OnItemDoubleTapped">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:MediaLibraryItemViewModel">
+                    <Grid ColumnDefinitions="Auto,*" Margin="6">
+                        <Border Grid.Column="0" Width="48" Height="48" CornerRadius="6"
+                                ClipToBounds="True"
+                                Background="{DynamicResource SurfaceAltBrush}"
+                                Margin="0,0,10,0">
+                            <Panel>
+                                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"
+                                       IsVisible="{Binding HasThumbnail}" />
+                                <TextBlock Text="{Binding FallbackIcon}" FontSize="18"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           IsVisible="{Binding !HasThumbnail}" />
+                            </Panel>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="{Binding Name}" />
+                            <TextBlock Text="{Binding KindLabel}" Classes="muted" FontSize="11" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</Window>
