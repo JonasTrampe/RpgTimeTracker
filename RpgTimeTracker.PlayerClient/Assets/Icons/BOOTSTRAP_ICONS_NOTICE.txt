@@ -1,0 +1,11 @@
+Bootstrap Icons
+
+This project embeds selected SVG path data from Bootstrap Icons.
+
+Source: https://icons.getbootstrap.com/
+Repository: https://github.com/twbs/icons
+License: MIT
+Copyright (c) 2019-2024 The Bootstrap Authors
+
+The full MIT license text is available in the Bootstrap Icons repository:
+https://github.com/twbs/icons/blob/main/LICENSE
