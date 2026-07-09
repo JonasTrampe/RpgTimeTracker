@@ -495,7 +495,7 @@
                                                                 CornerRadius="6"
                                                                 Padding="10"
                                                                 Margin="0,0,0,10">
-                                                            <Grid ColumnDefinitions="75,Auto,*">
+                                                            <Grid ColumnDefinitions="90,Auto,*">
                                                                 <TextBlock Grid.Column="0" Classes="muted"
                                                                            Text="{DynamicResource MainWindow.Common.Duration}"
                                                                            VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -567,7 +567,7 @@
                                                                 Padding="10"
                                                                 Margin="0,0,0,10">
                                                             <Grid RowDefinitions="Auto,Auto">
-                                                                <Grid Grid.Row="0" ColumnDefinitions="75,260,*"
+                                                                <Grid Grid.Row="0" ColumnDefinitions="90,260,*"
                                                                       Margin="0,0,0,8">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
                                                                                Text="{DynamicResource MainWindow.Common.TargetTime}"
@@ -580,7 +580,7 @@
                                                                             Text="{Binding NewAlarmDateTime, Mode=TwoWay}" />
                                                                     </StackPanel>
                                                                 </Grid>
-                                                                <Grid Grid.Row="1" ColumnDefinitions="75,Auto,*">
+                                                                <Grid Grid.Row="1" ColumnDefinitions="90,Auto,*">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
                                                                                Text="{DynamicResource MainWindow.Common.Repeat}"
                                                                                VerticalAlignment="Center"
@@ -659,7 +659,7 @@
                                                                 Margin="0,0,0,10">
                                                             <Grid RowDefinitions="Auto,Auto,Auto">
                                                                 <Grid Grid.Row="0"
-                                                                      ColumnDefinitions="75,Auto,*"
+                                                                      ColumnDefinitions="90,Auto,*"
                                                                       Margin="0,0,0,8" HorizontalAlignment="Left">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
                                                                                Text="{DynamicResource MainWindow.Common.Every}"
@@ -671,20 +671,20 @@
                                                                             LimitHours="23" LimitMinutes="59"
                                                                             LimitSeconds="59" />
                                                                 </Grid>
-                                                                <Grid Grid.Row="1" 
-                                                                      ColumnDefinitions="75,Auto,*"
+                                                                <Grid Grid.Row="1"
+                                                                      ColumnDefinitions="90,Auto,*"
                                                                       Margin="0,0,0,8" HorizontalAlignment="Left">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
                                                                                Text="{DynamicResource MainWindow.CreateItem.ActiveForLabel}"
                                                                                VerticalAlignment="Center"
-                                                                               Margin="18,0,10,0" />
+                                                                               Margin="0,0,10,0" />
                                                                     <controls:TimeSpanInput Grid.Column="1"
                                                                             Text="{Binding NewIntervalActiveDuration, Mode=TwoWay}"
                                                                             LimitDays="120"
                                                                             LimitHours="23" LimitMinutes="59"
                                                                             LimitSeconds="59" />
                                                                 </Grid>
-                                                                <Grid Grid.Row="2" ColumnDefinitions="75,150,*">
+                                                                <Grid Grid.Row="2" ColumnDefinitions="90,150,*">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
                                                                                Text="{DynamicResource MainWindow.Common.Max}"
                                                                                VerticalAlignment="Center"
