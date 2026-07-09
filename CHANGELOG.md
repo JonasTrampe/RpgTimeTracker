@@ -1,0 +1,52 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/) once it
+reaches 1.0.0 (see the alpha note in [README.md](README.md) — before that,
+the protocol and save format may still change between alpha releases).
+
+## [Unreleased]
+
+## [1.0.0-alpha] - 2026-07-10
+
+Initial public alpha: a GM-side control app (`RpgTimeTracker`) and a
+read-only player display app (`RpgTimeTracker.PlayerClient`), communicating
+over a length-prefixed JSON-RPC protocol on the local network.
+
+### Added
+
+- Shared game clock with adjustable speed (0.1x–300x), forward/backward time
+  jumps with undo history, and configurable time-of-day bookmarks.
+- Timers, alarms, and recurring interval events that run on game time and
+  react correctly to time jumps, each with an optional sound and trigger
+  media.
+- Media library (images/videos/audio) with thumbnails, trim/volume/repeat
+  settings, and one-click sending to all connected players, including a
+  multi-item gallery with slideshow auto-advance.
+- Separate sound library for background ambience/effects, independent of
+  timer/alarm trigger sounds, with per-sound volume, trim, and repeat count.
+- Built-in TCP server with LAN/mDNS discovery (merged into one list entry
+  per server), manual IP:port connection, optional connection PIN, and a
+  protocol-version handshake that rejects mismatched clients with a clear
+  error instead of undefined behavior.
+- Per-client connection list on the host with individual disconnect
+  ("kick"), and automatic reconnect with backoff on the client side after
+  an unexpected disconnect.
+- Calendar with custom recurring entries, day-cell view, and (optional)
+  automatic time-of-day ambience background switching.
+- JSON-based theme system (8 bundled sample themes) shared by both apps,
+  including a real color picker for custom accent colors.
+- Save/load of the full app state (game time, speed, timers, alarms,
+  bookmarks) as a JSON file.
+- Opt-in session log with explicit save-location export.
+- Full Bootstrap Icons set (2000+ icons) for timers/alarms/sounds, backed
+  by a single bundled JSON catalogue instead of hand-copied SVG paths.
+- English/German UI localization, switchable at runtime without restarting.
+- About screen (per app) with version, own MIT license, and third-party
+  license notices, rendered from Markdown.
+- CI build workflow (Windows + Linux compile check) and a release workflow
+  that publishes self-contained `win-x64`/`linux-x64` build artifacts to
+  GitHub Releases.
+- Architecture, protocol, and design-decision documentation under `docs/`.

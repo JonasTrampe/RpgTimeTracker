@@ -4,7 +4,8 @@
 [![License: MIT](https://img.shields.io/github/license/JonasTrampe/RpgTimeTracker)](LICENSE)
 
 > **Status: 1.0.0-alpha.** Works and is actively used, but the API/
-> protocol/save format may still change between alpha releases.
+> protocol/save format may still change between alpha releases. See
+> [CHANGELOG.md](CHANGELOG.md) for a history of notable changes.
 
 Two AvaloniaUI desktop apps (Windows/Linux/macOS) for a shared game clock
 (timers, alarms, recurring intervals) at the pen & paper table: a
