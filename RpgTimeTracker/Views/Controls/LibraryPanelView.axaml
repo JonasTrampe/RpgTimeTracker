@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:RpgTimeTracker.Views.Controls"
+             x:Class="RpgTimeTracker.Views.Controls.LibraryPanelView">
+    <!--
+        Gemeinsame Chrome für Medienbibliothek und Sound-Bibliothek: Titel/Beschreibung,
+        "Hinzufügen"-Button + Overflow-Menü (Export/Import), Fehleranzeige, WrapPanel-Liste und
+        Leerzustand. Nur der Tile-Inhalt (ItemTemplate) und die Datei-Dialog-/Add-Export-Import-
+        Logik (siehe code-behind, vom Aufrufer per Eigenschaften gesetzt) unterscheiden sich noch
+        zwischen den beiden Bibliotheken.
+
+        $parent[controls:LibraryPanelView] statt einer eigenen DataContext-Zuweisung, weil das
+        geerbte DataContext (MainWindowViewModel) unverändert für ItemsSource/HasNoItems/
+        ErrorMessage-Bindings von außen erreichbar bleiben muss.
+    -->
+    <Grid RowSpacing="8" RowDefinitions="auto,*,auto">
+
+        <StackPanel>
+            <TextBlock Classes="h2" Text="{Binding $parent[controls:LibraryPanelView].Title}" />
+            <TextBlock Classes="muted"
+                       Text="{Binding $parent[controls:LibraryPanelView].Description}"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding $parent[controls:LibraryPanelView].ItemsSource}"
+                      ItemTemplate="{Binding $parent[controls:LibraryPanelView].ItemTemplate}"
+                      VerticalAlignment="Stretch">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+
+        <StackPanel Grid.Row="2" VerticalAlignment="Bottom">
+            <TextBlock Classes="muted"
+                       Text="{Binding $parent[controls:LibraryPanelView].EmptyStateText}"
+                       IsVisible="{Binding $parent[controls:LibraryPanelView].HasNoItems}" />
+
+            <TextBlock Classes="muted"
+                       Text="{Binding $parent[controls:LibraryPanelView].ErrorMessage}"
+                       IsVisible="{Binding $parent[controls:LibraryPanelView].ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       Foreground="{DynamicResource WarnBrush}"
+                       TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                <Button Grid.Column="0"
+                        Content="{Binding $parent[controls:LibraryPanelView].AddButtonLabel}"
+                        Click="OnAddClick"
+                        HorizontalAlignment="Stretch" />
+                <Button Grid.Column="1" Classes="iconsquare" Content="&#8942;" Width="36" Height="36"
+                        ToolTip.Tip="Weitere Aktionen (Export/Import)">
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuItem Header="⇩ Bibliothek exportieren…" Click="OnExportClick" />
+                            <MenuItem Header="⇧ Bibliothek importieren…" Click="OnImportClick" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
+        </StackPanel>
+    </Grid>
+</UserControl>

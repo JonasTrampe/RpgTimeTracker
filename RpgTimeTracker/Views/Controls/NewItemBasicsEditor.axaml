@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RpgTimeTracker.ViewModels"
+             xmlns:conv="using:RpgTimeTracker.Views.Converters"
+             x:Class="RpgTimeTracker.Views.Controls.NewItemBasicsEditor"
+             x:DataType="vm:NewItemBasicsViewModel">
+    <!--
+        Die "Grundausstattung" beim Anlegen eines Timers/Weckers/Intervalls - vorher dreimal
+        fast identisch dupliziert in MainWindow.axaml (siehe design-decisions.md). Bindet
+        gegen NewItemBasicsViewModel statt gegen MainWindowViewModel direkt, damit dieselbe
+        Markup-Instanz für alle drei Element-Arten wiederverwendbar ist.
+    -->
+    <Grid RowDefinitions="Auto,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,10">
+            <ComboBox Grid.Column="0"
+                      ItemsSource="{Binding IconOptions}"
+                      SelectedItem="{Binding Icon}"
+                      Width="150"
+                      VerticalAlignment="Center"
+                      DoubleTapped="OnIconDoubleTapped"
+                      ToolTip.Tip="Doppelklick: Bootstrap Icon suchen"
+                      Margin="0,0,8,0" />
+            <Button Grid.Column="1" Classes="iconsquare" Content="⋯" ToolTip.Tip="Bootstrap Icon suchen"
+                    Click="OnChooseIconClick" Margin="0,0,10,0" />
+            <TextBox Grid.Column="2" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="Name"
+                     VerticalAlignment="Center" Margin="0,0,10,0" />
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6">
+                <ComboBox ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding Sound}" Width="150"
+                          VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding SoundRepeatCount}" Minimum="0" Maximum="20" FormatString="0" Width="90"
+                               VerticalAlignment="Center"
+                               ToolTip.Tip="Wie oft der Sound beim Auslösen hintereinander abgespielt wird (0 = endlos, bis das Element zurückgesetzt wird)" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
+            <TextBlock Classes="muted" Text="Darstellung:" VerticalAlignment="Center" />
+            <ColorPicker Color="{Binding ColorHex, Converter={x:Static conv:HexColorConverter.Instance}, Mode=TwoWay}"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="Rahmen-/Akzentfarbe dieses Elements in der Zeitliste" />
+            <CheckBox Content="⚡ Blinken" IsChecked="{Binding Blink}" VerticalAlignment="Center"
+                      ToolTip.Tip="Blinkt in der Zeitliste, sobald das Element ausgelöst/aktiv ist" />
+            <CheckBox Content="👁 Spieler sichtbar" IsChecked="{Binding IsPlayerVisible}" VerticalAlignment="Center"
+                      ToolTip.Tip="Ob dieses Element in der Spieler-Zeitliste erscheint (sonst nur beim SL)" />
+        </StackPanel>
+    </Grid>
+</UserControl>
