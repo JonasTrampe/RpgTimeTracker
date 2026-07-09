@@ -81,8 +81,9 @@ Overview of included components
    Project:  https://github.com/wieslawsoltes/Svg.Skia
    License:  Microsoft Public License (MS-PL) (see text below)
 
-9. Bootstrap Icons (selected SVG path data embedded directly in source,
-   not a NuGet package - see RpgTimeTracker/Assets/Icons/BOOTSTRAP_ICONS_NOTICE.txt)
+9. Bootstrap Icons (full SVG path catalogue bundled as a JSON data file,
+   not a NuGet package - see
+   RpgTimeTracker.Shared/Assets/BootstrapIcons/BOOTSTRAP_ICONS_NOTICE.txt)
    Project:  https://icons.getbootstrap.com/ (https://github.com/twbs/icons)
    License:  MIT (see "MIT License" text below)
    Copyright (c) 2019-2024 The Bootstrap Authors

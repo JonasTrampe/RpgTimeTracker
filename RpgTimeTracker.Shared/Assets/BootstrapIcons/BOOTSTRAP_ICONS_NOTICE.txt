@@ -1,6 +1,9 @@
 Bootstrap Icons
 
-This project embeds selected SVG path data from Bootstrap Icons.
+This project bundles the full Bootstrap Icons SVG path catalogue (all
+icons from release v1.13.1) as a single JSON data file
+(bootstrap-icons.json, generated from the official SVG sources - see
+VisualItemHelper), loaded at runtime instead of a NuGet package.
 
 Source: https://icons.getbootstrap.com/
 Repository: https://github.com/twbs/icons

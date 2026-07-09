@@ -1532,3 +1532,45 @@ tooltips, the alarm "now"/"once" labels, the interval status labels) were
 deliberately given one shared key each and reused across Host and
 PlayerClient rather than duplicated per-file, matching the project's
 existing preference for shared code over near-duplicate copies.
+
+## Full Bootstrap Icons catalogue as a bundled JSON file, not embedded source
+
+**Decision**: the icon picker's path data moved from ~50 hand-copied SVG
+path strings inside `VisualItemHelper.cs` to the *entire* Bootstrap Icons
+set (2077 icons, release v1.13.1) bundled as a single JSON data file
+(`RpgTimeTracker.Shared/Assets/BootstrapIcons/bootstrap-icons.json`,
+kebab-case icon name -> concatenated SVG path data), generated once from
+the official SVG sources and loaded lazily at runtime - the same
+Content-propagation pattern already used for `SampleThemes/` and
+`Localization/*.json`. The picker now offers every Bootstrap icon instead
+of a hand-curated subset, without any more path data living in C# source.
+
+**Why not keep growing the hardcoded switch statement**: adding icons one
+at a time by copy-pasting SVG path strings into source doesn't scale past
+a few dozen entries, and every addition risked a transcription error in
+a multi-hundred-character path string. A flat JSON lookup (mirroring
+`LocalizationService`'s and `ThemeDefinitionLoader`'s already-established
+"load a JSON asset at startup" pattern) removes that risk entirely and
+makes the full upstream set available for free.
+
+**Backward compatibility of already-saved Icon values**: the pre-existing
+named constants (`VisualItemHelper.IconTimer`, `IconAlarm`, etc.) keep
+their exact same string values (e.g. `"Bootstrap: Alarm"`), since these
+are what's actually serialized into saved timers/alarms/calendar entries.
+A small `LegacyDisplayNameToKebab` dictionary (~50 entries, just name
+mappings, no path data) resolves each of these to its Bootstrap kebab-case
+file name; only names *not* covered by this table fall through to a
+generated `"Bootstrap: <Title Case>"` label built from the full catalogue.
+This guarantees old save files keep resolving to a valid icon and never
+show a raw, unrecognized string.
+
+A few of the original ~50 hardcoded paths (Alarm, Hourglass, Fire,
+Shield, Eye, Star, Moon, Dice, Heart, Gear, Key) didn't have an
+exact-byte match anywhere in the v1.13.1 set - Bootstrap has refined
+several icon designs since whatever version those paths were originally
+copied from (e.g. `gear-fill` gained a 12-tooth design, `alarm-fill`
+gained bell "ears"). Rather than special-case a handful of old,
+superseded path strings just to preserve pixel-identical glyphs, those
+constants were repointed to today's closest equivalent icon (e.g.
+`alarm-fill`, `gear-fill`) - the same identifier still selects a sensible
+bell/gear/etc. icon, just the current Bootstrap rendering of it.

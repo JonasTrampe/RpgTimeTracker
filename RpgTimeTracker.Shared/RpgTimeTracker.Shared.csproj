@@ -13,22 +13,26 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- Einzige physische Kopie der Lizenzhinweise (Repo-Wurzel); wird per ProjectReference-
-             Content-Propagation automatisch auch ins Host- und Client-Ausgabeverzeichnis kopiert,
-             sodass der About-Screen (AboutViewModel) sie zur Laufzeit von beiden Apps aus laden kann,
-             ohne den Text zu duplizieren. -->
+        <!-- Single physical copy of the license notices (repo root); ProjectReference content
+             propagation automatically copies it to both the Host and Client output directories
+             as well, so the About screen (AboutViewModel) can load it at runtime from either app
+             without duplicating the text. -->
         <Content Include="..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
-        <!-- Eigene Projektlizenz, ebenso einmalig an der Repo-Wurzel gepflegt (siehe oben) - als
-             .txt-Link kopiert, da die Original-Datei keine Endung hat. -->
+        <!-- Own project license, likewise maintained once at the repo root (see above) - copied
+             as a .txt link since the original file has no extension. -->
         <Content Include="..\LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
-        <!-- Einzige physische Kopie der SL-Design-Vorlagen (vorher pro App dupliziert und
-             manuell synchron gehalten); Content-Propagation kopiert sie automatisch ins Host-
-             und Client-Ausgabeverzeichnis (siehe ThemeDefinitionLoader.SampleThemesDirectory,
-             das relativ zu AppContext.BaseDirectory sucht - funktioniert für beide Apps gleich). -->
+        <!-- Single physical copy of the GM theme templates (previously duplicated per app and
+             kept in sync manually); content propagation automatically copies it to both the Host
+             and Client output directories (see ThemeDefinitionLoader.SampleThemesDirectory, which
+             looks relative to AppContext.BaseDirectory - works the same way for both apps). -->
         <Content Include="SampleThemes\**\*.*" CopyToOutputDirectory="PreserveNewest" />
-        <!-- UI-Sprachdateien (siehe LocalizationService) - dieselbe Content-Propagation wie
-             SampleThemes oben, damit beide Apps dieselben en.json/de.json nutzen. -->
+        <!-- UI language files (see LocalizationService) - the same content propagation as
+             SampleThemes above, so both apps use the same en.json/de.json. -->
         <Content Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
+        <!-- Full Bootstrap Icons SVG path catalogue (see VisualItemHelper) - same content
+             propagation pattern as above, so both apps can resolve any icon name to its path
+             data without embedding it in source. -->
+        <Content Include="Assets\BootstrapIcons\*.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>
