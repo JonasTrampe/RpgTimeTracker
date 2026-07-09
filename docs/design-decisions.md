@@ -201,7 +201,7 @@ individually or in bulk, at the Host and every connected client.
 `ThemeSettingsService.SoundLibraryDirectory`, and its own `settings.json`
 section) is a completely separate collection from `MediaLibrary`
 (image/video only, `MediaLibraryItemViewModel`). They get their own tab
-("Sounds" vs. "Bibliothek") each with their own add/export/import buttons.
+("Sounds" vs. "Library") each with their own add/export/import buttons.
 `MediaTypeHelper.TryGetKind` returning `MediaKind.Audio` is now actively
 *rejected* by `AddMediaToLibraryFromPathAsync` (and vice versa: non-audio is
 rejected by `AddSoundToLibraryFromPathAsync`).
@@ -217,7 +217,7 @@ the kind of accidental cross-talk the previous decision above had to fix.
 Splitting the collection outright removes the discriminator entirely instead
 of gating on it everywhere.
 
-**Trigger-Medien is the one exception**: `TriggerMediaConfig` (the optional
+**Trigger media is the one exception**: `TriggerMediaConfig` (the optional
 image/video/audio a Timer/Alarm/Interval can auto-send on fire) still picks
 a file directly from disk via `TriggerMediaFileType`, not from either
 library — it has no "library" concept of its own, so there was nothing to
@@ -232,10 +232,10 @@ end or adjust one specific, already-in-flight sound anywhere it's playing
 `media.cleared`, these never touch the image/video slot and were added
 *only* for sounds.
 
-**Why**: once sounds could run in unlimited parallel (see above), the SL had
+**Why**: once sounds could run in unlimited parallel (see above), the GM had
 no way to see what was still playing, let alone stop a specific one (e.g. a
 looping ambience track) without waiting for it to end naturally. The
-"Aktuell abgespielte Sounds" panel (`MainWindowViewModel.ActivePlayingSounds`)
+"Currently Playing Sounds" panel (`MainWindowViewModel.ActivePlayingSounds`)
 is the visible half of this; the RPC pair is what makes "Stop" and the live
 volume slider actually reach wherever the sound is really playing, rather
 than only affecting Host-side bookkeeping.
@@ -260,7 +260,7 @@ potentially much longer library sounds.
 
 ## Removing a sound never deletes the underlying settings-file entry silently
 
-**Decision**: the old "+ Sound hinzufügen" Settings-tab flow
+**Decision**: the old "+ Add Sound" Settings-tab flow
 (`SoundService.AddCustomSound`/`RegisterCustomSounds`, backed by
 `ThemeSettingsService.CustomSounds`) was removed outright in favor of the
 Sound Library. Existing entries are migrated into `SoundLibrary` exactly
@@ -270,7 +270,7 @@ nobody silently loses a previously-added sound; `CustomSounds` itself is
 kept in the DTO purely so old `settings.json` files still deserialize.
 
 **Why**: two independent sound-adding flows (one for network-sent
-Bibliotheks-Sounds, one for local notification blips) would have meant two
+Library sounds, one for local notification blips) would have meant two
 places to manage largely the same kind of data, and no way for a
 notification sound to also be sendable to players. Merging them into one
 Sound Library — with the built-in tones staying as the only remaining
@@ -307,7 +307,7 @@ incorrectly, it turned out — as fullscreen getting stuck on, and `ClearMedia`
 was changed to auto-revert fullscreen whenever it had been auto-set by an
 event trigger. In practice this meant resetting a timer (which closes its
 own triggered media via `StopMediaIfTriggeredBy`) or simply clicking
-"Entfernen" would *also* silently drop a fullscreen view the SL wanted to
+"Remove" would *also* silently drop a fullscreen view the GM wanted to
 keep (e.g. "show the player list fullscreen for the rest of the session").
 Fullscreen is now purely opt-in/opt-out via the explicit toggle
 (`ToggleRemoteFullscreenCommand`) or an event trigger's `Fullscreen` flag
@@ -358,13 +358,13 @@ same source.
 
 **Why**: without tracking *which* item triggered the current media,
 resetting an unrelated timer could not distinguish "this timer's own
-triggered image" from "some other media the SL sent separately" — either
+triggered image" from "some other media the GM sent separately" — either
 resetting would need to never touch media (leaving a stale triggered image
 on screen after its timer resets) or it would risk clearing media it didn't
 cause. Reference-equality tracking against the config object solves this
 without needing IDs or timestamps.
 
-## "Spieler-Vollbild" drives the Host's own PlayerWindow too, not just remote clients
+## "Player Fullscreen" drives the Host's own PlayerWindow too, not just remote clients
 
 **Decision**: every place that changes `MainWindowViewModel.RemoteFullscreen`
 (the manual `ToggleRemoteFullscreenCommand`, stopping the network server, and
@@ -373,10 +373,10 @@ an event trigger's `Fullscreen` flag) now goes through a single
 remote clients *and* raises `LocalFullscreenRequested`, which
 `MainWindow.axaml.cs` uses to set the Host's own `PlayerWindow.WindowState`.
 
-**Why**: "Spieler-Vollbild" previously only meant "fullscreen for connected
+**Why**: "Player Fullscreen" previously only meant "fullscreen for connected
 network clients" — the Host's own `PlayerWindow` (used for solo preview or
 when running the display on a second local monitor without a separate
-PlayerClient instance) had no button that affected it at all, so an SL
+PlayerClient instance) had no button that affected it at all, so a GM
 running the display locally rather than over the network had no fullscreen
 control. Routing every fullscreen change through one helper keeps
 `RemoteFullscreen` (the single source of truth shown in the UI label) and
@@ -390,7 +390,7 @@ fullscreen (see above).
 (both PlayerClient windows) each install a local `KeyDown` handler that, if
 `WindowState == FullScreen` and the key is `Escape`, sets
 `WindowState = Normal` on that window only. `PlayerWindow` additionally shows
-a small "Vollbild beenden (Esc)" button, visible only while it is actually
+a small "Exit Fullscreen (Esc)" button, visible only while it is actually
 fullscreen (tracked via overriding `OnPropertyChanged` for
 `WindowStateProperty`, matching the existing pattern in
 `Views/Controls/DateTimeInput.axaml.cs`). Neither Escape nor the button
@@ -403,19 +403,19 @@ needed for the case where that state gets out of sync with reality (a stuck
 toggle, a window that fullscreened on the wrong monitor, or simply wanting a
 quick local peek without changing what every other screen shows). Making the
 escape purely local and non-destructive to the shared flag means the next
-legitimate fullscreen push (a new trigger-media event, the SL's toggle
+legitimate fullscreen push (a new trigger-media event, the GM's toggle
 button, or the next medium the client receives) still fullscreens correctly
 afterward — Escape is a momentary local override, not a persistent
 opt-out, mirroring the "fullscreen is never silently turned off as a side
 effect" rule above.
 
-## SL-authored Designs are JSON files loaded alongside the built-in compiled ones, not a replacement for them
+## GM-authored Designs are JSON files loaded alongside the built-in compiled ones, not a replacement for them
 
 **Decision**: `RpgTimeTracker.Shared.Theming.ThemeDefinitionDto` describes a
 Design (colors, gradient brushes, fonts, corner radii, named background
 images, button images) as data. `ThemeDefinitionLoader` scans two
 directories for `<id>/theme.json` folders — `SampleThemes/` shipped next to
-the exe, and `%AppData%/RpgTimeTracker/Themes/` for the SL's own — and
+the exe, and `%AppData%/RpgTimeTracker/Themes/` for the GM's own — and
 builds an Avalonia `ResourceDictionary` from each at runtime, using the
 *exact same resource keys* (`AccentBrush`, `WindowChromeBrush`,
 `WindowBackgroundImageBrush`, …) as the hand-written `Themes/*.axaml` files.
@@ -426,13 +426,13 @@ fast, compiled, hand-tuned XAML, and the JSON loader is purely additive.
 
 **Why**: rewriting 8 already-polished, hand-tuned Designs to a
 data-driven format risks visually regressing all of them for the sake of a
-feature only some SLs will use. Keeping both systems side by side — compiled
-XAML for the built-ins, JSON+loose-image-files for anything SL-authored —
-means zero risk to the existing Designs while still giving the SL a fully
+feature only some GMs will use. Keeping both systems side by side — compiled
+XAML for the built-ins, JSON+loose-image-files for anything GM-authored —
+means zero risk to the existing Designs while still giving the GM a fully
 equivalent, editable format. The 8 `SampleThemes/*/theme.json` files are a
 mechanical extraction of the built-in Designs (see
 `extract_themes.py`-style parsing of the `.axaml` XML) and exist specifically
-so an SL can copy one, rename its `Id`, and edit colors/images without
+so a GM can copy one, rename its `Id`, and edit colors/images without
 starting from a blank schema.
 
 **Update**: custom Designs are now pushed to clients too. The wire value for
@@ -445,14 +445,14 @@ only works if the client has the same `theme.json` available locally — the
 file itself is still never transferred over the wire, only its `Id`. Both
 apps ship the same 8 `SampleThemes/*/theme.json` (duplicated per-project as
 Content, since each app is a separate published output), so any built-in
-sample Design syncs correctly out of the box. An SL's own custom Design
+sample Design syncs correctly out of the box. A GM's own custom Design
 (under `%AppData%/RpgTimeTracker/Themes/`) only syncs automatically to a
 PlayerClient running on the *same machine or a synced profile* — for a
-Design used across multiple physical player machines, the SL currently has
+Design used across multiple physical player machines, the GM currently has
 to copy the `theme.json` (and its images) to each one manually. If the
 client doesn't have the referenced Design at all, it logs a warning and
 keeps showing whatever Design it had before, rather than silently falling
-back to a Design the SL didn't choose.
+back to a Design the GM didn't choose.
 
 ## Time-of-day ambience automation only swaps backgrounds within the active Design, and only if it has more than one
 
@@ -477,7 +477,7 @@ or blocking the whole feature on new art that doesn't exist yet, the
 automation is built against the general case (any Design's `Backgrounds`
 list, however long) and ships wired up for the one Design that already has
 real day/night art — every other Design works exactly as it did before
-until someone (the SL) adds a second named background to its `theme.json`.
+until someone (the GM) adds a second named background to its `theme.json`.
 
 ## Local-only video pause resolves via the same MediaPlayer.EndReached race as the remote report
 
@@ -552,7 +552,7 @@ path — and therefore the exact same `Jumped` event — that a normal jump
 uses, so connected clients follow an undo exactly like any other jump with
 no extra protocol work.
 
-## The SL-local heads-up warning and session log never cross the network, by construction
+## The GM-local heads-up warning and session log never cross the network, by construction
 
 **Decision**: `HeadsUpMessage` (a transient, auto-clearing banner shown a
 configurable lead time before a Timer/Alarm/IntervalEvent fires) and
@@ -560,15 +560,15 @@ configurable lead time before a Timer/Alarm/IntervalEvent fires) and
 exported only via an explicit file-save dialog) are both plain
 `MainWindowViewModel` state with no `Publish*Async` call anywhere near them.
 
-**Why**: both features are explicitly SL-facing conveniences — a spoiler
+**Why**: both features are explicitly GM-facing conveniences — a spoiler
 warning and a private recap — that must never leak to the player-facing
 side of the app. Not wiring them to `TcpPlayerServerService` at all (rather
 than wiring them and gating on a flag) makes "never sent to players" a
 structural guarantee instead of a behavior that depends on a check staying
 correct. The session log is additionally opt-in (`RecordSessionLog`) so nothing
-is retained in memory at all unless the SL turns it on, and export always
+is retained in memory at all unless the GM turns it on, and export always
 asks for a destination file rather than writing to a fixed path — mirroring
-the existing Speichern/Laden file-dialog pattern instead of introducing a
+the existing Save/Load file-dialog pattern instead of introducing a
 new persistence convention.
 
 ## Host/Client player UI is shared as markup via an interface, not by merging the two ViewModels
@@ -640,8 +640,8 @@ of duplication that only exists because there was no shared type to bind
 against. Introducing `NewItemBasicsViewModel` gives the control something
 real to bind to, and lets `ResetToDefaults()` replace what used to be 5-8
 individual property resets after each `AddTimer`/`AddAlarm`/`AddIntervalEvent`
-call. The per-item-kind wording differences that existed before ("Blinken
-bei Ablauf" vs. "bei Auslösung" vs. "während aktiv") were dropped in favor of
+call. The per-item-kind wording differences that existed before ("Blink
+on expiry" vs. "on trigger" vs. "while active") were dropped in favor of
 one generic "⚡ Blinken" label — a deliberate small wording simplification to
 keep the control genuinely reusable rather than parameterizing every string.
 
@@ -658,7 +658,7 @@ jump markers stay in the sidebar.
 **Why**: this block kept growing as features were added in this session
 (heads-up warning, session log, ambience automation, connected-clients list)
 until it was pushing the actually-time-critical clock controls further down
-an always-scrolled sidebar. None of these are things an SL touches
+an always-scrolled sidebar. None of these are things a GM touches
 mid-encounter the way they touch the clock/jump controls, so they belong
 behind a tab click, not permanently in view.
 
@@ -775,7 +775,7 @@ client jumps to it but can immediately navigate away again locally
 afterward. `media.retract` removes one item everywhere; nothing is deleted
 from a client's local cache until that arrives.
 
-**Why**: this exists so the SL can flip back to something shown five
+**Why**: this exists so the GM can flip back to something shown five
 minutes ago without re-sending it, and so a player who got distracted can
 scroll back through what's already been shown independently, without
 waiting on or disrupting anyone else. Local, no-round-trip navigation was a
@@ -793,7 +793,7 @@ recording a duplicate.
 `AddToGallery` and are therefore never part of this list. On the client,
 `_isShowingEventMedia` (Host: `_activeTriggerMediaSource` unchanged from
 before) blocks gallery navigation while one is on screen — consistent with
-"Bilder und Videos aus Events haben Vorrang" — and per explicit user
+"images and videos from events take priority" — and per explicit user
 decision, the gallery does **not** auto-resume the instant the event media
 naturally ends; it only resumes when the *triggering* Timer/Alarm/Interval
 is explicitly reset (`StopMediaIfTriggeredBy` → `ResumeGalleryAfterEventMedia`),
@@ -905,11 +905,11 @@ and the gallery was already cleared on every disconnect - so by the time
 the app is closing there's usually little left, but "little" isn't "none"
 (a currently-open image/video, or a gallery accumulated during a still-open
 session). Asking rather than always deleting matches the explicit request
-("auf Nachfrage") and leaves room for a player who wants to keep a received
+("only on request") and leaves room for a player who wants to keep a received
 image after closing. The orphan-sweep goes a step further than the literal
 ask because leftover temp files from a crash would otherwise never get
 cleaned up at all (nothing else in the app ever revisits them), which is
-exactly the "Müll" scenario being guarded against.
+exactly the "clutter" scenario being guarded against.
 
 ## Server name broadcast in the LAN/mDNS announcement
 
@@ -935,9 +935,9 @@ to avoid touching the already-working PTR/SRV matching logic
 label in the client's server list, useful once more than one Host runs on
 the same LAN).
 
-## Ingame-Kalender: hybrid month grid + entry list, shared toggle, event-media reuse
+## In-game calendar: hybrid month grid + entry list, shared toggle, event-media reuse
 
-**Decision**: a "Kalender" main tab on the Host lets the SL create entries
+**Decision**: a "Kalender" main tab on the Host lets the GM create entries
 (`CalendarEntryDefinition`: title, description, icon, color, start date/time,
 recurrence [None/Daily/Weekly/Monthly/Yearly], optional end date, optional
 image/video/sound trigger, per-entry player-visible flag). The shared
@@ -1051,7 +1051,7 @@ buttons, decluttering the primary "Add" action.
 
 ## Host-side fullscreen toggles merged into the status bar
 
-**Decision**: the local "toggle own SL-preview fullscreen" icon (previously
+**Decision**: the local "toggle own GM-preview fullscreen" icon (previously
 in the Chronometer-Steuerung header) and the remote "push fullscreen to
 clients" button (previously a full-width button in the Bibliothek tab's
 ad-hoc send section) both moved into the persistent status bar as a pair of
@@ -1207,7 +1207,7 @@ own `MarkdownScrollViewer`.
 **Why**: once the project's own `LICENSE` was added alongside the existing
 third-party notices, the combined document became three walls of legal text
 stacked in front of (or after) the actual app description, all forced open at
-once - exactly the "haben nicht immer alles durchscrollen wollen" problem the
+once - exactly the "didn't always want to scroll through everything" problem the
 single-scroll-region fix from the previous section was meant to solve for a
 *different* squeeze bug, but which reappeared here in a new form once there
 was more content. Expanders let both license texts default to closed, so the
@@ -1264,7 +1264,7 @@ regenerate locally and differ across Rider installs/OSes), not project
 state worth reviewing in diffs or forcing on contributors who use a
 different editor. The commit-SHA suffix on the informational version is
 useful for internal build traceability but is not something an About
-dialog aimed at SL/players needs to show - "1.0.0-alpha" answers "is this
+dialog aimed at GM/players needs to show - "1.0.0-alpha" answers "is this
 the version I think it is" without exposing implementation detail. The CI
 was scoped to "does it still build on both OSes" rather than a full
 publish/artifact pipeline because that's the actual failure mode worth
@@ -1281,11 +1281,11 @@ have a single `Apply(ThemeDefinitionDto, folderPath)` method - there is no
 `Apply(AppTheme)` anymore. The 8 designs that used to be compiled-in now
 ship purely as their existing `SampleThemes/*/theme.json` files (which
 were already byte-for-byte equivalents, kept in sync as JSON "documentation
-copies" of the AXAML - see the older "SL-eigene Designs" README section).
+copies" of the AXAML - see the older "GM-authored Designs" README section).
 `ThemeDefinitionDto` gained an optional `PickerLabel` field so the style
 picker can keep showing a short neutral name ("Shadowrun / Cyberpunk")
 instead of each design's flashy in-fiction `DisplayName` ("SHADOWRUN //
-HOST-LAYER CHRONO", used for the in-app hero title) - custom SL designs
+HOST-LAYER CHRONO", used for the in-app hero title) - custom GM designs
 without a `PickerLabel` just fall back to `DisplayName`, unchanged from
 before. `ThemeDefinitionLoader.Resolve(rawId)` is a new single entry point
 that every consumer (Host/Client startup, `MainWindowViewModel`,
@@ -1395,7 +1395,7 @@ selection no longer opens a disk file picker - it opens a new
 a modal list, double-click to choose) listing `MediaLibrary` items only.
 Audio-as-event-medium is unaffected and still uses a disk file picker
 (`ChooseTriggerAudioAsync`), now scoped to audio extensions only instead
-of the old combined "Bild, Video oder Audio" filter. Each of the four
+of the old combined "image, video, or audio" filter. Each of the four
 "Event-Medium" UI blocks (New Timer, New Alarm, New Interval, and the
 existing-item edit flyout) got a second small button ("Audio…") alongside
 the renamed "Aus Bibliothek…" button, since one `TriggerMediaConfig` can
@@ -1460,3 +1460,75 @@ item the next time it fired, with no error, no log message, just a no-op
 the file" is the option that makes an orphaned-but-working file a
 deliberate, informed choice instead of an invisible side effect the user
 never agreed to.
+
+## Resource-based English/German localization
+
+**Decision**: the entire codebase (UI strings, code comments, log
+messages, documentation) is standardized on English, with a proper
+switchable localization system layered on top for the UI - not a one-way
+hardcoded replacement. English is the default/fallback language; German is
+a selectable alternative, matching the `todo.md` Lokalisierung TODO's
+original design intent ("Host und PlayerClient müssen nicht dieselbe
+Sprache verwenden").
+
+The architecture deliberately mirrors the existing JSON-based theme system
+almost exactly, since both solve the same shape of problem (swap a set of
+named values into the UI at runtime, per-installation, without a rebuild):
+`LocalizationService` (`RpgTimeTracker.Shared/Services/Localization/`) is
+a static class that loads a flat `Dictionary<string,string>` from
+`en.json`/`de.json` (`RpgTimeTracker.Shared/Localization/`, copied to both
+apps' output directories via the same `<Content Include>` MSBuild pattern
+already used for `SampleThemes/`), builds an Avalonia `ResourceDictionary`
+keyed by dotted identifiers (e.g. `"MainWindow.Clock.SectionTitle"`), and
+merges/swaps it into `Application.Current.Resources.MergedDictionaries` on
+`Apply(string? language)` - so XAML binds via `{DynamicResource Some.Key}`
+and updates instantly on a language switch, exactly like
+`ThemeService.Apply`. A `Get(string key)` static method covers the
+non-XAML-bound case: C# code that assigns a string directly to a
+ViewModel property (error messages, status/log text shown via
+`ShowActionStatus`/`RecordSessionEvent`, default item names like "New
+Timer"/"Neuer Timer"). English is always loaded as a fallback merge for
+any key missing from the active non-English language, so a partially
+translated language file degrades gracefully instead of showing raw keys.
+
+Interpolated strings (e.g. `$"Timer expired: {timer.Name}"`) can't be
+looked up directly through a flat key→string dictionary, since the
+dictionary only stores static text. These became format-string resource
+values (`"Timer expired: {0}"` / `"Timer abgelaufen: {0}"`) invoked via
+`string.Format(LocalizationService.Get("Key"), value)` - a pattern applied
+consistently across every ViewModel with dynamic status/error text.
+
+Host and PlayerClient each persist their own `Language` setting
+independently in their existing settings DTOs (`ThemeSettingsDto`/
+`ClientSettingsDto`) - no network sync of language preference, unlike
+Theme which the Host actively pushes to connected Clients. This is
+intentional: the GM's own authored names (timer/alarm names, jump
+markers, calendar entries) are freely typed by the GM and sent over the
+protocol as plain strings regardless of either side's UI language, so
+Host and PlayerClient genuinely don't need to agree on a language.
+
+A discovered XAML limitation along the way: `MultiBinding`/plain
+`Binding` with `StringFormat="{DynamicResource ...}"` does **not** work
+as a way to localize a format string - `StringFormat` is a plain CLR
+property in Avalonia (not itself bindable/dynamic-resource-aware),
+mirroring the same limitation in WPF. The fix was to split a composite
+label into two separate `TextBlock`s (a `{DynamicResource}`-bound static
+label + a `{Binding}`-bound dynamic value) instead of ever attempting a
+localized composite format string in XAML - used first for the About
+screen's version line, then for the header labels/values across
+`ClientMainWindow.axaml` and `MainWindow.axaml`.
+
+Migrating the ~330 remaining hardcoded UI strings (beyond the About-screen
+proof-of-concept) was mechanical enough to parallelize: each area (a
+view + its ViewModel) was assigned to its own pass, choosing a
+`<ViewName>.<Area>.<Descriptor>` key naming convention (e.g.
+`MainWindow.Clock.SectionTitle`, `ClientMainWindowViewModel.Alarm.DetailFormat`)
+and reporting the new key→text pairs back rather than editing the shared
+`en.json`/`de.json` directly, so the two JSON files could be assembled and
+reconciled in one consistent pass afterward instead of risking merge
+conflicts between concurrent edits to the same file. A handful of
+genuinely shared concepts (the media-window minimize/close/gallery-nav
+tooltips, the alarm "now"/"once" labels, the interval status labels) were
+deliberately given one shared key each and reused across Host and
+PlayerClient rather than duplicated per-file, matching the project's
+existing preference for shared code over near-duplicate copies.

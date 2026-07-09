@@ -6,21 +6,21 @@ using RpgTimeTracker.Shared.Services.Theming;
 namespace RpgTimeTracker.Services;
 
 /// <summary>
-///     Lädt ein per JSON definiertes Design (siehe ThemeDefinitionLoader - sowohl die mit der App
-///     ausgelieferten SampleThemes als auch SL-eigene Designs laufen über denselben Mechanismus,
-///     es gibt keine separate Klasse "eingebauter" Designs mehr) und tauscht es zur Laufzeit im
-///     Application.Resources-MergedDictionaries-Slot aus. Dadurch aktualisieren sich alle
-///     DynamicResource-Bindings in den Views sofort, ohne Neustart der App.
+///     Loads a JSON-defined theme (see ThemeDefinitionLoader - both the SampleThemes shipped with the app
+///     and GM's own themes go through the same mechanism, there is no longer a separate class of
+///     "built-in" themes) and swaps it at runtime into the
+///     Application.Resources MergedDictionaries slot. This causes all
+///     DynamicResource bindings in the views to update immediately, without restarting the app.
 /// </summary>
 public static class ThemeService
 {
-    // Merkt sich das aktuell geladene Theme-Dictionary, damit es beim Wechsel gezielt entfernt
-    // (statt versehentlich alle MergedDictionaries geleert) werden kann.
+    // Remembers the currently loaded theme dictionary, so that it can be removed specifically
+    // on change (instead of accidentally clearing all MergedDictionaries).
     private static ResourceDictionary? _current;
 
     /// <summary>
-    ///     Der Ordner des zuletzt angewendeten Designs (für die Ambiente-Automatik, um weitere
-    ///     Hintergründe desselben Designs nachzuladen).
+    ///     The folder of the last applied theme (for the ambience automation, to load
+    ///     further backgrounds of the same theme).
     /// </summary>
     public static string? CurrentThemeFolderPath { get; private set; }
 

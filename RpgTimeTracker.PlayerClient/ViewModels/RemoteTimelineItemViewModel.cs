@@ -7,10 +7,10 @@ using RpgTimeTracker.Shared.ViewModels;
 namespace RpgTimeTracker.PlayerClient.ViewModels;
 
 /// <summary>
-///     Reine Anzeige-Hülle für ein Timer-/Wecker-/Intervall-Item auf dem Remote-Client.
-///     Die Werte werden von ClientMainWindowViewModel gesetzt, das die eigentliche
-///     Fortschritts-/Restzeit-Berechnung lokal aus den (per RPC synchronisierten) Shared-Modellen
-///     + der lokalen Uhr ableitet - der Server schickt hier keine fertig formatierten Strings mehr.
+///     Pure display shell for a timer/alarm/interval item on the remote client.
+///     The values are set by ClientMainWindowViewModel, which derives the actual
+///     progress/remaining-time calculation locally from the (RPC-synchronized) shared models
+///     + the local clock - the server no longer sends ready-formatted strings here.
 /// </summary>
 public partial class RemoteTimelineItemViewModel : ObservableObject, IPlayerTimelineEntry
 {

@@ -1,20 +1,20 @@
 namespace RpgTimeTracker.Models;
 
 /// <summary>
-///     Antwort auf die Warnung beim Löschen eines Medienbibliothek-Eintrags, der noch als
-///     Event-Medium zugewiesen ist (siehe MainWindowViewModel.RemoveMediaLibraryItemAsync).
+///     Response to the warning shown when deleting a media library entry that is still
+///     assigned as an event medium (see MainWindowViewModel.RemoveMediaLibraryItemAsync).
 /// </summary>
 public enum TriggerMediaDeleteChoice
 {
-    /// <summary>Löschen abbrechen, nichts ändern.</summary>
+    /// <summary>Cancel deletion, change nothing.</summary>
     Cancel,
 
-    /// <summary>Zuweisung bei allen betroffenen Elementen entfernen, danach Bibliothekseintrag + Datei löschen.</summary>
+    /// <summary>Remove the assignment from all affected items, then delete the library entry + file.</summary>
     RemoveFromItemsAndDelete,
 
     /// <summary>
-    ///     Nur den Bibliothekseintrag entfernen; die Datei bleibt auf der Platte, damit die
-    ///     betroffenen Elemente ihr Event-Medium behalten (aber nicht mehr in der Bibliothek verwaltbar).
+    ///     Only remove the library entry; the file stays on disk so that the
+    ///     affected items keep their event medium (but it can no longer be managed in the library).
     /// </summary>
     KeepInItemsRemoveFromLibraryOnly
 }

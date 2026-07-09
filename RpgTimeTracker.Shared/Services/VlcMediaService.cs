@@ -6,9 +6,9 @@ using Serilog;
 namespace RpgTimeTracker.Shared.Services;
 
 /// <summary>
-///     Verwaltet die eine LibVLC-Instanz des Prozesses. Unter Windows wird die native
-///     Bibliothek über das NuGet-Paket VideoLAN.LibVLC.Windows mitgeliefert; unter Linux muss
-///     VLC systemweit installiert sein (z.B. "sudo apt install vlc" / "sudo dnf install vlc").
+///     Manages the single LibVLC instance of the process. On Windows the native
+///     library is bundled via the NuGet package VideoLAN.LibVLC.Windows; on Linux
+///     VLC must be installed system-wide (e.g. "sudo apt install vlc" / "sudo dnf install vlc").
 /// </summary>
 public static class VlcMediaService
 {
@@ -36,7 +36,7 @@ public static class VlcMediaService
             Core.Initialize();
             _libVlc = new LibVLC(false);
             libVlc = _libVlc;
-            Log.Information("LibVLC erfolgreich initialisiert");
+            Log.Information("LibVLC successfully initialized");
             return true;
         }
         catch (Exception ex)
@@ -45,17 +45,17 @@ public static class VlcMediaService
             LastError = OperatingSystem.IsLinux()
                 ? "VLC-Bibliothek nicht gefunden. Bitte VLC installieren (z.B. 'sudo apt install vlc' unter Ubuntu/Debian, 'sudo dnf install vlc' unter Fedora) und die App neu starten."
                 : $"VLC-Bibliothek konnte nicht geladen werden: {ex.Message}";
-            Log.Error(ex, "LibVLC-Initialisierung fehlgeschlagen");
+            Log.Error(ex, "LibVLC initialization failed");
             libVlc = null;
             return false;
         }
     }
 
     /// <summary>
-    ///     Schneidet einen Sound über die LibVLC-Optionen start-time/stop-time zurecht (Sekunden,
-    ///     invariant formatiert - VLC parst diese Optionen wie eine Kommandozeile, ein per Kultur
-    ///     abweichendes Dezimaltrennzeichen wie "," würde den Wert stillschweigend verwerfen).
-    ///     0 bedeutet an der jeweiligen Stelle "kein Trim".
+    ///     Trims a sound using the LibVLC start-time/stop-time options (seconds,
+    ///     formatted invariantly - VLC parses these options like a command line, a culture-
+    ///     specific decimal separator like "," would silently discard the value).
+    ///     0 means "no trim" at the respective position.
     /// </summary>
     public static void ApplySoundTrim(Media media, long trimStartMs, long trimEndMs)
     {

@@ -1,268 +1,267 @@
-# RPG Zeitverfolgung
+# RPG Time Tracker
 
 [![Build](https://github.com/JonasTrampe/RpgTimeTracker/actions/workflows/build.yml/badge.svg)](https://github.com/JonasTrampe/RpgTimeTracker/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/github/license/JonasTrampe/RpgTimeTracker)](LICENSE)
 
-> **Status: 1.0.0-alpha.** Funktioniert, wird aktiv genutzt, aber API/
-> Protokoll/Speicherformat können sich zwischen Alpha-Versionen noch ändern.
+> **Status: 1.0.0-alpha.** Works and is actively used, but the API/
+> protocol/save format may still change between alpha releases.
 
-Zwei AvaloniaUI-Desktop-Apps (Windows/Linux/macOS) für eine gemeinsame Spieluhr
-(Timer, Wecker, wiederkehrende Intervalle) am Pen&Paper-Tisch: eine
-SL-seitige Steuer-App und eine schreibgeschützte Anzeige-App für die
-Spieler auf einem zweiten Bildschirm, inklusive Bild-/Video-Versand und einer
-komplett getrennten Sound-Bibliothek für Hintergrundsounds/Effekte.
+Two AvaloniaUI desktop apps (Windows/Linux/macOS) for a shared game clock
+(timers, alarms, recurring intervals) at the pen & paper table: a
+GM-side control app and a read-only display app for the players on a
+second screen, including image/video sending and a completely separate
+sound library for background sounds/effects.
 
-## Die beiden Apps
+## The two apps
 
-- **`RpgTimeTracker`** (SL/Host) — die Steuer-App. Besitzt die
-  maßgebliche Spieluhr sowie alle Timer/Wecker/Intervalle, verwaltet die
-  Medienbibliothek und betreibt den TCP-Server, an den sich beliebig viele
-  Spieler-Clients gleichzeitig verbinden können.
-- **`RpgTimeTracker.PlayerClient`** (Spieler-Client) — reine Anzeige-App.
-  Verbindet sich per LAN/mDNS-Suche oder manueller IP-Eingabe mit dem Host,
-  leitet daraus lokal ihre eigene Spieluhr ab und zeigt die Zeitleiste sowie
-  vom Host gesendete Bilder/Videos an (Sounds spielen ohne eigene Anzeige).
+- **`RpgTimeTracker`** (GM/Host) — the control app. Owns the
+  authoritative game clock as well as all timers/alarms/intervals, manages
+  the media library, and runs the TCP server that any number of
+  player clients can connect to simultaneously.
+- **`RpgTimeTracker.PlayerClient`** (player client) — a pure display app.
+  Connects to the host via LAN/mDNS discovery or manual IP entry,
+  derives its own game clock locally from that, and shows the timeline as
+  well as images/videos sent by the host (sounds play without their own display).
 
-Beide Apps kommunizieren über ein schlankes, längenpräfigiertes
-JSON-RPC-Protokoll auf TCP; Details dazu (Frame-Format, komplette
-Methodenliste, Medien-Streaming) stehen in [`docs/protocol.md`](docs/protocol.md).
+Both apps communicate over a lightweight, length-prefixed
+JSON-RPC protocol on TCP; details on this (frame format, complete
+method list, media streaming) can be found in [`docs/protocol.md`](docs/protocol.md).
 
-## Funktionen
+## Features
 
-- **Spieluhr**: Datum & Uhrzeit frei setzbar, Start/Pause, läuft danach
-  automatisch weiter.
-- **Geschwindigkeit**: Zeitfaktor von 0,1× bis 300× (Presets + Slider) –
-  z.B. "1 Sekunde real = 1 Stunde Spielzeit" während einer Rast.
-- **Zeitsprung vor & zurück**: freies Sprung-Textfeld (`hh:mm:ss` bzw.
-  `t.hh:mm:ss` für Tage, mit `-` für rückwärts) sowie Schnellauswahl-Buttons
-  (+1 Std, +8 Std, +1 Tag, -1 Std, -1 Tag). Der jeweils letzte Zeitsprung
-  (auch über Schnellauswahl oder Sprungmarken) lässt sich per Button wieder
-  rückgängig machen.
-- **Konfigurierbare Sprungmarken**: z.B. "Morgengrauen" (06:00), "Mittag"
-  (12:00), "Abend" (18:00), "Mitternacht" – frei benennbar, editierbar und
-  löschbar. Pro Marke springt ▶ zum nächsten und ◀ zum vorherigen Auftreten
-  dieser Uhrzeit.
-- **Timer**: beliebig viele Countdown-Timer mit Fortschrittsbalken und
-  Restzeitanzeige, laufen an der Spielzeit (nicht Echtzeit) und reagieren
-  korrekt auf Zeitsprünge in beide Richtungen (nur solange sie aktiv laufen).
-  Optional lässt sich pro Timer ein Bild/Video hinterlegen, das beim Ablauf
-  automatisch an alle Spieler gesendet wird (siehe Trigger-Medien unten);
-  ein manuelles Zurücksetzen des Timers schließt dieses Medium wieder, falls
-  es noch angezeigt wird.
-- **Wecker**: beliebig viele Wecker mit fester Zielzeit, optional
-  wiederkehrend (z.B. alle 24 Spielstunden). Springt man zeitlich vor die
-  Zielzeit zurück, "entschärft" sich ein bereits ausgelöster Wecker wieder.
-- **Speichern & Laden**: kompletter Zustand (Spielzeit, Geschwindigkeit,
-  alle Timer, Wecker und Sprungmarken) lässt sich über die 💾/📂-Buttons
-  oben links als JSON-Datei exportieren bzw. wieder importieren.
-- **Netzwerk-Spieleranzeige**: der SL startet in der Steuer-App einen
-  TCP-Server auf einem frei wählbaren Port mit einem frei wählbaren
-  Servernamen (wird im mDNS-/LAN-Announcement mitgeschickt und erscheint so
-  in der Serverliste der Clients – nützlich, sobald mehrere Hosts im
-  selben Netzwerk laufen); Spieler-Clients finden ihn automatisch per mDNS-
-  und LAN-Broadcast-Suche (beide Quellen werden zu einem Eintrag pro Server
-  zusammengeführt, mit Hinweis, über welchen Weg er gefunden wurde) oder
-  verbinden sich manuell per IP:Port. Verbundene Clients werden in der
-  Steuer-App mit Verbindungszeitpunkt aufgelistet und lassen sich einzeln
-  per Klick trennen. Bricht die Verbindung unerwartet ab (WLAN-Aussetzer,
-  Host-Neustart), versucht der Client automatisch mit wachsendem Abstand
-  erneut zu verbinden und bekommt bei Erfolg denselben vollständigen
-  Zustand wie ein frisch verbundener Client – ein manuelles "Trennen"
-  hingegen bleibt getrennt. Vor dem Schließen fragt der Client, sofern noch
-  zwischengespeicherte Bilder/Videos vorhanden sind, ob diese Temp-Dateien
-  gelöscht werden sollen. Optional lässt sich in den Netzwerk-Einstellungen
-  ein PIN festlegen, den ein Client beim Verbinden kennen muss (leer =
-  kein PIN nötig) – reine LAN-Zugangskontrolle gegen versehentliches
-  Mitverbinden fremder Geräte, keine echte Verschlüsselung/Authentifizierung.
-  Client und Host tauschen beim Verbindungsaufbau außerdem ihre
-  Protokoll-Version aus; passt sie nicht zusammen, lehnt der Host die
-  Verbindung mit einer klaren Fehlermeldung statt undefiniertem Verhalten ab.
-- **Bild/Video an Spieler senden**: in der Medienbibliothek ein Bild oder
-  Video auswählen (bis ca. 1900 MB) – es öffnet sofort ein eigenes
-  Medien-Fenster bei allen verbundenen Spieler-Clients (Bilder inline,
-  Videos über die eingebettete VLC-Wiedergabe), optional auch lokal beim SL
-  (nur wenn gerade kein Spieler verbunden ist, um doppelte Anzeige zu
-  vermeiden). Das Fenster lässt sich vom SL aus per "Entfernen" bei allen
-  Beteiligten schließen; ob es im Vollbild oder als normales Fenster
-  angezeigt wird, stellt jede Seite (SL und jeder Spieler) unabhängig und
-  lokal ein. Der "Spieler-Vollbild"-Schalter beim SL schaltet sowohl alle
-  verbundenen Spieler-Clients als auch das eigene Spielerfenster fullscreen;
-  jedes Fenster (SL und Client) lässt sich jederzeit rein lokal per
-  Escape-Taste (oder beim SL zusätzlich per Button) wieder verkleinern, ohne
-  den Vollbild-Zustand der anderen Seite zu beeinflussen.
-  Der Spieler-Client meldet dem Host zudem zurück, wann ein
-  Video wirklich zu spielen beginnt und endet (echte VLC-Dauer statt
-  Schätzung), worauf z.B. eine automatische Uhr-Pause während des Videos
-  basiert.
-- **Medienbibliothek**: Bilder/Videos vorab zur Bibliothek hinzufügen
-  (bleibt über Neustarts erhalten, inkl. Vorschaubild bei Bildern und
-  freier Umbenennung) – ein Doppelklick auf einen Eintrag zeigt ihn sofort
-  bei SL und allen verbundenen Spielern an. Lässt sich über "Exportieren"/
-  "Importieren" (Reiter "Bibliothek") als eigener, frei wählbarer Ordner
-  sichern bzw. auf einem anderen Rechner wieder einlesen.
-- **Diashow/Galerie (Bild/Video)**: jedes gesendete Bild/Video bleibt
-  erhalten, statt vom nächsten ersetzt zu werden – SL und jeder Spieler
-  blättern unabhängig voneinander per Pfeiltaste oder Klick im
-  Spielerfenster durch alles, was schon gezeigt wurde (rein lokal, ohne den
-  Host zu fragen). Der SL kann ein Element bei allen "hervorheben" (ein
-  Sprung-Vorschlag, kein Zwang) oder ganz aus der Galerie entfernen, und
-  eine optionale Sekunden-pro-Bild-Einstellung schaltet bei allen
-  automatisch weiter (Videos werden davon nie unterbrochen). Ereignis-
-  Medien (Timer/Wecker/Intervall) haben Vorrang: sie unterbrechen die
-  Galerie-Anzeige kurz, ohne selbst Teil davon zu werden, und die Galerie
-  läuft erst nach dem Zurücksetzen des auslösenden Elements weiter.
-- **Trigger-Medien**: Timern, Weckern und Intervall-Ereignissen lässt sich
-  ein Bild/Video (oder ein Sound, direkt von der Platte gewählt) zuweisen,
-  das automatisch beim Auslösen gesendet wird, wahlweise mit Vollbild und
-  Endlosschleife statt automatischem Schließen. Für Video zusätzlich mit
-  Uhr-Pause während der Wiedergabe (pausiert die Uhr exakt bis zum
-  tatsächlichen Ende, nicht nur bis zu einer geschätzten Dauer, auch wenn
-  das Video nur lokal beim SL läuft).
-- **Sound-Bibliothek (eigener Reiter "Sounds", komplett getrennt von
-  Bild/Video)**: Sounds per Einfachklick an alle Spieler senden (und
-  lokal beim SL, wenn gerade kein Spieler verbunden ist) – ganz ohne
-  eigenes Anzeigefenster, ohne ein gerade gezeigtes Bild/Video zu ersetzen
-  und ohne selbst durch ein neues Bild/Video oder einen weiteren Sound
-  gestoppt zu werden. Beliebig viele Sounds laufen gleichzeitig. Jede
-  Bibliothekskachel hat ein ⚙-Symbol mit den Einstellungen (Lautstärke,
-  Endlosschleife oder feste Wiederholungszahl, Zurechtschneiden – Start/Ende
-  in Sekunden – und ein "SL-Test"-Button zum lokalen Vorhören ohne zu
-  senden); das öffnet sich als Overlay, ohne die Kachel-Anordnung zu
-  verschieben. Ein Sound, der über das "Sound"-Feld eines Timers/Weckers/
-  Intervalls ausgelöst wird (statt der eingebauten Töne Pling/Glocke/
-  Digital), wird ebenfalls an die Spieler gesendet und endet automatisch,
-  wenn das auslösende Element zurückgesetzt wird. Auch die Sound-Bibliothek
-  lässt sich exportieren/importieren wie die Medienbibliothek.
-- **Statusleiste (unten, bei jedem Reiter sichtbar)**: Serverstatus
-  (läuft/gestoppt, Adresse:Port, Anzahl verbundener Spieler), das gerade
-  gezeigte Bild/Video mit Schließen-Button, ein Sound-Zähler, dessen
-  Flyout alle gerade laufenden Sounds mit Live-Lautstärkeregler auflistet
-  und erlaubt, jeden einzeln oder alle zusammen zu stoppen (auch bei allen
-  verbundenen Spieler-Clients), eine Glocke, deren Flyout die zuletzt
-  ausgelösten Aktions-Meldungen ("... gesendet" usw.) als Verlauf zeigt,
-  sowie zwei Vollbild-Schalter (eigene SL-Vorschau lokal, Spieler-Anzeige
-  remote). Bewusst außerhalb der Reiter-Inhalte platziert, damit nichts
-  "springt", während im Hintergrund Sounds beginnen/enden oder ein Medium
-  wechselt.
-- **Ingame-Kalender (eigener Host-Reiter "Kalender")**: frei definierbare
-  Termine auf Ingame-Datum/Uhrzeit mit Titel, Beschreibung, Icon, Farbe,
-  Wiederholung (täglich/wöchentlich/monatlich/jährlich, optional mit
-  Enddatum) und optionalem Bild-/Video-/Sound-Auslöser (löst wie ein
-  Timer/Wecker das übliche Event-Medium aus). Im gemeinsamen Kopfbereich von
-  Host-Spielerfenster und Client erscheint ein kleiner Umschalter
-  "Zeitliste ↔ Kalender" – aber nur, wenn mindestens ein für Spieler
-  sichtbarer Termin existiert; sonst bleibt es bei der reinen Zeitliste,
-  keine leere Kalender-Option. Persistiert im normalen Spielstand und
-  zusätzlich separat als JSON exportierbar/importierbar; Änderungen werden
-  automatisch an alle verbundenen Spieler gesendet, neu verbundene Clients
-  erhalten den vollständigen Kalender beim Verbinden.
-- **Über-Dialog (Host und Client, "ℹ"-Button)**: Titel/Beschreibung aus einer
-  pro App eigenen Markdown-Datei (`About/AboutContent.md`, per
-  ClassIsland.Markdown.Avalonia gerendert), Versionsnummer sowie die eigene
-  Projektlizenz und die Lizenzhinweise aller verwendeten
-  Drittanbieter-Bibliotheken (`LICENSE`/`THIRD-PARTY-NOTICES.txt`, dieselben
-  Dateien, aus denen auch dieses Repo seine Lizenzangaben bezieht – nicht
-  dupliziert getippt), jeweils in einem zugeklappten Abschnitt.
-- **Medienfenster (Host-Vorschau und Client)**: zeigen zusätzlich zum Bild/
-  Video eine kleine Uhr-Anzeige (aktuelle Spielzeit bleibt auch bei
-  vollflächigem Medium sichtbar) sowie einen eigenen Minimieren-Button neben
-  dem Schließen-Button, da im Vollbild/randlosen Modus kein Betriebssystem-
-  Fenstertitel mit nativem Minimieren zur Verfügung steht.
-- **Sound je Element**: Timer/Wecker/Intervalle spielen beim Auslösen einen
-  wählbaren Sound ab - entweder einen der eingebauten Standardtöne (Pling/
-  Glocke/Digital, rein lokal beim SL) oder einen Sound aus der
-  Sound-Bibliothek (wird an Spieler gesendet, siehe oben). Bei den
-  eingebauten Tönen wahlweise mehrfach hintereinander (einstellbare
-  Wiederholung, 0 = endlos – stoppt dann erst, wenn das jeweilige Element
-  zurückgesetzt bzw. quittiert oder gelöscht wird); ein Bibliotheks-Sound
-  mit Wiederholung 0 loopt entsprechend endlos, bis das Element
-  zurückgesetzt wird.
-- **Vorwarnung (nur für SL sichtbar)**: optional ein Hinweis-Banner ein
-  konfigurierbares Zeitfenster (Minuten Spielzeit) bevor ein Timer/Wecker/
-  Intervall auslöst – wird nie an Spieler gesendet.
-- **Sitzungsprotokoll**: optional aufzuzeichnende Liste ausgelöster Ereignisse
-  (Zeitsprünge, Auslösungen, gesendete Medien) mit Spielzeit-Stempel; Export
-  als Textdatei an einen frei wählbaren Speicherort.
-- **Stile (JSON-Designs)**: alle 8 mitgelieferten Stile (Shadowrun, Mittelalter,
-  Warhammer 40k, Alien, Steampunk, Postapokalypse, Eldritch Horror, Gothic
-  Vampire) sowie beliebig viele eigene liegen als `theme.json` (Farben,
-  Verlaufsfarben, Schriften, benannte Hintergrund-/Buttonbilder) vor –
-  die mitgelieferten unter `SampleThemes/`, eigene SL-Designs zusätzlich in
-  `%AppData%/RpgTimeTracker/Themes/`, wo sie automatisch in der Stil-Auswahl
-  erscheinen. Wählt der SL ein Design, wird es auch an verbundene
-  Spieler-Clients übertragen (per Design-Id) – der Client zeigt es korrekt
-  an, wenn er dieselbe `theme.json` lokal besitzt (mitgeliefert für alle 8
-  Standard-Stile; ein komplett neues SL-Design muss aktuell manuell auch auf
-  die Spieler-Rechner kopiert werden).
-- **Ambiente-Automatik (optional)**: wechselt bei einem Design mit mehreren
-  benannten Hintergründen automatisch zwischen Tag- und Nacht-Hintergrund,
-  je nach Spielzeit. Bei Designs mit nur einem Hintergrund (aktuell alle
-  bleibt sie ohne sichtbare Wirkung.
+- **Game clock**: date & time freely settable, start/pause, keeps
+  running automatically afterward.
+- **Speed**: time factor from 0.1x to 300x (presets + slider) —
+  e.g. "1 real second = 1 hour of game time" during a rest.
+- **Time jump forward & backward**: free-form jump text field (`hh:mm:ss` or
+  `t.hh:mm:ss` for days, with `-` for backward) as well as quick-select buttons
+  (+1 hr, +8 hr, +1 day, -1 hr, -1 day). The most recent time jump
+  (including via quick select or bookmarks) can be undone again with a button.
+- **Configurable bookmarks**: e.g. "Dawn" (06:00), "Noon"
+  (12:00), "Evening" (18:00), "Midnight" — freely nameable, editable, and
+  deletable. For each bookmark, ▶ jumps to the next and ◀ to the previous occurrence
+  of that time of day.
+- **Timers**: any number of countdown timers with progress bar and
+  remaining-time display, run on game time (not real time) and react
+  correctly to time jumps in both directions (only while actively running).
+  Optionally, an image/video can be attached to each timer, which is
+  automatically sent to all players when it expires (see trigger media below);
+  manually resetting the timer also closes this media again, if
+  it is still being shown.
+- **Alarms**: any number of alarms with a fixed target time, optionally
+  recurring (e.g. every 24 game hours). Jumping back in time before the
+  target time "disarms" an already-triggered alarm again.
+- **Save & load**: the complete state (game time, speed,
+  all timers, alarms, and bookmarks) can be exported as a JSON file via the
+  💾/📂 buttons in the top left, or imported again.
+- **Networked player display**: the GM starts a TCP server in the
+  control app on a freely selectable port with a freely selectable
+  server name (this is included in the mDNS/LAN announcement and thus appears
+  in the clients' server list — useful once several hosts are running on
+  the same network); player clients find it automatically via mDNS
+  and LAN broadcast discovery (both sources are merged into one
+  entry per server, with an indication of how it was found), or
+  connect manually via IP:port. Connected clients are listed in the
+  control app along with their connection time and can be disconnected
+  individually with a click. If the connection drops unexpectedly (Wi-Fi
+  hiccup, host restart), the client automatically retries the connection with
+  increasing backoff, and on success receives the same complete
+  state as a freshly connected client would — a manual "disconnect",
+  on the other hand, stays disconnected. Before closing, if there are
+  still cached images/videos, the client asks whether these temp files
+  should be deleted. A PIN can optionally be set in the network settings
+  that a client must know when connecting (empty =
+  no PIN required) — pure LAN access control against accidentally
+  connecting foreign devices, not real encryption/authentication.
+  Client and host also exchange their
+  protocol version when the connection is established; if they don't match, the
+  host rejects the connection with a clear error message instead of undefined behavior.
+- **Send image/video to players**: select an image or
+  video (up to about 1900 MB) in the media library — this immediately opens a
+  dedicated media window on all connected player clients (images inline,
+  videos via the embedded VLC playback), optionally also locally on the GM's
+  side (only when no player is currently connected, to avoid
+  duplicate display). The window can be closed for everyone by the GM via
+  "Remove"; whether it is shown in fullscreen or as a normal window
+  is set independently and locally by each side (GM and each player). The GM's
+  "player fullscreen" toggle switches both all connected player clients
+  and the GM's own player window to fullscreen;
+  each window (GM and client) can be shrunk back down at any time, purely
+  locally, via the Escape key (or, for the GM, additionally via a button), without
+  affecting the fullscreen state on the other side.
+  The player client also reports back to the host when a
+  video actually starts and ends playing (real VLC duration instead of
+  an estimate), which e.g. an automatic clock pause during the video
+  is based on.
+- **Media library**: add images/videos to the library ahead of time
+  (persists across restarts, including a thumbnail for images and
+  free renaming) — double-clicking an entry shows it immediately
+  to the GM and all connected players. Can be backed up via "Export"/
+  "Import" ("Library" tab) into a separate, freely selectable folder,
+  or read back in on a different machine.
+- **Slideshow/gallery (image/video)**: every sent image/video is
+  kept instead of being replaced by the next one — the GM and each player
+  browse independently through everything that has already been shown, using the arrow
+  key or clicks in the player window (purely locally, without asking the
+  host). The GM can "highlight" an item for everyone (a
+  suggested jump, not a requirement) or remove it from the gallery entirely, and
+  an optional seconds-per-image setting advances everyone
+  automatically (videos are never interrupted by this). Event
+  media (timer/alarm/interval) take priority: they briefly interrupt the
+  gallery display without becoming part of it themselves, and the gallery
+  only continues after the triggering item is reset.
+- **Trigger media**: an image/video (or a sound, selected directly from
+  disk) can be assigned to timers, alarms, and interval events,
+  which is sent automatically when triggered, optionally with fullscreen and
+  an infinite loop instead of closing automatically. For video, there's additionally
+  a clock pause during playback (pauses the clock exactly until the
+  actual end, not just an estimated duration, even if
+  the video only plays locally on the GM's side).
+- **Sound library (its own "Sounds" tab, completely separate from
+  image/video)**: send sounds to all players with a single click (and
+  locally to the GM, if no player is currently connected) —
+  entirely without its own display window, without replacing any currently shown
+  image/video, and without being stopped itself by a new image/video or
+  another sound. Any number of sounds can play simultaneously. Each
+  library tile has a ⚙ icon with the settings (volume,
+  infinite loop or a fixed repeat count, trimming — start/end
+  in seconds — and an "GM test" button to preview locally without
+  sending); this opens as an overlay, without shifting the
+  tile layout. A sound triggered via the "sound" field of a timer/alarm/
+  interval (instead of the built-in tones Ping/Bell/
+  Digital) is also sent to the players and ends automatically
+  when the triggering item is reset. The sound library can
+  also be exported/imported like the media library.
+- **Status bar (bottom, visible on every tab)**: server status
+  (running/stopped, address:port, number of connected players), the currently
+  shown image/video with a close button, a sound counter whose
+  flyout lists all currently playing sounds with a live volume control
+  and allows stopping each individually or all together (also across
+  all connected player clients), a bell whose flyout shows the most recently
+  triggered action messages ("... sent", etc.) as a history,
+  as well as two fullscreen toggles (the GM's own local preview, remote player
+  display). Deliberately placed outside the tab content so that nothing
+  "jumps" while sounds start/end or a medium
+  changes in the background.
+- **Ingame calendar (its own host tab "Calendar")**: freely definable
+  events on an ingame date/time with title, description, icon, color,
+  recurrence (daily/weekly/monthly/yearly, optionally with an
+  end date), and an optional image/video/sound trigger (triggers the usual
+  event media, like a timer/alarm). A small toggle
+  "Timeline ↔ Calendar" appears in the shared header area of the
+  host's player window and the client — but only if at least one event
+  visible to players exists; otherwise it stays as a plain timeline,
+  with no empty calendar option. Persisted in the normal save state and
+  additionally exportable/importable separately as JSON; changes are
+  automatically sent to all connected players, and newly connected clients
+  receive the full calendar upon connecting.
+- **About dialog (host and client, "ℹ" button)**: title/description from an
+  app-specific Markdown file (`About/AboutContent.md`, rendered via
+  ClassIsland.Markdown.Avalonia), version number, as well as the app's own
+  project license and the license notices of all
+  third-party libraries used (`LICENSE`/`THIRD-PARTY-NOTICES.txt`, the same
+  files this repo also draws its license information from — not
+  duplicated separately), each in a collapsed section.
+- **Media windows (host preview and client)**: in addition to the image/
+  video, they show a small clock display (the current game time stays
+  visible even with a full-area medium) as well as their own minimize button next to
+  the close button, since in fullscreen/borderless mode there is no operating-system
+  window title bar with native minimize available.
+- **Sound per item**: timers/alarms/intervals play a
+  selectable sound when triggered — either one of the built-in default tones (Ping/
+  Bell/Digital, purely local on the GM's side) or a sound from the
+  sound library (sent to players, see above). For the
+  built-in tones, optionally multiple times in a row (configurable
+  repeat count, 0 = infinite — only stops once the respective item
+  is reset, acknowledged, or deleted); a library sound
+  with a repeat count of 0 loops infinitely accordingly, until the item
+  is reset.
+- **Advance warning (visible only to the GM)**: optionally a notice banner a
+  configurable time window (minutes of game time) before a timer/alarm/
+  interval triggers — never sent to players.
+- **Session log**: an optionally recordable list of triggered events
+  (time jumps, triggers, sent media) with a game-time stamp; exportable
+  as a text file to a freely selectable location.
+- **Themes (JSON designs)**: all 8 bundled themes (Shadowrun, Medieval,
+  Warhammer 40k, Alien, Steampunk, Post-Apocalypse, Eldritch Horror, Gothic
+  Vampire) as well as any number of custom ones exist as `theme.json` files (colors,
+  gradient colors, fonts, named background/button images) —
+  the bundled ones under `SampleThemes/`, custom GM themes additionally in
+  `%AppData%/RpgTimeTracker/Themes/`, where they automatically show up in the
+  theme selector. When the GM selects a theme, it is also transmitted to
+  connected player clients (by theme ID) — the client displays it
+  correctly if it has the same `theme.json` locally (bundled for all 8
+  default themes; a brand-new custom GM theme currently still has to be
+  copied manually to the players' machines as well).
+- **Ambient automation (optional)**: for a theme with several
+  named backgrounds, automatically switches between day and night background,
+  depending on the game time. For themes with only one background (currently all
+  of them), it has no visible effect.
 
-Alle Timer und Wecker werden bei jedem Tick der Spieluhr *und* bei jedem
-manuellen Zeitsprung mit dem entsprechenden Spielzeit-Delta aktualisiert –
-wird die Uhr beschleunigt, verlangsamt oder springt vor/zurück, ändert sich
-automatisch auch das Verhalten aller Timer/Wecker. Der Spieler-Client
-rekonstruiert dasselbe Verhalten lokal aus den vom Host gesendeten Deltas,
-ohne bei jedem Tick eine Netzwerknachricht zu benötigen.
+All timers and alarms are updated with the corresponding game-time delta on every
+tick of the game clock *and* on every manual time jump —
+if the clock is sped up, slowed down, or jumps forward/backward, the
+behavior of all timers/alarms automatically changes accordingly. The player client
+reconstructs the same behavior locally from the deltas sent by the host,
+without needing a network message on every tick.
 
-## Voraussetzungen
+## Requirements
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download) (siehe `global.json`;
-  alle drei Projekte zielen auf `net10.0`)
-- Internetzugriff beim ersten Build (NuGet-Pakete: Avalonia, CommunityToolkit.Mvvm,
+- [.NET 10 SDK](https://dotnet.microsoft.com/download) (see `global.json`;
+  all three projects target `net10.0`)
+- Internet access for the first build (NuGet packages: Avalonia, CommunityToolkit.Mvvm,
   LibVLCSharp, Serilog)
-- Für Video-/Audio-Wiedergabe (Bild funktioniert immer ohne Zusatzsoftware):
-  - **Windows**: keine zusätzliche Installation nötig – die native VLC-Bibliothek
-    wird über das NuGet-Paket `VideoLAN.LibVLC.Windows` mitgeliefert.
-  - **Linux**: VLC muss systemweit installiert sein, z.B.
-    `sudo apt install vlc` (Debian/Ubuntu) oder `sudo dnf install vlc` (Fedora).
-    Ohne installiertes VLC funktioniert die Bildanzeige weiterhin, Video-/
-    Audio-Versand zeigt aber eine Fehlermeldung statt abzuspielen.
+- For video/audio playback (images always work without additional software):
+  - **Windows**: no additional installation needed — the native VLC library
+    is bundled via the `VideoLAN.LibVLC.Windows` NuGet package.
+  - **Linux**: VLC must be installed system-wide, e.g.
+    `sudo apt install vlc` (Debian/Ubuntu) or `sudo dnf install vlc` (Fedora).
+    Without VLC installed, image display still works, but video/
+    audio sending shows an error message instead of playing.
 
-## Bauen & Starten
+## Building & Running
 
 ```bash
 dotnet restore RpgTimeTracker.sln
 
-# SL/Host-App:
+# GM/Host app:
 dotnet run --project RpgTimeTracker/RpgTimeTracker.csproj
 
-# Spieler-Client:
+# Player client:
 dotnet run --project RpgTimeTracker.PlayerClient/RpgTimeTracker.PlayerClient.csproj
 ```
 
-Für eine eigenständige Windows-Exe (jeweils für Host bzw. Client):
+For a standalone Windows exe (for host and client respectively):
 
 ```bash
 dotnet publish RpgTimeTracker/RpgTimeTracker.csproj -c Release -r win-x64 --self-contained true
 dotnet publish RpgTimeTracker.PlayerClient/RpgTimeTracker.PlayerClient.csproj -c Release -r win-x64 --self-contained true
 ```
 
-Für Linux entsprechend `-r linux-x64`.
+For Linux, use `-r linux-x64` accordingly.
 
-## Projektstruktur
+## Project structure
 
 ```
-RpgTimeTracker.Shared/          # von beiden Apps referenziert, nichts dupliziert
+RpgTimeTracker.Shared/          # referenced by both apps, nothing duplicated
 ├── Network/    # NetworkFrame, MediaLimits, DTOs
-├── Rpc/        # RpcMessage/RpcNotification<T> (JSON-RPC-Umschlag)
+├── Rpc/        # RpcMessage/RpcNotification<T> (JSON-RPC envelope)
 ├── Models/     # TimerItem, AlarmItem, IntervalEventItem, MediaKind
 ├── Services/   # GameClockService, MediaTypeHelper, VlcMediaService
-├── Visuals/    # VisualItemHelper (Bootstrap-Icons)
-├── Logging/    # AppLogging (Serilog-Bootstrap für beide Apps)
-└── Styles/     # AppStyles.axaml - gemeinsames Fenster-Chrome
+├── Visuals/    # VisualItemHelper (Bootstrap icons)
+├── Logging/    # AppLogging (Serilog bootstrap for both apps)
+└── Styles/     # AppStyles.axaml - shared window chrome
 
-RpgTimeTracker/                 # SL/Host-App
-├── Models/         # TriggerMediaConfig u.a. host-only Modelle
+RpgTimeTracker/                 # GM/Host app
+├── Models/         # TriggerMediaConfig and other host-only models
 ├── Network/        # TcpPlayerServerService, PlayerMdnsAnnouncer, LanDiscoveryResponder
-├── Persistence/    # AppStateDto (Speichern/Laden-Schema)
+├── Persistence/    # AppStateDto (save/load schema)
 ├── ViewModels/      # MainWindowViewModel, TimerItemViewModel, ConnectedClientItemViewModel, ...
 ├── Views/           # MainWindow.axaml(.cs)
 ├── App.axaml / App.axaml.cs
 └── Program.cs
 
-RpgTimeTracker.PlayerClient/    # Spieler-Client-App
+RpgTimeTracker.PlayerClient/    # player client app
 ├── Network/        # PlayerTcpClientService, MdnsDiscoveryService
 ├── Services/       # ClientSettingsService, ClientThemeService
 ├── ViewModels/      # ClientMainWindowViewModel
@@ -271,23 +270,23 @@ RpgTimeTracker.PlayerClient/    # Spieler-Client-App
 └── Program.cs
 ```
 
-## Dokumentation
+## Documentation
 
-Ausführlichere technische Dokumentation liegt in [`docs/`](docs/):
+More detailed technical documentation lives in [`docs/`](docs/):
 
-- [`docs/architecture.md`](docs/architecture.md) — Systemüberblick: die drei
-  Projekte, ihre Zuständigkeiten, das Threading-Modell und der Datenfluss.
-- [`docs/protocol.md`](docs/protocol.md) — Frame-Format und die komplette
-  JSON-RPC-Methodenliste (beide Richtungen), Medien-Streaming, Uhr-Sync.
-- [`docs/design-decisions.md`](docs/design-decisions.md) — warum bestimmte
-  Dinge so gebaut sind, wie sie sind, inklusive einiger Entscheidungen, die
-  frühere Lösungen bewusst wieder rückgängig gemacht haben.
+- [`docs/architecture.md`](docs/architecture.md) — system overview: the three
+  projects, their responsibilities, the threading model, and the data flow.
+- [`docs/protocol.md`](docs/protocol.md) — frame format and the complete
+  JSON-RPC method list (both directions), media streaming, clock sync.
+- [`docs/design-decisions.md`](docs/design-decisions.md) — why certain
+  things are built the way they are, including a few decisions that
+  deliberately reversed earlier solutions.
 
-## Mögliche Erweiterungen
+## Possible extensions
 
-- Sound/Popup-Benachrichtigung bei Timer-Ablauf bzw. Wecker-Auslösung
-- Eigener Fantasy-Kalender (andere Monatslängen, Wochentage, Feiertage)
-  statt des Standard-`DateTime`
-- Mehrere parallele "Sitzungen"/Kampagnen mit eigener Spielzeit
-- Automatisches Speichern beim Schließen der App / zuletzt genutzte Datei merken
-- Video-Chunking mit progressiver Wiedergabe schon während der Übertragung
+- Sound/popup notification when a timer expires or an alarm triggers
+- Custom fantasy calendar (different month lengths, weekdays, holidays)
+  instead of the standard `DateTime`
+- Multiple parallel "sessions"/campaigns with their own game time
+- Auto-save on closing the app / remember the last-used file
+- Video chunking with progressive playback already during transfer

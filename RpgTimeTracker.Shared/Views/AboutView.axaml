@@ -4,34 +4,21 @@
              xmlns:mdxaml="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
              x:Class="RpgTimeTracker.Shared.Views.AboutView"
              x:DataType="vm:AboutViewModel">
-    <!--
-        Gemeinsamer About-Screen für Host und Client: Titel+Beschreibung kommen als Markdown
-        vom jeweiligen AboutWindow (siehe About/AboutContent.md in beiden Projekten). Die eigene
-        Lizenz und die Lizenzhinweise der Drittanbieter-Bibliotheken stecken in zugeklappten
-        Expandern statt direkt im Fließtext - beide Texte sind lang und werden selten
-        gebraucht, sodass niemand an ihnen vorbeiscrollen soll, um zur eigentlichen
-        Beschreibung zu kommen bzw. den Screen schnell wieder schließen zu können. Eine einzige
-        äußere ScrollViewer trägt die ganze Seite (Beschreibung + ggf. aufgeklappte Expander) -
-        die inneren MarkdownScrollViewer bekommen dadurch unbegrenzte Höhe zugewiesen und wachsen
-        einfach mit ihrem Inhalt mit, statt selbst eine Scroll-Nische zu brauchen (siehe
-        design-decisions.md, "Combined session.hello handshake" ist ein anderes Thema, aber der
-        vorige DockPanel-Squeeze-Bug bei genau diesem Screen ist dort auch dokumentiert).
-        THIRD-PARTY-NOTICES.txt und LICENSE sind kein "echtes" Markdown, aber ihre
-        Setext-Überschriften (Titelzeile, darunter eine Linie aus Bindestrichen) werden trotzdem
-        als Überschriften erkannt.
-    -->
+
     <ScrollViewer Margin="20">
         <StackPanel Spacing="14">
-            <TextBlock Classes="muted"
-                       Text="{Binding VersionText, StringFormat='Version {0}'}" />
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Classes="muted" Text="{DynamicResource About.VersionLabel}" />
+                <TextBlock Classes="muted" Text="{Binding VersionText}" />
+            </StackPanel>
 
             <mdxaml:MarkdownScrollViewer Markdown="{Binding ContentMarkdown}" />
 
-            <Expander Header="🔓 Eigene Lizenz (MIT)">
+            <Expander Header="{DynamicResource About.OwnLicenseHeader}">
                 <mdxaml:MarkdownScrollViewer Markdown="{Binding LicenseText}" Margin="0,8,0,0" />
             </Expander>
 
-            <Expander Header="📚 Bibliotheken &amp; Lizenzen (Drittanbieter)">
+            <Expander Header="{DynamicResource About.ThirdPartyHeader}">
                 <mdxaml:MarkdownScrollViewer Markdown="{Binding ThirdPartyNoticesText}" Margin="0,8,0,0" />
             </Expander>
         </StackPanel>

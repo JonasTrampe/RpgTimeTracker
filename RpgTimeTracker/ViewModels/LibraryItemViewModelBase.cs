@@ -5,16 +5,16 @@ using CommunityToolkit.Mvvm.Input;
 namespace RpgTimeTracker.ViewModels;
 
 /// <summary>
-///     Gemeinsame Basis für MediaLibraryItemViewModel und SoundLibraryItemViewModel: beide sind
-///     ein benanntes, lokal gespeichertes Dateisystem-Element mit Umbenennen/Löschen/Änderungs-
-///     benachrichtigung - alles darüber hinaus (Thumbnail/Kind/Loop bei Medien; Lautstärke/
-///     Wiederholungen/Trim bei Sounds) bleibt bewusst in den jeweiligen abgeleiteten Klassen, da es
-///     sich inhaltlich zu stark unterscheidet, um sich sinnvoll zu teilen.
-///     CRTP (TSelf = die konkrete abgeleitete Klasse) statt eines nicht-generischen
-///     Action&lt;LibraryItemViewModelBase&gt;, damit die bestehenden, konkret typisierten
-///     onDeleteRequested/onChanged-Callback-Methoden in MainWindowViewModel (z.B.
-///     RemoveMediaLibraryItem(MediaLibraryItemViewModel)) unverändert per Method-Group weiterhin
-///     als Konstruktor-Argument passen.
+///     Common base for MediaLibraryItemViewModel and SoundLibraryItemViewModel: both are
+///     a named, locally stored filesystem item with rename/delete/change
+///     notification - everything beyond that (thumbnail/kind/loop for media; volume/
+///     repeats/trim for sounds) is deliberately kept in the respective derived classes, since
+///     it differs too much in substance to be usefully shared.
+///     CRTP (TSelf = the concrete derived class) instead of a non-generic
+///     Action&lt;LibraryItemViewModelBase&gt;, so that the existing, concretely typed
+///     onDeleteRequested/onChanged callback methods in MainWindowViewModel (e.g.
+///     RemoveMediaLibraryItem(MediaLibraryItemViewModel)) still fit unchanged via method group
+///     as a constructor argument.
 /// </summary>
 public abstract partial class LibraryItemViewModelBase<TSelf> : ObservableObject
     where TSelf : LibraryItemViewModelBase<TSelf>
@@ -47,8 +47,8 @@ public abstract partial class LibraryItemViewModelBase<TSelf> : ObservableObject
     }
 
     /// <summary>
-    ///     Für abgeleitete Klassen: eigene änderungsauslösende Properties (z.B. Loop,
-    ///     Volume, Trim) rufen das ebenfalls über diese Methode auf, da _onChanged hier gekapselt bleibt.
+    ///     For derived classes: their own change-triggering properties (e.g. Loop,
+    ///     Volume, Trim) also call this via this method, since _onChanged remains encapsulated here.
     /// </summary>
     protected void NotifyChanged()
     {

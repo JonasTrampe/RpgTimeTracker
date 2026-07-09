@@ -5,9 +5,9 @@ using RpgTimeTracker.Shared.Models;
 namespace RpgTimeTracker.Models.Persistence;
 
 /// <summary>
-///     Serialisierbarer Schnappschuss des kompletten App-Zustands.
-///     TimeSpan-Werte werden bewusst als long (Ticks) gespeichert, da
-///     System.Text.Json TimeSpan ohne eigenen Converter nicht unterstützt.
+///     Serializable snapshot of the complete app state.
+///     TimeSpan values are deliberately stored as long (ticks), since
+///     System.Text.Json does not support TimeSpan without a custom converter.
 /// </summary>
 public class AppStateDto
 {
@@ -24,7 +24,7 @@ public class AppStateDto
 
     public string? Theme { get; set; }
 
-    /// <summary>Globaler Default-Sound für neue Elemente. Einzelne Elemente speichern ihren Sound separat.</summary>
+    /// <summary>Global default sound for new items. Individual items store their sound separately.</summary>
     public string? Sound { get; set; }
 }
 

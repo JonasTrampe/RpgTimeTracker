@@ -1,6 +1,6 @@
 namespace RpgTimeTracker.Shared.Models.Network;
 
-/// <summary>Kündigt ein Medium an (RpcMethods.MediaBegin), gefolgt von N rohen NetworkFrame.TypeMediaChunk-Frames.</summary>
+/// <summary>Announces a medium (RpcMethods.MediaBegin), followed by N raw NetworkFrame.TypeMediaChunk frames.</summary>
 public sealed class MediaHeaderDto
 {
     public const string MediaKindImage = "Image";
@@ -11,40 +11,41 @@ public sealed class MediaHeaderDto
     public string FileName { get; set; } = string.Empty;
     public string MimeType { get; set; } = string.Empty;
 
-    /// <summary>Gesamtgröße in Bytes; die eigentlichen Daten folgen als NetworkFrame.TypeMediaChunk-Frames.</summary>
+    /// <summary>Total size in bytes; the actual data follows as NetworkFrame.TypeMediaChunk frames.</summary>
     public long TotalLength { get; set; }
 
     /// <summary>
-    ///     Ob das Video nach dem Ende automatisch von vorn beginnen soll (Client-seitig via LibVLC),
-    ///     statt media.playbackEnded zu melden und vom Host geschlossen zu werden.
+    ///     Whether the video should automatically restart from the beginning after ending
+    ///     (client-side via LibVLC), instead of reporting media.playbackEnded and being closed
+    ///     by the host.
     /// </summary>
     public bool Loop { get; set; }
 
     /// <summary>
-    ///     Nur für Sounds relevant (0-100): Start-Lautstärke, wie im Sound-Bibliothekseintrag
-    ///     hinterlegt. Live-Änderungen während der Wiedergabe laufen separat über media.setVolume.
+    ///     Only relevant for sounds (0-100): starting volume, as stored in the sound library
+    ///     entry. Live changes during playback run separately via media.setVolume.
     /// </summary>
     public int Volume { get; set; } = 100;
 
     /// <summary>
-    ///     Nur für Sounds relevant und nur wirksam, wenn Loop=false: Gesamtanzahl der
-    ///     Wiedergaben (1 = einmal, kein Wiederholen). Bei Loop=true irrelevant (endlos).
+    ///     Only relevant for sounds and only effective when Loop=false: total number of
+    ///     playbacks (1 = once, no repeat). Irrelevant when Loop=true (endless).
     /// </summary>
     public int RepeatCount { get; set; } = 1;
 
     /// <summary>
-    ///     Nur für Sounds relevant: Zurechtschneiden über LibVLC-Startzeit/-Endzeit-Optionen.
-    ///     0 = kein Trim an dieser Stelle (Start bei 0 bzw. bis zum Dateiende).
+    ///     Only relevant for sounds: trimming via LibVLC start-time/end-time options.
+    ///     0 = no trim at this point (start at 0 or up to the end of the file, respectively).
     /// </summary>
     public long TrimStartMs { get; set; }
 
     public long TrimEndMs { get; set; }
 
     /// <summary>
-    ///     Nur für Bild/Video relevant: ob dieses Medium in der session-eigenen Galerie
-    ///     bleibt (Ad-hoc/Bibliothek, navigierbar/rückblätterbar) statt nur einmalig gezeigt zu werden
-    ///     (Event-Trigger-Medien - haben Vorrang, unterbrechen die Galerie-Anzeige, sind aber selbst
-    ///     nicht Teil davon). Bei false löscht der Client die Datei wie bisher nach der Anzeige.
+    ///     Only relevant for images/video: whether this medium stays in the session's own
+    ///     gallery (ad-hoc/library, navigable/browsable) instead of just being shown once
+    ///     (event-trigger media - take precedence, interrupt the gallery display, but are not
+    ///     themselves part of it). When false, the client deletes the file after display as before.
     /// </summary>
     public bool AddToGallery { get; set; }
 }

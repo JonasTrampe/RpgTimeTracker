@@ -19,6 +19,7 @@ using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Models.Rpc;
 using RpgTimeTracker.Shared.Models.Theming;
 using RpgTimeTracker.Shared.Services;
+using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Theming;
 using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.Shared.ViewModels;
@@ -28,10 +29,10 @@ namespace RpgTimeTracker.PlayerClient.ViewModels;
 
 public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, IPlayerDisplayContext
 {
-    // ==================== Sounds: unabhängig vom Bild/Video-Anzeige-Slot ====================
-    // Sounds laufen NIE über CurrentMediaKind/MediaPlayer (Video-Feld) - kein Fenster, keine
-    // Ersetzung eines gerade gezeigten Bilds/Videos, und beliebig viele parallel: jeder Sound
-    // bekommt einen eigenen, kurzlebigen MediaPlayer statt den gemeinsam genutzten Video-Player.
+    // ==================== Sounds: independent of the image/video display slot ====================
+    // Sounds NEVER run through CurrentMediaKind/MediaPlayer (video field) - no window, no
+    // replacement of a currently shown image/video, and any number in parallel: each sound
+    // gets its own, short-lived MediaPlayer instead of the shared video player.
 
     private readonly Dictionary<string, MediaPlayer> _activeSoundPlayers = new();
     private readonly List<CalendarEntryDefinition> _calendarEntries = new();
@@ -43,15 +44,15 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     private readonly List<GalleryEntry> _gallery = new();
 
     /// <summary>
-    ///     Läuft rein lokal (nicht netzgetrieben): der Server schickt Zeit nur bei Sprüngen,
-    ///     dazwischen tickt diese Instanz mit der zuletzt bekannten Geschwindigkeit selbst weiter
-    ///     - identische Ableitungslogik wie beim Host, siehe RpgTimeTracker.Shared.Services.
+    ///     Runs purely locally (not network-driven): the server sends time only on jumps,
+    ///     in between this instance ticks on its own with the last known speed
+    ///     - identical derivation logic as on the host, see RpgTimeTracker.Shared.Services.
     /// </summary>
     private readonly GameClockService _localClock = new(DateTime.Now);
 
     /// <summary>
-    ///     Verbleibende Wiedergaben je MediaId (-1 = endlos/Loop, sonst zählt bei jedem
-    ///     natürlichen Ende runter - siehe OnSoundEndReached).
+    ///     Remaining plays per MediaId (-1 = endless/loop, otherwise counts down on each
+    ///     natural end - see OnSoundEndReached).
     /// </summary>
     private readonly Dictionary<string, int> _soundRepeatsRemaining = new();
 
@@ -84,6 +85,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     [ObservableProperty] private string _playerHeaderTitle = "Spieleranzeige";
     [ObservableProperty] private int _port = 48550;
     [ObservableProperty] private DiscoveredRpgTimeTrackerServer? _selectedServer;
+    [ObservableProperty] private string _selectedLanguageOption = "English";
     [ObservableProperty] private bool _showConnectionSettings = true;
     [ObservableProperty] private bool _showPlayerCalendarView;
     private DispatcherTimer? _slideshowTimer;
@@ -94,6 +96,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         var clientSettings = ClientSettingsService.LoadSettings();
         _mediaFullscreen = clientSettings.MediaFullscreen;
         _pin = clientSettings.Pin;
+        _selectedLanguageOption = clientSettings.Language == "de" ? "Deutsch" : "English";
 
         _localClock.Tick += (newTime, gameDelta) => OnLocalClockTick(newTime, gameDelta);
 
@@ -137,11 +140,11 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             }
             else
             {
-                // Verbindung weg: lokale Uhr anhalten, damit Restzeiten nicht "phantomhaft"
-                // ohne Server weiterlaufen, bis eine neue Verbindung wieder synchronisiert.
+                // Connection lost: pause the local clock, so that remaining times don't keep
+                // running "phantom-like" without the server until a new connection re-syncs.
                 _localClock.Pause();
-                // Alle noch laufenden Sounds sofort stoppen - ohne Host-Verbindung soll das
-                // Client-Gerät nicht unkontrolliert weiterspielen (z.B. eine Loop-Ambience).
+                // Immediately stop all still-running sounds - without a host connection the
+                // client device should not keep playing uncontrolled (e.g. a looping ambience).
                 StopAllSounds();
                 ClearGallery();
                 _calendarEntries.Clear();
@@ -170,7 +173,10 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
     public string MediaFullscreenLabel => MediaFullscreen ? "Medien-Vollbild aus" : "Medien-Vollbild an";
 
-    /// <summary>Ob beim Schließen der App überhaupt etwas zum Aufräumen da ist - nur dann lohnt sich die Nachfrage.</summary>
+    /// <summary>Display names for the language ComboBox; native names on purpose, not translated by LocalizationService itself.</summary>
+    public ObservableCollection<string> LanguageOptions { get; } = ["English", "Deutsch"];
+
+    /// <summary>Whether there is anything to clean up at all when the app closes - only then is asking worthwhile.</summary>
     public bool HasTempFilesToClean => _gallery.Count > 0 || _currentVideoTempPath is not null;
 
     public void Dispose()
@@ -199,23 +205,23 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     public bool ShowPlayerTimelineView => !ShowPlayerCalendarView;
 
     /// <summary>
-    ///     Für PlayerTimelineListView (Shared) - dieselbe Collection-Instanz, keine Kopie, damit Live-Updates erhalten
-    ///     bleiben.
+    ///     For PlayerTimelineListView (Shared) - the same collection instance, no copy, so live updates are
+    ///     preserved.
     /// </summary>
     IEnumerable IPlayerDisplayContext.TimelineEntries => Items;
 
     IEnumerable IPlayerDisplayContext.CalendarMonthDays => PlayerCalendarDays;
     IEnumerable IPlayerDisplayContext.CalendarEntries => PlayerCalendarEntries;
 
-    /// <summary>SL fordert an, die Anzeige (Medium falls offen, sonst Zeitliste) fullscreen umzuschalten.</summary>
+    /// <summary>GM requests toggling the display (medium if open, otherwise timeline) to fullscreen.</summary>
     public event Action<bool>? RemoteFullscreenRequested;
 
     /// <summary>
-    ///     Feuert unconditionally bei jedem neuen Medium (nicht nur beim Wechsel von "kein Medium"
-    ///     zu "Medium") - eine reine HasMedia-Änderungsprüfung würde bei zwei Medien gleicher Art
-    ///     hintereinander (z.B. Bild -> Bild) nicht auslösen, weil sich der bool-Wert nicht ändert.
-    ///     Damit lässt sich ein vom Spieler zwischenzeitlich geschlossenes Medien-Fenster trotzdem
-    ///     beim nächsten gesendeten Medium zuverlässig wieder öffnen.
+    ///     Fires unconditionally on every new medium (not only when switching from "no medium"
+    ///     to "medium") - a pure HasMedia change check would not trigger for two media of the
+    ///     same kind in a row (e.g. image -> image), because the bool value doesn't change.
+    ///     This reliably reopens a media window that the player closed in the meantime, the
+    ///     next time a medium is sent.
     /// </summary>
     public event Action? MediaWindowShouldShow;
 
@@ -239,12 +245,19 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         SaveClientSettings();
     }
 
+    partial void OnSelectedLanguageOptionChanged(string value)
+    {
+        LocalizationService.Apply(value == "Deutsch" ? "de" : "en");
+        SaveClientSettings();
+    }
+
     private void SaveClientSettings()
     {
         ClientSettingsService.SaveSettings(new ClientSettingsService.ClientSettingsDto
         {
             MediaFullscreen = MediaFullscreen,
-            Pin = Pin
+            Pin = Pin,
+            Language = SelectedLanguageOption == "Deutsch" ? "de" : "en"
         });
     }
 
@@ -274,7 +287,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Verbindung zu {Host}:{Port} fehlgeschlagen", Host, Port);
+            Log.Warning(ex, "Connection to {Host}:{Port} failed", Host, Port);
             IsConnected = false;
             ShowConnectionSettings = true;
             ConnectionStatus = $"Verbindung fehlgeschlagen: {ex.Message}";
@@ -284,7 +297,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     [RelayCommand]
     private void Disconnect()
     {
-        Log.Information("Verbindung manuell getrennt");
+        Log.Information("Connection manually disconnected");
         _client.Disconnect();
         IsConnected = false;
         ShowConnectionSettings = true;
@@ -308,14 +321,14 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
             if (servers.Count > 0 && SelectedServer is null) SelectedServer = servers[0];
 
-            Log.Information("Server-Suche abgeschlossen: {ServerCount} gefunden", servers.Count);
+            Log.Information("Server search completed: {ServerCount} found", servers.Count);
             ConnectionStatus = servers.Count == 0
-                ? "Kein Server gefunden. Prüfe: Server gestartet, gleiche LAN/VPN, Firewall für TCP 48550 und UDP 48551/5353."
-                : $"{servers.Count} Server gefunden";
+                ? LocalizationService.Get("ClientMainWindowViewModel.Connection.NoServerFound")
+                : string.Format(LocalizationService.Get("ClientMainWindowViewModel.Connection.ServersFound"), servers.Count);
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Server-Suche fehlgeschlagen");
+            Log.Warning(ex, "Server search failed");
             ConnectionStatus = $"Suche fehlgeschlagen: {ex.Message}";
         }
         finally
@@ -348,7 +361,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
     private void OnSessionSnapshot(SessionSnapshotParams snapshot)
     {
-        Log.Information("session.snapshot verarbeitet: {ItemCount} Items, Uhr läuft={IsRunning}, Zeit={GameTime}",
+        Log.Information("session.snapshot processed: {ItemCount} items, clock running={IsRunning}, time={GameTime}",
             snapshot.Items.Count, snapshot.IsClockRunning, snapshot.CurrentGameTime);
         PlayerHeaderTitle = Limit(snapshot.PlayerHeaderTitle, 120);
         PlayerHeaderSubtitle = Limit(snapshot.PlayerHeaderSubtitle, 180);
@@ -377,8 +390,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     }
 
     /// <summary>
-    ///     Periodische Drift-Korrektur der lokal abgeleiteten Uhr + Selbstheilung, falls ein
-    ///     clock.*-Delta wegen skipIfBusy (Medienübertragung lief gerade) verworfen wurde.
+    ///     Periodic drift correction of the locally derived clock + self-healing, in case a
+    ///     clock.* delta was discarded due to skipIfBusy (media transfer was in progress).
     /// </summary>
     private void OnClockHeartbeat(DateTime gameTime, double speedMultiplier, bool isRunning)
     {
@@ -389,10 +402,10 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         else _localClock.Pause();
     }
 
-    // Der Client muss dieselbe theme.json lokal besitzen (mitgelieferte SampleThemes oder
-    // dieselbe %AppData%/RpgTimeTracker/Themes-Datei wie der Host), sonst bleibt das zuletzt
-    // aktive Design bestehen (kein automatischer Rückfall, um kein optisch falsches Design zu
-    // zeigen - siehe ThemeDefinitionLoader.Resolve).
+    // The client must own the same theme.json locally (bundled SampleThemes or the same
+    // %AppData%/RpgTimeTracker/Themes file as the host), otherwise the last active theme
+    // stays in place (no automatic fallback, to avoid showing a visually wrong theme -
+    // see ThemeDefinitionLoader.Resolve).
     private void ApplyTheme(string? theme)
     {
         var newTheme = Limit(theme, 80);
@@ -403,7 +416,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         var loaded = ThemeDefinitionLoader.Resolve(newTheme);
         if (loaded is not { } resolved)
         {
-            Log.Warning("SL-Design {Theme} lokal nicht gefunden - Design bleibt unverändert", newTheme);
+            Log.Warning("GM theme {Theme} not found locally - theme remains unchanged", newTheme);
             return;
         }
 
@@ -569,10 +582,15 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             vm.Name = Limit(timer.Name, 120);
             vm.Icon = VisualItemHelper.NormalizeIcon(timer.Icon);
             vm.ColorHex = Limit(timer.ColorHex, 24);
-            vm.KindLabel = "Timer";
+            vm.KindLabel = LocalizationService.Get("TimelineDisplayItem.KindTimer");
             vm.PrimaryValue = FormatTimeSpan(timer.Remaining);
-            vm.DetailText = $"Rest: {FormatTimeSpan(timer.Remaining)} · Dauer: {FormatTimeSpan(timer.Duration)}";
-            vm.StatusText = timer.IsCompleted ? "Abgelaufen" : timer.IsRunning ? "Läuft" : "Pausiert";
+            vm.DetailText = string.Format(LocalizationService.Get("ClientMainWindowViewModel.Timer.DetailFormat"),
+                FormatTimeSpan(timer.Remaining), FormatTimeSpan(timer.Duration));
+            vm.StatusText = timer.IsCompleted
+                ? LocalizationService.Get("TimelineDisplayItem.StatusExpired")
+                : timer.IsRunning
+                    ? LocalizationService.Get("TimelineDisplayItem.StatusRunning")
+                    : LocalizationService.Get("TimelineDisplayItem.StatusPaused");
             vm.IsActive = timer.IsRunning;
             vm.IsCompleted = timer.IsCompleted;
             vm.HasProgress = true;
@@ -587,13 +605,18 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             vm.Name = Limit(alarm.Name, 120);
             vm.Icon = VisualItemHelper.NormalizeIcon(alarm.Icon);
             vm.ColorHex = Limit(alarm.ColorHex, 24);
-            vm.KindLabel = "Wecker";
+            vm.KindLabel = LocalizationService.Get("TimelineDisplayItem.KindAlarm");
             vm.PrimaryValue = alarm.IsOverdue(currentTime) || alarm.IsTriggered
-                ? "Jetzt!"
+                ? LocalizationService.Get("AlarmItem.NowLabel")
                 : FormatTimeSpan(alarm.TimeRemaining(currentTime));
-            var repeatDisplay = alarm.RepeatInterval.HasValue ? FormatTimeSpan(alarm.RepeatInterval.Value) : "einmalig";
-            vm.DetailText = $"{alarm.TriggerAt:dddd, dd.MM.yyyy HH:mm} · Wdh.: {repeatDisplay}";
-            vm.StatusText = alarm.IsTriggered ? "Ausgelöst" : "Bereit";
+            var repeatDisplay = alarm.RepeatInterval.HasValue
+                ? FormatTimeSpan(alarm.RepeatInterval.Value)
+                : LocalizationService.Get("AlarmItem.RepeatOnce");
+            vm.DetailText = string.Format(LocalizationService.Get("ClientMainWindowViewModel.Alarm.DetailFormat"),
+                $"{alarm.TriggerAt:dddd, dd.MM.yyyy HH:mm}", repeatDisplay);
+            vm.StatusText = alarm.IsTriggered
+                ? LocalizationService.Get("TimelineDisplayItem.StatusTriggered")
+                : LocalizationService.Get("TimelineDisplayItem.StatusReady");
             vm.IsActive = alarm.IsTriggered;
             vm.IsCompleted = alarm.IsTriggered;
             vm.HasProgress = false;
@@ -607,18 +630,20 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             vm.Name = Limit(interval.Name, 120);
             vm.Icon = VisualItemHelper.NormalizeIcon(interval.Icon);
             vm.ColorHex = Limit(interval.ColorHex, 24);
-            vm.KindLabel = "OnTime";
+            vm.KindLabel = LocalizationService.Get("TimelineDisplayItem.KindInterval");
             vm.PrimaryValue = interval.IsActive
-                ? $"aktiv: {FormatTimeSpan(interval.Remaining)}"
-                : $"nächster: {FormatTimeSpan(interval.Remaining)}";
+                ? string.Format(LocalizationService.Get("IntervalEvent.RemainingActiveFormat"), FormatTimeSpan(interval.Remaining))
+                : string.Format(LocalizationService.Get("IntervalEvent.RemainingNextFormat"), FormatTimeSpan(interval.Remaining));
             var repeatDisplay = interval.MaxRepeats is > 0
                 ? $"{interval.CurrentRepeatNumber}/{interval.MaxRepeats}"
                 : $"{interval.CurrentRepeatNumber}/∞";
-            vm.DetailText =
-                $"alle {FormatTimeSpan(interval.Interval)} für {FormatTimeSpan(interval.ActiveDuration)} · {repeatDisplay}";
-            vm.StatusText = interval.IsCompleted ? "Fertig" :
-                interval.IsActive ? "Aktiv" :
-                interval.IsRunning ? "Läuft" : "Pausiert";
+            vm.DetailText = string.Format(LocalizationService.Get("ClientMainWindowViewModel.Interval.DetailFormat"),
+                FormatTimeSpan(interval.Interval), FormatTimeSpan(interval.ActiveDuration), repeatDisplay);
+            vm.StatusText = interval.IsCompleted ? LocalizationService.Get("IntervalEvent.StatusDone") :
+                interval.IsActive ? LocalizationService.Get("TimelineDisplayItem.StatusActive") :
+                interval.IsRunning
+                    ? LocalizationService.Get("TimelineDisplayItem.StatusRunning")
+                    : LocalizationService.Get("TimelineDisplayItem.StatusPaused");
             vm.IsActive = interval.IsActive;
             vm.IsCompleted = interval.IsCompleted;
             vm.HasProgress = true;
@@ -627,37 +652,37 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         }
     }
 
-    // ==================== Medien ====================
+    // ==================== Media ====================
 
     private void OnMediaBegin(MediaHeaderDto header, string tempPath)
     {
         if (header.Kind == MediaHeaderDto.MediaKindAudio)
         {
-            // Sounds bekommen bewusst KEIN Medien-Fenster und ersetzen kein gerade gezeigtes
-            // Bild/Video - siehe PlaySound-Kommentar. Deshalb auch kein CurrentMediaFileName/
-            // MediaWindowShouldShow hier, das ist exklusiv für den Bild/Video-Anzeige-Slot.
+            // Sounds deliberately get NO media window and do not replace a currently shown
+            // image/video - see PlaySound comment. Hence also no CurrentMediaFileName/
+            // MediaWindowShouldShow here, that is exclusive to the image/video display slot.
             PlaySound(tempPath, header);
             return;
         }
 
-        // Event-Trigger-Medien (AddToGallery=false) haben Vorrang: sie überschreiben die Anzeige
-        // vorübergehend und sperren die lokale Galerie-Navigation, bis sie wieder schließen
-        // (media.cleared - siehe OnMediaCleared) - siehe design-decisions.md.
+        // Event-trigger media (AddToGallery=false) take precedence: they temporarily
+        // override the display and lock local gallery navigation until they close again
+        // (media.cleared - see OnMediaCleared) - see design-decisions.md.
         _isShowingEventMedia = !header.AddToGallery;
         CurrentMediaFileName = Limit(header.FileName, 120);
 
         if (header.Kind == MediaHeaderDto.MediaKindVideo)
         {
-            // Erst das Fenster zeigen (Größe/Position an Hauptfenster angeglichen, ggf.
-            // fullscreen, Topmost gesetzt), DANN die Wiedergabe starten - der native
-            // Video-Rendering-Surface (VideoView ist ein eingebettetes natives Child-Fenster,
-            // kein reines Avalonia-Control) wird sonst mitten in der Wiedergabe umgroßt, was bei
-            // hochauflösenden Videos zu einer falschen Fenstergröße und/oder einem Video führt,
-            // das hinter statt in der Zeitliste erscheint.
+            // Show the window first (size/position aligned to the main window, fullscreen
+            // if applicable, Topmost set), THEN start playback - otherwise the native
+            // video rendering surface (VideoView is an embedded native child window,
+            // not a pure Avalonia control) gets resized mid-playback, which for
+            // high-resolution videos leads to a wrong window size and/or a video that
+            // appears behind rather than in the timeline.
             MediaWindowShouldShow?.Invoke();
             StartVideo(tempPath, header.MediaId, header.Loop, header.FileName, header.AddToGallery);
         }
-        // Für Bilder: OnMediaCompleted wartet ab, ein Teilbild lässt sich nicht dekodieren.
+        // For images: OnMediaCompleted waits, a partial image cannot be decoded.
     }
 
     private void OnMediaCompleted(MediaHeaderDto header, string tempPath)
@@ -679,14 +704,14 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Bild konnte nicht dekodiert werden: {FileName}", header.FileName);
+            Log.Error(ex, "Image could not be decoded: {FileName}", header.FileName);
             MediaErrorMessage = $"Bild konnte nicht angezeigt werden: {ex.Message}";
             CurrentMediaKind = MediaKind.None;
         }
         finally
         {
-            // Das Bild liegt jetzt als Bitmap im Speicher (Galerie-Eintrag oder nicht) - die
-            // Temp-Datei wird nie wieder gebraucht, anders als bei Video (siehe StartVideo).
+            // The image is now in memory as a bitmap (gallery entry or not) - the
+            // temp file is never needed again, unlike video (see StartVideo).
             DeleteFileQuietly(tempPath);
         }
     }
@@ -696,7 +721,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         CurrentMediaBitmap = null;
         if (!VlcMediaService.TryGetLibVlc(out var libVlc) || libVlc is null)
         {
-            Log.Error("Video kann nicht abgespielt werden: LibVLC nicht verfügbar ({Error})",
+            Log.Error("Video cannot be played: LibVLC not available ({Error})",
                 VlcMediaService.LastError);
             MediaErrorMessage = VlcMediaService.LastError ?? "Video konnte nicht abgespielt werden.";
             CurrentMediaKind = MediaKind.None;
@@ -714,8 +739,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             if (MediaPlayer is null)
             {
                 MediaPlayer = new MediaPlayer(libVlc);
-                // Einmalig für die Lebensdauer des Players - nicht pro Video, da derselbe
-                // MediaPlayer über StartVideo hinweg wiederverwendet wird.
+                // Once for the lifetime of the player - not per video, since the same
+                // MediaPlayer is reused across StartVideo calls.
                 MediaPlayer.LengthChanged += OnVlcLengthChanged;
                 MediaPlayer.EndReached += OnVlcEndReached;
             }
@@ -723,9 +748,9 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             using var media = new Media(libVlc, tempPath);
             MediaPlayer.Play(media);
 
-            // Vorheriges Video nur löschen, wenn es NICHT (mehr) Teil der Galerie ist - Galerie-
-            // Videos bleiben auf der Platte, bis sie explizit entfernt werden (RetractGalleryItem),
-            // damit lokales Zurücknavigieren keine erneute Übertragung braucht.
+            // Only delete the previous video if it is NOT (no longer) part of the gallery -
+            // gallery videos stay on disk until explicitly removed (RetractGalleryItem),
+            // so local back-navigation doesn't need a re-transfer.
             if (!_gallery.Any(g => g.TempPath == previousTempPath)) DeleteFileQuietly(previousTempPath);
 
             MediaErrorMessage = null;
@@ -735,7 +760,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Video konnte nicht abgespielt werden: {TempPath}", tempPath);
+            Log.Error(ex, "Video could not be played: {TempPath}", tempPath);
             MediaErrorMessage = $"Video konnte nicht abgespielt werden: {ex.Message}";
             CurrentMediaKind = MediaKind.None;
         }
@@ -745,7 +770,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     {
         if (!VlcMediaService.TryGetLibVlc(out var libVlc) || libVlc is null)
         {
-            Log.Error("Sound kann nicht abgespielt werden: LibVLC nicht verfügbar ({Error})",
+            Log.Error("Sound cannot be played: LibVLC not available ({Error})",
                 VlcMediaService.LastError);
             DeleteFileQuietly(tempPath);
             return;
@@ -760,7 +785,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             {
                 if (reported || e.Length <= 0) return;
                 reported = true;
-                Log.Information("Sound-Wiedergabe gestartet: {MediaId} ({DurationMs} ms)", mediaId, e.Length);
+                Log.Information("Sound playback started: {MediaId} ({DurationMs} ms)", mediaId, e.Length);
                 _ = _client.SendMediaPlaybackStartedAsync(mediaId, TimeSpan.FromMilliseconds(e.Length));
             };
             player.EndReached += (_, _) => Dispatcher.UIThread.Post(() => OnSoundEndReached(mediaId, tempPath));
@@ -775,21 +800,21 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Sound konnte nicht abgespielt werden: {TempPath}", tempPath);
+            Log.Error(ex, "Sound could not be played: {TempPath}", tempPath);
             DeleteFileQuietly(tempPath);
         }
     }
 
     /// <summary>
-    ///     SL beendet diesen Sound gezielt (media.stopSound) - unabhängig davon, ob er gerade
-    ///     natürlich endet oder loopt.
+    ///     GM stops this sound specifically (media.stopSound) - regardless of whether it is
+    ///     currently ending naturally or looping.
     /// </summary>
     private void StopSound(string mediaId)
     {
         if (!_activeSoundPlayers.Remove(mediaId, out var player)) return;
 
         _soundRepeatsRemaining.Remove(mediaId);
-        Log.Information("Sound {MediaId} auf SL-Wunsch gestoppt", mediaId);
+        Log.Information("Sound {MediaId} stopped at GM's request", mediaId);
         player.Stop();
         player.Dispose();
     }
@@ -802,14 +827,14 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     }
 
     /// <summary>
-    ///     Stoppt ALLE gerade laufenden Sounds - z.B. wenn die Verbindung zum Host abbricht,
-    ///     damit dieses Gerät nicht unkontrolliert (z.B. eine Loop-Ambience) weiterspielt.
+    ///     Stops ALL currently running sounds - e.g. when the connection to the host drops,
+    ///     so this device does not keep playing uncontrolled (e.g. a looping ambience).
     /// </summary>
     private void StopAllSounds()
     {
         foreach (var (mediaId, player) in _activeSoundPlayers)
         {
-            Log.Information("Sound {MediaId} gestoppt (StopAllSounds)", mediaId);
+            Log.Information("Sound {MediaId} stopped (StopAllSounds)", mediaId);
             player.Stop();
             player.Dispose();
         }
@@ -819,9 +844,10 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     }
 
     /// <summary>
-    ///     Endlos (Loop) oder noch Wiederholungen übrig: derselbe Sound-Player startet lokal
-    ///     neu. Sonst: aufräumen + Host benachrichtigen (der Host trackt Sounds nicht mehr aktiv, aber
-    ///     die Meldung schadet nicht und bleibt für evtl. spätere Auswertung konsistent mit dem Video-Pfad).
+    ///     Endless (loop) or repeats still remaining: the same sound player restarts locally.
+    ///     Otherwise: clean up + notify the host (the host no longer actively tracks sounds, but
+    ///     the notification does no harm and stays consistent with the video path for possible
+    ///     later evaluation).
     /// </summary>
     private void OnSoundEndReached(string mediaId, string tempPath)
     {
@@ -830,14 +856,14 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         var remaining = _soundRepeatsRemaining.GetValueOrDefault(mediaId, 0);
         if (remaining < 0 || remaining > 1)
         {
-            Log.Debug("Sound {MediaId} zu Ende - wird neu gestartet (verbleibend: {Remaining})", mediaId, remaining);
+            Log.Debug("Sound {MediaId} ended - restarting (remaining: {Remaining})", mediaId, remaining);
             if (remaining > 0) _soundRepeatsRemaining[mediaId] = remaining - 1;
             player.Stop();
             player.Play();
             return;
         }
 
-        Log.Information("Sound {MediaId} zu Ende", mediaId);
+        Log.Information("Sound {MediaId} ended", mediaId);
         _activeSoundPlayers.Remove(mediaId);
         _soundRepeatsRemaining.Remove(mediaId);
         player.Stop();
@@ -846,7 +872,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _ = _client.SendMediaPlaybackEndedAsync(mediaId);
     }
 
-    /// <summary>Meldet dem Host einmalig die tatsächliche (von LibVLC ermittelte) Videodauer.</summary>
+    /// <summary>Reports the actual (LibVLC-determined) video duration to the host once.</summary>
     private void OnVlcLengthChanged(object? sender, MediaPlayerLengthChangedEventArgs e)
     {
         if (_playbackStartedReported || e.Length <= 0) return;
@@ -854,26 +880,26 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
         var mediaId = _currentMediaId;
         if (string.IsNullOrEmpty(mediaId)) return;
-        Log.Information("Video-Wiedergabe gestartet: {MediaId} ({DurationMs} ms)", mediaId, e.Length);
+        Log.Information("Video playback started: {MediaId} ({DurationMs} ms)", mediaId, e.Length);
         _ = _client.SendMediaPlaybackStartedAsync(mediaId, TimeSpan.FromMilliseconds(e.Length));
     }
 
     /// <summary>
-    ///     Loop: lokal neu starten. Sonst: dem Host melden, der das Medium daraufhin schließt/die pausierte Uhr
-    ///     fortsetzt.
+    ///     Loop: restart locally. Otherwise: notify the host, which then closes the medium/resumes
+    ///     the paused clock.
     /// </summary>
     private void OnVlcEndReached(object? sender, EventArgs e)
     {
         var loop = _currentMediaLoop;
         var mediaId = _currentMediaId;
 
-        // Läuft auf einem LibVLC-internen Callback-Thread - laut LibVLC-Doku sollte man von dort
-        // aus nicht direkt wieder in den Player hineinrufen (Play/Stop), daher auf den UI-Thread verschieben.
+        // Runs on a LibVLC-internal callback thread - per LibVLC docs one should not call back
+        // directly into the player from there (Play/Stop), hence moving to the UI thread.
         Dispatcher.UIThread.Post(() =>
         {
             if (loop)
             {
-                Log.Debug("Video {MediaId} zu Ende - Loop, wird neu gestartet", mediaId);
+                Log.Debug("Video {MediaId} ended - looping, restarting", mediaId);
                 MediaPlayer?.Stop();
                 MediaPlayer?.Play();
                 return;
@@ -881,7 +907,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
             if (!string.IsNullOrEmpty(mediaId))
             {
-                Log.Information("Video {MediaId} zu Ende - melde Host", mediaId);
+                Log.Information("Video {MediaId} ended - notifying host", mediaId);
                 _ = _client.SendMediaPlaybackEndedAsync(mediaId);
             }
         });
@@ -889,15 +915,15 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
     private void OnMediaCleared()
     {
-        Log.Information("Medium geschlossen (media.cleared)");
+        Log.Information("Medium closed (media.cleared)");
         StopVideo();
         CurrentMediaKind = MediaKind.None;
         CurrentMediaFileName = null;
         CurrentMediaBitmap = null;
         MediaErrorMessage = null;
-        // Entsperrt die lokale Galerie-Navigation, falls dies ein Event-Medium war (Vorrang jetzt
-        // vorbei) - der Host schickt danach i.d.R. ein media.highlight, um die Galerie an der
-        // zuletzt gezeigten Stelle fortzusetzen (siehe MainWindowViewModel.ResumeGalleryAfterEventMedia).
+        // Unlocks local gallery navigation if this was an event medium (precedence now over) -
+        // the host then usually sends a media.highlight to resume the gallery at the last
+        // shown position (see MainWindowViewModel.ResumeGalleryAfterEventMedia).
         _isShowingEventMedia = false;
         MediaWindowShouldHide?.Invoke();
     }
@@ -906,7 +932,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     {
         MediaPlayer?.Stop();
 
-        // Galerie-Videos bleiben auf der Platte, bis sie explizit entfernt werden (RetractGalleryItem).
+        // Gallery videos stay on disk until explicitly removed (RetractGalleryItem).
         if (!_gallery.Any(g => g.TempPath == _currentVideoTempPath)) DeleteFileQuietly(_currentVideoTempPath);
 
         _currentVideoTempPath = null;
@@ -950,8 +976,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     }
 
     /// <summary>
-    ///     SL hebt dieses Element hervor (media.highlight) - ein Sprung-Vorschlag für alle,
-    ///     kein Zwang; ignoriert, falls das Element hier (noch) nicht bekannt ist.
+    ///     GM highlights this item (media.highlight) - a jump suggestion for everyone,
+    ///     not mandatory; ignored if the item is (not yet) known here.
     /// </summary>
     private void ShowGalleryItem(string mediaId)
     {
@@ -996,7 +1022,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Galerie-Video konnte nicht abgespielt werden: {TempPath}", entry.TempPath);
+                Log.Error(ex, "Gallery video could not be played: {TempPath}", entry.TempPath);
             }
         }
 
@@ -1034,11 +1060,11 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     }
 
     /// <summary>
-    ///     Löscht alle noch vorhandenen lokalen Temp-Dateien dieser Sitzung (Galerie + aktuell
-    ///     gezeigtes Ad-hoc-Video) und räumt zusätzlich verwaiste Temp-Dateien eines früheren, nicht
-    ///     sauber beendeten Laufs auf (gleiches Namensmuster, siehe BeginMediaStream) - wird nur auf
-    ///     ausdrückliche Nachfrage beim Schließen der App aufgerufen (siehe ClientMainWindow.OnClosing),
-    ///     damit im temporären Verzeichnis nicht dauerhaft Medien-Reste liegen bleiben.
+    ///     Deletes all still-present local temp files of this session (gallery + currently
+    ///     shown ad-hoc video) and additionally cleans up orphaned temp files from an earlier
+    ///     run that didn't end cleanly (same naming pattern, see BeginMediaStream) - only called
+    ///     on explicit confirmation when closing the app (see ClientMainWindow.OnClosing), so
+    ///     media leftovers don't permanently accumulate in the temp directory.
     /// </summary>
     public void DeleteAllTempFiles()
     {
@@ -1057,7 +1083,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Verwaiste Temp-Dateien konnten nicht vollständig aufgeräumt werden");
+            Log.Warning(ex, "Orphaned temp files could not be fully cleaned up");
         }
     }
 
@@ -1073,8 +1099,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     }
 
     /// <summary>
-    ///     Videos werden nie automatisch weggeschaltet - der Timer überspringt diesen Tick
-    ///     einfach und prüft beim nächsten erneut.
+    ///     Videos are never switched away automatically - the timer simply skips this tick
+    ///     and checks again on the next one.
     /// </summary>
     private void AdvanceSlideshowIfDue()
     {
@@ -1143,12 +1169,12 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         RefreshPlayerCalendar();
     }
 
-    // ==================== Galerie: session-eigene Liste gesendeter Bilder/Videos ====================
-    // Jeder Client navigiert unabhängig und rein lokal durch diese Liste (Pfeiltasten/Klick, siehe
-    // Views/MediaWindow.axaml.cs) - ohne den Host zu fragen. Ein media.highlight vom Host ist nur
-    // ein Sprung-Vorschlag, keine Sperre: danach kann sich der Spieler wieder frei wegbewegen.
-    // Event-Trigger-Medien (AddToGallery=false) sind NIE Teil dieser Liste und blockieren die
-    // Navigation nur, solange sie selbst angezeigt werden (siehe _isShowingEventMedia).
+    // ==================== Gallery: session-own list of sent images/videos ====================
+    // Each client navigates independently and purely locally through this list (arrow keys/click,
+    // see Views/MediaWindow.axaml.cs) - without asking the host. A media.highlight from the host
+    // is only a jump suggestion, not a lock: afterward the player can move away freely again.
+    // Event-trigger media (AddToGallery=false) are NEVER part of this list and only block
+    // navigation while they themselves are being shown (see _isShowingEventMedia).
 
     private sealed class GalleryEntry
     {

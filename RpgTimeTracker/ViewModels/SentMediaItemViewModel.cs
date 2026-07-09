@@ -9,11 +9,11 @@ using RpgTimeTracker.Shared.Models;
 namespace RpgTimeTracker.ViewModels;
 
 /// <summary>
-///     Ein an Spieler gesendetes Bild/Video, das in der session-eigenen Galerie bleibt (nicht sofort
-///     durch das nächste Senden verworfen) - SL und jeder Spieler können unabhängig voneinander
-///     vor/zurück durch diese Liste navigieren (siehe design-decisions.md). "Hervorheben" springt bei
-///     allen Beteiligten (auch dem SL selbst) auf dieses Element; "Entfernen" nimmt es aus der Galerie.
-///     Event-Trigger-Medien sind bewusst NIE Teil dieser Liste (siehe MainWindowViewModel.SendTriggerMediaAsync).
+///     An image/video sent to players that stays in the session's own gallery (not immediately
+///     discarded by the next send) - the GM and each player can independently
+///     navigate forward/backward through this list (see design-decisions.md). "Highlight" jumps
+///     for all participants (including the GM themselves) to this item; "Remove" takes it out of the gallery.
+///     Event-trigger media are deliberately NEVER part of this list (see MainWindowViewModel.SendTriggerMediaAsync).
 /// </summary>
 public partial class SentMediaItemViewModel : ObservableObject, IDisposable
 {
@@ -56,8 +56,8 @@ public partial class SentMediaItemViewModel : ObservableObject, IDisposable
     public string MimeType { get; }
 
     /// <summary>
-    ///     Ob LocalPath eine Einweg-Ad-hoc-Cache-Kopie ist (beim Entfernen aus der Galerie zu
-    ///     löschen) oder eine persistente Bibliotheksdatei (bleibt unabhängig von der Galerie bestehen).
+    ///     Whether LocalPath is a one-off ad-hoc cache copy (to be deleted
+    ///     when removed from the gallery) or a persistent library file (remains independent of the gallery).
     /// </summary>
     public bool IsOwnedCache { get; }
 

@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
+using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Visuals;
 
 namespace RpgTimeTracker.ViewModels;
@@ -51,7 +52,7 @@ public partial class TimerItemViewModel : ObservableObject
 
     public Guid Id => _model.Id;
 
-    /// <summary>Optionales Bild/Video, das automatisch verteilt wird, wenn dieser Timer abläuft.</summary>
+    /// <summary>Optional image/video that is automatically distributed when this timer expires.</summary>
     public TriggerMediaConfig TriggerMedia { get; } = new();
 
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
@@ -81,15 +82,15 @@ public partial class TimerItemViewModel : ObservableObject
     public int SoundRepeatCountToPlay => _model.SoundRepeatCount;
 
     /// <summary>
-    ///     Feuert bei diskreten Zustandsänderungen (bearbeitet/gestartet/pausiert/zurückgesetzt/
-    ///     abgelaufen) - NICHT bei jedem Uhr-Tick. MainWindowViewModel hängt sich hier ein, um nur
-    ///     bei echten Änderungen ein timelineItem.upserted übers Netz zu schicken.
+    ///     Fires on discrete state changes (edited/started/paused/reset/
+    ///     completed) - NOT on every clock tick. MainWindowViewModel subscribes here to only
+    ///     send a timelineItem.upserted over the network on real changes.
     /// </summary>
     public event Action? StateChanged;
 
     /// <summary>
-    ///     Feuert bei Reset() - MainWindowViewModel schließt dann eine gerade laufende, von diesem Timer ausgelöste
-    ///     Medienanzeige.
+    ///     Fires on Reset() - MainWindowViewModel then closes a currently running media display
+    ///     that was triggered by this timer.
     /// </summary>
     public event Action? MediaResetRequested;
 
@@ -144,7 +145,7 @@ public partial class TimerItemViewModel : ObservableObject
     {
         if (!TimeSpan.TryParse(DurationText, out var parsed) || parsed <= TimeSpan.Zero)
         {
-            ErrorMessage = "Ungültige Dauer (Format dd.hh:mm:ss)";
+            ErrorMessage = LocalizationService.Get("TimerItem.ErrorInvalidDurationLong");
             return;
         }
 
@@ -171,7 +172,7 @@ public partial class TimerItemViewModel : ObservableObject
             {
                 if (!TimeSpan.TryParse(DurationText, out var parsed) || parsed <= TimeSpan.Zero)
                 {
-                    ErrorMessage = "Ungültige Dauer (Format hh:mm:ss)";
+                    ErrorMessage = LocalizationService.Get("TimerItem.ErrorInvalidDuration");
                     return;
                 }
 

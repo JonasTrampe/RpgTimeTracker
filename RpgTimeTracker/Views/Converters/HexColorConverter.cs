@@ -5,7 +5,7 @@ using Avalonia.Media;
 
 namespace RpgTimeTracker.Views.Converters;
 
-/// <summary>Bindet ein #RRGGBB/#AARRGGBB-Hex-String-Feld (ColorHex) an Avalonia's ColorPicker.Color.</summary>
+/// <summary>Binds a #RRGGBB/#AARRGGBB hex string field (ColorHex) to Avalonia's ColorPicker.Color.</summary>
 public sealed class HexColorConverter : IValueConverter
 {
     public static readonly HexColorConverter Instance = new();

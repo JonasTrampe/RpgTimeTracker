@@ -17,7 +17,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "Unbehandelte Ausnahme beim Start/Betrieb - Anwendung wird beendet.");
+            Log.Fatal(ex, "Unhandled exception during startup/operation - application is terminating.");
             throw;
         }
         finally

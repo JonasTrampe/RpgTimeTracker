@@ -69,7 +69,7 @@ consistent with `SoundService`, `ThemeSettingsService`, etc.).
   uses to know when to push a `timelineItem.upserted` delta.
 - **`ViewModels/TimelineDisplayItemViewModel.cs`** — a facade that wraps
   whichever of the three item ViewModels a given row is, so the shared
-  "Elementliste" list and the read-only player list can bind against one
+  "Item List" list and the read-only player list can bind against one
   unified type instead of three.
 - **`Network/TcpPlayerServerService.cs`** — the TCP server. Accepts
   connections, sends the granular RPC deltas, streams media in chunks, runs a
@@ -102,7 +102,7 @@ consistent with `SoundService`, `ThemeSettingsService`, etc.).
   entry there sends it to players exactly like the Sounds tab, picking a
   built-in keeps the old local-only blip behavior (`SoundService.Play`).
 - **`Persistence/AppStateDto.cs`** — the JSON schema for the save/load
-  feature (File → Speichern/Laden), independent of the network protocol.
+  feature (File → Save/Load), independent of the network protocol.
 - **`Services/ThemeService.cs`** — swaps the active Design's `ResourceDictionary`
   into `Application.Resources.MergedDictionaries`, either a compiled
   `Themes/*.axaml` (built-in Design) or a `ResourceDictionary` built at
@@ -122,7 +122,7 @@ consistent with `SoundService`, `ThemeSettingsService`, etc.).
   `WindowBackgroundImageBrush` between the first (day, 06–18) and last
   (night) entry as the game clock crosses those hours. A no-op for any
   Design with only one background — which today is every built-in Design
-  except the "Mittelalter" sample (see
+  except the "Medieval" sample (see
   [`design-decisions.md`](design-decisions.md) for why more variety isn't
   wired in by default).
 - **`Views/PlayerWindow.axaml(.cs)`** — the Host's own local player-facing
@@ -131,9 +131,9 @@ consistent with `SoundService`, `ThemeSettingsService`, etc.).
   manually, by an event trigger's `Fullscreen` flag, or cleared when the
   network server stops — drives both the RPC push to remote clients *and*
   this window's `WindowState` via the `LocalFullscreenRequested` event, so
-  "Spieler-Vollbild" fullscreens the Host's own preview together with every
+  "Player Fullscreen" fullscreens the Host's own preview together with every
   connected PlayerClient. Locally, `PlayerWindow` also has its own Escape-key
-  handler and a "Vollbild beenden (Esc)" button (visible only while actually
+  handler and an "Exit Fullscreen (Esc)" button (visible only while actually
   fullscreen) that exit fullscreen for *this window only*, without touching
   `RemoteFullscreen` or pushing anything — see
   [`design-decisions.md`](design-decisions.md) for why that stays purely
@@ -190,7 +190,7 @@ timeline list — so that markup lives once, in `RpgTimeTracker.Shared/Views`:
 
 - **`PlayerHeaderView.axaml`** — the title/subtitle + current-time/speed
   header block.
-- **`PlayerTimelineListView.axaml`** — the "Zeitliste" card, including the
+- **`PlayerTimelineListView.axaml`** — the "Timeline" card, including the
   per-item template (icon/name/kind/status, primary value/detail, progress
   bar).
 

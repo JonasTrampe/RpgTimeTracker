@@ -14,7 +14,7 @@ public partial class IconPickerWindow : Window
     private readonly Action<string>? _onIconSelected;
     private readonly TimelineDisplayItemViewModel? _target;
 
-    /// <summary>Nur für den Avalonia-XAML-Loader (Previewer/AVLN3001); im App-Code stets mit target/callback konstruiert.</summary>
+    /// <summary>Only for the Avalonia XAML loader (Previewer/AVLN3001); in app code always constructed with target/callback.</summary>
     public IconPickerWindow()
     {
         InitializeComponent();

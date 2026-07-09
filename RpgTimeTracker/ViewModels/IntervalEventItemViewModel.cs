@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
+using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Visuals;
 
 namespace RpgTimeTracker.ViewModels;
@@ -58,7 +59,7 @@ public partial class IntervalEventItemViewModel : ObservableObject
 
     public Guid Id => _model.Id;
 
-    /// <summary>Optionales Bild/Video, das automatisch verteilt wird, wenn dieses Intervall aktiv wird.</summary>
+    /// <summary>Optional image/video that is automatically distributed when this interval becomes active.</summary>
     public TriggerMediaConfig TriggerMedia { get; } = new();
 
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
@@ -71,20 +72,20 @@ public partial class IntervalEventItemViewModel : ObservableObject
     public bool IsActive => _model.IsActive;
     public bool IsBlinkActive => Blink && IsActive && VisualItemHelper.BlinkFrame();
 
-    public string StartPauseLabel => _model.IsCompleted ? "Fertig" :
-        _model.IsRunning ? "Pause" :
-        _model.Elapsed > TimeSpan.Zero ? "Weiter" : "Start";
+    public string StartPauseLabel => _model.IsCompleted ? LocalizationService.Get("IntervalEvent.StatusDone") :
+        _model.IsRunning ? LocalizationService.Get("IntervalEvent.StatusPause") :
+        _model.Elapsed > TimeSpan.Zero ? LocalizationService.Get("IntervalEvent.StatusContinue") : LocalizationService.Get("IntervalEvent.StatusStart");
 
     public string RemainingText => _model.IsActive
-        ? $"aktiv: {FormatTimeSpan(_model.Remaining)}"
-        : $"nächster: {FormatTimeSpan(_model.Remaining)}";
+        ? string.Format(LocalizationService.Get("IntervalEvent.RemainingActiveFormat"), FormatTimeSpan(_model.Remaining))
+        : string.Format(LocalizationService.Get("IntervalEvent.RemainingNextFormat"), FormatTimeSpan(_model.Remaining));
 
     public string RepeatDisplay => _model.MaxRepeats.HasValue && _model.MaxRepeats.Value > 0
         ? $"{_model.CurrentRepeatNumber}/{_model.MaxRepeats.Value}"
         : $"{_model.CurrentRepeatNumber}/∞";
 
-    public string DetailDisplay =>
-        $"alle {FormatTimeSpan(_model.Interval)} für {FormatTimeSpan(_model.ActiveDuration)}";
+    public string DetailDisplay => string.Format(LocalizationService.Get("IntervalEvent.DetailFormat"),
+        FormatTimeSpan(_model.Interval), FormatTimeSpan(_model.ActiveDuration));
 
     public double Progress => _model.Progress;
 
@@ -97,14 +98,14 @@ public partial class IntervalEventItemViewModel : ObservableObject
     public TimeSpan? TimeUntilNextEvent => _model.IsRunning && !_model.IsCompleted ? _model.Remaining : null;
 
     /// <summary>
-    ///     Feuert bei diskreten Zustandsänderungen (bearbeitet/gestartet/pausiert/zurückgesetzt/fertig), nicht bei jedem
-    ///     Uhr-Tick.
+    ///     Fires on discrete state changes (edited/started/paused/reset/completed), not on every
+    ///     clock tick.
     /// </summary>
     public event Action? StateChanged;
 
     /// <summary>
-    ///     Feuert bei Reset() - MainWindowViewModel stoppt dann eine evtl. unendlich wiederholende Sound-Schleife dieses
-    ///     Intervalls.
+    ///     Fires on Reset() - MainWindowViewModel then stops a possibly infinitely repeating sound loop of this
+    ///     interval.
     /// </summary>
     public event Action? ResetRequested;
 
@@ -159,19 +160,19 @@ public partial class IntervalEventItemViewModel : ObservableObject
     {
         if (!TimeSpan.TryParse(IntervalText, out var interval) || interval <= TimeSpan.Zero)
         {
-            ErrorMessage = "Ungültiges Intervall";
+            ErrorMessage = LocalizationService.Get("IntervalEvent.ErrorInvalidInterval");
             return;
         }
 
         if (!TimeSpan.TryParse(ActiveDurationText, out var activeDuration) || activeDuration <= TimeSpan.Zero)
         {
-            ErrorMessage = "Ungültige Aktiv-Dauer";
+            ErrorMessage = LocalizationService.Get("IntervalEvent.ErrorInvalidActiveDuration");
             return;
         }
 
         if (activeDuration > interval)
         {
-            ErrorMessage = "Aktiv-Dauer sollte nicht größer als Intervall sein.";
+            ErrorMessage = LocalizationService.Get("IntervalEvent.ErrorActiveDurationExceedsInterval");
             return;
         }
 
@@ -180,7 +181,7 @@ public partial class IntervalEventItemViewModel : ObservableObject
         {
             if (!int.TryParse(MaxRepeatsText, out var parsedMax) || parsedMax < 0)
             {
-                ErrorMessage = "Max. Wiederholungen: 0/leer = unbegrenzt";
+                ErrorMessage = LocalizationService.Get("IntervalEvent.ErrorInvalidMaxRepeats");
                 return;
             }
 
@@ -232,9 +233,9 @@ public partial class IntervalEventItemViewModel : ObservableObject
         var triggeredNow = _model.Advance(gameDelta);
         RefreshAll();
 
-        // Terminale Zustandsänderung (MaxRepeats erreicht) muss dem Client mitgeteilt werden,
-        // damit er nicht ewig ein Item als "läuft noch" fortrechnet - anders als die normale
-        // aktiv/inaktiv-Zyklik, die der Client rein lokal aus Elapsed/Interval ableitet.
+        // Terminal state change (MaxRepeats reached) must be communicated to the client,
+        // so it doesn't keep computing an item as "still running" forever - unlike the normal
+        // active/inactive cycling, which the client derives purely locally from Elapsed/Interval.
         if (!wasCompleted && _model.IsCompleted) StateChanged?.Invoke();
 
         return triggeredNow;

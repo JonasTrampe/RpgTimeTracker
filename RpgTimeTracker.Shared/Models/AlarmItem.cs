@@ -3,8 +3,8 @@ using System;
 namespace RpgTimeTracker.Shared.Models;
 
 /// <summary>
-///     Ein Wecker, der bei einem bestimmten Spielzeit-Datum/Zeitpunkt auslöst.
-///     Kann optional wiederkehrend sein.
+///     An alarm that triggers at a specific game-time date/time.
+///     Can optionally be recurring.
 /// </summary>
 public class AlarmItem
 {
@@ -13,7 +13,7 @@ public class AlarmItem
     public string Icon { get; set; } = "Bootstrap: Alarm";
     public string Sound { get; set; } = "Pling";
 
-    /// <summary>Wie oft der Sound beim Auslösen hintereinander abgespielt wird.</summary>
+    /// <summary>How many times the sound is played in a row when triggered.</summary>
     public int SoundRepeatCount { get; set; } = 1;
 
     public string ColorHex { get; set; } = string.Empty;
@@ -74,9 +74,9 @@ public class AlarmItem
     }
 
     /// <summary>
-    ///     Rückt einen wiederkehrenden Termin in einem Schritt (statt einer Schleife) auf den
-    ///     nächsten Zeitpunkt nach currentGameTime vor. Wichtig bei großen Zeitsprüngen mit
-    ///     kurzem RepeatInterval, wo eine Schleife Millionen Iterationen bräuchte.
+    ///     Advances a recurring appointment in one step (instead of a loop) to the
+    ///     next point in time after currentGameTime. Important for large time jumps with
+    ///     a short RepeatInterval, where a loop would need millions of iterations.
     /// </summary>
     private static DateTime AdvancePastDue(DateTime triggerAt, DateTime currentGameTime, TimeSpan repeatInterval)
     {

@@ -2,17 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:RpgTimeTracker.Views.Controls"
              x:Class="RpgTimeTracker.Views.Controls.LibraryPanelView">
-    <!--
-        Gemeinsame Chrome für Medienbibliothek und Sound-Bibliothek: Titel/Beschreibung,
-        "Hinzufügen"-Button + Overflow-Menü (Export/Import), Fehleranzeige, WrapPanel-Liste und
-        Leerzustand. Nur der Tile-Inhalt (ItemTemplate) und die Datei-Dialog-/Add-Export-Import-
-        Logik (siehe code-behind, vom Aufrufer per Eigenschaften gesetzt) unterscheiden sich noch
-        zwischen den beiden Bibliotheken.
 
-        $parent[controls:LibraryPanelView] statt einer eigenen DataContext-Zuweisung, weil das
-        geerbte DataContext (MainWindowViewModel) unverändert für ItemsSource/HasNoItems/
-        ErrorMessage-Bindings von außen erreichbar bleiben muss.
-    -->
     <Grid RowSpacing="8" RowDefinitions="auto,*,auto">
 
         <StackPanel>

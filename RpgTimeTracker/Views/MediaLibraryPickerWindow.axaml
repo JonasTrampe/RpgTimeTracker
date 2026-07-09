@@ -2,15 +2,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:RpgTimeTracker.ViewModels"
         x:Class="RpgTimeTracker.Views.MediaLibraryPickerWindow"
-        Title="Bild/Video aus Bibliothek wählen"
+        Title="{DynamicResource MediaLibraryPicker.WindowTitle}"
         Width="420" Height="520"
         MinWidth="360" MinHeight="420"
         Background="{DynamicResource WindowBackgroundBrush}">
     <Window.Styles>
         <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
 
-        <!-- ListBox bewusst lokal, analog IconPickerWindow: soll wie eine Panel-Fläche
-             aussehen, nicht wie ein Eingabefeld. -->
         <Style Selector="ListBox">
             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
@@ -20,10 +18,10 @@
 
     <DockPanel Margin="14" LastChildFill="True">
         <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,10">
-            <TextBlock Text="Medienbibliothek" FontWeight="Bold" FontSize="16" />
-            <TextBlock Text="Doppelklick übernimmt das Bild/Video als Event-Medium. Event-Medien kommen nur noch aus der Bibliothek - dort zuerst hinzufügen, falls es fehlt."
+            <TextBlock Text="{DynamicResource MediaLibraryPicker.Title}" FontWeight="Bold" FontSize="16" />
+            <TextBlock Text="{DynamicResource MediaLibraryPicker.Description}"
                        TextWrapping="Wrap" Opacity="0.75" />
-            <TextBlock Name="EmptyText" Text="Die Bibliothek ist leer." IsVisible="False"
+            <TextBlock Name="EmptyText" Text="{DynamicResource MediaLibraryPicker.EmptyState}" IsVisible="False"
                        Opacity="0.75" FontStyle="Italic" />
         </StackPanel>
 

@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
+using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Visuals;
 
 namespace RpgTimeTracker.ViewModels;
@@ -61,7 +62,7 @@ public partial class AlarmItemViewModel : ObservableObject
 
     public Guid Id => _model.Id;
 
-    /// <summary>Optionales Bild/Video, das automatisch verteilt wird, wenn dieser Wecker auslöst.</summary>
+    /// <summary>Optional image/video that is automatically distributed when this alarm triggers.</summary>
     public TriggerMediaConfig TriggerMedia { get; } = new();
 
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
@@ -73,7 +74,7 @@ public partial class AlarmItemViewModel : ObservableObject
 
     public string RepeatIntervalDisplay => _model.RepeatInterval.HasValue
         ? FormatTimeSpan(_model.RepeatInterval.Value)
-        : "einmalig";
+        : LocalizationService.Get("AlarmItem.RepeatOnce");
 
     public bool IsTriggered => _model.IsTriggered;
 
@@ -83,7 +84,7 @@ public partial class AlarmItemViewModel : ObservableObject
         {
             var remaining = _model.TimeRemaining(_currentGameTime);
             return _model.IsOverdue(_currentGameTime) || _model.IsTriggered
-                ? "Jetzt!"
+                ? LocalizationService.Get("AlarmItem.NowLabel")
                 : FormatTimeSpan(remaining);
         }
     }
@@ -97,12 +98,12 @@ public partial class AlarmItemViewModel : ObservableObject
     public int SoundRepeatCountToPlay => _model.SoundRepeatCount;
     public TimeSpan? TimeUntilNextEvent => _model.IsTriggered ? null : _model.TimeRemaining(_currentGameTime);
 
-    /// <summary>Feuert bei diskreten Zustandsänderungen (bearbeitet/ausgelöst/quittiert), nicht bei jedem Uhr-Tick.</summary>
+    /// <summary>Fires on discrete state changes (edited/triggered/dismissed), not on every clock tick.</summary>
     public event Action? StateChanged;
 
     /// <summary>
-    ///     Feuert bei Dismiss() - MainWindowViewModel stoppt dann eine evtl. unendlich wiederholende Sound-Schleife
-    ///     dieses Weckers.
+    ///     Fires on Dismiss() - MainWindowViewModel then stops a possibly infinitely repeating sound loop
+    ///     of this alarm.
     /// </summary>
     public event Action? ResetRequested;
 
@@ -157,7 +158,7 @@ public partial class AlarmItemViewModel : ObservableObject
     {
         if (!DateTime.TryParse(TriggerAtDateTimeTextEdit, out var triggerAt))
         {
-            ErrorMessage = "Ungültiges Datum (Format JJJJ-MM-TT HH:mm:ss)";
+            ErrorMessage = LocalizationService.Get("AlarmItem.ErrorInvalidDate");
             return;
         }
 
@@ -166,7 +167,7 @@ public partial class AlarmItemViewModel : ObservableObject
         {
             if (!TimeSpan.TryParse(RepeatIntervalTextEdit, out var parsedRepeat) || parsedRepeat <= TimeSpan.Zero)
             {
-                ErrorMessage = "Ungültiges Wiederhol-Intervall";
+                ErrorMessage = LocalizationService.Get("AlarmItem.ErrorInvalidRepeatInterval");
                 return;
             }
 

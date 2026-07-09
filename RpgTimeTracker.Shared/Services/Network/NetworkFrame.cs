@@ -7,18 +7,18 @@ using System.Threading.Tasks;
 namespace RpgTimeTracker.Shared.Services.Network;
 
 /// <summary>
-///     Längenpräfixiertes Binär-Frame für die TCP-Verbindung zwischen SL-App und Spieler-Client:
-///     [1 Byte Frame-Typ][4 Bytes Payload-Länge, big-endian][Payload].
+///     Length-prefixed binary frame for the TCP connection between GM app and player client:
+///     [1 byte frame type][4 bytes payload length, big-endian][payload].
 /// </summary>
 public static class NetworkFrame
 {
-    /// <summary>Payload = UTF8-JSON einer RpcNotification (siehe RpgTimeTracker.Shared.Services.Rpc).</summary>
+    /// <summary>Payload = UTF8 JSON of an RpcNotification (see RpgTimeTracker.Shared.Services.Rpc).</summary>
     public const byte TypeRpc = 1;
 
     /// <summary>
-    ///     Payload = roher Ausschnitt der aktuell gestreamten Mediendatei (siehe media.begin-RPC
-    ///     für Metadaten/Gesamtlänge). Chunks kommen in Reihenfolge, kein eigener Header nötig,
-    ///     da pro Verbindung immer nur ein Medium gleichzeitig läuft.
+    ///     Payload = raw chunk of the currently streamed media file (see the media.begin RPC
+    ///     for metadata/total length). Chunks arrive in order, no separate header needed,
+    ///     since only one medium runs at a time per connection.
     /// </summary>
     public const byte TypeMediaChunk = 2;
 
@@ -37,14 +37,14 @@ public static class NetworkFrame
     }
 
     /// <summary>
-    ///     Liest genau ein Frame. Gibt null zurück, wenn die Verbindung sauber geschlossen wurde
-    ///     oder ein Frame die Längengrenze überschreitet (dann sollte die Verbindung getrennt werden).
+    ///     Reads exactly one frame. Returns null if the connection was closed cleanly
+    ///     or a frame exceeds the length limit (in which case the connection should be dropped).
     /// </summary>
     /// <param name="onDataReceived">
-    ///     Optional: wird nach jedem Teil-Read aufgerufen (auch mitten in einem großen Media-Frame).
-    ///     Damit kann ein Aufrufer einen Idle-Timeout auf "letzte Aktivität auf der Leitung" statt
-    ///     nur "letztes vollständiges Frame" basieren - sonst würde ein großes, aber gesund
-    ///     laufendes Video einen Idle-Watchdog fälschlich auslösen.
+    ///     Optional: called after each partial read (even in the middle of a large media frame).
+    ///     This lets a caller base an idle timeout on "last activity on the wire" instead of
+    ///     just "last complete frame" - otherwise a large but healthily
+    ///     running video would falsely trigger an idle watchdog.
     /// </param>
     public static async Task<(byte Type, byte[] Payload)?> ReadAsync(Stream stream, int maxPayloadLength,
         CancellationToken token, Action? onDataReceived = null)

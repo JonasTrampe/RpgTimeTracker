@@ -1,97 +1,97 @@
 namespace RpgTimeTracker.Shared.Models.Rpc;
 
 /// <summary>
-///     Namen aller JSON-RPC-Notifications (kein Request/Response, keine IDs). Der weit überwiegende
-///     Teil läuft Server-zu-Client (SL-Host publiziert Zustandsänderungen); die beiden
-///     MediaPlayback*-Methoden sind die einzige Ausnahme und laufen Client-zu-Server, damit der
-///     Host weiß, wann ein Video beim Spieler tatsächlich zu Ende ist (siehe MediaPlaybackEnded).
+///     Names of all JSON-RPC notifications (no request/response, no IDs). The vast majority
+///     run server-to-client (the GM host publishes state changes); the two MediaPlayback*
+///     methods are the only exception and run client-to-server, so the host knows when a
+///     video has actually ended for the player (see MediaPlaybackEnded).
 /// </summary>
 public static class RpcMethods
 {
     /// <summary>
-    ///     Client-zu-Server: erstes Signal direkt nach dem TCP-Verbindungsaufbau - Protokoll-Version
-    ///     und optionaler PIN, bevor der Host mit dem vollen session.snapshot antwortet (siehe
-    ///     TcpPlayerServerService.PerformHandshakeAsync). Ohne dieses Signal (Timeout) oder bei
-    ///     falschem PIN/inkompatibler Version antwortet der Host stattdessen mit
-    ///     session.helloRejected und trennt die Verbindung.
+    ///     Client-to-server: first signal right after the TCP connection is established -
+    ///     protocol version and optional PIN, before the host replies with the full
+    ///     session.snapshot (see TcpPlayerServerService.PerformHandshakeAsync). Without this
+    ///     signal (timeout) or with a wrong PIN/incompatible version, the host instead responds
+    ///     with session.helloRejected and disconnects.
     /// </summary>
     public const string SessionHello = "session.hello";
 
     /// <summary>
-    ///     Server-zu-Client: lehnt die Verbindung ab (falscher PIN, inkompatible Protokoll-Version,
-    ///     oder kein session.hello innerhalb des Timeouts). Der Client soll das NICHT automatisch
-    ///     erneut versuchen (siehe PlayerTcpClientService._userDisconnectRequested).
+    ///     Server-to-client: rejects the connection (wrong PIN, incompatible protocol version,
+    ///     or no session.hello within the timeout). The client should NOT automatically retry
+    ///     this (see PlayerTcpClientService._userDisconnectRequested).
     /// </summary>
     public const string SessionHelloRejected = "session.helloRejected";
 
-    /// <summary>Vollständiger Zustand für neu verbindende Clients (einmalig beim Connect).</summary>
+    /// <summary>Full state for newly connecting clients (once, on connect).</summary>
     public const string SessionSnapshot = "session.snapshot";
 
-    /// <summary>Reines Lebenszeichen ohne Nutzdaten, damit der Client eine tote Verbindung erkennt.</summary>
+    /// <summary>Pure heartbeat with no payload, so the client detects a dead connection.</summary>
     public const string SessionHeartbeat = "session.heartbeat";
 
     public const string ClockStarted = "clock.started";
     public const string ClockStopped = "clock.stopped";
     public const string ClockSpeedChanged = "clock.speedChanged";
 
-    /// <summary>Absoluter Resync-Punkt: manuelles Setzen der Zeit, Zeitsprung, oder Laden eines Spielstands.</summary>
+    /// <summary>Absolute resync point: manual time set, time jump, or loading a save.</summary>
     public const string ClockTimeJumped = "clock.timeJumped";
 
     public const string HeaderChanged = "header.changed";
     public const string ThemeChanged = "theme.changed";
 
     /// <summary>
-    ///     Ein Timer/Wecker/Intervall wurde angelegt oder hat sich strukturell geändert
-    ///     (Start/Pause/Reset/Fertig/Ausgelöst/Bearbeitet) - NICHT bei reinem Zeitfortschritt.
+    ///     A timer/alarm/interval was created or changed structurally
+    ///     (start/pause/reset/completed/triggered/edited) - NOT on pure time progress.
     /// </summary>
     public const string TimelineItemUpserted = "timelineItem.upserted";
 
     public const string TimelineItemRemoved = "timelineItem.removed";
 
-    /// <summary>SL fordert den Client auf, sein Anzeigefenster (Liste) zu (ent-)maximieren.</summary>
+    /// <summary>GM requests the client to (un)maximize its display window (list).</summary>
     public const string DisplayFullscreen = "display.fullscreen";
 
-    /// <summary>Kündigt ein Medium an; die Rohdaten folgen als Binär-Chunks (siehe NetworkFrame.TypeMediaChunk).</summary>
+    /// <summary>Announces a medium; the raw data follows as binary chunks (see NetworkFrame.TypeMediaChunk).</summary>
     public const string MediaBegin = "media.begin";
 
     public const string MediaCleared = "media.cleared";
 
     /// <summary>
-    ///     Client-zu-Server: Wiedergabe eines Videos hat tatsächlich begonnen, inkl. der vom
-    ///     Client selbst (LibVLC) ermittelten Dauer.
+    ///     Client-to-server: playback of a video has actually started, including the duration
+    ///     determined by the client itself (LibVLC).
     /// </summary>
     public const string MediaPlaybackStarted = "media.playbackStarted";
 
     /// <summary>
-    ///     Client-zu-Server: ein nicht-loopendes Video ist zu Ende - der Host nutzt das, um
-    ///     eine dafür pausierte Spielzeit fortzusetzen und/oder das Medium bei allen Clients zu schließen.
+    ///     Client-to-server: a non-looping video has ended - the host uses this to resume a
+    ///     game time paused for it and/or close the medium on all clients.
     /// </summary>
     public const string MediaPlaybackEnded = "media.playbackEnded";
 
     /// <summary>
-    ///     SL beendet einen einzelnen, gerade laufenden Sound gezielt (per MediaId) - unabhängig
-    ///     vom Bild/Video-"aktuelles Medium"-Slot, siehe MediaHeaderDto.MediaKindAudio.
+    ///     GM stops a single, currently running sound specifically (by MediaId) - independent
+    ///     of the image/video "current medium" slot, see MediaHeaderDto.MediaKindAudio.
     /// </summary>
     public const string MediaStopSound = "media.stopSound";
 
-    /// <summary>SL passt die Lautstärke eines gerade laufenden Sounds live an (per MediaId).</summary>
+    /// <summary>GM adjusts the volume of a currently running sound live (by MediaId).</summary>
     public const string MediaSetVolume = "media.setVolume";
 
     /// <summary>
-    ///     Entfernt ein Bild/Video gezielt aus der Galerie (per MediaId) - unabhängig vom
-    ///     gerade angezeigten Element, siehe MediaHeaderDto.AddToGallery.
+    ///     Removes an image/video specifically from the gallery (by MediaId) - independent of
+    ///     the currently displayed item, see MediaHeaderDto.AddToGallery.
     /// </summary>
     public const string MediaRetract = "media.retract";
 
     /// <summary>
-    ///     SL "hebt hervor": alle Clients springen lokal auf dieses Galerie-Element (per
-    ///     MediaId), können sich danach aber weiterhin unabhängig davon wegbewegen.
+    ///     GM "highlights": all clients jump locally to this gallery item (by MediaId), but can
+    ///     then continue to move away from it independently afterward.
     /// </summary>
     public const string MediaHighlight = "media.highlight";
 
     /// <summary>
-    ///     Setzt die automatische Weiterschalt-Zeit pro Bild (Sekunden, 0 = manuell). Gilt
-    ///     clientseitig nur für Bilder, nie für Videos (siehe design-decisions.md).
+    ///     Sets the automatic advance time per image (seconds, 0 = manual). Client-side, applies
+    ///     only to images, never to videos (see design-decisions.md).
     /// </summary>
     public const string MediaSlideshowInterval = "media.slideshowInterval";
 }

@@ -11,7 +11,7 @@ public partial class MediaLibraryPickerWindow : Window
 {
     private readonly Action<MediaLibraryItemViewModel>? _onSelected;
 
-    /// <summary>Nur für den Avalonia-XAML-Loader (Previewer/AVLN3001); im App-Code stets mit Bibliothek/Callback konstruiert.</summary>
+    /// <summary>Only for the Avalonia XAML loader (Previewer/AVLN3001); in app code always constructed with library/callback.</summary>
     public MediaLibraryPickerWindow()
     {
         InitializeComponent();

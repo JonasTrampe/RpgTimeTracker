@@ -5,15 +5,12 @@
         xmlns:views="using:RpgTimeTracker.Shared.Views"
         x:Class="RpgTimeTracker.PlayerClient.Views.ClientMainWindow"
         x:DataType="vm:ClientMainWindowViewModel"
-        Title="RPG Zeitverfolgung — Remote Spieleranzeige"
+        Title="{DynamicResource ClientMainWindow.WindowTitle}"
         Width="1050" Height="720" MinWidth="820" MinHeight="520"
         Background="{DynamicResource WindowBackgroundBrush}">
     <Window.Styles>
         <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
 
-        <!-- Nur Werte, die hier bewusst vom gemeinsamen Chrome abweichen: der Remote-Client
-             zeigt Zustände (aktiv/fertig/blinkend) rein über die Rahmenfarbe statt über
-             gefüllte Hintergründe, deshalb bleiben diese Modifier-Klassen lokal. -->
         <Style Selector="Border.windowframe">
             <Setter Property="Background" Value="#20000000" />
             <Setter Property="Padding" Value="14" />
@@ -58,8 +55,6 @@
             <Setter Property="Padding" Value="8,6" />
         </Style>
 
-        <!-- ListBox ist nicht Teil des gemeinsamen Eingabefeld-Styles (siehe AppStyles.axaml),
-             soll hier aber wie ein Eingabefeld aussehen (z.B. für die Serverliste). -->
         <Style Selector="ListBox">
             <Setter Property="Background" Value="{DynamicResource InputBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
@@ -117,18 +112,20 @@
                 <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
                     <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
                         <TextBlock Text="{Binding ConnectionStatus}" Classes="muted" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding CurrentTheme, StringFormat='Design: {0}'}" Classes="muted"
-                                   FontSize="11" Opacity="0.7" />
+                        <TextBlock Classes="muted" FontSize="11" Opacity="0.7">
+                            <Run Text="{DynamicResource ClientMainWindow.Status.ThemeLabel}" />
+                            <Run Text="{Binding CurrentTheme, StringFormat=' {0}'}" />
+                        </TextBlock>
                     </StackPanel>
                     <Button Grid.Column="1" Content="{Binding MediaFullscreenLabel}"
                             Command="{Binding ToggleMediaFullscreenCommand}" VerticalAlignment="Center"
                             Margin="0,0,8,0"
-                            ToolTip.Tip="Ob das Medien-Fenster (Bild/Video) im Vollbild oder als normales Fenster geöffnet wird" />
+                            ToolTip.Tip="{DynamicResource ClientMainWindow.Toolbar.MediaFullscreenTooltip}" />
                     <Button Grid.Column="2" Content="{Binding ConnectionToggleLabel}"
                             Command="{Binding ToggleConnectionSettingsCommand}" Margin="0,0,8,0" />
-                    <Button Grid.Column="3" Content="Trennen" Command="{Binding DisconnectCommand}"
+                    <Button Grid.Column="3" Content="{DynamicResource ClientMainWindow.Toolbar.DisconnectButton}" Command="{Binding DisconnectCommand}"
                             IsVisible="{Binding IsConnected}" Margin="0,0,8,0" />
-                    <Button Grid.Column="4" Content="&#8505; Über" Click="OnOpenAboutClick" />
+                    <Button Grid.Column="4" Content="{DynamicResource ClientMainWindow.Toolbar.AboutButton}" Click="OnOpenAboutClick" />
                 </Grid>
             </Border>
 
@@ -139,33 +136,39 @@
                     IsVisible="{Binding ShowConnectionSettings}">
                 <Grid ColumnDefinitions="340,*">
                     <StackPanel Grid.Column="0" Spacing="14">
-                        <TextBlock Text="Manuell verbinden" FontWeight="Bold" />
+                        <TextBlock Text="{DynamicResource ClientMainWindow.Connection.ManualHeader}" FontWeight="Bold" />
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Host / IP-Adresse" Classes="muted" />
-                            <TextBox Text="{Binding Host, Mode=TwoWay}" PlaceholderText="z. B. 192.168.178.42" />
+                            <TextBlock Text="{DynamicResource ClientMainWindow.Connection.HostLabel}" Classes="muted" />
+                            <TextBox Text="{Binding Host, Mode=TwoWay}" PlaceholderText="{DynamicResource ClientMainWindow.Connection.HostPlaceholder}" />
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Port" Classes="muted" />
+                            <TextBlock Text="{DynamicResource ClientMainWindow.Connection.PortLabel}" Classes="muted" />
                             <NumericUpDown Value="{Binding Port, Mode=TwoWay}" Minimum="1" Maximum="65535"
                                            FormatString="0" />
                         </StackPanel>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="PIN (falls vom Host verlangt)" Classes="muted" />
-                            <TextBox Text="{Binding Pin, Mode=TwoWay}" PasswordChar="•" PlaceholderText="Kein PIN"
+                            <TextBlock Text="{DynamicResource ClientMainWindow.Connection.PinLabel}" Classes="muted" />
+                            <TextBox Text="{Binding Pin, Mode=TwoWay}" PasswordChar="•" PlaceholderText="{DynamicResource ClientMainWindow.Connection.PinPlaceholder}"
                                       MaxLength="32" />
                         </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{DynamicResource Settings.Language}" Classes="muted" />
+                            <ComboBox ItemsSource="{Binding LanguageOptions}"
+                                      SelectedItem="{Binding SelectedLanguageOption}"
+                                      HorizontalAlignment="Stretch" />
+                        </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Classes="primary" Content="Verbinden" Command="{Binding ConnectCommand}" />
+                            <Button Classes="primary" Content="{DynamicResource ClientMainWindow.Connection.ConnectButton}" Command="{Binding ConnectCommand}" />
                             <Button Command="{Binding DiscoverCommand}" IsEnabled="{Binding !IsDiscovering}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <TextBlock Text="🔄" IsVisible="{Binding IsDiscovering}" />
-                                    <TextBlock Text="LAN/mDNS suchen" />
+                                    <TextBlock Text="{DynamicResource ClientMainWindow.Connection.DiscoverButton}" />
                                 </StackPanel>
                             </Button>
-                            <Button Content="Trennen" Command="{Binding DisconnectCommand}" />
+                            <Button Content="{DynamicResource ClientMainWindow.Toolbar.DisconnectButton}" Command="{Binding DisconnectCommand}" />
                         </StackPanel>
                         <TextBlock Classes="muted"
-                                   Text="Server vorher in der Haupt-App starten: Konfiguration → Netzwerk-Spieleranzeige → Server starten."
+                                   Text="{DynamicResource ClientMainWindow.Connection.HostAppHint}"
                                    TextWrapping="Wrap" />
                     </StackPanel>
 
@@ -178,15 +181,15 @@
                             Margin="16,0,0,0">
                         <DockPanel LastChildFill="True">
                             <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-                                <TextBlock Grid.Column="0" Text="Gefundene Server" FontWeight="Bold" />
-                                <TextBlock Grid.Column="1" Classes="muted" Text="🔄 Suche läuft…"
+                                <TextBlock Grid.Column="0" Text="{DynamicResource ClientMainWindow.Discovery.FoundHeader}" FontWeight="Bold" />
+                                <TextBlock Grid.Column="1" Classes="muted" Text="{DynamicResource ClientMainWindow.Discovery.SearchingLabel}"
                                            IsVisible="{Binding IsDiscovering}" />
-                                <TextBlock Grid.Column="1" Classes="muted" Text="Auswahl übernimmt Host/Port"
+                                <TextBlock Grid.Column="1" Classes="muted" Text="{DynamicResource ClientMainWindow.Discovery.SelectionHint}"
                                            IsVisible="{Binding !IsDiscovering}" />
                             </Grid>
                             <TextBlock DockPanel.Dock="Top"
                                        Classes="muted"
-                                       Text="Noch keine Server gefunden. Klicke auf „LAN/mDNS suchen“ oder gib Host und Port manuell ein."
+                                       Text="{DynamicResource ClientMainWindow.Discovery.EmptyHint}"
                                        IsVisible="{Binding HasNoDiscoveredServers}"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,8" />
@@ -207,14 +210,14 @@
                                                                 BorderThickness="1"
                                                                 CornerRadius="4"
                                                                 Padding="6,1"
-                                                                ToolTip.Tip="Erkannt über">
+                                                                ToolTip.Tip="{DynamicResource ClientMainWindow.Discovery.SourceTooltip}">
                                                             <TextBlock Text="{Binding SourceLabel}" Classes="muted"
                                                                        FontSize="11" />
                                                         </Border>
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding Display}" Classes="muted" />
                                                 </StackPanel>
-                                                <TextBlock Grid.Column="1" Text="verwenden" Classes="muted"
+                                                <TextBlock Grid.Column="1" Text="{DynamicResource ClientMainWindow.Discovery.UseLabel}" Classes="muted"
                                                            VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>

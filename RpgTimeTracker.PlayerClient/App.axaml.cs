@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using RpgTimeTracker.PlayerClient.Services;
 using RpgTimeTracker.PlayerClient.ViewModels;
 using RpgTimeTracker.PlayerClient.Views;
+using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Theming;
 
 namespace RpgTimeTracker.PlayerClient;
@@ -17,11 +18,13 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        // Zuletzt gewählten Stil laden, bevor das Fenster erzeugt wird, damit beim ersten
-        // Rendern schon die richtigen Theme-Ressourcen greifen (siehe App.axaml-Kommentar:
-        // Application.Resources bleibt bewusst leer, damit dieser Merge nicht mit direkt
-        // gesetzten Keys kollidiert). Vor dem ersten session.snapshot vom Host gibt es noch
-        // keine Theme-Vorgabe, daher der feste "shadowrun"-Fallback.
+        LocalizationService.Apply(ClientSettingsService.LoadSettings().Language);
+
+        // Load the last selected style before the window is created, so that the correct
+        // theme resources are already in effect on the first render (see App.axaml comment:
+        // Application.Resources is deliberately left empty so this merge doesn't collide with
+        // directly set keys). Before the first session.snapshot from the host there is no
+        // theme specified yet, hence the fixed "shadowrun" fallback.
         var loaded = ThemeDefinitionLoader.Resolve("shadowrun");
         if (loaded is { } theme) ClientThemeService.Apply(theme.Definition, theme.FolderPath);
 

@@ -7,8 +7,8 @@ namespace RpgTimeTracker;
 
 internal static class Program
 {
-    // Der Einstiegspunkt darf keinen AppBuilder direkt zurückgeben,
-    // da sonst der Avalonia-Designer/Vorschau-Host Probleme bekommt.
+    // The entry point must not return an AppBuilder directly,
+    // otherwise the Avalonia designer/preview host runs into problems.
     [STAThread]
     public static void Main(string[] args)
     {
@@ -19,7 +19,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "Unbehandelte Ausnahme beim Start/Betrieb - Anwendung wird beendet.");
+            Log.Fatal(ex, "Unhandled exception during startup/operation - application is shutting down.");
             throw;
         }
         finally

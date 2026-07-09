@@ -12,9 +12,9 @@ using Serilog;
 namespace RpgTimeTracker.PlayerClient.Network;
 
 /// <summary>
-///     Über welche(n) Mechanismus/Mechanismen ein Server gefunden wurde - derselbe Host:Port
-///     kann über beide Wege antworten, siehe MdnsDiscoveryService.DiscoverAsync (ein Eintrag pro
-///     Host:Port, Quellen werden zusammengeführt statt den vorherigen Fund zu überschreiben).
+///     Via which mechanism(s) a server was found - the same host:port can respond via both
+///     paths, see MdnsDiscoveryService.DiscoverAsync (one entry per host:port, sources are
+///     merged instead of overwriting the previous find).
 /// </summary>
 [Flags]
 public enum DiscoverySource
@@ -59,12 +59,12 @@ public sealed class MdnsDiscoveryService
     }
 
     /// <summary>
-    ///     Zweite, gröbere Zusammenführung über den Port: host:port ist der primäre Schlüssel beim
-    ///     Sammeln (siehe DiscoverViaLanBroadcastAsync/DiscoverViaMdnsAsync), aber mDNS und
-    ///     LAN-Broadcast können auf Rechnern mit mehreren Netzwerkadaptern trotzdem noch
-    ///     unterschiedliche lokale IPs für denselben Host ermitteln. Da pro LAN realistisch nur ein
-    ///     Host läuft, reicht "gleicher Port" als Kriterium für "derselbe Server" - Quellen werden
-    ///     auch hier zusammengeführt statt eine der beiden Antworten zu verwerfen.
+    ///     Second, coarser merge by port: host:port is the primary key while collecting (see
+    ///     DiscoverViaLanBroadcastAsync/DiscoverViaMdnsAsync), but mDNS and LAN broadcast can
+    ///     still resolve different local IPs for the same host on machines with multiple network
+    ///     adapters. Since realistically only one host runs per LAN, "same port" is sufficient as
+    ///     the criterion for "same server" - sources are merged here too instead of discarding
+    ///     one of the two responses.
     /// </summary>
     private static IReadOnlyList<DiscoveredRpgTimeTrackerServer> MergeByPort(
         IEnumerable<DiscoveredRpgTimeTrackerServer> servers)
@@ -139,18 +139,18 @@ public sealed class MdnsDiscoveryService
                             Port = dto.Port,
                             Source = DiscoverySource.Lan
                         };
-                    Log.Debug("LAN-Broadcast-Antwort: {Host}:{Port}", host, dto.Port);
+                    Log.Debug("LAN broadcast response: {Host}:{Port}", host, dto.Port);
                 }
                 catch (Exception ex)
                 {
-                    Log.Debug(ex, "LAN-Broadcast-Paket ignoriert");
+                    Log.Debug(ex, "LAN broadcast packet ignored");
                 }
             }
         }
         catch (Exception ex)
         {
             // Broadcast discovery is optional.
-            Log.Warning(ex, "LAN-Broadcast-Discovery fehlgeschlagen");
+            Log.Warning(ex, "LAN broadcast discovery failed");
         }
     }
 
@@ -190,9 +190,9 @@ public sealed class MdnsDiscoveryService
                     if (server.Port <= 0 || string.IsNullOrWhiteSpace(server.Host)) continue;
 
                     var key = $"{server.Host}:{server.Port}";
-                    // Derselbe Server kann bereits über LAN-Broadcast gefunden worden sein - dann
-                    // nur die Quelle ergänzen statt den bestehenden Eintrag (samt seiner Quelle)
-                    // zu überschreiben, damit "LAN + mDNS" sichtbar bleibt statt nur "mDNS".
+                    // The same server may already have been found via LAN broadcast - in that
+                    // case only add the source instead of overwriting the existing entry (and
+                    // its source), so that "LAN + mDNS" stays visible instead of just "mDNS".
                     if (results.TryGetValue(key, out var existing))
                     {
                         existing.Source |= DiscoverySource.Mdns;
@@ -203,14 +203,14 @@ public sealed class MdnsDiscoveryService
                         results[key] = server;
                     }
 
-                    Log.Debug("mDNS-Antwort: {Host}:{Port}", server.Host, server.Port);
+                    Log.Debug("mDNS response: {Host}:{Port}", server.Host, server.Port);
                 }
             }
         }
         catch (Exception ex)
         {
             // mDNS discovery is optional.
-            Log.Warning(ex, "mDNS-Discovery fehlgeschlagen");
+            Log.Warning(ex, "mDNS discovery failed");
         }
     }
 
@@ -300,8 +300,8 @@ public sealed class MdnsDiscoveryService
     }
 
     /// <summary>
-    ///     TXT-RDATA ist eine Folge längenpräfixierter Strings (siehe PlayerMdnsAnnouncer.WriteTxt) -
-    ///     sucht darin den ersten Eintrag der Form "name=..." und gibt den Wert dahinter zurück.
+    ///     TXT RDATA is a sequence of length-prefixed strings (see PlayerMdnsAnnouncer.WriteTxt) -
+    ///     searches it for the first entry of the form "name=..." and returns the value after it.
     /// </summary>
     private static string? ReadTxtRecordName(byte[] packet, int rdataStart, int rdLength)
     {

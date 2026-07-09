@@ -3,19 +3,19 @@ using System;
 namespace RpgTimeTracker.Models;
 
 /// <summary>
-///     Eine konfigurierbare Sprungmarke für eine bestimmte Tageszeit
-///     (z.B. "Morgengrauen" = 06:00). Beim Aktivieren springt die Spielzeit
-///     zum nächsten bzw. vorherigen Auftreten dieser Uhrzeit.
+///     A configurable jump marker for a specific time of day
+///     (e.g. "dawn" = 06:00). When activated, the game time jumps
+///     to the next or previous occurrence of this time.
 /// </summary>
 public class JumpMarker
 {
     public Guid Id { get; } = Guid.NewGuid();
     public string Name { get; set; } = "Marke";
 
-    /// <summary>Tageszeit der Marke, z.B. new TimeSpan(6, 0, 0) für 06:00 Uhr.</summary>
+    /// <summary>Time of day for the marker, e.g. new TimeSpan(6, 0, 0) for 06:00.</summary>
     public TimeSpan TimeOfDay { get; set; }
 
-    /// <summary>Nächstes Auftreten dieser Tageszeit ab dem gegebenen Zeitpunkt (exklusiv, falls genau jetzt).</summary>
+    /// <summary>Next occurrence of this time of day from the given point in time (exclusive if exactly now).</summary>
     public DateTime NextOccurrence(DateTime from)
     {
         var target = from.Date + TimeOfDay;
@@ -23,7 +23,7 @@ public class JumpMarker
         return target;
     }
 
-    /// <summary>Vorheriges Auftreten dieser Tageszeit vor dem gegebenen Zeitpunkt (exklusiv, falls genau jetzt).</summary>
+    /// <summary>Previous occurrence of this time of day before the given point in time (exclusive if exactly now).</summary>
     public DateTime PreviousOccurrence(DateTime from)
     {
         var target = from.Date + TimeOfDay;

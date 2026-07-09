@@ -60,10 +60,10 @@ it is **notification-only** — no request IDs, no responses:
 | `theme.changed` | `{ theme }` | Theme switched |
 | `timelineItem.upserted` | `TimelineItemSnapshotDto` | A timer/alarm/interval was created or had a discrete state change (started/paused/reset/completed/triggered/edited) — **not** sent every tick |
 | `timelineItem.removed` | `{ id }` | Item deleted |
-| `display.fullscreen` | `{ fullscreen }` | SL toggled "Spieler-Vollbild" |
+| `display.fullscreen` | `{ fullscreen }` | SL toggled "Player Fullscreen" |
 | `media.begin` | `MediaHeaderDto` (id, kind, filename, mime, total length, loop, volume, repeatCount, trimStartMs, trimEndMs, addToGallery) | Announces an incoming image/video/sound, immediately followed by N `TypeMediaChunk` frames. `Volume`/`RepeatCount`/`TrimStartMs`/`TrimEndMs` are only meaningful for `Kind = Audio` — `RepeatCount` only applies when `Loop = false` (1 = play once, no repeat). `AddToGallery` is only meaningful for `Kind = Image`/`Video`: true for ad-hoc/library sends (joins the client's local gallery), false for event-trigger media (one-shot, takes display priority, never joins the gallery) |
 | `media.cleared` | *(none)* | SL removed the current image/video, or a non-looping video finished and auto-closed. **Never** affects sounds, which live entirely outside this slot — see [`design-decisions.md`](design-decisions.md) |
-| `media.stopSound` | `{ mediaId }` | SL stopped one specific, currently-playing sound (per-item "Stop" or the bulk "Alle stoppen" in the Sounds tab) |
+| `media.stopSound` | `{ mediaId }` | SL stopped one specific, currently-playing sound (per-item "Stop" or the bulk "Stop All" in the Sounds tab) |
 | `media.setVolume` | `{ mediaId, volume }` | SL adjusted a currently-playing sound's volume live (the "currently playing sounds" panel's slider) |
 | `media.retract` | `{ mediaId }` | SL removed one image/video from the gallery everywhere - each client drops it from its local list and deletes its cached copy |
 | `media.highlight` | `{ mediaId }` | SL (or the auto-resume after an event medium closes) suggests jumping to this gallery item - each client jumps its own local pointer there but can navigate away again immediately afterward |

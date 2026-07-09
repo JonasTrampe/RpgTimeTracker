@@ -19,8 +19,8 @@ public sealed class BootstrapIconChoice
 }
 
 /// <summary>
-///     Icon-Auswahl auf Basis von Bootstrap Icons (MIT).
-///     Die Pfaddaten sind aus den offiziellen Bootstrap-Icons-SVGs übernommen.
+///     Icon selection based on Bootstrap Icons (MIT).
+///     The path data is taken from the official Bootstrap Icons SVGs.
 /// </summary>
 public static class VisualItemHelper
 {

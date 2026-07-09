@@ -3,9 +3,9 @@ using System;
 namespace RpgTimeTracker.Shared.Models;
 
 /// <summary>
-///     Ein Countdown-Timer, der an der Spielzeit hängt (nicht an der Echtzeit).
-///     Farbwechsel-/OnTime-Logik ist bewusst nicht mehr Teil des Timers,
-///     sondern liegt in IntervalEventItem.
+///     A countdown timer tied to game time (not real time).
+///     Color-change/OnTime logic is deliberately no longer part of the timer,
+///     but lives in IntervalEventItem instead.
 /// </summary>
 public class TimerItem
 {
@@ -14,17 +14,17 @@ public class TimerItem
     public string Icon { get; set; } = "Bootstrap: Clock";
     public string Sound { get; set; } = "Pling";
 
-    /// <summary>Wie oft der Sound beim Auslösen hintereinander abgespielt wird.</summary>
+    /// <summary>How many times the sound is played in a row when triggered.</summary>
     public int SoundRepeatCount { get; set; } = 1;
 
     public string ColorHex { get; set; } = string.Empty;
     public bool Blink { get; set; }
     public bool IsPlayerVisible { get; set; }
 
-    /// <summary>Gesamtdauer des Timers in Spielzeit.</summary>
+    /// <summary>Total duration of the timer in game time.</summary>
     public TimeSpan Duration { get; set; } = TimeSpan.FromMinutes(10);
 
-    /// <summary>Bereits verstrichene Spielzeit seit dem Start.</summary>
+    /// <summary>Game time already elapsed since the start.</summary>
     public TimeSpan Elapsed { get; private set; } = TimeSpan.Zero;
 
     public bool IsRunning { get; private set; }

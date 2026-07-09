@@ -10,28 +10,29 @@ using Avalonia.Platform.Storage;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Services;
+using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.ViewModels;
 
 namespace RpgTimeTracker.Views;
 
 public partial class MainWindow : Window
 {
-    private static readonly FilePickerFileType JsonFileType = new("Spielstand (JSON)")
+    private static readonly FilePickerFileType JsonFileType = new(LocalizationService.Get("MainWindow.FileTypes.GameState"))
     {
         Patterns = ["*.json"]
     };
 
-    private static readonly FilePickerFileType CalendarJsonFileType = new("Kalender (JSON)")
+    private static readonly FilePickerFileType CalendarJsonFileType = new(LocalizationService.Get("MainWindow.FileTypes.Calendar"))
     {
         Patterns = ["*.json"]
     };
 
-    internal static readonly FilePickerFileType AudioFileType = new("Sound-Datei")
+    internal static readonly FilePickerFileType AudioFileType = new(LocalizationService.Get("MainWindow.FileTypes.SoundFile"))
     {
         Patterns = ["*.wav", "*.mp3", "*.ogg", "*.flac", "*.aiff", "*.aif", "*.m4a", "*.aac"]
     };
 
-    internal static readonly FilePickerFileType MediaFileType = new("Bild oder Video")
+    internal static readonly FilePickerFileType MediaFileType = new(LocalizationService.Get("MainWindow.FileTypes.ImageOrVideo"))
     {
         Patterns =
         [
@@ -40,17 +41,17 @@ public partial class MainWindow : Window
         ]
     };
 
-    // Event-Medien (Timer/Wecker/Intervall) können weiterhin auch Audio sein, aber Bild/Video
-    // kommen jetzt ausschließlich aus der Medienbibliothek (siehe ChooseTriggerMediaFromLibrary) -
-    // nur für Audio bleibt der direkte Datei-Dialog, da es dafür kein separates Bibliothekskonzept
-    // für Event-Medien gibt (die Sound-Bibliothek ist für das "Sound"-Feld der Elemente gedacht,
-    // nicht für Event-Medien).
-    private static readonly FilePickerFileType TriggerAudioFileType = new("Audio")
+    // Event media (timer/alarm/interval) can still also be audio, but image/video
+    // now comes exclusively from the media library (see ChooseTriggerMediaFromLibrary) -
+    // only for audio does the direct file dialog remain, since there is no separate library concept
+    // for event media (the sound library is meant for the items' "sound" field,
+    // not for event media).
+    private static readonly FilePickerFileType TriggerAudioFileType = new(LocalizationService.Get("MainWindow.FileTypes.Audio"))
     {
         Patterns = ["*.mp3", "*.wav", "*.ogg", "*.flac", "*.aiff", "*.aif", "*.m4a", "*.aac"]
     };
 
-    private static readonly FilePickerFileType TextFileType = new("Textdatei")
+    private static readonly FilePickerFileType TextFileType = new(LocalizationService.Get("MainWindow.FileTypes.TextFile"))
     {
         Patterns = ["*.txt", "*.md"]
     };
@@ -75,13 +76,13 @@ public partial class MainWindow : Window
             _attachedViewModel = vm;
             vm.LocalFullscreenRequested += OnLocalFullscreenRequested;
 
-            MediaLibraryPanel.AddDialogTitle = "Bild oder Video zur Bibliothek hinzufügen";
+            MediaLibraryPanel.AddDialogTitle = LocalizationService.Get("MainWindow.Dialogs.AddMediaToLibrary");
             MediaLibraryPanel.AddFileTypeFilter = MediaFileType;
             MediaLibraryPanel.AddItemAsync = vm.AddMediaToLibraryFromPathAsync;
             MediaLibraryPanel.ExportAsync = vm.ExportMediaLibraryAsync;
             MediaLibraryPanel.ImportAsync = vm.ImportMediaLibraryAsync;
 
-            SoundLibraryPanel.AddDialogTitle = "Sound zur Bibliothek hinzufügen";
+            SoundLibraryPanel.AddDialogTitle = LocalizationService.Get("MainWindow.Dialogs.AddSoundToLibrary");
             SoundLibraryPanel.AddFileTypeFilter = AudioFileType;
             SoundLibraryPanel.AddItemAsync = vm.AddSoundToLibraryFromPathAsync;
             SoundLibraryPanel.ExportAsync = vm.ExportSoundLibraryAsync;
@@ -94,8 +95,8 @@ public partial class MainWindow : Window
         _attachedViewModel = null;
     }
 
-    // Ein Event-Medium mit "Vollbild" pusht nicht nur remote (RPC an Clients), sondern schaltet
-    // auch das eigene, lokal offene Spielerfenster fullscreen - für Solo-Tests/Vorschau ohne Client.
+    // An event medium with "fullscreen" not only pushes remotely (RPC to clients), but also
+    // switches its own, locally open player window to fullscreen - for solo tests/preview without a client.
     private void OnLocalFullscreenRequested(bool fullscreen)
     {
         if (_playerWindow is null) return;
@@ -159,9 +160,9 @@ public partial class MainWindow : Window
 
     private void OnSoundIconPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        // Sofort (nicht erst nach dem ClickCount-Check) markieren: die Kachel selbst hat
-        // ein eigenes PointerPressed, das den Sound sendet (OnSoundLibraryItemPointerPressed) -
-        // ein Klick aufs Icon soll das nie auslösen, auch nicht der erste Klick eines Doppelklicks.
+        // Mark immediately (not only after the ClickCount check): the tile itself has
+        // its own PointerPressed that sends the sound (OnSoundLibraryItemPointerPressed) -
+        // a click on the icon should never trigger that, not even the first click of a double-click.
         e.Handled = true;
         if (e.ClickCount < 2 || sender is not Control control ||
             control.DataContext is not SoundLibraryItemViewModel item) return;
@@ -179,7 +180,7 @@ public partial class MainWindow : Window
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Bild oder Video an Spieler senden",
+            Title = LocalizationService.Get("MainWindow.Dialogs.SendMediaToPlayers"),
             AllowMultiple = false,
             FileTypeFilter = [MediaFileType]
         });
@@ -191,7 +192,7 @@ public partial class MainWindow : Window
             var localPath = files[0].TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(localPath))
             {
-                vm.MediaErrorMessage = "Medium konnte nicht gesendet werden: kein lokaler Dateipfad verfügbar.";
+                vm.MediaErrorMessage = LocalizationService.Get("MainWindow.Errors.MediaNoLocalFilePath");
                 return;
             }
 
@@ -199,7 +200,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.MediaErrorMessage = $"Medium konnte nicht gesendet werden: {ex.Message}";
+            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.MediaCouldNotBeSent"), ex.Message);
         }
     }
 
@@ -212,7 +213,7 @@ public partial class MainWindow : Window
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Sound an Spieler senden",
+            Title = LocalizationService.Get("MainWindow.Dialogs.SendSoundToPlayers"),
             AllowMultiple = false,
             FileTypeFilter = [AudioFileType]
         });
@@ -224,7 +225,7 @@ public partial class MainWindow : Window
             var localPath = files[0].TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(localPath))
             {
-                vm.MediaErrorMessage = "Sound konnte nicht gesendet werden: kein lokaler Dateipfad verfügbar.";
+                vm.MediaErrorMessage = LocalizationService.Get("MainWindow.Errors.SoundNoLocalFilePath");
                 return;
             }
 
@@ -232,7 +233,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.MediaErrorMessage = $"Sound konnte nicht gesendet werden: {ex.Message}";
+            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.SoundCouldNotBeSent"), ex.Message);
         }
     }
 
@@ -248,10 +249,10 @@ public partial class MainWindow : Window
             item.HighlightCommand.Execute(null);
     }
 
-    // Event-Medium (Timer/Wecker/Intervall lösen automatisch ein Bild/Video/Audio aus): je zwei
-    // Klick-Handler ("Aus Bibliothek…" für Bild/Video, "Audio…" für Audio von der Platte) für die
-    // "Hinzufügen"-Reiter (DataContext = MainWindowViewModel, Ziel eine der drei Staging-Configs)
-    // plus je einer für ein bereits bestehendes Element (DataContext = TimelineDisplayItemViewModel).
+    // Event medium (timer/alarm/interval automatically trigger an image/video/audio): two
+    // click handlers each ("From library…" for image/video, "Audio…" for audio from disk) for the
+    // "Add" tab (DataContext = MainWindowViewModel, target one of the three staging configs)
+    // plus one each for an already existing item (DataContext = TimelineDisplayItemViewModel).
     private void OnChooseTimerTriggerMediaClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainWindowViewModel vm) ChooseTriggerMediaFromLibrary(vm.MediaLibrary, vm.NewTimerTriggerMedia);
@@ -295,10 +296,10 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    ///     Bild/Video für ein Event-Medium kommt ausschließlich aus der Medienbibliothek (kein
-    ///     Datei-Dialog mehr) - damit ist sichergestellt, dass jedes Event-Medium-Bild/Video auch
-    ///     als Bibliothekseintrag existiert und die Lösch-Warnung (RemoveMediaLibraryItem) es
-    ///     zuverlässig erkennen kann.
+    ///     Image/video for an event medium comes exclusively from the media library (no more
+    ///     file dialog) - this ensures that every event medium image/video also
+    ///     exists as a library entry and the delete warning (RemoveMediaLibraryItem) can
+    ///     reliably detect it.
     /// </summary>
     private void ChooseTriggerMediaFromLibrary(IEnumerable<MediaLibraryItemViewModel> library, TriggerMediaConfig target)
     {
@@ -319,7 +320,7 @@ public partial class MainWindow : Window
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Audio-Datei für Event-Medium wählen",
+            Title = LocalizationService.Get("MainWindow.Dialogs.ChooseAudioForEventMedium"),
             AllowMultiple = false,
             FileTypeFilter = [TriggerAudioFileType]
         });
@@ -342,9 +343,9 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    ///     An MainWindowViewModel.ConfirmTriggerMediaDeleteAsync gehängt (siehe OnDataContextChanged) -
-    ///     das ViewModel kann kein Window selbst öffnen, braucht die Rückfrage aber, bevor ein noch
-    ///     zugewiesenes Bibliotheks-Bild/Video tatsächlich gelöscht wird.
+    ///     Attached to MainWindowViewModel.ConfirmTriggerMediaDeleteAsync (see OnDataContextChanged) -
+    ///     the view model cannot open a window itself, but needs the confirmation before an already
+    ///     assigned library image/video is actually deleted.
     /// </summary>
     private async Task<TriggerMediaDeleteChoice> ShowConfirmTriggerMediaDeleteAsync(MediaLibraryItemViewModel item,
         IReadOnlyList<string> usedBy)
@@ -353,8 +354,8 @@ public partial class MainWindow : Window
         return await dialog.ShowDialog<TriggerMediaDeleteChoice>(this);
     }
 
-    // Datei-Dialoge brauchen Zugriff auf den TopLevel/StorageProvider und
-    // bleiben deshalb bewusst im Code-Behind statt im ViewModel.
+    // File dialogs need access to the TopLevel/StorageProvider and
+    // therefore deliberately remain in the code-behind instead of the view model.
     private async void OnSaveClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
@@ -364,7 +365,7 @@ public partial class MainWindow : Window
 
         var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Spielstand speichern",
+            Title = LocalizationService.Get("MainWindow.Dialogs.SaveGameState"),
             SuggestedFileName = $"rpg-zeit-{DateTime.Now:yyyy-MM-dd_HHmm}.json",
             DefaultExtension = "json",
             FileTypeChoices = [JsonFileType]
@@ -378,11 +379,11 @@ public partial class MainWindow : Window
             stream.SetLength(0);
             await using var writer = new StreamWriter(stream);
             await writer.WriteAsync(json);
-            vm.NotifyActionStatus("Spielstand gespeichert");
+            vm.NotifyActionStatus(LocalizationService.Get("MainWindow.Status.GameStateSaved"));
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.SaveFailed"), ex.Message);
         }
     }
 
@@ -395,7 +396,7 @@ public partial class MainWindow : Window
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Spielstand laden",
+            Title = LocalizationService.Get("MainWindow.Dialogs.LoadGameState"),
             AllowMultiple = false,
             FileTypeFilter = [JsonFileType]
         });
@@ -408,16 +409,16 @@ public partial class MainWindow : Window
             using var reader = new StreamReader(stream);
             var json = await reader.ReadToEndAsync();
             vm.ImportStateFromJson(json);
-            vm.NotifyActionStatus("Spielstand geladen");
+            vm.NotifyActionStatus(LocalizationService.Get("MainWindow.Status.GameStateLoaded"));
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = $"Laden fehlgeschlagen: {ex.Message}";
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.LoadFailed"), ex.Message);
         }
     }
 
-    // Speicherziel bewusst bei jedem Export frei wählbar (statt eines festen Pfads) -
-    // derselbe Datei-Dialog-Ansatz wie Speichern/Laden.
+    // Save target deliberately freely selectable on every export (instead of a fixed path) -
+    // the same file dialog approach as save/load.
     private async void OnExportSessionLogClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
@@ -427,7 +428,7 @@ public partial class MainWindow : Window
 
         var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Sitzungsprotokoll exportieren",
+            Title = LocalizationService.Get("MainWindow.Dialogs.ExportSessionLog"),
             SuggestedFileName = $"sitzungsprotokoll-{DateTime.Now:yyyy-MM-dd_HHmm}.txt",
             DefaultExtension = "txt",
             FileTypeChoices = [TextFileType]
@@ -443,7 +444,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = $"Protokoll-Export fehlgeschlagen: {ex.Message}";
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.LogExportFailed"), ex.Message);
         }
     }
 
@@ -456,7 +457,7 @@ public partial class MainWindow : Window
 
         var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Kalender exportieren",
+            Title = LocalizationService.Get("MainWindow.Dialogs.ExportCalendar"),
             SuggestedFileName = $"kalender-{DateTime.Now:yyyy-MM-dd_HHmm}.json",
             DefaultExtension = "json",
             FileTypeChoices = [CalendarJsonFileType]
@@ -469,11 +470,11 @@ public partial class MainWindow : Window
             stream.SetLength(0);
             await using var writer = new StreamWriter(stream);
             await writer.WriteAsync(vm.ExportCalendarToJson());
-            vm.NotifyActionStatus("Kalender exportiert");
+            vm.NotifyActionStatus(LocalizationService.Get("MainWindow.Status.CalendarExported"));
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = $"Kalender-Export fehlgeschlagen: {ex.Message}";
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarExportFailed"), ex.Message);
         }
     }
 
@@ -486,7 +487,7 @@ public partial class MainWindow : Window
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Kalender importieren",
+            Title = LocalizationService.Get("MainWindow.Dialogs.ImportCalendar"),
             AllowMultiple = false,
             FileTypeFilter = [CalendarJsonFileType]
         });
@@ -497,11 +498,11 @@ public partial class MainWindow : Window
             await using var stream = await files[0].OpenReadAsync();
             using var reader = new StreamReader(stream);
             vm.ImportCalendarFromJson(await reader.ReadToEndAsync());
-            vm.NotifyActionStatus("Kalender importiert");
+            vm.NotifyActionStatus(LocalizationService.Get("MainWindow.Status.CalendarImported"));
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = $"Kalender-Import fehlgeschlagen: {ex.Message}";
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarImportFailed"), ex.Message);
         }
     }
 }

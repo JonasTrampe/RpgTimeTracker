@@ -6,17 +6,23 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Shared.Models;
+using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Visuals;
 
 namespace RpgTimeTracker.Shared.ViewModels;
 
 public partial class CalendarEntryViewModel : ObservableObject
 {
-    public const string RecurrenceNone = "Keine";
-    public const string RecurrenceDaily = "Täglich";
-    public const string RecurrenceWeekly = "Wöchentlich";
-    public const string RecurrenceMonthly = "Monatlich";
-    public const string RecurrenceYearly = "Jährlich";
+    // These are display strings, re-evaluated on each access via LocalizationService so
+    // language switches propagate immediately. They are never serialized: persisted data
+    // uses CalendarRecurrenceKind (enum) via ToRecurrenceKind/FromRecurrenceKind below, and
+    // these strings are only compared against each other (both always in the current
+    // language), never against a stored value from a previous language.
+    public static string RecurrenceNone => LocalizationService.Get("Calendar.RecurrenceNone");
+    public static string RecurrenceDaily => LocalizationService.Get("Calendar.RecurrenceDaily");
+    public static string RecurrenceWeekly => LocalizationService.Get("Calendar.RecurrenceWeekly");
+    public static string RecurrenceMonthly => LocalizationService.Get("Calendar.RecurrenceMonthly");
+    public static string RecurrenceYearly => LocalizationService.Get("Calendar.RecurrenceYearly");
 
     private static readonly string[] DateTimeFormats = ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm"];
     private readonly Action<CalendarEntryViewModel> _onChanged;
@@ -30,7 +36,7 @@ public partial class CalendarEntryViewModel : ObservableObject
     [ObservableProperty] private string _repeatUntilText = string.Empty;
     [ObservableProperty] private string _startDateTimeText;
     private bool _suppressChangeNotifications;
-    [ObservableProperty] private string _title = "Neuer Termin";
+    [ObservableProperty] private string _title = LocalizationService.Get("Calendar.NewEntryTitle");
     [ObservableProperty] private string? _validationMessage;
 
     public CalendarEntryViewModel(Action<CalendarEntryViewModel> onChanged,
@@ -50,7 +56,7 @@ public partial class CalendarEntryViewModel : ObservableObject
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);
     public IBrush? ColorBrush => VisualItemHelper.TryBrush(ColorHex);
 
-    public static IReadOnlyList<string> RecurrenceOptions { get; } =
+    public static IReadOnlyList<string> RecurrenceOptions =>
     [
         RecurrenceNone,
         RecurrenceDaily,
@@ -61,14 +67,14 @@ public partial class CalendarEntryViewModel : ObservableObject
 
     public string TriggerSummary => TriggerMedia.HasMedia
         ? $"{TriggerMedia.FileName} ({TriggerKindLabel})"
-        : "Kein Auslöser";
+        : LocalizationService.Get("Calendar.NoTrigger");
 
     public string TriggerKindLabel => TriggerMedia.Kind switch
     {
-        MediaKind.Image => "Bild",
-        MediaKind.Video => "Video",
-        MediaKind.Audio => "Sound",
-        _ => "Kein Medium"
+        MediaKind.Image => LocalizationService.Get("Calendar.MediaKind.Image"),
+        MediaKind.Video => LocalizationService.Get("Calendar.MediaKind.Video"),
+        MediaKind.Audio => LocalizationService.Get("Calendar.MediaKind.Audio"),
+        _ => LocalizationService.Get("Calendar.MediaKind.None")
     };
 
     partial void OnTitleChanged(string value)
@@ -245,14 +251,14 @@ public partial class CalendarEntryViewModel : ObservableObject
 
     public static CalendarRecurrenceKind ToRecurrenceKind(string recurrence)
     {
-        return recurrence switch
-        {
-            RecurrenceDaily => CalendarRecurrenceKind.Daily,
-            RecurrenceWeekly => CalendarRecurrenceKind.Weekly,
-            RecurrenceMonthly => CalendarRecurrenceKind.Monthly,
-            RecurrenceYearly => CalendarRecurrenceKind.Yearly,
-            _ => CalendarRecurrenceKind.None
-        };
+        // RecurrenceDaily/Weekly/... are localized display strings (not compile-time
+        // constants), so this can't be a constant-pattern switch anymore - compare by value
+        // instead, against whichever language is currently active.
+        if (recurrence == RecurrenceDaily) return CalendarRecurrenceKind.Daily;
+        if (recurrence == RecurrenceWeekly) return CalendarRecurrenceKind.Weekly;
+        if (recurrence == RecurrenceMonthly) return CalendarRecurrenceKind.Monthly;
+        if (recurrence == RecurrenceYearly) return CalendarRecurrenceKind.Yearly;
+        return CalendarRecurrenceKind.None;
     }
 
     private static string FromRecurrenceKind(CalendarRecurrenceKind kind)

@@ -22,15 +22,15 @@ public partial class PlayerWindow : Window
             ExitFullscreenButton.IsVisible = change.GetNewValue<WindowState>() == WindowState.FullScreen;
     }
 
-    // Escape beendet nur lokal das Vollbild dieses Fensters, unabhängig vom SL-weiten
-    // "Spieler-Vollbild"-Zustand (MainWindowViewModel.RemoteFullscreen bleibt unverändert) - so
-    // lässt sich ein einzelnes verirrtes Fenster jederzeit ohne Seiteneffekte auf Remote-Clients
-    // beheben. Ebenso der Button unten, für den Fall dass Escape z.B. durch ein anderes fokussiertes
-    // Steuerelement abgefangen wird.
-    // Pfeiltasten hier sind der SL-eigene Diashow-Navigationsweg: sie lösen denselben globalen
-    // "Hervorheben"-Broadcast aus wie ein Klick in der Bibliothek-Liste (siehe
-    // MainWindowViewModel.NextGalleryItemCommand) - anders als beim Spieler-Client gibt es beim
-    // SL keine getrennte rein lokale Navigation.
+    // Escape only locally ends this window's fullscreen, independent of the GM-wide
+    // "player fullscreen" state (MainWindowViewModel.RemoteFullscreen remains unchanged) - this
+    // allows a single stray window to be fixed at any time without side effects on remote clients.
+    // Likewise the button below, in case Escape is intercepted by e.g. another focused
+    // control.
+    // Arrow keys here are the GM's own slideshow navigation path: they trigger the same global
+    // "highlight" broadcast as a click in the library list (see
+    // MainWindowViewModel.NextGalleryItemCommand) - unlike the player client, the
+    // GM has no separate purely local navigation.
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape && WindowState == WindowState.FullScreen)

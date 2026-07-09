@@ -6,7 +6,7 @@
         xmlns:viewModels="clr-namespace:RpgTimeTracker.Shared.ViewModels;assembly=RpgTimeTracker.Shared"
         x:Class="RpgTimeTracker.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="RPG Zeitverfolgung"
+        Title="{DynamicResource MainWindow.WindowTitle}"
         Width="1150" Height="740" MinWidth="900" MinHeight="600"
         Background="{DynamicResource WindowBackgroundBrush}">
 
@@ -216,14 +216,15 @@
                                         VerticalAlignment="Center" HorizontalAlignment="Right" Height="52">
                                 <Border Classes="dataChip" Width="280" Height="60">
                                     <StackPanel Spacing="1">
-                                        <TextBlock Classes="muted" Text="Aktive Spielzeit" />
+                                        <TextBlock Classes="muted"
+                                                   Text="{DynamicResource MainWindow.Header.ActiveGameTime}" />
                                         <TextBlock Classes="clockValue"
                                                    Text="{Binding CurrentGameTimeText, Mode=TwoWay}" />
                                     </StackPanel>
                                 </Border>
                                 <Border Classes="dataChip" Width="180" Height="60">
                                     <StackPanel Spacing="1">
-                                        <TextBlock Classes="muted" Text="Status" />
+                                        <TextBlock Classes="muted" Text="{DynamicResource MainWindow.Header.Status}" />
                                         <TextBlock Classes="statusValue" Text="{Binding ClockStatusText, Mode=TwoWay}" />
                                     </StackPanel>
                                 </Border>
@@ -248,16 +249,20 @@
                             <DockPanel LastChildFill="True">
                                 <Border Classes="sectionheader" DockPanel.Dock="Top">
                                     <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
-                                        <TextBlock Classes="h1" Text="Chronometer-Steuerung" />
+                                        <TextBlock Classes="h1" Text="{DynamicResource MainWindow.Clock.SectionTitle}" />
                                         <Button Grid.Column="1" Classes="iconsquare" Content="&#128101;"
-                                                ToolTip.Tip="Spielerfenster öffnen" Click="OnOpenPlayerWindowClick"
+                                                ToolTip.Tip="{DynamicResource MainWindow.Clock.OpenPlayerWindowTooltip}"
+                                                Click="OnOpenPlayerWindowClick"
                                                 Margin="0,0,4,0" />
                                         <Button Grid.Column="2" Classes="iconsquare" Content="&#128190;"
-                                                ToolTip.Tip="Spielstand speichern" Click="OnSaveClick" Margin="0,0,4,0" />
+                                                ToolTip.Tip="{DynamicResource MainWindow.Clock.SaveTooltip}"
+                                                Click="OnSaveClick" Margin="0,0,4,0" />
                                         <Button Grid.Column="3" Classes="iconsquare" Content="&#128194;"
-                                                ToolTip.Tip="Spielstand laden" Click="OnLoadClick" Margin="0,0,4,0" />
+                                                ToolTip.Tip="{DynamicResource MainWindow.Clock.LoadTooltip}"
+                                                Click="OnLoadClick" Margin="0,0,4,0" />
                                         <Button Grid.Column="4" Classes="iconsquare" Content="&#8505;"
-                                                ToolTip.Tip="Über RPG Zeitverfolgung" Click="OnOpenAboutClick" />
+                                                ToolTip.Tip="{DynamicResource MainWindow.Clock.AboutTooltip}"
+                                                Click="OnOpenAboutClick" />
                                     </Grid>
                                 </Border>
 
@@ -270,7 +275,8 @@
                                                 CornerRadius="6"
                                                 Padding="12">
                                             <StackPanel Spacing="4" HorizontalAlignment="Center">
-                                                <TextBlock Classes="muted" Text="Aktuelle Spielzeit" />
+                                                <TextBlock Classes="muted"
+                                                           Text="{DynamicResource MainWindow.Clock.CurrentGameTime}" />
                                                 <TextBlock Classes="clockValue large"
                                                            Text="{Binding CurrentGameTimeText, Mode=TwoWay}"
                                                            HorizontalAlignment="Center" />
@@ -291,7 +297,8 @@
                                         <Separator Background="{DynamicResource BorderBrush}" />
 
                                         <StackPanel Spacing="8">
-                                            <TextBlock Classes="h2" Text="Geschwindigkeit" />
+                                            <TextBlock Classes="h2"
+                                                       Text="{DynamicResource MainWindow.Clock.SpeedHeader}" />
 
                                             <NumericUpDown
                                                 Value="{Binding SpeedMultiplierInput}"
@@ -303,69 +310,90 @@
                                                 HorizontalContentAlignment="Center"
                                                 Margin="0,0,8,0" />
 
-                                            <TextBlock Text="Spielzeitfaktor pro Echtzeit-Sekunde"
+                                            <TextBlock Text="{DynamicResource MainWindow.Clock.SpeedDescription}"
                                                        Classes="muted" />
                                         </StackPanel>
 
                                         <Separator Background="{DynamicResource BorderBrush}" />
 
                                         <StackPanel Spacing="8">
-                                            <TextBlock Classes="h2" Text="Datum / Uhrzeit manuell setzen" />
-                                            <controls:DateTimeInput Text="{Binding ManualDateTimeText, Mode=TwoWay}"/>
-                                            <Button Content="Übernehmen" Command="{Binding ApplyManualDateTimeCommand}"
+                                            <TextBlock Classes="h2"
+                                                       Text="{DynamicResource MainWindow.Clock.SetDateTimeHeader}" />
+                                            <controls:DateTimeInput Text="{Binding ManualDateTimeText, Mode=TwoWay}" />
+                                            <Button Content="{DynamicResource MainWindow.Clock.ApplyButton}"
+                                                    Command="{Binding ApplyManualDateTimeCommand}"
                                                     HorizontalAlignment="Center" />
                                         </StackPanel>
 
                                         <Separator Background="{DynamicResource BorderBrush}" />
 
                                         <StackPanel Spacing="8">
-                                            <TextBlock Classes="h2" Text="Zeitsprung" />
+                                            <TextBlock Classes="h2"
+                                                       Text="{DynamicResource MainWindow.Clock.JumpHeader}" />
                                             <controls:TimeSpanInput Text="{Binding JumpAmountText, Mode=TwoWay}"
                                                                     HorizontalAlignment="Center" />
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                                        Spacing="4">
                                                 <Button
                                                     Classes="primary"
-                                                    Content="Vor Springen"
+                                                    Content="{DynamicResource MainWindow.Clock.JumpForward}"
                                                     Command="{Binding JumpForwardCommand}"
                                                     HorizontalAlignment="Stretch" Width="165" />
                                                 <Button
                                                     Classes="primary"
-                                                    Content="Zurück Springen"
+                                                    Content="{DynamicResource MainWindow.Clock.JumpBackward}"
                                                     Command="{Binding JumpBackwardCommand}"
                                                     HorizontalAlignment="Stretch" Width="165" />
                                             </StackPanel>
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
-                                                <Button Content="↩ Rückgängig"
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                                        Spacing="4">
+                                                <Button Content="{DynamicResource MainWindow.Clock.UndoJump}"
                                                         Command="{Binding UndoJumpCommand}"
                                                         IsEnabled="{Binding CanUndoJump}"
                                                         HorizontalAlignment="Stretch" Width="165"
-                                                        ToolTip.Tip="Macht den letzten Zeitsprung rückgängig - mehrfach klickbar, um mehrere Sprünge nacheinander zurückzunehmen (auch Schnellauswahl-Buttons, Sprungmarken und manuell gesetzte Zeit)" />
-                                                <Button Content="↪ Wiederholen"
+                                                        ToolTip.Tip="{DynamicResource MainWindow.Clock.UndoJumpTooltip}" />
+                                                <Button Content="{DynamicResource MainWindow.Clock.RedoJump}"
                                                         Command="{Binding RedoJumpCommand}"
                                                         IsEnabled="{Binding CanRedoJump}"
                                                         HorizontalAlignment="Stretch" Width="165"
-                                                        ToolTip.Tip="Stellt einen per 'Rückgängig' zurückgenommenen Zeitsprung wieder her - verfügbar bis zum nächsten neuen Sprung" />
+                                                        ToolTip.Tip="{DynamicResource MainWindow.Clock.RedoJumpTooltip}" />
                                             </StackPanel>
                                             <Grid ColumnDefinitions="175,175">
                                                 <WrapPanel Grid.Column="0">
-                                                    <Button Content="-1 Std" Command="{Binding QuickJumpCommand}"
-                                                            CommandParameter="-01:00:00" Margin="0,0,4,4" Width="83" />
-                                                    <Button Content="-2 Std" Command="{Binding QuickJumpCommand}"
-                                                            CommandParameter="-02:00:00" Margin="0,0,4,4" Width="83" />
-                                                    <Button Content="-1 Tag" Command="{Binding QuickJumpCommand}"
-                                                            CommandParameter="-1.00:00:00" Margin="0,0,4,4" Width="83" />
-                                                    <Button Content="-8 Std" Command="{Binding QuickJumpCommand}"
-                                                            CommandParameter="-08:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button
+                                                        Content="{DynamicResource MainWindow.Clock.QuickJumpMinus1Hour}"
+                                                        Command="{Binding QuickJumpCommand}"
+                                                        CommandParameter="-01:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button
+                                                        Content="{DynamicResource MainWindow.Clock.QuickJumpMinus2Hours}"
+                                                        Command="{Binding QuickJumpCommand}"
+                                                        CommandParameter="-02:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button
+                                                        Content="{DynamicResource MainWindow.Clock.QuickJumpMinus1Day}"
+                                                        Command="{Binding QuickJumpCommand}"
+                                                        CommandParameter="-1.00:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button
+                                                        Content="{DynamicResource MainWindow.Clock.QuickJumpMinus8Hours}"
+                                                        Command="{Binding QuickJumpCommand}"
+                                                        CommandParameter="-08:00:00" Margin="0,0,4,4" Width="83" />
                                                 </WrapPanel>
                                                 <WrapPanel Grid.Column="1">
-                                                    <Button Content="+2 Std" Command="{Binding QuickJumpCommand}"
-                                                            CommandParameter="02:00:00" Margin="0,0,4,4" Width="83" />
-                                                    <Button Content="+1 Std" Command="{Binding QuickJumpCommand}"
-                                                            CommandParameter="01:00:00" Margin="0,0,4,4" Width="83" />
-                                                    <Button Content="+8 Std" Command="{Binding QuickJumpCommand}"
-                                                            CommandParameter="08:00:00" Margin="0,0,4,4" Width="83" />
-                                                    <Button Content="+1 Tag" Command="{Binding QuickJumpCommand}"
-                                                            CommandParameter="1.00:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button
+                                                        Content="{DynamicResource MainWindow.Clock.QuickJumpPlus2Hours}"
+                                                        Command="{Binding QuickJumpCommand}"
+                                                        CommandParameter="02:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button
+                                                        Content="{DynamicResource MainWindow.Clock.QuickJumpPlus1Hour}"
+                                                        Command="{Binding QuickJumpCommand}"
+                                                        CommandParameter="01:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button
+                                                        Content="{DynamicResource MainWindow.Clock.QuickJumpPlus8Hours}"
+                                                        Command="{Binding QuickJumpCommand}"
+                                                        CommandParameter="08:00:00" Margin="0,0,4,4" Width="83" />
+                                                    <Button
+                                                        Content="{DynamicResource MainWindow.Clock.QuickJumpPlus1Day}"
+                                                        Command="{Binding QuickJumpCommand}"
+                                                        CommandParameter="1.00:00:00" Margin="0,0,4,4" Width="83" />
                                                 </WrapPanel>
                                             </Grid>
                                         </StackPanel>
@@ -373,9 +401,10 @@
                                         <Separator Background="{DynamicResource BorderBrush}" />
 
                                         <StackPanel Spacing="8">
-                                            <TextBlock Classes="h2" Text="Sprungmarken" />
+                                            <TextBlock Classes="h2"
+                                                       Text="{DynamicResource MainWindow.Clock.MarkersHeader}" />
                                             <TextBlock Classes="muted"
-                                                       Text="Springt zur nächsten (rechter Pfeil) oder vorherigen (linker Pfeil) dieser Uhrzeiten."
+                                                       Text="{DynamicResource MainWindow.Clock.MarkersDescription}"
                                                        TextWrapping="Wrap" />
 
                                             <ItemsControl ItemsSource="{Binding JumpMarkers}">
@@ -397,17 +426,17 @@
                                                                              Width="64" PlaceholderText="hh:mm" />
                                                                     <Button Grid.Column="2" Classes="iconsquare"
                                                                             Content="&#10003;"
-                                                                            ToolTip.Tip="Uhrzeit übernehmen"
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.Clock.MarkerApplyTimeTooltip}"
                                                                             Command="{Binding ApplyTimeCommand}"
                                                                             Margin="4,0,0,0" />
                                                                     <Button Grid.Column="3" Classes="iconsquare"
                                                                             Content="&#9664;"
-                                                                            ToolTip.Tip="Vorheriges Vorkommen"
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.Clock.MarkerPreviousTooltip}"
                                                                             Command="{Binding JumpToPreviousCommand}"
                                                                             Margin="4,0,0,0" />
                                                                     <Button Grid.Column="4" Classes="iconsquare"
                                                                             Content="&#9654;"
-                                                                            ToolTip.Tip="Nächstes Vorkommen"
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.Clock.MarkerNextTooltip}"
                                                                             Command="{Binding JumpToNextCommand}"
                                                                             Margin="4,0,0,0" />
                                                                 </Grid>
@@ -423,10 +452,12 @@
 
                                             <Grid ColumnDefinitions="*,Auto,Auto">
                                                 <TextBox Grid.Column="0" Text="{Binding NewMarkerName, Mode=TwoWay}"
-                                                         PlaceholderText="Name" Margin="0,0,6,0" />
+                                                         PlaceholderText="{DynamicResource MainWindow.Clock.MarkerNamePlaceholder}"
+                                                         Margin="0,0,6,0" />
                                                 <TextBox Grid.Column="1" Text="{Binding NewMarkerTime, Mode=TwoWay}"
                                                          PlaceholderText="hh:mm" Width="64" Margin="0,0,6,0" />
-                                                <Button Grid.Column="2" Classes="primary" Content="+ Marke"
+                                                <Button Grid.Column="2" Classes="primary"
+                                                        Content="{DynamicResource MainWindow.Clock.MarkerAddButton}"
                                                         Command="{Binding AddMarkerCommand}" />
                                             </Grid>
                                         </StackPanel>
@@ -443,15 +474,15 @@
                         <Border Classes="card" Grid.Column="1">
                             <DockPanel LastChildFill="True">
                                 <Border Classes="sectionheader" DockPanel.Dock="Top">
-                                    <TextBlock Classes="h2" Text="Elemente &amp; Medien" />
+                                    <TextBlock Classes="h2" Text="{DynamicResource MainWindow.ItemsMedia.SectionTitle}" />
                                 </Border>
 
                                 <TabControl Padding="12,8,12,0">
-                                    <TabItem Header="Element Anlegen">
+                                    <TabItem Header="{DynamicResource MainWindow.Tabs.CreateItem}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                                       VerticalScrollBarVisibility="Visible" AllowAutoHide="false">
                                             <TabControl Classes="subtabs" Padding="12">
-                                                <TabItem Header="+ Timer">
+                                                <TabItem Header="{DynamicResource MainWindow.CreateItem.TimerTab}">
                                                     <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
                                                         <controls:NewItemBasicsEditor Grid.Row="0"
                                                                 DataContext="{Binding NewTimerBasics}"
@@ -464,8 +495,9 @@
                                                                 CornerRadius="6"
                                                                 Padding="10"
                                                                 Margin="0,0,0,10">
-                                                            <Grid ColumnDefinitions="Auto,Auto,*">
-                                                                <TextBlock Grid.Column="0" Classes="muted" Text="Dauer"
+                                                            <Grid ColumnDefinitions="75,Auto,*">
+                                                                <TextBlock Grid.Column="0" Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Common.Duration}"
                                                                            VerticalAlignment="Center" Margin="0,0,10,0" />
                                                                 <controls:TimeSpanInput Grid.Column="1"
                                                                         Text="{Binding NewTimerDuration, Mode=TwoWay}"
@@ -484,13 +516,13 @@
                                                                 Margin="0,0,0,10">
                                                             <StackPanel Spacing="6">
                                                                 <TextBlock Classes="muted"
-                                                                           Text="Event-Medium (optional, wird bei Ablauf automatisch an Spieler gesendet)"
+                                                                           Text="{DynamicResource MainWindow.TriggerMedia.TimerDescription}"
                                                                            TextWrapping="Wrap" />
                                                                 <Grid ColumnDefinitions="Auto,Auto,*,Auto">
                                                                     <Button Grid.Column="0"
-                                                                            Content="Aus Bibliothek…"
+                                                                            Content="{DynamicResource MainWindow.TriggerMedia.ChooseFromLibrary}"
                                                                             Click="OnChooseTimerTriggerMediaClick"
-                                                                            ToolTip.Tip="Bild/Video aus der Medienbibliothek wählen" />
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ChooseTooltip}" />
                                                                     <TextBlock Grid.Column="2" Classes="muted"
                                                                                Text="{Binding NewTimerTriggerMedia.FileName}"
                                                                                VerticalAlignment="Center" Margin="8,0"
@@ -499,14 +531,15 @@
                                                                             Content="&#10005;"
                                                                             Command="{Binding NewTimerTriggerMedia.ClearCommand}"
                                                                             IsVisible="{Binding NewTimerTriggerMedia.HasMedia}"
-                                                                            ToolTip.Tip="Event-Medium entfernen" />
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ClearTooltip}" />
                                                                 </Grid>
                                                                 <StackPanel Orientation="Horizontal" Spacing="12"
                                                                             IsVisible="{Binding NewTimerTriggerMedia.HasMedia}">
-                                                                    <CheckBox Content="⛶ Vollbild bei Auslösung"
-                                                                              IsChecked="{Binding NewTimerTriggerMedia.Fullscreen}" />
                                                                     <CheckBox
-                                                                        Content="⏸ Spielzeit während Video pausieren"
+                                                                        Content="{DynamicResource MainWindow.TriggerMedia.FullscreenCheckbox}"
+                                                                        IsChecked="{Binding NewTimerTriggerMedia.Fullscreen}" />
+                                                                    <CheckBox
+                                                                        Content="{DynamicResource MainWindow.TriggerMedia.PauseClockCheckbox}"
                                                                         IsChecked="{Binding NewTimerTriggerMedia.PauseClockDuringVideo}"
                                                                         IsVisible="{Binding NewTimerTriggerMedia.IsVideo}" />
                                                                 </StackPanel>
@@ -514,13 +547,13 @@
                                                         </Border>
 
                                                         <Button Grid.Row="3" Classes="primary"
-                                                                Content="+ Timer anlegen"
+                                                                Content="{DynamicResource MainWindow.CreateItem.AddTimerButton}"
                                                                 Command="{Binding AddTimerCommand}"
                                                                 HorizontalAlignment="Right" />
                                                     </Grid>
                                                 </TabItem>
 
-                                                <TabItem Header="+ Wecker">
+                                                <TabItem Header="{DynamicResource MainWindow.CreateItem.AlarmTab}">
                                                     <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
                                                         <controls:NewItemBasicsEditor Grid.Row="0"
                                                                 DataContext="{Binding NewAlarmBasics}"
@@ -534,10 +567,10 @@
                                                                 Padding="10"
                                                                 Margin="0,0,0,10">
                                                             <Grid RowDefinitions="Auto,Auto">
-                                                                <Grid Grid.Row="0" ColumnDefinitions="Auto,260,*"
+                                                                <Grid Grid.Row="0" ColumnDefinitions="75,260,*"
                                                                       Margin="0,0,0,8">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
-                                                                               Text="Zielzeit"
+                                                                               Text="{DynamicResource MainWindow.Common.TargetTime}"
                                                                                VerticalAlignment="Center"
                                                                                Margin="0,0,10,0" />
                                                                     <StackPanel Grid.Column="1"
@@ -547,9 +580,9 @@
                                                                             Text="{Binding NewAlarmDateTime, Mode=TwoWay}" />
                                                                     </StackPanel>
                                                                 </Grid>
-                                                                <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*">
+                                                                <Grid Grid.Row="1" ColumnDefinitions="75,Auto,*">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
-                                                                               Text="Wiederholung"
+                                                                               Text="{DynamicResource MainWindow.Common.Repeat}"
                                                                                VerticalAlignment="Center"
                                                                                Margin="0,0,10,0" />
                                                                     <controls:TimeSpanInput Grid.Column="1"
@@ -558,7 +591,7 @@
                                                                             LimitHours="23"
                                                                             LimitMinutes="59" LimitSeconds="59" />
                                                                     <TextBlock Grid.Column="2" Classes="muted"
-                                                                               Text="Leer lassen = einmalig"
+                                                                               Text="{DynamicResource MainWindow.Common.OnceIfEmpty}"
                                                                                VerticalAlignment="Center"
                                                                                Margin="10,0,0,0" />
                                                                 </Grid>
@@ -574,13 +607,13 @@
                                                                 Margin="0,0,0,10">
                                                             <StackPanel Spacing="6">
                                                                 <TextBlock Classes="muted"
-                                                                           Text="Event-Medium (optional, wird bei Auslösung automatisch an Spieler gesendet)"
+                                                                           Text="{DynamicResource MainWindow.TriggerMedia.TriggerDescription}"
                                                                            TextWrapping="Wrap" />
                                                                 <Grid ColumnDefinitions="Auto,Auto,*,Auto">
                                                                     <Button Grid.Column="0"
-                                                                            Content="Aus Bibliothek…"
+                                                                            Content="{DynamicResource MainWindow.TriggerMedia.ChooseFromLibrary}"
                                                                             Click="OnChooseAlarmTriggerMediaClick"
-                                                                            ToolTip.Tip="Bild/Video aus der Medienbibliothek wählen" />
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ChooseTooltip}" />
                                                                     <TextBlock Grid.Column="2" Classes="muted"
                                                                                Text="{Binding NewAlarmTriggerMedia.FileName}"
                                                                                VerticalAlignment="Center" Margin="8,0"
@@ -589,14 +622,15 @@
                                                                             Content="&#10005;"
                                                                             Command="{Binding NewAlarmTriggerMedia.ClearCommand}"
                                                                             IsVisible="{Binding NewAlarmTriggerMedia.HasMedia}"
-                                                                            ToolTip.Tip="Event-Medium entfernen" />
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ClearTooltip}" />
                                                                 </Grid>
                                                                 <StackPanel Orientation="Horizontal" Spacing="12"
                                                                             IsVisible="{Binding NewAlarmTriggerMedia.HasMedia}">
-                                                                    <CheckBox Content="⛶ Vollbild bei Auslösung"
-                                                                              IsChecked="{Binding NewAlarmTriggerMedia.Fullscreen}" />
                                                                     <CheckBox
-                                                                        Content="⏸ Spielzeit während Video pausieren"
+                                                                        Content="{DynamicResource MainWindow.TriggerMedia.FullscreenCheckbox}"
+                                                                        IsChecked="{Binding NewAlarmTriggerMedia.Fullscreen}" />
+                                                                    <CheckBox
+                                                                        Content="{DynamicResource MainWindow.TriggerMedia.PauseClockCheckbox}"
                                                                         IsChecked="{Binding NewAlarmTriggerMedia.PauseClockDuringVideo}"
                                                                         IsVisible="{Binding NewAlarmTriggerMedia.IsVideo}" />
                                                                 </StackPanel>
@@ -604,13 +638,13 @@
                                                         </Border>
 
                                                         <Button Grid.Row="3" Classes="primary"
-                                                                Content="+ Wecker anlegen"
+                                                                Content="{DynamicResource MainWindow.CreateItem.AddAlarmButton}"
                                                                 Command="{Binding AddAlarmCommand}"
                                                                 HorizontalAlignment="Right" />
                                                     </Grid>
                                                 </TabItem>
 
-                                                <TabItem Header="+ OnTime">
+                                                <TabItem Header="{DynamicResource MainWindow.CreateItem.IntervalTab}">
                                                     <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
                                                         <controls:NewItemBasicsEditor Grid.Row="0"
                                                                 DataContext="{Binding NewIntervalBasics}"
@@ -623,12 +657,12 @@
                                                                 CornerRadius="6"
                                                                 Padding="10"
                                                                 Margin="0,0,0,10">
-                                                            <Grid RowDefinitions="Auto,Auto">
+                                                            <Grid RowDefinitions="Auto,Auto,Auto">
                                                                 <Grid Grid.Row="0"
-                                                                      ColumnDefinitions="Auto,Auto,Auto,Auto,*"
-                                                                      Margin="0,0,0,8">
+                                                                      ColumnDefinitions="75,Auto,*"
+                                                                      Margin="0,0,0,8" HorizontalAlignment="Left">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
-                                                                               Text="Alle"
+                                                                               Text="{DynamicResource MainWindow.Common.Every}"
                                                                                VerticalAlignment="Center"
                                                                                Margin="0,0,10,0" />
                                                                     <controls:TimeSpanInput Grid.Column="1"
@@ -636,27 +670,32 @@
                                                                             LimitDays="120"
                                                                             LimitHours="23" LimitMinutes="59"
                                                                             LimitSeconds="59" />
-                                                                    <TextBlock Grid.Column="2" Classes="muted"
-                                                                               Text="Aktiv für"
+                                                                </Grid>
+                                                                <Grid Grid.Row="1" 
+                                                                      ColumnDefinitions="75,Auto,*"
+                                                                      Margin="0,0,0,8" HorizontalAlignment="Left">
+                                                                    <TextBlock Grid.Column="0" Classes="muted"
+                                                                               Text="{DynamicResource MainWindow.CreateItem.ActiveForLabel}"
                                                                                VerticalAlignment="Center"
                                                                                Margin="18,0,10,0" />
-                                                                    <controls:TimeSpanInput Grid.Column="3"
+                                                                    <controls:TimeSpanInput Grid.Column="1"
                                                                             Text="{Binding NewIntervalActiveDuration, Mode=TwoWay}"
                                                                             LimitDays="120"
                                                                             LimitHours="23" LimitMinutes="59"
                                                                             LimitSeconds="59" />
                                                                 </Grid>
-                                                                <Grid Grid.Row="1" ColumnDefinitions="Auto,100,*">
+                                                                <Grid Grid.Row="2" ColumnDefinitions="75,150,*">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
-                                                                               Text="max"
+                                                                               Text="{DynamicResource MainWindow.Common.Max}"
                                                                                VerticalAlignment="Center"
                                                                                Margin="0,0,10,0" />
                                                                     <TextBox Grid.Column="1"
                                                                              Text="{Binding NewIntervalMaxRepeats, Mode=TwoWay}"
                                                                              PlaceholderText="∞" />
                                                                     <TextBlock Grid.Column="2" Classes="muted"
-                                                                               Text="Leer oder 0 = unbegrenzt"
+                                                                               Text="{DynamicResource MainWindow.Common.EmptyOrZeroUnlimited}"
                                                                                VerticalAlignment="Center"
+                                                                               HorizontalAlignment="Left"
                                                                                Margin="10,0,0,0" />
                                                                 </Grid>
                                                             </Grid>
@@ -671,13 +710,13 @@
                                                                 Margin="0,0,0,10">
                                                             <StackPanel Spacing="6">
                                                                 <TextBlock Classes="muted"
-                                                                           Text="Event-Medium (optional, wird bei Aktivierung automatisch an Spieler gesendet)"
+                                                                           Text="{DynamicResource MainWindow.TriggerMedia.IntervalDescription}"
                                                                            TextWrapping="Wrap" />
                                                                 <Grid ColumnDefinitions="Auto,Auto,*,Auto">
                                                                     <Button Grid.Column="0"
-                                                                            Content="Aus Bibliothek…"
+                                                                            Content="{DynamicResource MainWindow.TriggerMedia.ChooseFromLibrary}"
                                                                             Click="OnChooseIntervalTriggerMediaClick"
-                                                                            ToolTip.Tip="Bild/Video aus der Medienbibliothek wählen" />
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ChooseTooltip}" />
                                                                     <TextBlock Grid.Column="2" Classes="muted"
                                                                                Text="{Binding NewIntervalTriggerMedia.FileName}"
                                                                                VerticalAlignment="Center" Margin="8,0"
@@ -686,14 +725,15 @@
                                                                             Content="&#10005;"
                                                                             Command="{Binding NewIntervalTriggerMedia.ClearCommand}"
                                                                             IsVisible="{Binding NewIntervalTriggerMedia.HasMedia}"
-                                                                            ToolTip.Tip="Event-Medium entfernen" />
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ClearTooltip}" />
                                                                 </Grid>
                                                                 <StackPanel Orientation="Horizontal" Spacing="12"
                                                                             IsVisible="{Binding NewIntervalTriggerMedia.HasMedia}">
-                                                                    <CheckBox Content="⛶ Vollbild bei Auslösung"
-                                                                              IsChecked="{Binding NewIntervalTriggerMedia.Fullscreen}" />
                                                                     <CheckBox
-                                                                        Content="⏸ Spielzeit während Video pausieren"
+                                                                        Content="{DynamicResource MainWindow.TriggerMedia.FullscreenCheckbox}"
+                                                                        IsChecked="{Binding NewIntervalTriggerMedia.Fullscreen}" />
+                                                                    <CheckBox
+                                                                        Content="{DynamicResource MainWindow.TriggerMedia.PauseClockCheckbox}"
                                                                         IsChecked="{Binding NewIntervalTriggerMedia.PauseClockDuringVideo}"
                                                                         IsVisible="{Binding NewIntervalTriggerMedia.IsVideo}" />
                                                                 </StackPanel>
@@ -701,7 +741,7 @@
                                                         </Border>
 
                                                         <Button Grid.Row="3" Classes="primary"
-                                                                Content="+ OnTime anlegen"
+                                                                Content="{DynamicResource MainWindow.CreateItem.AddIntervalButton}"
                                                                 Command="{Binding AddIntervalEventCommand}"
                                                                 HorizontalAlignment="Right" />
                                                     </Grid>
@@ -710,11 +750,12 @@
                                         </ScrollViewer>
                                     </TabItem>
 
-                                    <TabItem Header="Elementliste">
+                                    <TabItem Header="{DynamicResource MainWindow.Tabs.ItemList}">
                                         <DockPanel LastChildFill="True">
                                             <Border Classes="sectionheader" DockPanel.Dock="Top">
                                                 <Grid ColumnDefinitions="*,Auto">
-                                                    <TextBlock Grid.Column="0" Classes="h2" Text="Gemeinsame Zeitliste" />
+                                                    <TextBlock Grid.Column="0" Classes="h2"
+                                                               Text="{DynamicResource MainWindow.ItemList.SharedTimelineHeader}" />
                                                     <Button Grid.Column="1"
                                                             Classes="primary"
                                                             Content="{Binding NextEventJumpLabel}"
@@ -723,7 +764,8 @@
                                                 </Grid>
                                             </Border>
 
-                                            <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false">
+                                            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                                          AllowAutoHide="false">
                                                 <ItemsControl ItemsSource="{Binding TimelineItems}"
                                                               Margin="16,14,16,16">
                                                     <ItemsControl.ItemTemplate>
@@ -746,7 +788,7 @@
                                                                                 Width="20" Height="20"
                                                                                 Foreground="{DynamicResource TextBrush}"
                                                                                 PointerPressed="OnTimelineIconPointerPressed"
-                                                                                ToolTip.Tip="Doppelklick: Bootstrap Icon auswählen" />
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Common.IconPickerTooltip}" />
                                                                         <TextBlock Text="{Binding Name}"
                                                                                 FontWeight="Bold"
                                                                                 VerticalAlignment="Center" />
@@ -755,10 +797,11 @@
                                                                             <TextBlock Text="{Binding KindLabel}"
                                                                                     Classes="muted" />
                                                                         </Border>
-                                                                        <TextBlock Text="SL-only"
-                                                                                Foreground="{DynamicResource WarnBrush}"
-                                                                                VerticalAlignment="Center"
-                                                                                IsVisible="{Binding IsSlOnly}" />
+                                                                        <TextBlock
+                                                                            Text="{DynamicResource MainWindow.ItemList.SlOnlyLabel}"
+                                                                            Foreground="{DynamicResource WarnBrush}"
+                                                                            VerticalAlignment="Center"
+                                                                            IsVisible="{Binding IsSlOnly}" />
                                                                         <TextBlock Text="{Binding StatusText}"
                                                                                 Foreground="{DynamicResource OkBrush}"
                                                                                 VerticalAlignment="Center" />
@@ -769,14 +812,17 @@
                                                                         <Button Content="{Binding StartPauseLabel}"
                                                                                 Command="{Binding ToggleRunCommand}"
                                                                                 IsVisible="{Binding CanStartPause}" />
-                                                                        <Button Content="Reset"
-                                                                                Command="{Binding ResetCommand}"
-                                                                                IsVisible="{Binding CanReset}" />
-                                                                        <Button Content="Bestätigen"
-                                                                                Command="{Binding DismissCommand}"
-                                                                                IsVisible="{Binding CanDismiss}" />
-                                                                        <Button Content="Einstellungen"
-                                                                                Command="{Binding ToggleConfigCommand}" />
+                                                                        <Button
+                                                                            Content="{DynamicResource MainWindow.ItemList.ResetButton}"
+                                                                            Command="{Binding ResetCommand}"
+                                                                            IsVisible="{Binding CanReset}" />
+                                                                        <Button
+                                                                            Content="{DynamicResource MainWindow.ItemList.ConfirmButton}"
+                                                                            Command="{Binding DismissCommand}"
+                                                                            IsVisible="{Binding CanDismiss}" />
+                                                                        <Button
+                                                                            Content="{DynamicResource MainWindow.ItemList.SettingsButton}"
+                                                                            Command="{Binding ToggleConfigCommand}" />
                                                                         <Button Classes="iconsquare" Content="&#10005;"
                                                                                 Command="{Binding DeleteCommand}" />
                                                                     </StackPanel>
@@ -816,7 +862,7 @@
                                                                                     RowDefinitions="Auto,Auto">
                                                                                     <TextBlock Grid.Row="0"
                                                                                         Grid.Column="0" Classes="muted"
-                                                                                        Text="Name"
+                                                                                        Text="{DynamicResource MainWindow.Common.Name}"
                                                                                         VerticalAlignment="Center"
                                                                                         Margin="0,0,10,8" />
                                                                                     <TextBox Grid.Row="0"
@@ -826,7 +872,7 @@
                                                                                         Margin="0,0,12,8" />
                                                                                     <TextBlock Grid.Row="0"
                                                                                         Grid.Column="2" Classes="muted"
-                                                                                        Text="Sound"
+                                                                                        Text="{DynamicResource MainWindow.ItemList.SoundLabel}"
                                                                                         VerticalAlignment="Center"
                                                                                         Margin="0,0,10,8" />
                                                                                     <StackPanel Grid.Row="0"
@@ -836,17 +882,25 @@
                                                                                         <ComboBox
                                                                                             ItemsSource="{Binding SoundOptions}"
                                                                                             SelectedItem="{Binding EditSound, Mode=TwoWay}"
-                                                                                            Width="150" />
+                                                                                            Width="150">
+                                                                                            <ComboBox.ItemTemplate>
+                                                                                                <DataTemplate>
+                                                                                                    <TextBlock
+                                                                                                        Text="{Binding Converter={x:Static conv:SoundDisplayNameConverter.Instance}}" />
+                                                                                                </DataTemplate>
+                                                                                            </ComboBox.ItemTemplate>
+                                                                                        </ComboBox>
                                                                                         <NumericUpDown
                                                                                             Value="{Binding EditSoundRepeatCount, Mode=TwoWay}"
                                                                                             Minimum="0" Maximum="20"
-                                                                                            FormatString="0" Width="90"
-                                                                                            ToolTip.Tip="Wie oft der Sound hintereinander abgespielt wird (0 = endlos, bis das Element zurückgesetzt wird)" />
+                                                                                            FormatString="0"
+                                                                                            Width="120"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.ItemList.SoundRepeatTooltip}" />
                                                                                     </StackPanel>
 
                                                                                     <TextBlock Grid.Row="1"
                                                                                         Grid.Column="0" Classes="muted"
-                                                                                        Text="Farbe"
+                                                                                        Text="{DynamicResource MainWindow.Common.Color}"
                                                                                         VerticalAlignment="Center"
                                                                                         Margin="0,0,10,0" />
                                                                                     <ColorPicker Grid.Row="1"
@@ -858,11 +912,12 @@
                                                                                         Grid.ColumnSpan="2"
                                                                                         Orientation="Horizontal"
                                                                                         Spacing="12">
-                                                                                        <CheckBox Content="⚡ Blinken"
+                                                                                        <CheckBox
+                                                                                            Content="{DynamicResource MainWindow.ItemList.BlinkCheckbox}"
                                                                                             IsChecked="{Binding EditBlink, Mode=TwoWay}"
                                                                                             VerticalAlignment="Center" />
                                                                                         <CheckBox
-                                                                                            Content="👁 Spieler sichtbar"
+                                                                                            Content="{DynamicResource MainWindow.ItemList.PlayerVisibleCheckbox}"
                                                                                             IsChecked="{Binding EditIsPlayerVisible, Mode=TwoWay}"
                                                                                             VerticalAlignment="Center" />
                                                                                     </StackPanel>
@@ -876,7 +931,8 @@
                                                                                     CornerRadius="6" Padding="10">
                                                                                 <Grid ColumnDefinitions="Auto,Auto,*">
                                                                                     <TextBlock Grid.Column="0"
-                                                                                        Classes="muted" Text="Dauer"
+                                                                                        Classes="muted"
+                                                                                        Text="{DynamicResource MainWindow.Common.Duration}"
                                                                                         VerticalAlignment="Center"
                                                                                         Margin="0,0,10,0" />
                                                                                     <controls:TimeSpanInput
@@ -888,7 +944,7 @@
                                                                                         LimitSeconds="59" />
                                                                                     <TextBlock Grid.Column="2"
                                                                                         Classes="muted"
-                                                                                        Text="Std / Min / Sek"
+                                                                                        Text="{DynamicResource MainWindow.ItemList.DurationUnitsHint}"
                                                                                         VerticalAlignment="Center"
                                                                                         Margin="10,0,0,0" />
                                                                                 </Grid>
@@ -904,7 +960,7 @@
                                                                                         ColumnDefinitions="Auto,Auto,*">
                                                                                         <TextBlock Grid.Column="0"
                                                                                             Classes="muted"
-                                                                                            Text="Zielzeit"
+                                                                                            Text="{DynamicResource MainWindow.Common.TargetTime}"
                                                                                             VerticalAlignment="Center"
                                                                                             Margin="0,0,10,0" />
                                                                                         <controls:DateTimeInput
@@ -916,7 +972,7 @@
                                                                                             LimitSeconds="59" />
                                                                                         <TextBlock Grid.Column="2"
                                                                                             Classes="muted"
-                                                                                            Text="Mausrad auf jedem Feld"
+                                                                                            Text="{DynamicResource MainWindow.ItemList.MouseWheelHint}"
                                                                                             VerticalAlignment="Center"
                                                                                             Margin="10,0,0,0" />
                                                                                     </Grid>
@@ -924,7 +980,7 @@
                                                                                         ColumnDefinitions="Auto,Auto,*">
                                                                                         <TextBlock Grid.Column="0"
                                                                                             Classes="muted"
-                                                                                            Text="Wiederholung"
+                                                                                            Text="{DynamicResource MainWindow.Common.Repeat}"
                                                                                             VerticalAlignment="Center"
                                                                                             Margin="0,0,10,0" />
                                                                                         <controls:TimeSpanInput
@@ -937,7 +993,7 @@
                                                                                             LimitSeconds="59" />
                                                                                         <TextBlock Grid.Column="2"
                                                                                             Classes="muted"
-                                                                                            Text="Leer lassen = einmalig"
+                                                                                            Text="{DynamicResource MainWindow.Common.OnceIfEmpty}"
                                                                                             VerticalAlignment="Center"
                                                                                             Margin="10,0,0,0" />
                                                                                     </Grid>
@@ -953,7 +1009,8 @@
                                                                                     <Grid
                                                                                         ColumnDefinitions="Auto,Auto,Auto,Auto,*">
                                                                                         <TextBlock Grid.Column="0"
-                                                                                            Classes="muted" Text="Alle"
+                                                                                            Classes="muted"
+                                                                                            Text="{DynamicResource MainWindow.Common.Every}"
                                                                                             VerticalAlignment="Center"
                                                                                             Margin="0,0,10,0" />
                                                                                         <controls:TimeSpanInput
@@ -965,7 +1022,7 @@
                                                                                             LimitSeconds="59" />
                                                                                         <TextBlock Grid.Column="2"
                                                                                             Classes="muted"
-                                                                                            Text="aktiv für"
+                                                                                            Text="{DynamicResource MainWindow.ItemList.ActiveForLabelLower}"
                                                                                             VerticalAlignment="Center"
                                                                                             Margin="18,0,10,0" />
                                                                                         <controls:TimeSpanInput
@@ -979,7 +1036,8 @@
                                                                                     <Grid
                                                                                         ColumnDefinitions="Auto,100,*">
                                                                                         <TextBlock Grid.Column="0"
-                                                                                            Classes="muted" Text="max"
+                                                                                            Classes="muted"
+                                                                                            Text="{DynamicResource MainWindow.Common.Max}"
                                                                                             VerticalAlignment="Center"
                                                                                             Margin="0,0,10,0" />
                                                                                         <TextBox Grid.Column="1"
@@ -987,7 +1045,7 @@
                                                                                             PlaceholderText="∞" />
                                                                                         <TextBlock Grid.Column="2"
                                                                                             Classes="muted"
-                                                                                            Text="Leer oder 0 = unbegrenzt"
+                                                                                            Text="{DynamicResource MainWindow.Common.EmptyOrZeroUnlimited}"
                                                                                             VerticalAlignment="Center"
                                                                                             Margin="10,0,0,0" />
                                                                                     </Grid>
@@ -1001,14 +1059,14 @@
                                                                                 Padding="10">
                                                                                 <StackPanel Spacing="6">
                                                                                     <TextBlock Classes="muted"
-                                                                                        Text="Event-Medium (optional, wird bei Auslösung automatisch an Spieler gesendet)"
+                                                                                        Text="{DynamicResource MainWindow.TriggerMedia.TriggerDescription}"
                                                                                         TextWrapping="Wrap" />
                                                                                     <Grid
                                                                                         ColumnDefinitions="Auto,Auto,*,Auto">
                                                                                         <Button Grid.Column="0"
-                                                                                            Content="Aus Bibliothek…"
+                                                                                            Content="{DynamicResource MainWindow.TriggerMedia.ChooseFromLibrary}"
                                                                                             Click="OnChooseItemTriggerMediaClick"
-                                                                                            ToolTip.Tip="Bild/Video aus der Medienbibliothek wählen" />
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ChooseTooltip}" />
                                                                                         <TextBlock Grid.Column="2"
                                                                                             Classes="muted"
                                                                                             Text="{Binding TriggerMedia.FileName}"
@@ -1020,17 +1078,17 @@
                                                                                             Content="&#10005;"
                                                                                             Command="{Binding TriggerMedia.ClearCommand}"
                                                                                             IsVisible="{Binding TriggerMedia.HasMedia}"
-                                                                                            ToolTip.Tip="Event-Medium entfernen" />
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ClearTooltip}" />
                                                                                     </Grid>
                                                                                     <StackPanel
                                                                                         Orientation="Horizontal"
                                                                                         Spacing="12"
                                                                                         IsVisible="{Binding TriggerMedia.HasMedia}">
                                                                                         <CheckBox
-                                                                                            Content="⛶ Vollbild bei Auslösung"
+                                                                                            Content="{DynamicResource MainWindow.TriggerMedia.FullscreenCheckbox}"
                                                                                             IsChecked="{Binding TriggerMedia.Fullscreen}" />
                                                                                         <CheckBox
-                                                                                            Content="⏸ Spielzeit während Video pausieren"
+                                                                                            Content="{DynamicResource MainWindow.TriggerMedia.PauseClockCheckbox}"
                                                                                             IsChecked="{Binding TriggerMedia.PauseClockDuringVideo}"
                                                                                             IsVisible="{Binding TriggerMedia.IsVideo}" />
                                                                                     </StackPanel>
@@ -1038,7 +1096,7 @@
                                                                             </Border>
 
                                                                             <Button Classes="primary"
-                                                                                    Content="Änderungen übernehmen"
+                                                                                    Content="{DynamicResource MainWindow.ItemList.ApplyChangesButton}"
                                                                                     Command="{Binding ApplyEditsCommand}"
                                                                                     HorizontalAlignment="Right"
                                                                                     MinWidth="230" />
@@ -1060,16 +1118,16 @@
                                         </DockPanel>
                                     </TabItem>
 
-                                    <TabItem Header="Bibliothek">
+                                    <TabItem Header="{DynamicResource MainWindow.Tabs.Library}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">
                                             <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
                                                 <!-- Linke Spalte: Senden + persistente Bibliothek. -->
                                                 <Border Grid.Column="0" Classes="settingsGroup" Margin="0 0 4 0">
                                                     <controls:LibraryPanelView x:Name="MediaLibraryPanel"
-                                                                               Title="Medienbibliothek"
-                                                                               Description="Vorausgewählte Bilder/Videos."
-                                                                               EmptyStateText="Noch keine Medien in der Bibliothek."
+                                                                               Title="{DynamicResource MainWindow.Library.MediaLibraryTitle}"
+                                                                               Description="{DynamicResource MainWindow.Library.MediaLibraryDescription}"
+                                                                               EmptyStateText="{DynamicResource MainWindow.Library.MediaLibraryEmptyState}"
                                                                                HasNoItems="{Binding HasNoMediaLibraryItems}"
                                                                                ErrorMessage="{Binding MediaErrorMessage, Mode=TwoWay}"
                                                                                ItemsSource="{Binding MediaLibrary}">
@@ -1078,7 +1136,7 @@
                                                                 <Border Classes="item" Width="120"
                                                                         Margin="0,0,10,10"
                                                                         DoubleTapped="OnMediaLibraryItemDoubleTapped"
-                                                                        ToolTip.Tip="Doppelklick zum Anzeigen">
+                                                                        ToolTip.Tip="{DynamicResource MainWindow.Library.ItemTooltip}">
                                                                     <StackPanel Spacing="6">
                                                                         <Panel>
                                                                             <Border Width="96" Height="96"
@@ -1108,14 +1166,14 @@
                                                                                     Content="⚙" Width="22"
                                                                                     Height="22"
                                                                                     FontSize="11"
-                                                                                    ToolTip.Tip="Umbenennen">
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Library.RenameTooltip}">
                                                                                     <Button.Flyout>
                                                                                         <Flyout Placement="Bottom">
                                                                                             <StackPanel Spacing="8"
                                                                                                 Width="200">
                                                                                                 <TextBlock
                                                                                                     Classes="muted"
-                                                                                                    Text="Name" />
+                                                                                                    Text="{DynamicResource MainWindow.Common.Name}" />
                                                                                                 <TextBox
                                                                                                     Text="{Binding Name, Mode=TwoWay}" />
                                                                                             </StackPanel>
@@ -1125,7 +1183,7 @@
                                                                                 <Button Classes="iconsquare"
                                                                                     Content="&#10005;"
                                                                                     Command="{Binding DeleteCommand}"
-                                                                                    ToolTip.Tip="Aus Bibliothek entfernen"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
                                                                                     Width="22" Height="22"
                                                                                     FontSize="10" />
                                                                             </StackPanel>
@@ -1143,7 +1201,7 @@
                                                                             <CheckBox Content="🔁"
                                                                                     IsChecked="{Binding Loop}"
                                                                                     IsVisible="{Binding SupportsLoop}"
-                                                                                    ToolTip.Tip="Am Ende von vorn beginnen"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Library.LoopTooltip}"
                                                                                     Padding="4,0" FontSize="11" />
                                                                         </StackPanel>
                                                                     </StackPanel>
@@ -1157,24 +1215,27 @@
 
                                                         <StackPanel Spacing="4" IsVisible="False">
                                                             <TextBlock Classes="muted"
-                                                                       Text="Bild/Video an Spieler senden" />
+                                                                       Text="{DynamicResource MainWindow.Library.SendMediaLabel}" />
                                                             <Grid ColumnDefinitions="*,Auto">
-                                                                <Button Grid.Column="0" Content="+ Medium senden"
+                                                                <Button Grid.Column="0"
+                                                                        Content="{DynamicResource MainWindow.Library.SendMediaButton}"
                                                                         Click="OnSendMediaClick"
                                                                         HorizontalAlignment="Stretch" Margin="0,0,8,0" />
-                                                                <CheckBox Grid.Column="1" Content="🔁 Loop"
+                                                                <CheckBox Grid.Column="1"
+                                                                          Content="{DynamicResource MainWindow.Common.LoopCheckbox}"
                                                                           IsChecked="{Binding SendMediaLoop}"
                                                                           VerticalAlignment="Center"
-                                                                          ToolTip.Tip="Video am Ende von vorn beginnen, statt es zu schließen" />
+                                                                          ToolTip.Tip="{DynamicResource MainWindow.Library.LoopVideoTooltip}" />
                                                             </Grid>
                                                             <TextBlock Classes="muted"
-                                                                       Text="Bilder: PNG/JPG/GIF/BMP/WebP · Videos: MP4/WebM/MKV/MOV/AVI (max. 1900 MB)"
+                                                                       Text="{DynamicResource MainWindow.Library.SupportedFormats}"
                                                                        TextWrapping="Wrap" />
                                                             <Separator Background="{DynamicResource BorderBrush}" />
                                                         </StackPanel>
                                                         <TextBlock Classes="h2"
-                                                                   Text="Aktuell gesendete Bilder/Videos (Galerie)" />
-                                                        <TextBlock Classes="muted" Text="Noch nichts gesendet."
+                                                                   Text="{DynamicResource MainWindow.Library.GalleryHeader}" />
+                                                        <TextBlock Classes="muted"
+                                                                   Text="{DynamicResource MainWindow.Library.GalleryEmptyState}"
                                                                    IsVisible="{Binding HasNoSentMediaItems}" />
                                                         <ItemsControl ItemsSource="{Binding SentMediaItems}">
                                                             <ItemsControl.ItemsPanel>
@@ -1184,17 +1245,41 @@
                                                             </ItemsControl.ItemsPanel>
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:SentMediaItemViewModel">
-                                                                    <Border Classes="item" Width="120" Margin="0,0,10,10" PointerPressed="OnSentMediaItemPointerPressed" ToolTip.Tip="Klick: bei SL und allen Spielern hervorheben">
+                                                                    <Border Classes="item" Width="120"
+                                                                            Margin="0,0,10,10"
+                                                                            PointerPressed="OnSentMediaItemPointerPressed"
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.Library.GalleryItemTooltip}">
                                                                         <StackPanel Spacing="6">
                                                                             <Panel>
-                                                                                <Border Width="96" Height="96" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource SurfaceAltBrush}" HorizontalAlignment="Center">
+                                                                                <Border Width="96" Height="96"
+                                                                                    CornerRadius="6"
+                                                                                    ClipToBounds="True"
+                                                                                    Background="{DynamicResource SurfaceAltBrush}"
+                                                                                    HorizontalAlignment="Center">
                                                                                     <Panel>
-                                                                                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" IsVisible="{Binding HasThumbnail}"/>
-                                                                                        <TextBlock Text="{Binding FallbackIcon}" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasThumbnail}"/>
+                                                                                        <Image
+                                                                                            Source="{Binding Thumbnail}"
+                                                                                            Stretch="UniformToFill"
+                                                                                            IsVisible="{Binding HasThumbnail}" />
+                                                                                        <TextBlock
+                                                                                            Text="{Binding FallbackIcon}"
+                                                                                            FontSize="28"
+                                                                                            HorizontalAlignment="Center"
+                                                                                            VerticalAlignment="Center"
+                                                                                            IsVisible="{Binding !HasThumbnail}" />
                                                                                     </Panel>
                                                                                 </Border>
-                                                                                <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,-4,0">
-                                                                                   <Button  Classes="iconsquare" Content="&#10005;" Command="{Binding RetractCommand}" ToolTip.Tip="Aus der Galerie entfernen" Width="22" Height="22" FontSize="10"/>
+                                                                                <StackPanel Orientation="Horizontal"
+                                                                                    Spacing="2"
+                                                                                    HorizontalAlignment="Right"
+                                                                                    VerticalAlignment="Top"
+                                                                                    Margin="0,-4,-4,0">
+                                                                                    <Button Classes="iconsquare"
+                                                                                        Content="&#10005;"
+                                                                                        Command="{Binding RetractCommand}"
+                                                                                        ToolTip.Tip="{DynamicResource MainWindow.Library.RetractTooltip}"
+                                                                                        Width="22" Height="22"
+                                                                                        FontSize="10" />
                                                                                 </StackPanel>
                                                                             </Panel>
                                                                             <TextBlock Text="{Binding Name}"
@@ -1220,15 +1305,15 @@
                                         </ScrollViewer>
                                     </TabItem>
 
-                                    <TabItem Header="Sounds">
+                                    <TabItem Header="{DynamicResource MainWindow.Tabs.Sounds}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">
                                             <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
                                                 <Border Grid.Column="0" Classes="settingsGroup" Margin="0 0 4 0">
                                                     <controls:LibraryPanelView x:Name="SoundLibraryPanel"
-                                                                               Title="Sound-Bibliothek"
-                                                                               Description="Vorausgewählte Sounds"
-                                                                               EmptyStateText="Noch keine Sounds in der Bibliothek."
+                                                                               Title="{DynamicResource MainWindow.Sounds.LibraryTitle}"
+                                                                               Description="{DynamicResource MainWindow.Sounds.LibraryDescription}"
+                                                                               EmptyStateText="{DynamicResource MainWindow.Sounds.LibraryEmptyState}"
                                                                                HasNoItems="{Binding HasNoSoundLibraryItems}"
                                                                                ErrorMessage="{Binding MediaErrorMessage, Mode=TwoWay}"
                                                                                ItemsSource="{Binding SoundLibrary}">
@@ -1237,7 +1322,7 @@
                                                                 <Border Classes="item" Width="140"
                                                                         Margin="0,0,10,10"
                                                                         PointerPressed="OnSoundLibraryItemPointerPressed"
-                                                                        ToolTip.Tip="Einfachklick: an Spieler senden">
+                                                                        ToolTip.Tip="{DynamicResource MainWindow.Sounds.ItemTooltip}">
                                                                     <StackPanel Spacing="6">
                                                                         <Grid ColumnDefinitions="*,Auto,Auto">
                                                                             <PathIcon Grid.Column="0"
@@ -1246,51 +1331,51 @@
                                                                                     HorizontalAlignment="Left"
                                                                                     Foreground="{DynamicResource TextBrush}"
                                                                                     PointerPressed="OnSoundIconPointerPressed"
-                                                                                    ToolTip.Tip="Doppelklick: Bootstrap Icon auswählen" />
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.IconPickerTooltip}" />
                                                                             <Button Grid.Column="1"
                                                                                     Classes="iconsquare" Content="⚙"
                                                                                     Width="22" Height="22"
                                                                                     FontSize="11"
-                                                                                    ToolTip.Tip="Sound-Einstellungen">
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Sounds.SettingsTooltip}">
                                                                                 <Button.Flyout>
                                                                                     <Flyout Placement="Bottom">
                                                                                         <StackPanel Spacing="8"
                                                                                             Width="240">
                                                                                             <TextBlock
                                                                                                 Classes="muted"
-                                                                                                Text="Name" />
+                                                                                                Text="{DynamicResource MainWindow.Common.Name}" />
                                                                                             <TextBox
                                                                                                 Text="{Binding Name, Mode=TwoWay}" />
 
                                                                                             <TextBlock
                                                                                                 Classes="muted"
-                                                                                                Text="Lautstärke" />
+                                                                                                Text="{DynamicResource MainWindow.Common.Volume}" />
                                                                                             <Slider Minimum="0"
                                                                                                 Maximum="100"
                                                                                                 Value="{Binding Volume}" />
 
                                                                                             <CheckBox
-                                                                                                Content="🔁 Endlosschleife"
+                                                                                                Content="{DynamicResource MainWindow.Sounds.LoopCheckbox}"
                                                                                                 IsChecked="{Binding Loop}" />
 
                                                                                             <StackPanel Spacing="2"
                                                                                                 IsVisible="{Binding !Loop}">
                                                                                                 <TextBlock
                                                                                                     Classes="muted"
-                                                                                                    Text="Wiederholungen" />
+                                                                                                    Text="{DynamicResource MainWindow.Sounds.RepeatCountLabel}" />
                                                                                                 <NumericUpDown
                                                                                                     Value="{Binding RepeatCount}"
                                                                                                     Minimum="1"
                                                                                                     Maximum="20"
                                                                                                     FormatString="0"
-                                                                                                    HorizontalAlignment="Stretch" />
+                                                                                                    Width="120" />
                                                                                             </StackPanel>
 
                                                                                             <Separator
                                                                                                 Background="{DynamicResource BorderBrush}" />
                                                                                             <TextBlock
                                                                                                 Classes="muted"
-                                                                                                Text="Zurechtschneiden (Sekunden, 0 = aus)"
+                                                                                                Text="{DynamicResource MainWindow.Sounds.TrimHeader}"
                                                                                                 TextWrapping="Wrap" />
                                                                                             <Grid
                                                                                                 ColumnDefinitions="*,*"
@@ -1300,7 +1385,7 @@
                                                                                                     Spacing="2">
                                                                                                     <TextBlock
                                                                                                         Classes="muted"
-                                                                                                        Text="Start"
+                                                                                                        Text="{DynamicResource MainWindow.Sounds.TrimStartLabel}"
                                                                                                         FontSize="11" />
                                                                                                     <NumericUpDown
                                                                                                         Value="{Binding TrimStartSeconds}"
@@ -1314,9 +1399,9 @@
                                                                                                     Spacing="2">
                                                                                                     <TextBlock
                                                                                                         Classes="muted"
-                                                                                                        Text="Ende"
+                                                                                                        Text="{DynamicResource MainWindow.Sounds.TrimEndLabel}"
                                                                                                         FontSize="11"
-                                                                                                        ToolTip.Tip="0 = bis zum Dateiende" />
+                                                                                                        ToolTip.Tip="{DynamicResource MainWindow.Sounds.TrimEndTooltip}" />
                                                                                                     <NumericUpDown
                                                                                                         Value="{Binding TrimEndSeconds}"
                                                                                                         Minimum="0"
@@ -1327,10 +1412,10 @@
                                                                                             </Grid>
 
                                                                                             <Button
-                                                                                                Content="▶ SL-Test"
+                                                                                                Content="{DynamicResource MainWindow.Sounds.TestButton}"
                                                                                                 Command="{Binding TestCommand}"
                                                                                                 HorizontalAlignment="Stretch"
-                                                                                                ToolTip.Tip="Nur lokal beim SL testen (nicht senden)" />
+                                                                                                ToolTip.Tip="{DynamicResource MainWindow.Sounds.TestTooltip}" />
                                                                                         </StackPanel>
                                                                                     </Flyout>
                                                                                 </Button.Flyout>
@@ -1339,7 +1424,7 @@
                                                                                     Classes="iconsquare"
                                                                                     Content="&#10005;"
                                                                                     Command="{Binding DeleteCommand}"
-                                                                                    ToolTip.Tip="Aus Bibliothek entfernen"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
                                                                                     Width="22" Height="22"
                                                                                     FontSize="10" />
                                                                         </Grid>
@@ -1357,19 +1442,21 @@
 
                                                         <StackPanel IsVisible="False">
                                                             <TextBlock Classes="muted"
-                                                                       Text="Sound an Spieler senden (ohne Bibliothek)" />
+                                                                       Text="{DynamicResource MainWindow.Sounds.SendSoundLabel}" />
                                                             <Grid ColumnDefinitions="*,Auto">
-                                                                <Button Grid.Column="0" Content="+ Sound senden"
+                                                                <Button Grid.Column="0"
+                                                                        Content="{DynamicResource MainWindow.Sounds.SendSoundButton}"
                                                                         Click="OnSendSoundClick"
                                                                         HorizontalAlignment="Stretch"
                                                                         Margin="0,0,8,0" />
-                                                                <CheckBox Grid.Column="1" Content="🔁 Loop"
+                                                                <CheckBox Grid.Column="1"
+                                                                          Content="{DynamicResource MainWindow.Common.LoopCheckbox}"
                                                                           IsChecked="{Binding SendSoundLoop}"
                                                                           VerticalAlignment="Center"
-                                                                          ToolTip.Tip="Sound am Ende von vorn beginnen, statt natürlich zu enden" />
+                                                                          ToolTip.Tip="{DynamicResource MainWindow.Sounds.LoopTooltip}" />
                                                             </Grid>
                                                             <TextBlock Classes="muted"
-                                                                       Text="MP3, WAV, OGG, FLAC, AIFF, M4A/AAC (max. 1900 MB)"
+                                                                       Text="{DynamicResource MainWindow.Sounds.SupportedFormats}"
                                                                        TextWrapping="Wrap" />
 
                                                             <Separator Background="{DynamicResource BorderBrush}" />
@@ -1380,10 +1467,10 @@
                                                         <StackPanel Spacing="8" Margin="10,0,0,0">
                                                             <TextBlock
                                                                 Classes="h2"
-                                                                Text="Aktuell abgespielte Sounds"
+                                                                Text="{DynamicResource MainWindow.Sounds.ActivePlayingHeader}"
                                                                 VerticalAlignment="Center" />
                                                             <TextBlock Classes="muted"
-                                                                       Text="Keine Sounds aktiv."
+                                                                       Text="{DynamicResource MainWindow.Sounds.NoActiveSounds}"
                                                                        IsVisible="{Binding HasNoActivePlayingSounds}" />
 
                                                             <ItemsControl ItemsSource="{Binding ActivePlayingSounds}"
@@ -1407,7 +1494,8 @@
                                                                                             FontWeight="Bold"
                                                                                             FontSize="12"
                                                                                             TextTrimming="CharacterEllipsis" />
-                                                                                        <TextBlock Text="🔁 Loop"
+                                                                                        <TextBlock
+                                                                                            Text="{DynamicResource MainWindow.Sounds.LoopLabel}"
                                                                                             Classes="muted"
                                                                                             FontSize="11"
                                                                                             IsVisible="{Binding Loop}" />
@@ -1416,7 +1504,7 @@
                                                                                         Classes="iconsquare"
                                                                                         Content="⏹"
                                                                                         Command="{Binding StopCommand}"
-                                                                                        ToolTip.Tip="Diesen Sound stoppen"
+                                                                                        ToolTip.Tip="{DynamicResource MainWindow.Sounds.StopTooltip}"
                                                                                         Width="22"
                                                                                         Height="22"
                                                                                         FontSize="10"
@@ -1424,12 +1512,12 @@
                                                                                 </Grid>
                                                                                 <StackPanel Spacing="2">
                                                                                     <TextBlock Classes="muted"
-                                                                                        Text="Lautstärke"
+                                                                                        Text="{DynamicResource MainWindow.Common.Volume}"
                                                                                         FontSize="11" />
                                                                                     <Slider Minimum="0"
                                                                                         Maximum="100"
                                                                                         Value="{Binding Volume}"
-                                                                                        ToolTip.Tip="Lautstärke live anpassen" />
+                                                                                        ToolTip.Tip="{DynamicResource MainWindow.Sounds.VolumeLiveTooltip}" />
                                                                                 </StackPanel>
                                                                             </StackPanel>
                                                                         </Border>
@@ -1444,26 +1532,27 @@
                                         </ScrollViewer>
                                     </TabItem>
 
-                                    <TabItem Header="Kalender">
+                                    <TabItem Header="{DynamicResource MainWindow.Tabs.Calendar}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">
                                             <StackPanel Spacing="14" Margin="4,14,13,16">
                                                 <Border Classes="settingsGroup">
                                                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                                                         <StackPanel Grid.Column="0" Spacing="4">
-                                                            <TextBlock Classes="h2" Text="Kalender" />
+                                                            <TextBlock Classes="h2"
+                                                                       Text="{DynamicResource MainWindow.Calendar.Title}" />
                                                             <TextBlock Classes="muted"
-                                                                       Text="Monatsansicht mit Tagesliste. Im Spielerfenster erscheint die Umschaltung nur, wenn spielersichtbare Einträge existieren."
+                                                                       Text="{DynamicResource MainWindow.Calendar.Description}"
                                                                        TextWrapping="Wrap" />
                                                         </StackPanel>
                                                         <Button Grid.Column="1"
-                                                                Content="+ Eintrag"
+                                                                Content="{DynamicResource MainWindow.Calendar.AddEntryButton}"
                                                                 Command="{Binding AddCalendarEntryCommand}" />
                                                         <Button Grid.Column="2"
-                                                                Content="Exportieren…"
+                                                                Content="{DynamicResource MainWindow.Calendar.ExportButton}"
                                                                 Click="OnExportCalendarClick" />
                                                         <Button Grid.Column="3"
-                                                                Content="Importieren…"
+                                                                Content="{DynamicResource MainWindow.Calendar.ImportButton}"
                                                                 Click="OnImportCalendarClick" />
                                                     </Grid>
                                                 </Border>
@@ -1488,20 +1577,34 @@
                                                             </Grid>
 
                                                             <UniformGrid Columns="7">
-                                                                <TextBlock Text="Mo" HorizontalAlignment="Center"
-                                                                           Classes="muted" />
-                                                                <TextBlock Text="Di" HorizontalAlignment="Center"
-                                                                           Classes="muted" />
-                                                                <TextBlock Text="Mi" HorizontalAlignment="Center"
-                                                                           Classes="muted" />
-                                                                <TextBlock Text="Do" HorizontalAlignment="Center"
-                                                                           Classes="muted" />
-                                                                <TextBlock Text="Fr" HorizontalAlignment="Center"
-                                                                           Classes="muted" />
-                                                                <TextBlock Text="Sa" HorizontalAlignment="Center"
-                                                                           Classes="muted" />
-                                                                <TextBlock Text="So" HorizontalAlignment="Center"
-                                                                           Classes="muted" />
+                                                                <TextBlock
+                                                                    Text="{DynamicResource MainWindow.Calendar.MondayShort}"
+                                                                    HorizontalAlignment="Center"
+                                                                    Classes="muted" />
+                                                                <TextBlock
+                                                                    Text="{DynamicResource MainWindow.Calendar.TuesdayShort}"
+                                                                    HorizontalAlignment="Center"
+                                                                    Classes="muted" />
+                                                                <TextBlock
+                                                                    Text="{DynamicResource MainWindow.Calendar.WednesdayShort}"
+                                                                    HorizontalAlignment="Center"
+                                                                    Classes="muted" />
+                                                                <TextBlock
+                                                                    Text="{DynamicResource MainWindow.Calendar.ThursdayShort}"
+                                                                    HorizontalAlignment="Center"
+                                                                    Classes="muted" />
+                                                                <TextBlock
+                                                                    Text="{DynamicResource MainWindow.Calendar.FridayShort}"
+                                                                    HorizontalAlignment="Center"
+                                                                    Classes="muted" />
+                                                                <TextBlock
+                                                                    Text="{DynamicResource MainWindow.Calendar.SaturdayShort}"
+                                                                    HorizontalAlignment="Center"
+                                                                    Classes="muted" />
+                                                                <TextBlock
+                                                                    Text="{DynamicResource MainWindow.Calendar.SundayShort}"
+                                                                    HorizontalAlignment="Center"
+                                                                    Classes="muted" />
                                                             </UniformGrid>
 
                                                             <ItemsControl ItemsSource="{Binding PlayerCalendarDays}">
@@ -1542,7 +1645,7 @@
                                                                 <TextBlock Classes="settingsGroupTitle"
                                                                            Text="{Binding PlayerCalendarSelectedDateLabel}" />
                                                                 <TextBlock Classes="muted"
-                                                                           Text="Keine Einträge für den ausgewählten Tag."
+                                                                           Text="{DynamicResource MainWindow.Calendar.NoEntriesForDay}"
                                                                            IsVisible="{Binding !HasCalendarEntriesForSelectedDate}" />
                                                                 <ListBox
                                                                     ItemsSource="{Binding CalendarEntriesForSelectedDate}"
@@ -1571,7 +1674,7 @@
                                                                                         Classes="muted" />
                                                                                 </StackPanel>
                                                                                 <TextBlock Grid.Column="3"
-                                                                                    Text="Spieler"
+                                                                                    Text="{DynamicResource MainWindow.Calendar.PlayerLabel}"
                                                                                     Classes="muted"
                                                                                     IsVisible="{Binding IsPlayerVisible}" />
                                                                             </Grid>
@@ -1583,7 +1686,8 @@
 
                                                         <Border Classes="settingsGroup">
                                                             <StackPanel Spacing="10">
-                                                                <TextBlock Classes="settingsGroupTitle" Text="Eintrag" />
+                                                                <TextBlock Classes="settingsGroupTitle"
+                                                                           Text="{DynamicResource MainWindow.Calendar.EntryHeader}" />
                                                                 <TextBlock Classes="muted"
                                                                            Text="{Binding SelectedCalendarEntry.ValidationMessage}"
                                                                            Foreground="{DynamicResource WarnBrush}"
@@ -1592,12 +1696,14 @@
 
                                                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                                                     <StackPanel Grid.Column="0" Spacing="4">
-                                                                        <TextBlock Classes="muted" Text="Titel" />
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="{DynamicResource MainWindow.Calendar.TitleLabel}" />
                                                                         <TextBox
                                                                             Text="{Binding SelectedCalendarEntry.Title, Mode=TwoWay}" />
                                                                     </StackPanel>
                                                                     <StackPanel Grid.Column="1" Spacing="4">
-                                                                        <TextBlock Classes="muted" Text="Icon" />
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="{DynamicResource MainWindow.Calendar.IconLabel}" />
                                                                         <ComboBox ItemsSource="{Binding IconOptions}"
                                                                                 SelectedItem="{Binding SelectedCalendarEntry.Icon, Mode=TwoWay}"
                                                                                 Width="170" />
@@ -1605,7 +1711,8 @@
                                                                 </Grid>
 
                                                                 <StackPanel Spacing="4">
-                                                                    <TextBlock Classes="muted" Text="Beschreibung" />
+                                                                    <TextBlock Classes="muted"
+                                                                               Text="{DynamicResource MainWindow.Calendar.DescriptionLabel}" />
                                                                     <TextBox
                                                                         Text="{Binding SelectedCalendarEntry.Description, Mode=TwoWay}"
                                                                         AcceptsReturn="True"
@@ -1615,12 +1722,14 @@
 
                                                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                                                                     <StackPanel Grid.Column="0" Spacing="4">
-                                                                        <TextBlock Classes="muted" Text="Start" />
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="{DynamicResource MainWindow.Calendar.StartLabel}" />
                                                                         <controls:DateTimeInput
                                                                             Text="{Binding SelectedCalendarEntry.StartDateTimeText, Mode=TwoWay}" />
                                                                     </StackPanel>
                                                                     <StackPanel Grid.Column="1" Spacing="4">
-                                                                        <TextBlock Classes="muted" Text="Enddatum" />
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="{DynamicResource MainWindow.Calendar.EndDateLabel}" />
                                                                         <TextBox
                                                                             Text="{Binding SelectedCalendarEntry.RepeatUntilText, Mode=TwoWay}"
                                                                             PlaceholderText="YYYY-MM-DD" />
@@ -1629,22 +1738,25 @@
 
                                                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                                                     <StackPanel Grid.Column="0" Spacing="4">
-                                                                        <TextBlock Classes="muted" Text="Wiederholung" />
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="{DynamicResource MainWindow.Common.Repeat}" />
                                                                         <ComboBox
                                                                             ItemsSource="{Binding CalendarRecurrenceOptions}"
                                                                             SelectedItem="{Binding SelectedCalendarEntry.Recurrence, Mode=TwoWay}"
                                                                             HorizontalAlignment="Stretch" />
                                                                     </StackPanel>
                                                                     <StackPanel Grid.Column="1" Spacing="4">
-                                                                        <TextBlock Classes="muted" Text="Farbe" />
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="{DynamicResource MainWindow.Common.Color}" />
                                                                         <ColorPicker
                                                                             Color="{Binding SelectedCalendarEntry.ColorHex, Converter={x:Static conv:HexColorConverter.Instance}, Mode=TwoWay}"
-                                                                            ToolTip.Tip="Rahmenfarbe dieses Eintrags im Kalender" />
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.Calendar.ColorTooltip}" />
                                                                     </StackPanel>
                                                                 </Grid>
 
-                                                                <CheckBox Content="Für Spieler sichtbar"
-                                                                          IsChecked="{Binding SelectedCalendarEntry.IsPlayerVisible, Mode=TwoWay}" />
+                                                                <CheckBox
+                                                                    Content="{DynamicResource MainWindow.Calendar.PlayerVisibleCheckbox}"
+                                                                    IsChecked="{Binding SelectedCalendarEntry.IsPlayerVisible, Mode=TwoWay}" />
 
                                                                 <Border Background="{DynamicResource SurfaceBrush}"
                                                                         BorderBrush="{DynamicResource InnerFrameBrush}"
@@ -1653,7 +1765,7 @@
                                                                         Padding="10">
                                                                     <StackPanel Spacing="8">
                                                                         <TextBlock Classes="muted"
-                                                                                Text="Bild/Video auslösen" />
+                                                                                Text="{DynamicResource MainWindow.Calendar.TriggerMediaLabel}" />
                                                                         <ComboBox ItemsSource="{Binding MediaLibrary}"
                                                                                 SelectedItem="{Binding SelectedCalendarTriggerMediaItem, Mode=TwoWay}">
                                                                             <ComboBox.ItemTemplate>
@@ -1665,7 +1777,7 @@
                                                                         </ComboBox>
 
                                                                         <TextBlock Classes="muted"
-                                                                                Text="Sound auslösen" />
+                                                                                Text="{DynamicResource MainWindow.Calendar.TriggerSoundLabel}" />
                                                                         <ComboBox ItemsSource="{Binding SoundLibrary}"
                                                                                 SelectedItem="{Binding SelectedCalendarTriggerSoundItem, Mode=TwoWay}">
                                                                             <ComboBox.ItemTemplate>
@@ -1683,18 +1795,21 @@
                                                                         <StackPanel Orientation="Horizontal"
                                                                                 Spacing="12"
                                                                                 IsVisible="{Binding SelectedCalendarEntry.TriggerMedia.HasMedia}">
-                                                                            <CheckBox Content="⛶ Vollbild"
-                                                                                    IsChecked="{Binding SelectedCalendarEntry.TriggerMedia.Fullscreen, Mode=TwoWay}" />
-                                                                            <CheckBox Content="⏸ Spielzeit pausieren"
-                                                                                    IsChecked="{Binding SelectedCalendarEntry.TriggerMedia.PauseClockDuringVideo, Mode=TwoWay}"
-                                                                                    IsVisible="{Binding SelectedCalendarEntry.TriggerMedia.IsVideo}" />
+                                                                            <CheckBox
+                                                                                Content="{DynamicResource MainWindow.Calendar.FullscreenCheckbox}"
+                                                                                IsChecked="{Binding SelectedCalendarEntry.TriggerMedia.Fullscreen, Mode=TwoWay}" />
+                                                                            <CheckBox
+                                                                                Content="{DynamicResource MainWindow.Calendar.PauseClockCheckbox}"
+                                                                                IsChecked="{Binding SelectedCalendarEntry.TriggerMedia.PauseClockDuringVideo, Mode=TwoWay}"
+                                                                                IsVisible="{Binding SelectedCalendarEntry.TriggerMedia.IsVideo}" />
                                                                         </StackPanel>
                                                                     </StackPanel>
                                                                 </Border>
 
-                                                                <Button Content="Eintrag löschen"
-                                                                        Command="{Binding SelectedCalendarEntry.DeleteCommand}"
-                                                                        HorizontalAlignment="Right" />
+                                                                <Button
+                                                                    Content="{DynamicResource MainWindow.Calendar.DeleteEntryButton}"
+                                                                    Command="{Binding SelectedCalendarEntry.DeleteCommand}"
+                                                                    HorizontalAlignment="Right" />
                                                             </StackPanel>
                                                         </Border>
                                                     </StackPanel>
@@ -1703,7 +1818,7 @@
                                         </ScrollViewer>
                                     </TabItem>
 
-                                    <TabItem Header="Einstellungen">
+                                    <TabItem Header="{DynamicResource MainWindow.Tabs.Settings}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                                       VerticalScrollBarVisibility="Visible" AllowAutoHide="false">
                                             <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
@@ -1712,27 +1827,37 @@
                                                     <Border Classes="settingsGroup">
                                                         <StackPanel Spacing="10">
                                                             <TextBlock Classes="settingsGroupTitle"
-                                                                       Text="🎨 Darstellung" />
+                                                                       Text="{DynamicResource MainWindow.Settings.AppearanceHeader}" />
                                                             <StackPanel Spacing="4">
-                                                                <TextBlock Classes="muted" Text="Stil" />
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Settings.StyleLabel}" />
                                                                 <ComboBox ItemsSource="{Binding ThemeOptions}"
                                                                           SelectedItem="{Binding SelectedThemeOption}"
                                                                           HorizontalAlignment="Stretch" />
                                                                 <CheckBox
-                                                                    Content="Ambiente-Automatik (Hintergrund nach Tageszeit wechseln)"
+                                                                    Content="{DynamicResource MainWindow.Settings.AmbienceAutomationCheckbox}"
                                                                     IsChecked="{Binding AmbienceAutomationEnabled, Mode=TwoWay}"
                                                                     IsEnabled="{Binding HasAmbienceBackgrounds}"
-                                                                    ToolTip.Tip="Nur wirksam, wenn das gewählte Design (JSON) mehr als einen benannten Hintergrund hat" />
+                                                                    ToolTip.Tip="{DynamicResource MainWindow.Settings.AmbienceAutomationTooltip}" />
                                                             </StackPanel>
                                                             <Separator Background="{DynamicResource BorderBrush}" />
                                                             <StackPanel Spacing="4">
-                                                                <TextBlock Classes="muted" Text="Spielerfenster-Titel" />
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource Settings.Language}" />
+                                                                <ComboBox ItemsSource="{Binding LanguageOptions}"
+                                                                          SelectedItem="{Binding SelectedLanguageOption}"
+                                                                          HorizontalAlignment="Stretch" />
+                                                            </StackPanel>
+                                                            <Separator Background="{DynamicResource BorderBrush}" />
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Settings.PlayerWindowTitleLabel}" />
                                                                 <TextBox
                                                                     Text="{Binding PlayerHeaderTitle, Mode=TwoWay}"
-                                                                    PlaceholderText="Titel im Spielerfenster" />
+                                                                    PlaceholderText="{DynamicResource MainWindow.Settings.PlayerWindowTitlePlaceholder}" />
                                                                 <TextBox
                                                                     Text="{Binding PlayerHeaderSubtitle, Mode=TwoWay}"
-                                                                    PlaceholderText="Untertitel im Spielerfenster" />
+                                                                    PlaceholderText="{DynamicResource MainWindow.Settings.PlayerWindowSubtitlePlaceholder}" />
                                                             </StackPanel>
                                                         </StackPanel>
                                                     </Border>
@@ -1740,15 +1865,15 @@
                                                     <Border Classes="settingsGroup">
                                                         <StackPanel Spacing="10">
                                                             <TextBlock Classes="settingsGroupTitle"
-                                                                       Text="🔔 Vorwarnung" />
+                                                                       Text="{DynamicResource MainWindow.Settings.HeadsUpHeader}" />
                                                             <StackPanel Spacing="4">
                                                                 <CheckBox
-                                                                    Content="Vorwarnen, bevor ein Timer/Wecker/OnTime auslöst"
+                                                                    Content="{DynamicResource MainWindow.Settings.HeadsUpCheckbox}"
                                                                     IsChecked="{Binding HeadsUpWarningEnabled, Mode=TwoWay}" />
                                                                 <Grid ColumnDefinitions="Auto,Auto"
                                                                       IsEnabled="{Binding HeadsUpWarningEnabled}">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
-                                                                               Text="Vorlauf (Minuten)"
+                                                                               Text="{DynamicResource MainWindow.Settings.HeadsUpLeadLabel}"
                                                                                VerticalAlignment="Center"
                                                                                Margin="0,0,10,0" />
                                                                     <NumericUpDown Grid.Column="1"
@@ -1757,7 +1882,7 @@
                                                                             FormatString="0.0" Width="110" />
                                                                 </Grid>
                                                                 <TextBlock Classes="muted"
-                                                                           Text="Wird nie an Spieler gesendet - erscheint nur hier im SL-Fenster."
+                                                                           Text="{DynamicResource MainWindow.Settings.HeadsUpDescription}"
                                                                            TextWrapping="Wrap" />
                                                             </StackPanel>
                                                         </StackPanel>
@@ -1769,18 +1894,18 @@
                                                     <Border Classes="settingsGroup">
                                                         <StackPanel Spacing="10">
                                                             <TextBlock Classes="settingsGroupTitle"
-                                                                       Text="🌐 Netzwerk-Spieleranzeige" />
+                                                                       Text="{DynamicResource MainWindow.Settings.NetworkHeader}" />
                                                             <StackPanel Spacing="4">
                                                                 <TextBlock Classes="muted"
-                                                                           Text="Servername (im Announcement, für Spieler sichtbar)" />
+                                                                           Text="{DynamicResource MainWindow.Settings.ServerNameLabel}" />
                                                                 <TextBox Text="{Binding ServerName, Mode=TwoWay}"
-                                                                         PlaceholderText="RpgTimeTracker"
+                                                                         PlaceholderText="{DynamicResource MainWindow.Settings.ServerNamePlaceholder}"
                                                                          MaxLength="60" />
                                                                 <TextBlock Classes="muted"
-                                                                           Text="PIN (optional, leer = kein PIN erforderlich)" />
+                                                                           Text="{DynamicResource MainWindow.Settings.PinLabel}" />
                                                                 <TextBox Text="{Binding ConnectionPin, Mode=TwoWay}"
                                                                          PasswordChar="•"
-                                                                         PlaceholderText="Kein PIN"
+                                                                         PlaceholderText="{DynamicResource MainWindow.Settings.PinPlaceholder}"
                                                                          MaxLength="32" />
                                                                 <Grid ColumnDefinitions="*,Auto">
                                                                     <NumericUpDown Grid.Column="0"
@@ -1797,14 +1922,15 @@
                                                                            Text="{Binding NetworkServerStatus}"
                                                                            TextWrapping="Wrap" />
                                                                 <TextBlock Classes="muted"
-                                                                           Text="Startet TCP + mDNS/LAN-Suche nur bei Bedarf. Servername wird beim nächsten Serverstart übernommen."
+                                                                           Text="{DynamicResource MainWindow.Settings.NetworkDescription}"
                                                                            TextWrapping="Wrap" />
                                                             </StackPanel>
                                                             <Separator Background="{DynamicResource BorderBrush}" />
                                                             <StackPanel Spacing="4">
-                                                                <TextBlock Classes="muted" Text="Verbundene Clients" />
                                                                 <TextBlock Classes="muted"
-                                                                           Text="Keine Clients verbunden."
+                                                                           Text="{DynamicResource MainWindow.Settings.ConnectedClientsLabel}" />
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Settings.NoConnectedClients}"
                                                                            IsVisible="{Binding HasNoConnectedClients}"
                                                                            FontStyle="Italic" />
                                                                 <ItemsControl
@@ -1824,9 +1950,9 @@
                                                                                         Text="{Binding ConnectedSinceDisplay, StringFormat='seit {0}'}" />
                                                                                 </StackPanel>
                                                                                 <Button Grid.Column="1"
-                                                                                    Content="Trennen"
+                                                                                    Content="{DynamicResource MainWindow.Settings.DisconnectButton}"
                                                                                     Command="{Binding DisconnectCommand}"
-                                                                                    ToolTip.Tip="Diesen Client vom Server trennen" />
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Settings.DisconnectTooltip}" />
                                                                             </Grid>
                                                                         </DataTemplate>
                                                                     </ItemsControl.ItemTemplate>
@@ -1837,18 +1963,18 @@
                                                     <Border Classes="settingsGroup">
                                                         <StackPanel Spacing="10">
                                                             <TextBlock Classes="settingsGroupTitle"
-                                                                       Text="📋 Diashow Geschwindigkeit" />
+                                                                       Text="{DynamicResource MainWindow.Settings.SlideshowHeader}" />
                                                             <StackPanel Spacing="4">
                                                                 <Grid ColumnDefinitions="Auto,*">
                                                                     <TextBlock Grid.Column="0" Classes="muted"
-                                                                               Text="Sek./Bild:"
+                                                                               Text="{DynamicResource MainWindow.Settings.SecondsPerImageLabel}"
                                                                                VerticalAlignment="Center"
                                                                                Margin="0,0,8,0" />
                                                                     <NumericUpDown Grid.Column="1"
                                                                             Value="{Binding SlideshowSecondsPerImage}"
                                                                             Minimum="0" FormatString="0"
                                                                             HorizontalAlignment="Stretch"
-                                                                            ToolTip.Tip="Automatische Weiterschaltung - 0 = manuell. Gilt nie für Videos." />
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.Settings.SlideshowTooltip}" />
                                                                 </Grid>
                                                             </StackPanel>
                                                         </StackPanel>
@@ -1856,19 +1982,20 @@
                                                     <Border Classes="settingsGroup">
                                                         <StackPanel Spacing="10">
                                                             <TextBlock Classes="settingsGroupTitle"
-                                                                       Text="📋 Sitzungsprotokoll" />
+                                                                       Text="{DynamicResource MainWindow.Settings.SessionLogHeader}" />
                                                             <StackPanel Spacing="4">
                                                                 <CheckBox
-                                                                    Content="Ereignisse aufzeichnen (Zeitsprünge, Auslösungen, gesendete Medien)"
+                                                                    Content="{DynamicResource MainWindow.Settings.RecordSessionLogCheckbox}"
                                                                     IsChecked="{Binding RecordSessionLog, Mode=TwoWay}" />
                                                                 <Grid ColumnDefinitions="*,Auto">
                                                                     <Button Grid.Column="0"
-                                                                            Content="Protokoll exportieren…"
+                                                                            Content="{DynamicResource MainWindow.Settings.ExportLogButton}"
                                                                             Click="OnExportSessionLogClick"
                                                                             IsEnabled="{Binding HasSessionLogEntries}"
                                                                             HorizontalAlignment="Stretch"
                                                                             Margin="0,0,6,0" />
-                                                                    <Button Grid.Column="1" Content="Leeren"
+                                                                    <Button Grid.Column="1"
+                                                                            Content="{DynamicResource MainWindow.Settings.ClearLogButton}"
                                                                             Command="{Binding ClearSessionLogCommand}"
                                                                             IsEnabled="{Binding HasSessionLogEntries}" />
                                                                 </Grid>
@@ -1879,7 +2006,8 @@
                                                                         Padding="8"
                                                                         MaxHeight="140"
                                                                         IsVisible="{Binding HasSessionLogEntries}">
-                                                                    <ScrollViewer VerticalScrollBarVisibility="Auto" AllowAutoHide="false">
+                                                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                                            AllowAutoHide="false">
                                                                         <ItemsControl
                                                                             ItemsSource="{Binding SessionLogEntries}">
                                                                             <ItemsControl.ItemTemplate>
@@ -1929,16 +2057,17 @@
                                 <TextBlock Text="🖼" VerticalAlignment="Center" Margin="0,0,4,0" />
                                 <Button Classes="iconsquare" Content="&#8249;" Width="22" Height="22" FontSize="12"
                                         Command="{Binding PreviousGalleryItemCommand}"
-                                        ToolTip.Tip="Vorheriges Galerie-Element hervorheben"
+                                        ToolTip.Tip="{DynamicResource MainWindow.StatusBar.PreviousGalleryTooltip}"
                                         IsVisible="{Binding !HasNoSentMediaItems}" />
                                 <TextBlock Text="{Binding CurrentMediaFileName}" Classes="muted" MaxWidth="200"
                                            TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                 <Button Classes="iconsquare" Content="&#8250;" Width="22" Height="22" FontSize="12"
                                         Command="{Binding NextGalleryItemCommand}"
-                                        ToolTip.Tip="Nächstes Galerie-Element hervorheben"
+                                        ToolTip.Tip="{DynamicResource MainWindow.StatusBar.NextGalleryTooltip}"
                                         IsVisible="{Binding !HasNoSentMediaItems}" />
                                 <Button Classes="iconsquare" Content="&#10005;" Width="22" Height="22" FontSize="10"
-                                        Command="{Binding ClearMediaCommand}" ToolTip.Tip="Medium schließen"
+                                        Command="{Binding ClearMediaCommand}"
+                                        ToolTip.Tip="{DynamicResource MainWindow.StatusBar.CloseMediaTooltip}"
                                         Margin="6,0,0,0" />
                             </StackPanel>
 
@@ -1949,7 +2078,7 @@
                              davon erhalten. -->
                             <Button Grid.Column="3" Classes="iconsquare" Width="22" Height="22" FontSize="12"
                                     Margin="10,0,0,0"
-                                    ToolTip.Tip="Benachrichtigungen">
+                                    ToolTip.Tip="{DynamicResource MainWindow.StatusBar.NotificationsTooltip}">
                                 <Panel>
                                     <TextBlock Text="🔔" />
                                     <Ellipse Width="7" Height="7" Fill="{DynamicResource OkBrush}"
@@ -1959,7 +2088,8 @@
                                 <Button.Flyout>
                                     <Flyout Placement="TopEdgeAlignedRight">
                                         <StackPanel Spacing="8" Width="300" Margin="4">
-                                            <TextBlock Classes="h2" Text="Benachrichtigungen" />
+                                            <TextBlock Classes="h2"
+                                                       Text="{DynamicResource MainWindow.StatusBar.NotificationsHeader}" />
                                             <ItemsControl ItemsSource="{Binding ActionStatusHistory}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="x:String">
@@ -1968,7 +2098,8 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-                                            <TextBlock Classes="muted" Text="Noch keine Benachrichtigungen."
+                                            <TextBlock Classes="muted"
+                                                       Text="{DynamicResource MainWindow.StatusBar.NoNotifications}"
                                                        IsVisible="{Binding HasNoActionStatusHistory}" />
                                         </StackPanel>
                                     </Flyout>

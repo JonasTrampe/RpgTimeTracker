@@ -1,121 +1,123 @@
 # TODO
 
-Offene Ideen und Aufgaben für RpgTimeTracker, jenseits akuter Bugs. Kein
-Ersatz für Issues auf GitHub, sobald das Repo dort liegt — eher die
-Langzeit-Gedächtnisstütze für Dinge, die noch nicht spruchreif genug für ein
-Issue sind. Lizenz-/Attribution-Aufgaben stehen separat in
+Open ideas and tasks for RpgTimeTracker, beyond acute bugs. Not a
+replacement for GitHub Issues once the repo lives there — more of a
+long-term memory aid for things that aren't yet ripe enough for an
+Issue. License/attribution tasks live separately in
 [`legal-todo.md`](legal-todo.md).
 
 ## Features
 
-- [ ] Sound-/Popup-Benachrichtigung bei Timer-Ablauf bzw. Wecker-Auslösung
-      (auch wenn das Hauptfenster gerade nicht im Fokus ist)
-- [ ] Eigener Fantasy-Kalender (andere Monatslängen, Wochentage, Feiertage)
-      statt des Standard-`DateTime` — größerer Umbau, betrifft
-      `GameClockService` auf beiden Seiten sowie das Sprungmarken-Feature
-- [ ] Automatisches Speichern beim Schließen der App / zuletzt genutzte
-      Datei beim Start automatisch wieder laden
-- [ ] Sitzungs-/Kampagnen-Vorlagen: vorgefertigte Bündel aus
-      Timern/Weckern/Theme (z.B. "Reise-Modus", "Dungeon-Crawl") zum
-      Einklicken statt jedes Mal neu anlegen
-- [x] Erweiterter Undo-Verlauf über den zuletzt gemachten Zeitsprung hinaus —
-      erledigt: `MainWindowViewModel` hat jetzt einen echten Undo-*und*
-      Redo-Stack (`_jumpUndoStack`/`_jumpRedoStack`), beide beliebig oft
-      hintereinander klickbar; auch die manuelle Zeiteingabe
-      (`ApplyManualDateTime`) läuft jetzt über denselben Delta-Mechanismus
-      und ist damit ebenfalls rückgängig machbar. Ein neuer Sprung leert den
-      Redo-Stack (klassisches Editor-Verhalten); Laden eines Spielstands
-      leert beide Stacks, da sich eine alte Sprung-Historie nicht mehr auf
-      den neu geladenen Timer-/Wecker-Zustand bezieht.
+- [ ] Sound/popup notification when a timer expires or an alarm fires
+      (even when the main window isn't currently focused)
+- [ ] Custom fantasy calendar (different month lengths, weekdays, holidays)
+      instead of the standard `DateTime` — bigger rework, affects
+      `GameClockService` on both sides as well as the jump-marker feature
+- [ ] Auto-save when closing the app / automatically reload the
+      most recently used file on startup
+- [ ] Session/campaign templates: pre-built bundles of
+      timers/alarms/theme (e.g. "Travel mode", "Dungeon crawl") to
+      apply with one click instead of setting them up from scratch every time
+- [x] Extended undo history beyond the most recent time jump —
+      done: `MainWindowViewModel` now has a real undo *and*
+      redo stack (`_jumpUndoStack`/`_jumpRedoStack`), both clickable any
+      number of times in a row; manual time entry
+      (`ApplyManualDateTime`) now also goes through the same delta mechanism
+      and is therefore undoable as well. A new jump clears the
+      redo stack (classic editor behavior); loading a save game
+      clears both stacks, since an old jump history no longer applies to
+      the newly loaded timer/alarm state.
 
-## Netzwerk & Robustheit
+## Network & robustness
 
-- [x] Video-Chunking mit progressiver Wiedergabe schon während der
-      Übertragung (nicht erst nach vollständigem Empfang) — erledigt,
-      `StartVideo` spielt die noch wachsende Tempdatei sofort ab
-- [x] Auto-Reconnect mit Backoff im PlayerClient, wenn die TCP-Verbindung
-      unerwartet abbricht — erledigt (`PlayerTcpClientService.ReconnectLoopAsync`,
-      2s–20s Backoff, nur bei unerwarteter Trennung, nicht bei manuellem
-      Trennen); reconnected Clients bekommen automatisch einen vollen
-      `session.snapshot` über den bestehenden Catch-up-Pfad
-- [x] Optionaler PIN/Passcode beim Verbindungsaufbau — erledigt, zusammen mit
-      der Protokoll-Version in einem gemeinsamen `session.hello`/
-      `session.helloRejected`-Handshake (siehe unten); Host-Einstellung
-      `MainWindowViewModel.ConnectionPin`, leer = kein PIN nötig
-- [x] Protokoll-Version im Handshake — erledigt: `session.hello` (Client→Host,
-      direkt nach TCP-Connect, vor `session.snapshot`) trägt `ProtocolInfo.Version`
-      + optionalen PIN; `TcpPlayerServerService.PerformHandshakeAsync` prüft
-      beides und fügt die Verbindung erst danach zu `_clients` hinzu. Bei
-      Timeout/falschem PIN/Versionsmismatch: `session.helloRejected` + Trennen,
-      der Client versucht danach KEINEN Auto-Reconnect (siehe
+- [x] Video chunking with progressive playback already during
+      transfer (not only after full receipt) — done,
+      `StartVideo` plays the still-growing temp file immediately
+- [x] Auto-reconnect with backoff in the PlayerClient if the TCP connection
+      drops unexpectedly — done (`PlayerTcpClientService.ReconnectLoopAsync`,
+      2s-20s backoff, only on unexpected disconnects, not on manual
+      disconnects); reconnected clients automatically get a full
+      `session.snapshot` via the existing catch-up path
+- [x] Optional PIN/passcode when establishing a connection — done, together
+      with the protocol version in a shared `session.hello`/
+      `session.helloRejected` handshake (see below); Host setting
+      `MainWindowViewModel.ConnectionPin`, empty = no PIN required
+- [x] Protocol version in the handshake — done: `session.hello` (client to
+      Host, right after the TCP connect, before `session.snapshot`) carries
+      `ProtocolInfo.Version` plus an optional PIN; `TcpPlayerServerService.PerformHandshakeAsync`
+      checks both and only then adds the connection to `_clients`. On
+      timeout/wrong PIN/version mismatch: `session.helloRejected` plus disconnect,
+      after which the client does NOT attempt auto-reconnect (see
       `PlayerTcpClientService`, `case RpcMethods.SessionHelloRejected`)
-- [x] Servername im mDNS-/LAN-Announcement konfigurierbar — erledigt,
-      Host-Einstellungen → "Servername"; mehrere Hosts im selben LAN sind
-      damit in der Client-Serverliste unterscheidbar
-- [x] Aufräumen der lokal zwischengespeicherten Medien-Temp-Dateien beim
-      Schließen des Clients, auf Nachfrage — erledigt (`ConfirmCleanupWindow`
-      + `DeleteAllTempFiles`, inkl. Sweep verwaister Dateien von einem
-      früheren Absturz). Der Host legt selbst keine Temp-Dateien an
-      (prüft/sendet Bytes direkt aus der Bibliothek), betrifft ihn also nicht.
+- [x] Configurable server name in the mDNS/LAN announcement — done,
+      Host settings -> "Server name"; multiple hosts on the same LAN are
+      thus distinguishable in the client's server list
+- [x] Clean up locally cached media temp files when the client closes,
+      on request — done (`ConfirmCleanupWindow`
+      + `DeleteAllTempFiles`, including a sweep of orphaned files from a
+      previous crash). The Host itself never creates temp files
+      (it checks/sends bytes directly from the library), so this doesn't affect it.
 
-## Mobile / Android (siehe auch Chat-Diskussion)
+## Mobile / Android (see also chat discussion)
 
-- [ ] Machbarkeits-Spike: `Avalonia.Android`-Head-Projekt gegen
-      `RpgTimeTracker.Shared` bauen, um zu sehen, wie viel vom PlayerClient
-      sich wirklich ohne Änderung wiederverwenden lässt
-- [ ] LibVLC-Videowiedergabe auf Android prüfen (`VideoLAN.LibVLC.Android` +
-      `LibVLCSharp.Android.AWindowModern`) — anderer Rendering-Pfad als
-      Desktop, eigener Test nötig
-- [ ] mDNS-Discovery auf Android: braucht einen `WifiManager.MulticastLock`,
-      sonst kommen UDP-Multicast-Pakete evtl. gar nicht an
-- [ ] Verhalten bei gesperrtem Bildschirm/Hintergrund (Doze/App-Standby)
-      klären — eine "zweiter Bildschirm"-App, die im Hintergrund die
-      TCP-Verbindung verliert, ist für den Zweck nutzlos
-- [ ] QR-Code-Pairing als Alternative zur manuellen IP-Eingabe (Host zeigt
-      QR mit `host:port`, Handy scannt) — auf Mobile deutlich angenehmer
-      als Tippen, besonders praktisch, wenn PIN/Passcode (siehe oben)
-      mit reinkommt
+- [ ] Feasibility spike: build an `Avalonia.Android` head project against
+      `RpgTimeTracker.Shared` to see how much of the PlayerClient
+      can really be reused without changes
+- [ ] Check LibVLC video playback on Android (`VideoLAN.LibVLC.Android` +
+      `LibVLCSharp.Android.AWindowModern`) — different rendering path than
+      desktop, needs its own testing
+- [ ] mDNS discovery on Android: needs a `WifiManager.MulticastLock`,
+      otherwise UDP multicast packets may not arrive at all
+- [ ] Clarify behavior with a locked screen/in the background (Doze/App
+      Standby) — a "second screen" app that loses its
+      TCP connection in the background is useless for its purpose
+- [ ] QR code pairing as an alternative to manual IP entry (Host shows a
+      QR code with `host:port`, phone scans it) — much more pleasant
+      on mobile than typing, especially handy once a PIN/passcode (see
+      above) is added to the mix
 
-## Qualität / Tooling
+## Quality / tooling
 
-- [ ] Unit-Tests für `GameClockService` (Zeitsprünge vor/zurück,
-      Geschwindigkeitswechsel) und für die Client-seitige
-      Delta-Rekonstruktion der Timer/Wecker — je mehr Client-Plattformen
-      dazukommen, desto wichtiger, dass sich das Protokollverhalten nicht
-      unbemerkt ändert
-- [x] CI-Build (GitHub Actions) für Windows/Linux bei jedem Push — erledigt,
+- [ ] Unit tests for `GameClockService` (time jumps forward/backward,
+      speed changes) and for the client-side
+      delta reconstruction of timers/alarms — the more client platforms
+      get added, the more important it is that protocol behavior doesn't
+      change unnoticed
+- [x] CI build (GitHub Actions) for Windows/Linux on every push — done,
       [`.github/workflows/build.yml`](../.github/workflows/build.yml),
-      Matrix-Build auf `windows-latest`/`ubuntu-latest`, reiner Kompilier-
-      Check (kein Publish-Artefakt)
-- [ ] Siehe [`legal-todo.md`](legal-todo.md) für den vorgeschlagenen
-      CI-Check, der neue NuGet-Pakete gegen `THIRD-PARTY-NOTICES.txt`
-      abgleicht
+      matrix build on `windows-latest`/`ubuntu-latest`, a pure compile
+      check (no publish artifact)
+- [ ] See [`legal-todo.md`](legal-todo.md) for the proposed
+      CI check that compares new NuGet packages against `THIRD-PARTY-NOTICES.txt`
 
-## Lokalisierung
+## Localization
 
-- [ ] UI-Texte aus dem AXAML/Code-Behind in Ressourcen auslagern (z.B.
-      `.resx` oder Avalonia-`ResourceDictionary` pro Sprache) statt fest
-      codiertem Deutsch — betrifft Host und PlayerClient gleichermaßen,
-      inklusive der gemeinsamen Views in `RpgTimeTracker.Shared/Views`
-- [ ] Englisch als erste zusätzliche Sprache — naheliegend, sobald das Repo
-      öffentlich auf GitHub liegt und internationale Nutzer dazukommen
-- [ ] Sprachumschaltung (mindestens beim Start, idealerweise auch zur
-      Laufzeit) getrennt pro Installation — Host und PlayerClient müssen
-      nicht dieselbe Sprache verwenden, da SL-eigene Bezeichnungen (Timer-/
-      Wecker-Namen, Sprungmarken) ohnehin frei vom SL getextet und über das
-      Protokoll übertragen werden, nicht Teil der UI-Übersetzung sind
-- [ ] Kultur-/Formatabhängige Werte beachten: Datums-/Uhrzeitformat,
-      Dezimaltrennzeichen beim Geschwindigkeitsfaktor (0,1×–300×)
-- [ ] Eingebaute Bezeichnungen wie die Standardtöne "Pling"/"Glocke"/
-      "Digital" und die 8 mitgelieferten Design-Namen mit übersetzen, sonst
-      wirkt eine sonst übersetzte UI an diesen Stellen inkonsistent
+- [x] Move UI text out of AXAML/code-behind into resources (an Avalonia
+      `ResourceDictionary` built from flat JSON files per language, see
+      `RpgTimeTracker.Shared/Services/Localization/LocalizationService.cs` and
+      `RpgTimeTracker.Shared/Localization/{en,de}.json`) instead of
+      hard-coded German — covers Host and PlayerClient equally,
+      including the shared views in `RpgTimeTracker.Shared/Views`
+- [x] English as the first additional language — done; English is now the
+      default/fallback language, with German as the selectable alternative
+- [x] Language switching (at least on startup, also at runtime) per
+      installation — Host and PlayerClient each persist their own `Language`
+      setting independently and switch immediately via `{DynamicResource}`,
+      since the GM's own names (timer/alarm names, jump markers) are freely
+      authored by the GM anyway and sent over the protocol, and aren't part
+      of the UI translation
+- [ ] Account for culture/format-dependent values: date/time format,
+      decimal separator for the speed factor (0.1x-300x)
+- [ ] Translate built-in labels too, such as the default tones "Pling"/"Glocke"/
+      "Digital" and the 8 bundled theme names, otherwise an
+      otherwise-translated UI looks inconsistent at these spots
 
 ## UI
 
-- [ ] Komplettes UI-Redesign/Aufräumen (separates, größeres Vorhaben —
-      hier nur als Platzhalter, damit es nicht aus dem Blick gerät). Einiges
-      an Aufräumen ist bereits eingeflossen (Tab-Leiste als Unterstreichungs-
-      Optik statt Buttons, gemeinsame Statusleiste, geteilte
-      `LibraryPanelView` für Medien-/Sound-Bibliothek, zweispaltige Tabs) -
-      das hier ist trotzdem noch offen, weil keines davon ein durchgängiges
-      Redesign war, eher lokale Verbesserungen an bestehender Struktur.
+- [ ] Complete UI redesign/cleanup (a separate, larger undertaking —
+      listed here only as a placeholder so it doesn't get lost). Some
+      cleanup has already landed (tab bar as an underline
+      look instead of buttons, shared status bar, shared
+      `LibraryPanelView` for the media/sound library, two-column tabs) -
+      this item is still open regardless, because none of that was a full
+      redesign, more local improvements to the existing structure.

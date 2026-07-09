@@ -5,14 +5,14 @@ using Avalonia.Threading;
 namespace RpgTimeTracker.Shared.Services;
 
 /// <summary>
-///     Treibt eine "Spielzeit" (GameTime) an, die schneller oder langsamer als die
-///     Echtzeit laufen kann. Ein DispatcherTimer misst die reale vergangene Zeit
-///     zwischen zwei Ticks und multipliziert sie mit SpeedMultiplier, um die
-///     Spielzeit voranzutreiben.
-///     Wird sowohl vom SL-Host (nutzereingaben-getrieben) als auch vom Spieler-Client
-///     (RPC-Event-getrieben, siehe RemoteClockSync) verwendet - beide Seiten müssen mit
-///     derselben Ableitungslogik rechnen, damit Restzeiten/Fortschritt lokal identisch
-///     zum Server berechnet werden, ohne dass jeder Tick übers Netz geschickt werden muss.
+///     Drives a "game time" (GameTime) that can run faster or slower than
+///     real time. A DispatcherTimer measures the real elapsed time
+///     between two ticks and multiplies it by SpeedMultiplier to
+///     advance game time.
+///     Used both by the GM host (driven by user input) and the player client
+///     (driven by RPC events, see RemoteClockSync) - both sides must use
+///     the same derivation logic so that remaining time/progress is calculated locally
+///     identically to the server, without every tick having to be sent over the network.
 /// </summary>
 public class GameClockService : IDisposable
 {
@@ -34,8 +34,8 @@ public class GameClockService : IDisposable
     public bool IsRunning { get; private set; }
 
     /// <summary>
-    ///     Zeitfaktor: 1.0 = Spielzeit läuft wie Echtzeit, 60.0 = 1 Sekunde real
-    ///     entspricht 1 Minute Spielzeit, 0.5 = halbe Geschwindigkeit usw.
+    ///     Time factor: 1.0 = game time runs like real time, 60.0 = 1 second real
+    ///     equals 1 minute game time, 0.5 = half speed, etc.
     /// </summary>
     public double SpeedMultiplier { get; set; } = 1.0;
 
@@ -45,13 +45,13 @@ public class GameClockService : IDisposable
         _timer.Stop();
     }
 
-    /// <summary>Wird bei jedem Tick mit dem neuen Zeitpunkt und dem Spielzeit-Delta ausgelöst.</summary>
+    /// <summary>Raised on every tick with the new point in time and the game-time delta.</summary>
     public event Action<DateTime, TimeSpan>? Tick;
 
     /// <summary>
-    ///     Wird NUR bei einem expliziten Sprung (Jump/SetTime) ausgelöst, nicht beim normalen
-    ///     Fortschreiten durch OnTimerTick. Der SL-Host nutzt das, um clock.timeJumped nur bei
-    ///     echten Sprüngen übers Netz zu senden statt bei jedem Tick.
+    ///     Raised ONLY on an explicit jump (Jump/SetTime), not on normal
+    ///     progression via OnTimerTick. The GM host uses this to send clock.timeJumped over the
+    ///     network only for real jumps instead of on every tick.
     /// </summary>
     public event Action<DateTime>? Jumped;
 
@@ -73,9 +73,9 @@ public class GameClockService : IDisposable
     }
 
     /// <summary>
-    ///     Setzt die Spielzeit direkt auf einen neuen Zeitpunkt (z.B. manuell
-    ///     eingegebenes Datum). Intern nur ein Sprung um die Differenz zur
-    ///     aktuellen Zeit - Timer/Wecker reagieren also identisch wie bei Jump().
+    ///     Sets the game time directly to a new point in time (e.g. a manually
+    ///     entered date). Internally just a jump by the difference to the
+    ///     current time - timers/alarms therefore react identically to Jump().
     /// </summary>
     public void SetTime(DateTime newTime)
     {
@@ -83,10 +83,10 @@ public class GameClockService : IDisposable
     }
 
     /// <summary>
-    ///     Spult die Spielzeit um ein festes Delta vor oder zurück
-    ///     (z.B. "+8 Stunden Rast" oder "-1 Tag" zum Zurückspulen).
-    ///     Löst wie ein normaler Tick das Tick-Event aus, damit Timer und Wecker
-    ///     synchron mitgehen.
+    ///     Fast-forwards or rewinds the game time by a fixed delta
+    ///     (e.g. "+8 hours rest" or "-1 day" to rewind).
+    ///     Raises the Tick event like a normal tick, so timers and alarms
+    ///     stay in sync.
     /// </summary>
     public void Jump(TimeSpan delta)
     {

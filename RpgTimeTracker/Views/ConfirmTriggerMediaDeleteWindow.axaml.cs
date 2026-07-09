@@ -2,12 +2,13 @@ using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using RpgTimeTracker.Models;
+using RpgTimeTracker.Shared.Services.Localization;
 
 namespace RpgTimeTracker.Views;
 
 public partial class ConfirmTriggerMediaDeleteWindow : Window
 {
-    /// <summary>Nur für den Avalonia-XAML-Loader (Previewer/AVLN3001); im App-Code stets mit Verwendungsliste konstruiert.</summary>
+    /// <summary>Only for the Avalonia XAML loader (Previewer/AVLN3001); in app code always constructed with a usage list.</summary>
     public ConfirmTriggerMediaDeleteWindow()
     {
         InitializeComponent();
@@ -16,7 +17,8 @@ public partial class ConfirmTriggerMediaDeleteWindow : Window
     public ConfirmTriggerMediaDeleteWindow(string mediaName, IReadOnlyList<string> usedBy)
     {
         InitializeComponent();
-        UsageText.Text = $"\"{mediaName}\" wird aktuell als Event-Medium verwendet von: {string.Join(", ", usedBy)}.";
+        UsageText.Text = string.Format(LocalizationService.Get("ConfirmTriggerMediaDelete.UsageTextFormat"),
+            mediaName, string.Join(", ", usedBy));
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e) => Close(TriggerMediaDeleteChoice.Cancel);

@@ -4,12 +4,12 @@ using System.Windows.Input;
 namespace RpgTimeTracker.Shared.ViewModels;
 
 /// <summary>
-///     Gemeinsamer Anzeige-Vertrag für "Kopfzeile + Zeitliste", implementiert von
-///     MainWindowViewModel (Host) und ClientMainWindowViewModel (PlayerClient) - beide hatten
-///     bereits identisch benannte Properties. Erlaubt PlayerHeaderView/PlayerTimelineListView
-///     (Shared), gegen beide DataContext-Typen zu binden, ohne die beiden ViewModels
-///     zusammenzulegen; jede App behält ihre eigenen Extras (Host: lokale Medien-Vorschau,
-///     Client: Verbindungsbereich) außerhalb dieser gemeinsamen Controls.
+///     Shared display contract for "header + timeline", implemented by
+///     MainWindowViewModel (host) and ClientMainWindowViewModel (PlayerClient) - both already had
+///     identically named properties. Allows PlayerHeaderView/PlayerTimelineListView
+///     (Shared) to bind against both DataContext types without merging the two
+///     view models; each app keeps its own extras (host: local media preview,
+///     client: connection area) outside of these shared controls.
 /// </summary>
 public interface IPlayerDisplayContext
 {

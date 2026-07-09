@@ -7,15 +7,16 @@ using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Rpc;
+using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.Shared.ViewModels;
 
 namespace RpgTimeTracker.ViewModels;
 
 /// <summary>
-///     Gemeinsame Anzeige-/Editierzeile für Timer, Wecker und OnTime-Objekte.
-///     Die eigentlichen Fach-ViewModels bleiben getrennt; diese Klasse bündelt sie
-///     nur für die zusammengeführten Listen im SL- und Spielerfenster.
+///     Shared display/edit row for timer, alarm, and on-time objects.
+///     The actual domain view models remain separate; this class merely bundles them
+///     for the combined lists in the GM and player windows.
 /// </summary>
 public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTimelineEntry
 {
@@ -143,7 +144,7 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
 
-    // Timer-Edit
+    // Timer edit
     public string DurationText
     {
         get => _timer?.DurationText ?? string.Empty;
@@ -156,7 +157,7 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
 
     public bool CanEditDuration => _timer?.CanEditDuration ?? false;
 
-    // Wecker-Edit
+    // Alarm edit
     public string TriggerAtDateTimeText
     {
         get => _alarm?.TriggerAtDateTimeTextEdit ?? string.Empty;
@@ -177,7 +178,7 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
         }
     }
 
-    // OnTime-Edit
+    // OnTime edit
     public string IntervalText
     {
         get => _interval?.IntervalText ?? string.Empty;
@@ -372,7 +373,11 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
     public bool CanReset => _timer is not null || _interval is not null;
     public bool CanDismiss => _alarm?.IsTriggered == true;
 
-    public string KindLabel => IsTimer ? "Timer" : IsAlarm ? "Wecker" : "OnTime";
+    public string KindLabel => IsTimer
+        ? LocalizationService.Get("TimelineDisplayItem.KindTimer")
+        : IsAlarm
+            ? LocalizationService.Get("TimelineDisplayItem.KindAlarm")
+            : LocalizationService.Get("TimelineDisplayItem.KindInterval");
 
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);
 
@@ -411,17 +416,24 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
         {
             if (_timer is not null)
             {
-                if (_timer.IsCompleted) return "Abgelaufen";
-                return _timer.IsRunning ? "Läuft" : "Pausiert";
+                if (_timer.IsCompleted) return LocalizationService.Get("TimelineDisplayItem.StatusExpired");
+                return _timer.IsRunning
+                    ? LocalizationService.Get("TimelineDisplayItem.StatusRunning")
+                    : LocalizationService.Get("TimelineDisplayItem.StatusPaused");
             }
 
-            if (_alarm is not null) return _alarm.IsTriggered ? "Ausgelöst" : "Bereit";
+            if (_alarm is not null)
+                return _alarm.IsTriggered
+                    ? LocalizationService.Get("TimelineDisplayItem.StatusTriggered")
+                    : LocalizationService.Get("TimelineDisplayItem.StatusReady");
 
             if (_interval is not null)
             {
-                if (_interval.IsCompleted) return "Fertig";
-                if (_interval.IsActive) return "Aktiv";
-                return _interval.IsRunning ? "Läuft" : "Pausiert";
+                if (_interval.IsCompleted) return LocalizationService.Get("IntervalEvent.StatusDone");
+                if (_interval.IsActive) return LocalizationService.Get("TimelineDisplayItem.StatusActive");
+                return _interval.IsRunning
+                    ? LocalizationService.Get("TimelineDisplayItem.StatusRunning")
+                    : LocalizationService.Get("TimelineDisplayItem.StatusPaused");
             }
 
             return string.Empty;
@@ -458,9 +470,9 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
     }
 
     /// <summary>
-    ///     Baut den Netzwerk-Snapshot für timelineItem.upserted. Zentral an einer Stelle, damit
-    ///     sowohl der volle session.snapshot (neu verbindende Clients) als auch die gezielten
-    ///     Delta-Upserts (bei Bearbeiten/Start/Pause/Fertig/...) dieselbe Zuordnung verwenden.
+    ///     Builds the network snapshot for timelineItem.upserted. Centralized in one place so that
+    ///     both the full session.snapshot (newly connecting clients) and the targeted
+    ///     delta upserts (on edit/start/pause/complete/...) use the same mapping.
     /// </summary>
     public TimelineItemSnapshotDto ToRpcSnapshot()
     {
@@ -720,10 +732,10 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
 
     private void SourceChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // Blink-Ticks (alle 500ms) lösen für jedes Timeline-Item bereits RefreshBlinkState()
-        // aus, das IsBlinkActive/ItemBorderBrush explizit nachzieht. Ohne diesen Sonderfall
-        // würde jeder Blink-Tick zusätzlich hier eine volle RefreshAll() (~50 Notifications)
-        // pro Item auslösen, nur um dieselben zwei Properties erneut zu melden.
+        // Blink ticks (every 500ms) already trigger RefreshBlinkState() for each timeline item,
+        // which explicitly re-raises IsBlinkActive/ItemBorderBrush. Without this special case,
+        // every blink tick would additionally trigger a full RefreshAll() (~50 notifications)
+        // here per item, just to re-report the same two properties.
         if (e.PropertyName is nameof(IsBlinkActive) or nameof(ItemBorderBrush))
         {
             OnPropertyChanged(nameof(IsBlinkActive));

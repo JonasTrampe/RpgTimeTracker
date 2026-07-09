@@ -19,12 +19,12 @@ public static class SoundService
     public const string Digital = "Digital";
 
     /// <summary>
-    ///     Aktuell aus der Sound-Bibliothek registrierte Namen -&gt; Pfad (siehe SyncLibrarySounds).
-    ///     Ersetzt die frühere, separat gepflegte "Custom Sounds"-Liste aus den Einstellungen.
+    ///     Names currently registered from the sound library -&gt; path (see SyncLibrarySounds).
+    ///     Replaces the former, separately maintained "custom sounds" list from settings.
     /// </summary>
     private static readonly Dictionary<string, string> LibrarySoundPaths = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Kurze Pause zwischen zwei Wiederholungen desselben Sounds, damit sie hörbar getrennt bleiben.</summary>
+    /// <summary>Short pause between two repetitions of the same sound, so they remain audibly separated.</summary>
     private static readonly TimeSpan RepeatGap = TimeSpan.FromMilliseconds(300);
 
     public static ObservableCollection<string> SoundOptions { get; } =
@@ -36,10 +36,10 @@ public static class SoundService
     ];
 
     /// <summary>
-    ///     Ersetzt alle bisher aus der Sound-Bibliothek registrierten Einträge in SoundOptions durch die
-    ///     aktuell übergebenen (Built-ins Pling/Glocke/Digital/Kein Ton bleiben davon unberührt). Wird
-    ///     beim Start (nach dem Laden der Bibliothek) sowie bei jeder Änderung der Bibliothek
-    ///     (hinzufügen/entfernen/umbenennen) aufgerufen, siehe MainWindowViewModel.SyncSoundServiceLibrary.
+    ///     Replaces all entries previously registered from the sound library in SoundOptions with the
+    ///     currently passed ones (built-ins Pling/Bell/Digital/No Sound remain unaffected). Called
+    ///     on startup (after loading the library) as well as on every change to the library
+    ///     (add/remove/rename), see MainWindowViewModel.SyncSoundServiceLibrary.
     /// </summary>
     public static void SyncLibrarySounds(IEnumerable<(string Name, string Path)> sounds)
     {
@@ -56,9 +56,9 @@ public static class SoundService
     }
 
     /// <summary>
-    ///     Ob ein gewählter Sound-Name auf einen Sound-Bibliothek-Eintrag verweist (statt auf
-    ///     einen Built-in) - maßgeblich dafür, ob ein auslösendes Element den Sound an Spieler sendet
-    ///     (siehe MainWindowViewModel.PlaySound(Guid,...)) statt ihn nur lokal beim SL abzuspielen.
+    ///     Whether a chosen sound name refers to a sound library entry (rather than
+    ///     a built-in) - determines whether a triggering item sends the sound to players
+    ///     (see MainWindowViewModel.PlaySound(Guid,...)) instead of only playing it locally on the GM side.
     /// </summary>
     public static bool TryGetLibrarySoundPath(string? name, out string path)
     {
@@ -68,9 +68,9 @@ public static class SoundService
     }
 
     /// <summary>
-    ///     repeatCount &lt;= 0 bedeutet endlose Wiederholung - läuft, bis cancellationToken abgebrochen
-    ///     wird (siehe MainWindowViewModel.StopInfiniteSoundLoop, aufgerufen beim Reset des
-    ///     auslösenden Timers/Weckers/Intervalls). Für repeatCount &gt;= 1 ist der Token optional.
+    ///     repeatCount &lt;= 0 means infinite repetition - runs until cancellationToken is cancelled
+    ///     (see MainWindowViewModel.StopInfiniteSoundLoop, called when the triggering
+    ///     timer/alarm/interval is reset). For repeatCount &gt;= 1 the token is optional.
     /// </summary>
     public static void Play(string? soundName, int repeatCount = 1, CancellationToken cancellationToken = default)
     {
@@ -162,9 +162,9 @@ public static class SoundService
         return Path.Combine(AppContext.BaseDirectory, "Assets", "Sounds", fileName);
     }
 
-    // Wartet bewusst auf das Prozessende (statt fire-and-forget): läuft ohnehin auf einem
-    // Task.Run-Hintergrundthread, und nur so spielen mehrere Wiederholungen (SoundRepeatCount)
-    // nacheinander statt einander überlappend ab.
+    // Deliberately waits for the process to end (instead of fire-and-forget): it runs on a
+    // Task.Run background thread anyway, and this is the only way multiple repetitions (SoundRepeatCount)
+    // play one after another instead of overlapping.
     private static bool TryRunPlayer(string fileName, string arguments)
     {
         try
@@ -194,8 +194,8 @@ public static class SoundService
 
     private static void TryFallbackBeep()
     {
-        // Absichtlich kein Console.Beep: Console.Beep ist nicht plattformübergreifend
-        // und erzeugt unter Linux/macOS CA1416-Warnungen. Sound ist Komfortfunktion;
-        // wenn kein Player verfügbar ist, wird der Fehler still ignoriert.
+        // Deliberately no Console.Beep: Console.Beep is not cross-platform
+        // and produces CA1416 warnings on Linux/macOS. Sound is a convenience feature;
+        // if no player is available, the error is silently ignored.
     }
 }

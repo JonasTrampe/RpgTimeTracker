@@ -20,10 +20,10 @@ public partial class ClientMainWindow : Window
         KeyDown += OnKeyDown;
     }
 
-    // Escape beendet nur lokal das Vollbild DIESES Fensters (die Zeitliste) - trifft ein
-    // Medienfenster gerade fullscreen, ist das MediaWindow.OnKeyDown zuständig, da Tastatur-
-    // Events dem jeweils fokussierten Fenster zugestellt werden. Ein vom Host gepushter
-    // Vollbild-Zustand bleibt unverändert, der nächste Push kann also wieder fullscreen öffnen.
+    // Escape only ends the fullscreen of THIS window locally (the timeline) - if a media
+    // window is currently fullscreen, MediaWindow.OnKeyDown is responsible, since keyboard
+    // events are delivered to whichever window is focused. A fullscreen state pushed by the
+    // host remains unchanged, so the next push can open fullscreen again.
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape || WindowState != WindowState.FullScreen) return;
@@ -43,14 +43,14 @@ public partial class ClientMainWindow : Window
         }
     }
 
-    // Feuert unconditionally bei jedem neuen Medium (siehe Doc-Kommentar am Event) statt nur
-    // bei einer HasMedia-Änderung - so öffnet sich das Fenster auch wieder, wenn der Spieler es
-    // manuell geschlossen hatte und danach ein zweites Medium derselben Art gesendet wird.
+    // Fires unconditionally on every new medium (see doc comment on the event) instead of only
+    // on a HasMedia change - this way the window reopens even if the player closed it manually
+    // and a second medium of the same kind is then sent.
     //
-    // Das Fenster wird bewusst NICHT geschlossen/neu erzeugt, wenn der SL ein Medium entfernt
-    // (siehe OnMediaWindowShouldHide) - nur Hide()/Show() auf derselben Instanz, damit Position
-    // und Größe über mehrere Medien hinweg erhalten bleiben ("an der letzten Position mit der
-    // letzten Größe wieder im Vordergrund").
+    // The window is deliberately NOT closed/recreated when the GM removes a medium
+    // (see OnMediaWindowShouldHide) - only Hide()/Show() on the same instance, so position
+    // and size are preserved across multiple media ("back in the foreground at the last
+    // position with the last size").
     private void OnMediaWindowShouldShow()
     {
         if (DataContext is not ClientMainWindowViewModel vm) return;
@@ -71,11 +71,11 @@ public partial class ClientMainWindow : Window
         _mediaWindow.Activate();
     }
 
-    // Das Medienfenster soll optisch nahtlos an die Stelle der Zeitliste treten - dieselbe
-    // Position/Größe/Zustand wie das Hauptfenster, statt an einer eigenen (u.U. ganz anderen)
-    // Bildschirmposition aufzutauchen. Erst in Normal schalten, bevor Position/Größe gesetzt
-    // werden, da viele Fenstermanager explizite Geometrie-Änderungen ignorieren, solange ein
-    // Fenster noch maximiert/fullscreen ist.
+    // The media window should visually take the place of the timeline seamlessly - the same
+    // position/size/state as the main window, instead of appearing at its own (possibly quite
+    // different) screen position. Switch to Normal first before setting position/size, since
+    // many window managers ignore explicit geometry changes while a window is still
+    // maximized/fullscreen.
     private void SyncMediaWindowToMainWindow()
     {
         if (_mediaWindow is null) return;
@@ -98,8 +98,8 @@ public partial class ClientMainWindow : Window
         about.Show(this);
     }
 
-    // Ziel: Medium hat Vorrang (falls gerade eines sichtbar ist), sonst die Zeitliste -
-    // spiegelt dieselbe Priorität wie der lokale Vollbild-Umschalter auf der Host-Seite.
+    // Goal: medium takes precedence (if one is currently visible), otherwise the timeline -
+    // mirrors the same priority as the local fullscreen toggle on the host side.
     private void OnRemoteFullscreenRequested(bool fullscreen)
     {
         var hasVisibleMedia = (DataContext as ClientMainWindowViewModel)?.HasMedia == true &&
@@ -110,10 +110,10 @@ public partial class ClientMainWindow : Window
         UpdateMediaWindowTopmost();
     }
 
-    // Ein normales Fenster erscheint auf vielen Systemen sonst HINTER einem fullscreen
-    // geschalteten Geschwisterfenster statt davor - Topmost erzwingt, dass das Medium über der
-    // fullscreen geschalteten Zeitliste sichtbar bleibt. Nur aktiv, solange die Liste tatsächlich
-    // fullscreen ist, damit das Medienfenster sich sonst normal wie jedes andere Fenster verhält.
+    // Otherwise a normal window appears BEHIND a fullscreen sibling window on many systems
+    // instead of in front - Topmost forces the medium to stay visible above the fullscreen
+    // timeline. Only active while the list is actually fullscreen, so the media window
+    // otherwise behaves normally like any other window.
     private void UpdateMediaWindowTopmost()
     {
         if (_mediaWindow is not { IsVisible: true }) return;
@@ -132,11 +132,10 @@ public partial class ClientMainWindow : Window
             SyncMediaWindowToMainWindow();
     }
 
-    // Fragt vor dem tatsächlichen Schließen nach, ob lokal zwischengespeicherte Medien-Temp-
-    // Dateien gelöscht werden sollen - aber nur, wenn überhaupt welche vorhanden sind (siehe
-    // ClientMainWindowViewModel.HasTempFilesToClean). Window.Closing kann nicht direkt async
-    // sein, daher das Standard-Avalonia-Muster: einmal abbrechen, den Dialog awaiten, danach
-    // erneut (diesmal ohne Nachfrage) schließen.
+    // Asks before actually closing whether locally cached media temp files should be
+    // deleted - but only if any exist at all (see ClientMainWindowViewModel.HasTempFilesToClean).
+    // Window.Closing cannot be directly async, hence the standard Avalonia pattern: cancel
+    // once, await the dialog, then close again afterward (this time without asking).
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         if (!_closeConfirmed && DataContext is ClientMainWindowViewModel { HasTempFilesToClean: true } vm)

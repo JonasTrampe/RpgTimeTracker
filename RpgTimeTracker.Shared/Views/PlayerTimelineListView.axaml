@@ -3,23 +3,16 @@
              xmlns:viewModels="clr-namespace:RpgTimeTracker.Shared.ViewModels"
              x:Class="RpgTimeTracker.Shared.Views.PlayerTimelineListView"
              x:DataType="viewModels:IPlayerDisplayContext">
-    <!--
-        Gemeinsame Zeitlisten-Karte für Host-PlayerWindow und Client-ClientMainWindow. Die
-        Zustands-Modifier-Klassen (Classes.active/.completed/.blink) bleiben bewusst nur
-        Klassennamen hier - wie sie AUSSEHEN (gefüllter Hintergrund beim Host vs. reine
-        Rahmenfarbe beim Client) legt weiterhin jedes Fenster in seinen eigenen
-        Window.Styles fest (siehe design-decisions.md: unterschiedliches visuelles Vokabular
-        ist beabsichtigt, nur die Markup-Struktur soll nicht dupliziert sein).
-    -->
+
     <Border Classes="card">
         <DockPanel LastChildFill="True">
             <StackPanel DockPanel.Dock="Top" Spacing="10">
                 <Border Classes="sectionheader">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <TextBlock Classes="h1"
-                                   Text="Kalender"
+                                   Text="{DynamicResource PlayerTimeline.Header.Calendar}"
                                    IsVisible="{Binding ShowPlayerCalendarView}" />
-                        <TextBlock Classes="h1" Text="Zeitliste" IsVisible="{Binding ShowPlayerTimelineView}" />
+                        <TextBlock Classes="h1" Text="{DynamicResource PlayerTimeline.Header.Timeline}" IsVisible="{Binding ShowPlayerTimelineView}" />
 
                         <Border Grid.Column="1"
                                 Background="{DynamicResource TextInputHeaderBrush}"
@@ -31,11 +24,11 @@
                             <StackPanel Orientation="Horizontal" Spacing="4">
                                 <Button Classes="calendarToggle"
                                         Command="{Binding ShowPlayerTimelineCommand}"
-                                        Content="Zeitliste"
+                                        Content="{DynamicResource PlayerTimeline.Toggle.Timeline}"
                                         IsEnabled="{Binding ShowPlayerCalendarView}" />
                                 <Button Classes="calendarToggle"
                                         Command="{Binding ShowPlayerCalendarCommand}"
-                                        Content="Kalender"
+                                        Content="{DynamicResource PlayerTimeline.Toggle.Calendar}"
                                         IsEnabled="{Binding ShowPlayerTimelineView}" />
                             </StackPanel>
                         </Border>
@@ -64,13 +57,13 @@
                         </Grid>
 
                         <UniformGrid Columns="7">
-                            <TextBlock Text="Mo" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="Di" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="Mi" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="Do" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="Fr" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="Sa" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="So" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Mon}" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Tue}" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Wed}" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Thu}" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Fri}" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Sat}" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Sun}" HorizontalAlignment="Center" Classes="muted" />
                         </UniformGrid>
 
                         <ItemsControl ItemsSource="{Binding CalendarMonthDays}">
@@ -108,7 +101,7 @@
                         <StackPanel Spacing="8">
                             <TextBlock Text="{Binding PlayerCalendarSelectedDateLabel}" FontWeight="Bold" />
                             <TextBlock Classes="muted"
-                                       Text="Keine Einträge."
+                                       Text="{DynamicResource PlayerTimeline.Calendar.NoEntries}"
                                        IsVisible="{Binding !HasPlayerCalendarEntriesForSelectedDate}" />
                             <ItemsControl ItemsSource="{Binding CalendarEntries}"
                                           IsVisible="{Binding HasPlayerCalendarEntriesForSelectedDate}">

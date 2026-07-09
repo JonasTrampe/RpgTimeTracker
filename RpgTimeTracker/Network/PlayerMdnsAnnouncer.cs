@@ -81,7 +81,7 @@ public sealed class PlayerMdnsAnnouncer : IDisposable
             _udp.JoinMulticastGroup(IPAddress.Parse("224.0.0.251"));
 
             await SendAnnouncementAsync().ConfigureAwait(false);
-            Log.Information("mDNS-Ankündigung gestartet (Port {ServicePort})", _servicePort);
+            Log.Information("mDNS announcement started (port {ServicePort})", _servicePort);
 
             while (!token.IsCancellationRequested)
             {
@@ -96,7 +96,7 @@ public sealed class PlayerMdnsAnnouncer : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    Log.Debug(ex, "mDNS-Empfang übersprungen");
+                    Log.Debug(ex, "mDNS receive skipped");
                     continue;
                 }
 
@@ -107,7 +107,7 @@ public sealed class PlayerMdnsAnnouncer : IDisposable
         {
             // mDNS is optional. The TCP server still works via manual connection.
             Log.Warning(ex,
-                "mDNS-Ankündigung nicht verfügbar (Port {MdnsPort} evtl. belegt) - manuelle Verbindung funktioniert weiterhin",
+                "mDNS announcement unavailable (port {MdnsPort} possibly in use) - manual connection still works",
                 MdnsPort);
         }
     }
@@ -124,7 +124,7 @@ public sealed class PlayerMdnsAnnouncer : IDisposable
         }
         catch (Exception ex)
         {
-            Log.Debug(ex, "mDNS-Ankündigung konnte nicht gesendet werden");
+            Log.Debug(ex, "mDNS announcement could not be sent");
         }
     }
 
@@ -203,19 +203,19 @@ public sealed class PlayerMdnsAnnouncer : IDisposable
     }
 
     /// <summary>
-    ///     Muss dieselbe IP liefern wie LanDiscoveryResponder.GetLocalAddressFor, sonst meldet derselbe
-    ///     Host über mDNS und LAN-Broadcast zwei unterschiedliche Adressen - der Client kann die
-    ///     beiden Funde dann nicht als denselben Server zusammenführen (siehe MdnsDiscoveryService).
-    ///     Eine reine Interface-Aufzählung ("erstes Up/nicht-Loopback") ist dafür nicht zuverlässig
-    ///     genug: virtuelle Adapter (Hyper-V/WSL/Docker/VPN) sind auf vielen Rechnern ebenfalls "Up"
-    ///     und werden oft vor dem echten LAN-Adapter aufgezählt. Stattdessen wird - wie beim
-    ///     unicast LAN-Responder - über einen verbundenen UDP-Socket die vom Betriebssystem
-    ///     tatsächlich für ausgehenden Verkehr gewählte lokale Adresse ermittelt (UDP "Connect"
-    ///     verschickt dabei kein einziges Paket, es löst nur lokal die Route auf).
+    ///     Must return the same IP as LanDiscoveryResponder.GetLocalAddressFor, otherwise the same
+    ///     host would report two different addresses via mDNS and LAN broadcast - the client would
+    ///     then be unable to merge the two discoveries into the same server (see MdnsDiscoveryService).
+    ///     A plain interface enumeration ("first Up/non-loopback") is not reliable enough for this:
+    ///     virtual adapters (Hyper-V/WSL/Docker/VPN) are also "Up" on many machines and are often
+    ///     enumerated before the real LAN adapter. Instead, as with the unicast LAN responder, a
+    ///     connected UDP socket is used to determine the local address the operating system actually
+    ///     chooses for outbound traffic (UDP "Connect" does not send a single packet, it only resolves
+    ///     the route locally).
     /// </summary>
     /// <summary>
-    ///     Öffentlich, damit MainWindowViewModel dieselbe Ermittlung für die "Server läuft
-    ///     auf Adresse:Port"-Anzeige in der Statusleiste nutzen kann, statt sie zu duplizieren.
+    ///     Public so that MainWindowViewModel can reuse the same lookup for the "server running
+    ///     at address:port" display in the status bar, instead of duplicating it.
     /// </summary>
     public static IPAddress? GetBestLocalIPv4()
     {
@@ -228,7 +228,7 @@ public sealed class PlayerMdnsAnnouncer : IDisposable
         }
         catch
         {
-            // Kein Internet-Routing verfügbar (z.B. komplett getrenntes LAN) - Fallback unten.
+            // No internet routing available (e.g. completely isolated LAN) - fallback below.
         }
 
         try

@@ -6,11 +6,11 @@ using RpgTimeTracker.Shared.Services.Visuals;
 namespace RpgTimeTracker.ViewModels;
 
 /// <summary>
-///     Die "Grundausstattung" beim Anlegen eines neuen Timers/Weckers/Intervalls: Icon, Name,
-///     Sound (+Wiederholung), Darstellungsfarbe, Blinken, Spieler-sichtbar. Bündelt Felder, die
-///     vorher als sieben separate NewTimerXxx/NewAlarmXxx/NewIntervalXxx-Properties auf
-///     MainWindowViewModel dupliziert waren, damit NewItemBasicsEditor.axaml (View) einmal
-///     existiert statt dreimal.
+///     The "basic setup" when creating a new timer/alarm/interval: icon, name,
+///     sound (+repeat), display color, blink, player-visible. Bundles fields that
+///     were previously duplicated as seven separate NewTimerXxx/NewAlarmXxx/NewIntervalXxx
+///     properties on MainWindowViewModel, so that NewItemBasicsEditor.axaml (view) exists once
+///     instead of three times.
 /// </summary>
 public partial class NewItemBasicsViewModel : ObservableObject
 {
@@ -57,7 +57,7 @@ public partial class NewItemBasicsViewModel : ObservableObject
         if (Icon != normalized) Icon = normalized;
     }
 
-    /// <summary>Nach dem Anlegen eines Elements auf die Ausgangswerte für das nächste zurücksetzen.</summary>
+    /// <summary>Reset to the default values for the next item after creating one.</summary>
     public void ResetToDefaults()
     {
         Name = _defaultName;

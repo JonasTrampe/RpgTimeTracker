@@ -4,10 +4,10 @@ using CommunityToolkit.Mvvm.Input;
 namespace RpgTimeTracker.Shared.Models;
 
 /// <summary>
-///     Optionales Bild/Video, das automatisch an die Spieler verteilt wird, sobald ein Timer
-///     abläuft, ein Wecker auslöst oder ein OnTime-Intervall aktiv wird (siehe
-///     MainWindowViewModel.TriggerEventMedia). Rein host-seitige Autoren-Konfiguration - wird
-///     nicht an Clients übertragen, nur das Medium selbst (über den bestehenden Medien-Kanal).
+///     Optional image/video that is automatically distributed to the players as soon as a timer
+///     runs out, an alarm triggers, or an OnTime interval becomes active (see
+///     MainWindowViewModel.TriggerEventMedia). Purely host-side authoring configuration - it is
+///     not transmitted to clients, only the media itself (via the existing media channel).
 /// </summary>
 public partial class TriggerMediaConfig : ObservableObject
 {
@@ -18,18 +18,18 @@ public partial class TriggerMediaConfig : ObservableObject
     [ObservableProperty] private MediaKind _kind = MediaKind.None;
 
     /// <summary>
-    ///     Nur für Video/Audio relevant: am Ende von vorn beginnen statt dem Host das Ende zu melden und geschlossen zu
-    ///     werden.
+    ///     Only relevant for video/audio: restart from the beginning at the end instead of reporting the end to the
+    ///     host and being closed.
     /// </summary>
     [ObservableProperty] private bool _loop;
 
     [ObservableProperty] private string? _path;
 
     /// <summary>
-    ///     Nur für Video relevant: pausiert die Spielzeit für die Dauer der Wiedergabe. Für
-    ///     Sounds nicht verfügbar - die sind komplett vom Video-Ende-Tracking entkoppelt (siehe
-    ///     MainWindowViewModel.BeginVideoTracking), da mehrere Sounds parallel laufen können und keiner
-    ///     von ihnen ein Bild/Video ersetzen oder dessen eigenes Ende-Tracking kappen darf.
+    ///     Only relevant for video: pauses game time for the duration of playback. Not
+    ///     available for sounds - those are completely decoupled from video-end tracking (see
+    ///     MainWindowViewModel.BeginVideoTracking), since multiple sounds can run in parallel and none
+    ///     of them may replace an image/video or cut off its own end tracking.
     /// </summary>
     [ObservableProperty] private bool _pauseClockDuringVideo;
 

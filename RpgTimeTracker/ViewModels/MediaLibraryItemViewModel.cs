@@ -8,16 +8,16 @@ using RpgTimeTracker.Shared.Models;
 namespace RpgTimeTracker.ViewModels;
 
 /// <summary>
-///     Ein vorausgewähltes Bild/Video in der SL-Medienbibliothek. Doppelklick zeigt es sofort
-///     bei SL und allen verbundenen Spielern an (siehe MainWindowViewModel.ShowMediaLibraryItem).
+///     A preselected image/video in the GM media library. Double-click shows it immediately
+///     to the GM and all connected players (see MainWindowViewModel.ShowMediaLibraryItem).
 /// </summary>
 public partial class MediaLibraryItemViewModel : LibraryItemViewModelBase<MediaLibraryItemViewModel>
 {
     private readonly Action<MediaLibraryItemViewModel> _onShowRequested;
 
     /// <summary>
-    ///     Ob ein gesendetes Video am Ende automatisch von vorn beginnen soll, statt beim Ende dem Host gemeldet und
-    ///     geschlossen zu werden.
+    ///     Whether a sent video should automatically restart from the beginning at the end, instead of
+    ///     being reported to the host and closed at the end.
     /// </summary>
     [ObservableProperty] private bool _loop;
 
@@ -46,10 +46,10 @@ public partial class MediaLibraryItemViewModel : LibraryItemViewModelBase<MediaL
     public string KindLabel => Kind == MediaKind.Video ? "Video" : "Bild";
     public bool IsVideo => Kind == MediaKind.Video;
 
-    /// <summary>Nur Video kann am Ende automatisch von vorn beginnen statt den Host zu benachrichtigen.</summary>
+    /// <summary>Only video can automatically restart from the beginning instead of notifying the host.</summary>
     public bool SupportsLoop => Kind == MediaKind.Video;
 
-    /// <summary>Platzhalter-Icon für Videos ohne Thumbnail.</summary>
+    /// <summary>Placeholder icon for videos without a thumbnail.</summary>
     public string FallbackIcon => "\U0001F3AC";
 
     public bool HasThumbnail => Thumbnail is not null;

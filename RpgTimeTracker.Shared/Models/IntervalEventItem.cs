@@ -3,8 +3,8 @@ using System;
 namespace RpgTimeTracker.Shared.Models;
 
 /// <summary>
-///     Separates OnTime-/Intervall-Objekt: alle X Spielzeit wird für Y Spielzeit
-///     ein aktiver Zustand ausgelöst. Unterstützt Sound, Farbe, Icon und Blinken.
+///     Separate OnTime/interval object: every X game time, an active state is
+///     triggered for Y game time. Supports sound, color, icon, and blinking.
 /// </summary>
 public class IntervalEventItem
 {
@@ -13,7 +13,7 @@ public class IntervalEventItem
     public string Icon { get; set; } = "Bootstrap: Lightning";
     public string Sound { get; set; } = "Pling";
 
-    /// <summary>Wie oft der Sound beim Auslösen hintereinander abgespielt wird.</summary>
+    /// <summary>How many times the sound is played in a row when triggered.</summary>
     public int SoundRepeatCount { get; set; } = 1;
 
     public string ColorHex { get; set; } = "#FFD45A";
@@ -23,7 +23,7 @@ public class IntervalEventItem
     public TimeSpan Interval { get; set; } = TimeSpan.FromMinutes(10);
     public TimeSpan ActiveDuration { get; set; } = TimeSpan.FromMinutes(1);
 
-    /// <summary>0/null = unbegrenzt.</summary>
+    /// <summary>0/null = unlimited.</summary>
     public int? MaxRepeats { get; set; }
 
     public TimeSpan Elapsed { get; private set; } = TimeSpan.Zero;

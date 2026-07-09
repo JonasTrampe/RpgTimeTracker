@@ -4,14 +4,14 @@ using RpgTimeTracker.Shared.Models;
 
 namespace RpgTimeTracker.Shared.Models.Rpc;
 
-/// <summary>Client-zu-Server: erstes Signal nach dem Verbindungsaufbau (siehe RpcMethods.SessionHello).</summary>
+/// <summary>Client-to-server: first signal after the connection is established (see RpcMethods.SessionHello).</summary>
 public sealed class SessionHelloParams
 {
     public int ProtocolVersion { get; set; }
     public string Pin { get; set; } = string.Empty;
 }
 
-/// <summary>Server-zu-Client: Verbindung abgelehnt (siehe RpcMethods.SessionHelloRejected).</summary>
+/// <summary>Server-to-client: connection rejected (see RpcMethods.SessionHelloRejected).</summary>
 public sealed class SessionHelloRejectedParams
 {
     public string Reason { get; set; } = string.Empty;
@@ -35,10 +35,10 @@ public sealed class ClockSpeedChangedParams
 }
 
 /// <summary>
-///     Begleitet den periodischen Heartbeat mit dem aktuellen Uhrzustand, damit die lokal
-///     abgeleitete Client-Uhr regelmäßig gegen Drift korrigiert wird - und damit sich der Client
-///     auch von einem Delta-Event erholt, das wegen skipIfBusy (Medienübertragung lief gerade)
-///     verworfen wurde, ohne auf den nächsten echten Sprung warten zu müssen.
+///     Accompanies the periodic heartbeat with the current clock state so the locally
+///     derived client clock is regularly corrected against drift - and so the client
+///     can also recover from a delta event that was discarded because of skipIfBusy (media
+///     transfer was in progress), without having to wait for the next real jump.
 /// </summary>
 public sealed class ClockHeartbeatParams
 {
@@ -47,7 +47,7 @@ public sealed class ClockHeartbeatParams
     public bool IsClockRunning { get; set; }
 }
 
-/// <summary>Absoluter Resync-Punkt (manuelles Setzen, Zeitsprung, Laden eines Spielstands).</summary>
+/// <summary>Absolute resync point (manual setting, time jump, loading a save).</summary>
 public sealed class ClockTimeJumpedParams
 {
     public DateTime NewGameTime { get; set; }
@@ -74,55 +74,55 @@ public sealed class DisplayFullscreenParams
     public bool Fullscreen { get; set; }
 }
 
-/// <summary>Client-zu-Server: Video-Wiedergabe hat begonnen, inkl. der vom Client selbst ermittelten Dauer.</summary>
+/// <summary>Client-to-server: video playback has started, including the duration determined by the client itself.</summary>
 public sealed class MediaPlaybackStartedParams
 {
     public string MediaId { get; set; } = string.Empty;
     public long DurationMs { get; set; }
 }
 
-/// <summary>Client-zu-Server: ein nicht-loopendes Video ist beim Client zu Ende.</summary>
+/// <summary>Client-to-server: a non-looping video has ended on the client.</summary>
 public sealed class MediaPlaybackEndedParams
 {
     public string MediaId { get; set; } = string.Empty;
 }
 
-/// <summary>Server-zu-Client: beendet einen einzelnen, gerade laufenden Sound (per MediaId).</summary>
+/// <summary>Server-to-client: stops a single, currently playing sound (by MediaId).</summary>
 public sealed class MediaStopSoundParams
 {
     public string MediaId { get; set; } = string.Empty;
 }
 
-/// <summary>Server-zu-Client: passt die Lautstärke eines gerade laufenden Sounds live an (0-100).</summary>
+/// <summary>Server-to-client: adjusts the volume of a currently playing sound live (0-100).</summary>
 public sealed class MediaSetVolumeParams
 {
     public string MediaId { get; set; } = string.Empty;
     public int Volume { get; set; } = 100;
 }
 
-/// <summary>Server-zu-Client: entfernt ein Bild/Video aus der Galerie (per MediaId).</summary>
+/// <summary>Server-to-client: removes an image/video from the gallery (by MediaId).</summary>
 public sealed class MediaRetractParams
 {
     public string MediaId { get; set; } = string.Empty;
 }
 
-/// <summary>Server-zu-Client: springt (lokal, nicht sperrend) auf dieses Galerie-Element.</summary>
+/// <summary>Server-to-client: jumps (locally, non-blocking) to this gallery item.</summary>
 public sealed class MediaHighlightParams
 {
     public string MediaId { get; set; } = string.Empty;
 }
 
-/// <summary>Server-zu-Client: automatische Weiterschalt-Zeit pro Bild (Sekunden, 0 = manuell).</summary>
+/// <summary>Server-to-client: automatic advance time per image (seconds, 0 = manual).</summary>
 public sealed class MediaSlideshowIntervalParams
 {
     public double Seconds { get; set; }
 }
 
 /// <summary>
-///     Voller Zustand eines Timers/Weckers/Intervalls für "upsert" (angelegt oder strukturell
-///     geändert - Start/Pause/Reset/Fertig/Ausgelöst/bearbeitet). Wird NICHT bei reinem
-///     Zeitfortschritt gesendet: Restzeit/Fortschritt leitet der Client lokal aus diesen Feldern
-///     + seiner eigenen, per clock.*-Events synchronisierten Uhr ab.
+///     Full state of a timer/alarm/interval for "upsert" (created or structurally
+///     changed - start/pause/reset/completed/triggered/edited). NOT sent for pure
+///     time progression: the client derives remaining time/progress locally from these fields
+///     + its own clock, synchronized via clock.* events.
 /// </summary>
 public sealed class TimelineItemSnapshotDto
 {

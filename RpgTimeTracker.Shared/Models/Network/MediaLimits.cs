@@ -1,18 +1,18 @@
 namespace RpgTimeTracker.Shared.Models.Network;
 
 /// <summary>
-///     Gemeinsame Medien-Obergrenze für Host UND Client. Muss an EINER Stelle stehen: wäre sie in
-///     beiden Projekten separat definiert, könnten sie auseinanderlaufen - der Host würde ein
-///     größeres Medium akzeptieren/versenden, das der Client dann still verwirft (media.begin mit
-///     TotalLength über seinem eigenen, kleineren Limit wird kommentarlos ignoriert), ohne dass
-///     irgendwo eine Fehlermeldung entsteht.
+///     Shared media upper limit for BOTH host AND client. Must live in ONE place: if it were
+///     defined separately in both projects, they could drift apart - the host would
+///     accept/send a larger medium that the client then silently discards (media.begin with
+///     TotalLength over its own, smaller limit is ignored without comment), without any
+///     error appearing anywhere.
 /// </summary>
 public static class MediaLimits
 {
     /// <summary>
-    ///     Knapp unter 2 GiB statt exakt 2*1024^3: die Datei liegt komplett als byte[] im Speicher
-    ///     (int-indiziert), ein .NET-Array kann also ohnehin nie mehr als int.MaxValue (~2,147 GB)
-    ///     Elemente fassen.
+    ///     Just under 2 GiB instead of exactly 2*1024^3: the file sits entirely as a byte[] in
+    ///     memory (int-indexed), so a .NET array can never hold more than int.MaxValue
+    ///     (~2.147 GB) elements anyway.
     /// </summary>
     public const long MaxMediaBytes = 1900L * 1024 * 1024;
 }

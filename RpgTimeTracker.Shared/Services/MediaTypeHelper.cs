@@ -5,7 +5,7 @@ using RpgTimeTracker.Shared.Models;
 
 namespace RpgTimeTracker.Shared.Services;
 
-/// <summary>Ordnet Datei-Endungen einer MediaKind (Bild/Video/Audio) und einem MIME-Typ zu.</summary>
+/// <summary>Maps file extensions to a MediaKind (image/video/audio) and a MIME type.</summary>
 public static class MediaTypeHelper
 {
     private static readonly Dictionary<string, string> ImageMimeTypes = new(StringComparer.OrdinalIgnoreCase)

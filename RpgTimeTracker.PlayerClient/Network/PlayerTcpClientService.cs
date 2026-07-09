@@ -12,33 +12,33 @@ using Serilog;
 namespace RpgTimeTracker.PlayerClient.Network;
 
 /// <summary>
-///     Client für das JSON-RPC-Delta-Protokoll (siehe RpgTimeTracker.Shared.Models.Rpc/RpgTimeTracker.Shared.Services.Rpc): empfängt einen
-///     vollen session.snapshot beim Connect, danach nur noch gezielte Events. Medien kommen
-///     gechunkt (media.begin + N Binär-Frames) und werden progressiv in eine Tempdatei
-///     geschrieben, damit die Wiedergabe starten kann, bevor die Übertragung fertig ist.
+///     Client for the JSON-RPC delta protocol (see RpgTimeTracker.Shared.Models.Rpc/RpgTimeTracker.Shared.Services.Rpc): receives a
+///     full session.snapshot on connect, only targeted events after that. Media arrives
+///     chunked (media.begin + N binary frames) and is written progressively into a temp
+///     file, so playback can start before the transfer is finished.
 /// </summary>
 public sealed class PlayerTcpClientService : IDisposable
 {
     private const int MaxRpcPayloadBytes = 256 * 1024;
 
-    // Gemeinsam mit dem Host (siehe RpgTimeTracker.Shared.Models.Network.MediaLimits) - unterschiedliche
-    // Werte hier und im Host würden dazu führen, dass ein vom Host akzeptiertes/verteiltes
-    // größeres Medium hier kommentarlos verworfen wird, ohne dass irgendwo ein Fehler auftaucht.
-    // Passt komfortabel in int (Array-/NetworkFrame-Längen sind ohnehin int-begrenzt).
+    // Shared with the host (see RpgTimeTracker.Shared.Models.Network.MediaLimits) - different
+    // values here and on the host would cause a larger medium accepted/distributed by the host
+    // to be silently discarded here without any error appearing anywhere.
+    // Fits comfortably into int (array/NetworkFrame lengths are int-limited anyway).
     private const int MaxMediaBytes = (int)MediaLimits.MaxMediaBytes;
 
-    // Server sendet mindestens alle TcpPlayerServerService.HeartbeatInterval (5s) etwas.
-    // 15s Idle-Toleranz gibt Puffer für Jitter, ohne einen echten Abbruch spät zu erkennen.
-    // TcpClient.ReceiveTimeout greift NICHT bei ReadAsync, deshalb dieser eigene Watchdog -
-    // ohne ihn merkt der Client ein still gekapptes Kabel/WLAN nie und bleibt "verbunden"
-    // stehen, obwohl nichts mehr ankommt (UI wirkt dadurch eingefroren).
+    // Server sends at least something every TcpPlayerServerService.HeartbeatInterval (5s).
+    // 15s idle tolerance gives buffer for jitter, without detecting a real disconnect too late.
+    // TcpClient.ReceiveTimeout does NOT apply to ReadAsync, hence this separate watchdog -
+    // without it the client never notices a silently cut cable/WiFi and stays stuck
+    // "connected" even though nothing arrives anymore (UI appears frozen as a result).
     private static readonly TimeSpan IdleTimeout = TimeSpan.FromSeconds(15);
 
-    // Automatischer Reconnect nach einer unerwarteten Trennung (Idle-Timeout, Netzwerkfehler,
-    // Host-Neustart) - wächst pro Fehlschlag, damit ein dauerhaft nicht erreichbarer Host nicht
-    // im Sekundentakt angeklopft wird, aber ein kurzer Aussetzer (WLAN-Hänger, Host-Neustart)
-    // trotzdem zügig überbrückt wird. Nur EIN manueller Verbindungsabbruch (Disconnect()) stoppt
-    // den Reconnect-Versuch endgültig - siehe _userDisconnectRequested.
+    // Automatic reconnect after an unexpected disconnection (idle timeout, network error,
+    // host restart) - grows per failure so a permanently unreachable host isn't knocked on
+    // every second, while a brief hiccup (WiFi stall, host restart) is still bridged quickly.
+    // Only a MANUAL disconnect (Disconnect()) stops the reconnect attempt for good - see
+    // _userDisconnectRequested.
     private static readonly TimeSpan ReconnectInitialDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan ReconnectMaxDelay = TimeSpan.FromSeconds(20);
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -51,7 +51,7 @@ public sealed class PlayerTcpClientService : IDisposable
     private int _lastPort;
     private long _mediaBytesWritten;
 
-    // Zustand des gerade laufenden Medien-Streams (nur ein Medium gleichzeitig pro Verbindung).
+    // State of the currently running media stream (only one medium at a time per connection).
     private FileStream? _mediaFile;
     private MediaHeaderDto? _mediaHeader;
     private string? _mediaTempPath;
@@ -76,30 +76,30 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action<Guid>? TimelineItemRemoved;
     public event Action<bool>? DisplayFullscreenRequested;
 
-    /// <summary>Periodisches Lebenszeichen inkl. Uhrzustand - für Drift-Korrektur der lokalen Uhr.</summary>
+    /// <summary>Periodic heartbeat including clock state - for drift correction of the local clock.</summary>
     public event Action<DateTime, double, bool>? ClockHeartbeatReceived;
 
-    /// <summary>Ein Medium beginnt: Kind/Dateiname/MIME + Pfad einer (noch wachsenden) Tempdatei.</summary>
+    /// <summary>A medium begins: kind/filename/MIME + path of a (still growing) temp file.</summary>
     public event Action<MediaHeaderDto, string>? MediaBeginReceived;
 
-    /// <summary>Übertragung vollständig - relevant für Bilder (die erst jetzt dekodiert werden können).</summary>
+    /// <summary>Transfer complete - relevant for images (which can only now be decoded).</summary>
     public event Action<MediaHeaderDto, string>? MediaCompleted;
 
     public event Action? MediaCleared;
 
-    /// <summary>SL beendet einen einzelnen, gerade laufenden Sound gezielt (per MediaId).</summary>
+    /// <summary>GM stops a single, currently running sound specifically (by MediaId).</summary>
     public event Action<string>? SoundStopRequested;
 
-    /// <summary>SL passt die Lautstärke eines gerade laufenden Sounds live an (MediaId, 0-100).</summary>
+    /// <summary>GM adjusts the volume of a currently running sound live (MediaId, 0-100).</summary>
     public event Action<string, int>? SoundVolumeChangeRequested;
 
-    /// <summary>SL entfernt ein Bild/Video gezielt aus der Galerie (per MediaId).</summary>
+    /// <summary>GM removes an image/video specifically from the gallery (by MediaId).</summary>
     public event Action<string>? MediaRetractRequested;
 
-    /// <summary>SL hebt ein Galerie-Element hervor (per MediaId) - ein Sprung-Vorschlag, keine Sperre.</summary>
+    /// <summary>GM highlights a gallery item (by MediaId) - a jump suggestion, not a lock.</summary>
     public event Action<string>? MediaHighlightRequested;
 
-    /// <summary>Automatische Weiterschalt-Zeit pro Bild (Sekunden, 0 = manuell).</summary>
+    /// <summary>Automatic advance time per image (seconds, 0 = manual).</summary>
     public event Action<double>? SlideshowIntervalChanged;
 
     public event Action<string>? StatusChanged;
@@ -124,11 +124,11 @@ public sealed class PlayerTcpClientService : IDisposable
         };
 
         StatusChanged?.Invoke($"Verbinde zu {host}:{port} ...");
-        Log.Information("Verbindungsversuch zu {Host}:{Port}", host, port);
+        Log.Information("Connection attempt to {Host}:{Port}", host, port);
 
-        // Ein falscher/unerreichbarer manueller Host kann sonst minutenlang ohne jede
-        // Rückmeldung hängen (TCP-SYN-Timeout des Betriebssystems), bevor ConnectAsync
-        // überhaupt fehlschlägt - das wirkt wie ein UI, das auf Eingaben nicht reagiert.
+        // Otherwise a wrong/unreachable manual host can hang for minutes without any
+        // feedback (OS TCP SYN timeout) before ConnectAsync even fails - which looks
+        // like a UI that doesn't respond to input.
         using var connectTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
         connectTimeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
         try
@@ -137,33 +137,33 @@ public sealed class PlayerTcpClientService : IDisposable
         }
         catch (OperationCanceledException) when (!_cts.IsCancellationRequested)
         {
-            Log.Warning("Verbindung zu {Host}:{Port} nach 5s Timeout abgebrochen", host, port);
+            Log.Warning("Connection to {Host}:{Port} aborted after 5s timeout", host, port);
             throw new TimeoutException($"Keine Antwort von {host}:{port} innerhalb von 5 Sekunden.");
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Verbindung zu {Host}:{Port} fehlgeschlagen", host, port);
+            Log.Warning(ex, "Connection to {Host}:{Port} failed", host, port);
             throw;
         }
 
         StatusChanged?.Invoke($"Verbunden mit {host}:{port}");
-        Log.Information("Verbunden mit {Host}:{Port}", host, port);
+        Log.Information("Connected to {Host}:{Port}", host, port);
 
         var stream = _client.GetStream();
         _writeStream = stream;
         _ = Task.Run(() => ReadLoopAsync(stream, _cts.Token));
 
-        // Muss vor dem session.snapshot beim Host ankommen (siehe
-        // TcpPlayerServerService.PerformHandshakeAsync) - ohne dieses Signal (oder bei
-        // falschem PIN/inkompatibler Version) lehnt der Host die Verbindung per
-        // session.helloRejected ab und trennt sie wieder.
+        // Must arrive at the host before the session.snapshot (see
+        // TcpPlayerServerService.PerformHandshakeAsync) - without this signal (or with a
+        // wrong PIN/incompatible version) the host rejects the connection via
+        // session.helloRejected and disconnects it again.
         await SendRpcAsync(RpcMethods.SessionHello,
             new SessionHelloParams { ProtocolVersion = ProtocolInfo.Version, Pin = pin }).ConfigureAwait(false);
     }
 
     /// <summary>
-    ///     Manuelles/endgültiges Trennen: markiert die Trennung als gewollt, damit die laufende
-    ///     ReadLoopAsync (falls gerade aktiv) danach KEINEN automatischen Reconnect anstößt.
+    ///     Manual/final disconnect: marks the disconnection as intentional, so the running
+    ///     ReadLoopAsync (if currently active) does NOT trigger an automatic reconnect afterward.
     /// </summary>
     public void Disconnect()
     {
@@ -208,8 +208,8 @@ public sealed class PlayerTcpClientService : IDisposable
     }
 
     /// <summary>
-    ///     Meldet dem Host, dass ein Video tatsächlich zu spielen begonnen hat, inkl. der lokal (LibVLC) ermittelten
-    ///     Dauer.
+    ///     Reports to the host that a video has actually started playing, including the duration
+    ///     determined locally (LibVLC).
     /// </summary>
     public Task SendMediaPlaybackStartedAsync(string mediaId, TimeSpan duration)
     {
@@ -217,7 +217,7 @@ public sealed class PlayerTcpClientService : IDisposable
             new MediaPlaybackStartedParams { MediaId = mediaId, DurationMs = (long)duration.TotalMilliseconds });
     }
 
-    /// <summary>Meldet dem Host, dass ein nicht-loopendes Video zu Ende ist (Host pausiert Uhrzeit fort/schließt das Medium).</summary>
+    /// <summary>Reports to the host that a non-looping video has ended (host resumes the clock/closes the medium).</summary>
     public Task SendMediaPlaybackEndedAsync(string mediaId)
     {
         return SendRpcAsync(RpcMethods.MediaPlaybackEnded, new MediaPlaybackEndedParams { MediaId = mediaId });
@@ -235,7 +235,7 @@ public sealed class PlayerTcpClientService : IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "RPC-Notification {Method} konnte nicht serialisiert werden", method);
+            Log.Error(ex, "RPC notification {Method} could not be serialized", method);
             return;
         }
 
@@ -243,12 +243,12 @@ public sealed class PlayerTcpClientService : IDisposable
         try
         {
             await NetworkFrame.WriteAsync(stream, NetworkFrame.TypeRpc, payload).ConfigureAwait(false);
-            Log.Debug("RPC-Notification {Method} an Host gesendet", method);
+            Log.Debug("RPC notification {Method} sent to host", method);
         }
         catch (Exception ex)
         {
-            // Verbindung tot - der ReadLoop erkennt das ohnehin selbst und räumt auf.
-            Log.Debug(ex, "RPC-Notification {Method} konnte nicht gesendet werden (Verbindung vermutlich getrennt)",
+            // Connection dead - the ReadLoop detects this itself anyway and cleans up.
+            Log.Debug(ex, "RPC notification {Method} could not be sent (connection presumably disconnected)",
                 method);
         }
         finally
@@ -288,11 +288,11 @@ public sealed class PlayerTcpClientService : IDisposable
         catch (OperationCanceledException)
         {
             // expected on disconnect or idle-watchdog timeout
-            Log.Information("Verbindung beendet (getrennt oder Idle-Timeout)");
+            Log.Information("Connection closed (disconnected or idle timeout)");
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Verbindung mit Fehler beendet");
+            Log.Warning(ex, "Connection closed with error");
             StatusChanged?.Invoke($"Verbindung beendet: {ex.Message}");
         }
         finally
@@ -301,9 +301,9 @@ public sealed class PlayerTcpClientService : IDisposable
             await watchdogTask.ConfigureAwait(false);
             CleanupMediaStream();
 
-            // Nur bei einer UNERWARTETEN Trennung automatisch neu verbinden - ein manuelles
-            // Disconnect() (siehe dort) setzt _userDisconnectRequested vorher, damit diese
-            // Verbindung endgültig getrennt bleibt, statt sich selbst wieder aufzubauen.
+            // Only reconnect automatically on an UNEXPECTED disconnection - a manual
+            // Disconnect() (see there) sets _userDisconnectRequested beforehand, so this
+            // connection stays disconnected for good instead of re-establishing itself.
             if (!_userDisconnectRequested && _lastHost is not null)
                 _ = ReconnectLoopAsync(_lastHost, _lastPort);
             else
@@ -312,11 +312,11 @@ public sealed class PlayerTcpClientService : IDisposable
     }
 
     /// <summary>
-    ///     Versucht in wachsenden Abständen (2s bis max. 20s), dieselbe Verbindung wiederherzustellen,
-    ///     bis es klappt oder der Nutzer selbst trennt/eine andere Verbindung startet. Der neu
-    ///     verbindende Client bekommt beim erfolgreichen Reconnect automatisch einen vollen
-    ///     session.snapshot vom Host (siehe TcpPlayerServerService.SendCatchUpAsync) - kein
-    ///     gesonderter Resync-Pfad hier nötig.
+    ///     Attempts to re-establish the same connection at growing intervals (2s up to max. 20s),
+    ///     until it works or the user disconnects themselves/starts another connection. On a
+    ///     successful reconnect the reconnecting client automatically gets a full
+    ///     session.snapshot from the host (see TcpPlayerServerService.SendCatchUpAsync) - no
+    ///     separate resync path needed here.
     /// </summary>
     private async Task ReconnectLoopAsync(string host, int port)
     {
@@ -341,13 +341,13 @@ public sealed class PlayerTcpClientService : IDisposable
 
             try
             {
-                Log.Information("Automatischer Reconnect-Versuch zu {Host}:{Port}", host, port);
+                Log.Information("Automatic reconnect attempt to {Host}:{Port}", host, port);
                 await ConnectAsync(host, port, _lastPin).ConfigureAwait(false);
                 return;
             }
             catch (Exception ex)
             {
-                Log.Debug(ex, "Reconnect-Versuch zu {Host}:{Port} fehlgeschlagen", host, port);
+                Log.Debug(ex, "Reconnect attempt to {Host}:{Port} failed", host, port);
                 delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 1.5, ReconnectMaxDelay.TotalSeconds));
             }
         }
@@ -367,7 +367,7 @@ public sealed class PlayerTcpClientService : IDisposable
                 await Task.Delay(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(false);
                 if (DateTime.UtcNow - _lastActivityUtc > IdleTimeout)
                 {
-                    Log.Warning("Idle-Timeout ({Timeout}) erreicht - keine Aktivität vom Host, Verbindung gilt als tot",
+                    Log.Warning("Idle timeout ({Timeout}) reached - no activity from host, connection considered dead",
                         IdleTimeout);
                     cts.Cancel();
                     return;
@@ -384,7 +384,7 @@ public sealed class PlayerTcpClientService : IDisposable
     {
         if (payload.Length > MaxRpcPayloadBytes)
         {
-            Log.Warning("Eingehendes RPC-Frame ({Size} Bytes) überschreitet Limit ({Max} Bytes) - wird ignoriert",
+            Log.Warning("Incoming RPC frame ({Size} bytes) exceeds limit ({Max} bytes) - ignored",
                 payload.Length, MaxRpcPayloadBytes);
             return;
         }
@@ -392,7 +392,7 @@ public sealed class PlayerTcpClientService : IDisposable
         var raw = RpcMessage.TryParseRaw(payload);
         if (raw is null)
         {
-            Log.Warning("Eingehendes RPC-Frame konnte nicht als JSON-RPC geparst werden ({Size} Bytes)",
+            Log.Warning("Incoming RPC frame could not be parsed as JSON-RPC ({Size} bytes)",
                 payload.Length);
             return;
         }
@@ -404,17 +404,17 @@ public sealed class PlayerTcpClientService : IDisposable
                 case RpcMethods.SessionHelloRejected:
                     var rejected = raw.GetParams<SessionHelloRejectedParams>();
                     var reason = rejected?.Reason ?? "Verbindung abgelehnt.";
-                    Log.Warning("Verbindung vom Host abgelehnt: {Reason}", reason);
+                    Log.Warning("Connection rejected by host: {Reason}", reason);
                     StatusChanged?.Invoke($"Verbindung abgelehnt: {reason}");
-                    // Kein Reconnect-Versuch mit denselben (offenbar falschen) Zugangsdaten -
-                    // Disconnect() setzt _userDisconnectRequested=true, siehe ReadLoopAsync.
+                    // No reconnect attempt with the same (apparently wrong) credentials -
+                    // Disconnect() sets _userDisconnectRequested=true, see ReadLoopAsync.
                     Disconnect();
                     break;
                 case RpcMethods.SessionSnapshot:
                     var snapshot = raw.GetParams<SessionSnapshotParams>();
                     if (snapshot is not null)
                     {
-                        Log.Information("session.snapshot empfangen ({ItemCount} Items)", snapshot.Items.Count);
+                        Log.Information("session.snapshot received ({ItemCount} items)", snapshot.Items.Count);
                         SessionSnapshotReceived?.Invoke(snapshot);
                     }
 
@@ -459,7 +459,7 @@ public sealed class PlayerTcpClientService : IDisposable
                     if (mediaHeader is not null) BeginMediaStream(mediaHeader);
                     break;
                 case RpcMethods.MediaCleared:
-                    Log.Information("media.cleared empfangen");
+                    Log.Information("media.cleared received");
                     CleanupMediaStream();
                     MediaCleared?.Invoke();
                     break;
@@ -490,14 +490,14 @@ public sealed class PlayerTcpClientService : IDisposable
                     if (slideshow is not null) SlideshowIntervalChanged?.Invoke(slideshow.Seconds);
                     break;
                 default:
-                    Log.Debug("Unbekannte eingehende RPC-Methode {Method} ignoriert", raw.Method);
+                    Log.Debug("Unknown incoming RPC method {Method} ignored", raw.Method);
                     break;
             }
         }
         catch (Exception ex)
         {
             // Rogue or buggy server: ignore malformed notification, do not crash.
-            Log.Warning(ex, "Fehlerhafte eingehende RPC-Notification {Method} ignoriert", raw.Method);
+            Log.Warning(ex, "Malformed incoming RPC notification {Method} ignored", raw.Method);
         }
     }
 
@@ -507,7 +507,7 @@ public sealed class PlayerTcpClientService : IDisposable
 
         if (header.TotalLength < 0 || header.TotalLength > MaxMediaBytes)
         {
-            Log.Warning("media.begin für {FileName} verworfen: TotalLength {TotalLength} ungültig/über Limit ({Max})",
+            Log.Warning("media.begin for {FileName} discarded: TotalLength {TotalLength} invalid/over limit ({Max})",
                 header.FileName, header.TotalLength, MaxMediaBytes);
             return;
         }
@@ -531,14 +531,14 @@ public sealed class PlayerTcpClientService : IDisposable
             Log.Information("media.begin: {FileName} ({Kind}, {SizeKb} KB, Loop={Loop}) -> {TempPath}",
                 header.FileName, header.Kind, header.TotalLength / 1024, header.Loop, _mediaTempPath);
 
-            // Für Videos kann die Wiedergabe sofort starten (VLC verträgt eine wachsende
-            // Datei); für Bilder wartet der Aufrufer auf MediaCompleted, da ein Teilbild
-            // nicht dekodierbar ist.
+            // For videos, playback can start immediately (VLC tolerates a growing file);
+            // for images, the caller waits for MediaCompleted since a partial image
+            // cannot be decoded.
             MediaBeginReceived?.Invoke(header, _mediaTempPath);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "media.begin für {FileName} konnte nicht verarbeitet werden (Tempdatei)", header.FileName);
+            Log.Error(ex, "media.begin for {FileName} could not be processed (temp file)", header.FileName);
             CleanupMediaStream();
         }
     }
@@ -559,14 +559,14 @@ public sealed class PlayerTcpClientService : IDisposable
                 var path = _mediaTempPath!;
                 _mediaFile.Dispose();
                 _mediaFile = null;
-                Log.Information("Medium {FileName} vollständig empfangen ({Bytes} Bytes)", header.FileName,
+                Log.Information("Medium {FileName} fully received ({Bytes} bytes)", header.FileName,
                     _mediaBytesWritten);
                 MediaCompleted?.Invoke(header, path);
             }
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Medien-Chunk für {FileName} konnte nicht geschrieben werden", _mediaHeader?.FileName);
+            Log.Error(ex, "Media chunk for {FileName} could not be written", _mediaHeader?.FileName);
             CleanupMediaStream();
         }
     }

@@ -8,10 +8,10 @@ using RpgTimeTracker.Shared.Services.Visuals;
 namespace RpgTimeTracker.ViewModels;
 
 /// <summary>
-///     Ein vorausgewählter Sound in der SL-Sound-Bibliothek - komplett getrennt von der Bild/Video-
-///     Bibliothek (siehe MediaLibraryItemViewModel). Einfachklick sendet ihn sofort an alle Spieler
-///     (und ggf. lokal beim SL, siehe MainWindowViewModel.SendSoundAsync); "Test" spielt ihn NUR lokal
-///     beim SL ab, ohne ihn zu senden - zum Prüfen der Lautstärke vor dem eigentlichen Senden.
+///     A preselected sound in the GM sound library - completely separate from the image/video
+///     library (see MediaLibraryItemViewModel). A single click sends it immediately to all players
+///     (and locally at the GM's side if applicable, see MainWindowViewModel.SendSoundAsync); "Test" plays it ONLY locally
+///     at the GM's side, without sending it - to check the volume before actually sending it.
 /// </summary>
 public partial class SoundLibraryItemViewModel : LibraryItemViewModelBase<SoundLibraryItemViewModel>
 {
@@ -20,18 +20,18 @@ public partial class SoundLibraryItemViewModel : LibraryItemViewModelBase<SoundL
 
     [ObservableProperty] private string _icon;
 
-    /// <summary>Ob der Sound am Ende automatisch von vorn beginnen soll, statt natürlich zu enden.</summary>
+    /// <summary>Whether the sound should automatically restart from the beginning at the end, instead of ending naturally.</summary>
     [ObservableProperty] private bool _loop;
 
-    /// <summary>Nur wirksam wenn Loop=false: Gesamtanzahl der Wiedergaben (1 = einmal, kein Wiederholen).</summary>
+    /// <summary>Only effective when Loop=false: total number of playbacks (1 = once, no repeat).</summary>
     [ObservableProperty] private int _repeatCount = 1;
 
     [ObservableProperty] private double _trimEndSeconds;
 
-    /// <summary>Zurechtschneiden in Sekunden - 0 bedeutet "kein Trim an dieser Stelle".</summary>
+    /// <summary>Trim in seconds - 0 means "no trim at this point".</summary>
     [ObservableProperty] private double _trimStartSeconds;
 
-    /// <summary>Standard-Lautstärke (0-100), mit der dieser Sound gesendet/getestet wird.</summary>
+    /// <summary>Default volume (0-100) with which this sound is sent/tested.</summary>
     [ObservableProperty] private int _volume;
 
     public SoundLibraryItemViewModel(

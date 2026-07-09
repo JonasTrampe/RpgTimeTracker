@@ -67,7 +67,7 @@ public sealed class LanDiscoveryResponder : IDisposable
             _udp.EnableBroadcast = true;
             _udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             _udp.Client.Bind(new IPEndPoint(IPAddress.Any, DiscoveryPort));
-            Log.Information("LAN-Discovery-Responder gestartet auf UDP-Port {DiscoveryPort}", DiscoveryPort);
+            Log.Information("LAN discovery responder started on UDP port {DiscoveryPort}", DiscoveryPort);
 
             while (!token.IsCancellationRequested)
             {
@@ -110,7 +110,7 @@ public sealed class LanDiscoveryResponder : IDisposable
                 var json = JsonSerializer.Serialize(payload);
                 var bytes = Encoding.UTF8.GetBytes(json);
                 await _udp.SendAsync(bytes, bytes.Length, result.RemoteEndPoint).ConfigureAwait(false);
-                Log.Debug("LAN-Discovery-Anfrage von {RemoteEndPoint} beantwortet ({Host}:{Port})",
+                Log.Debug("LAN discovery request from {RemoteEndPoint} answered ({Host}:{Port})",
                     result.RemoteEndPoint, payload.Host, payload.Port);
             }
         }
@@ -118,7 +118,7 @@ public sealed class LanDiscoveryResponder : IDisposable
         {
             // Discovery is optional. Manual connection still works.
             Log.Warning(ex,
-                "LAN-Discovery-Responder nicht verfügbar (Port {DiscoveryPort} evtl. belegt) - manuelle Verbindung funktioniert weiterhin",
+                "LAN discovery responder unavailable (port {DiscoveryPort} possibly in use) - manual connection still works",
                 DiscoveryPort);
         }
     }

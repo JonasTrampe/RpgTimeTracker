@@ -7,7 +7,7 @@ using Serilog;
 namespace RpgTimeTracker.Services;
 
 /// <summary>
-///     Speichert kleine App-Einstellungen lokal im Benutzerprofil.
+///     Stores small app settings locally in the user profile.
 /// </summary>
 public static class ThemeSettingsService
 {
@@ -19,8 +19,8 @@ public static class ThemeSettingsService
     private static string SettingsPath => Path.Combine(SettingsDirectory, "settings.json");
 
     /// <summary>
-    ///     Legacy-Speicherort der alten "+ Sound hinzufügen"-Einstellungen-Funktion - nur noch
-    ///     für die einmalige Migration nach SoundLibraryDirectory relevant.
+    ///     Legacy storage location of the old "+ add sound" settings feature - only
+    ///     relevant for the one-time migration to SoundLibraryDirectory.
     /// </summary>
     public static string CustomSoundsDirectory => Path.Combine(SettingsDirectory, "Sounds");
 
@@ -59,7 +59,7 @@ public static class ThemeSettingsService
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Einstellungen konnten nicht geladen werden ({SettingsPath}) - verwende Standardwerte",
+            Log.Warning(ex, "Settings could not be loaded ({SettingsPath}) - using defaults",
                 SettingsPath);
             return new ThemeSettingsDto();
         }
@@ -74,16 +74,15 @@ public static class ThemeSettingsService
         }
         catch (Exception ex)
         {
-            // Einstellungen sind Komfort; Fehler sollen die App nicht stoppen.
-            Log.Warning(ex, "Einstellungen konnten nicht gespeichert werden ({SettingsPath})", SettingsPath);
+            // Settings are a convenience; errors should not stop the app.
+            Log.Warning(ex, "Settings could not be saved ({SettingsPath})", SettingsPath);
         }
     }
 
     /// <summary>
-    ///     Zuletzt gewählte Design-Id (siehe ThemeDefinitionLoader/ThemeDefinitionDto.Id, z.B.
-    ///     "shadowrun") - wird über ThemeDefinitionLoader.Resolve aufgelöst, das auch ältere
-    ///     gespeicherte Werte (frühere "custom:"-Präfixe, noch ältere PascalCase-Enum-Namen)
-    ///     versteht.
+    ///     Last chosen theme id (see ThemeDefinitionLoader/ThemeDefinitionDto.Id, e.g.
+    ///     "shadowrun") - resolved via ThemeDefinitionLoader.Resolve, which also understands
+    ///     older stored values (former "custom:" prefixes, even older PascalCase enum names).
     /// </summary>
     public static string? LoadLastThemeId()
     {
@@ -98,9 +97,9 @@ public static class ThemeSettingsService
     }
 
     /// <summary>
-    ///     Legacy: einzelner über die alte Einstellungen-Seite hinzugefügter Sound. Wird nur
-    ///     noch einmalig beim Start gelesen und in SoundLibrary überführt (siehe SoundService.MigrateLegacyCustomSounds) -
-    ///     neue Sounds landen nur noch in SoundLibrary, nicht mehr hier.
+    ///     Legacy: a single sound added via the old settings page. Only read
+    ///     once on startup and migrated to SoundLibrary (see SoundService.MigrateLegacyCustomSounds) -
+    ///     new sounds now only end up in SoundLibrary, not here anymore.
     /// </summary>
     public sealed class CustomSoundDto
     {
@@ -141,21 +140,24 @@ public static class ThemeSettingsService
         public bool AmbienceAutomationEnabled { get; set; }
 
         /// <summary>
-        ///     Im LAN/mDNS-Announcement übertragener Anzeigename, damit mehrere Server im selben
-        ///     Netzwerk in der Client-Serverliste unterscheidbar sind (siehe
+        ///     Display name transmitted in the LAN/mDNS announcement, so that multiple servers on the same
+        ///     network are distinguishable in the client's server list (see
         ///     PlayerMdnsAnnouncer/LanDiscoveryResponder).
         /// </summary>
         public string ServerName { get; set; } = "RpgTimeTracker";
 
-        /// <summary>Optionaler PIN für den Verbindungsaufbau (siehe MainWindowViewModel.ConnectionPin); leer = kein PIN.</summary>
+        /// <summary>Optional PIN for establishing a connection (see MainWindowViewModel.ConnectionPin); empty = no PIN.</summary>
         public string ConnectionPin { get; set; } = string.Empty;
 
-        /// <summary>Nur noch für die einmalige Migration gelesen - siehe CustomSoundDto-Kommentar.</summary>
+        /// <summary>UI language (see LocalizationService.SupportedLanguages) - separate from the PlayerClient, see ClientSettingsService.</summary>
+        public string Language { get; set; } = "en";
+
+        /// <summary>Only read for the one-time migration - see CustomSoundDto comment.</summary>
         public List<CustomSoundDto> CustomSounds { get; set; } = [];
 
         /// <summary>
-        ///     Ob die Migration aus CustomSounds nach SoundLibrary schon gelaufen ist (verhindert
-        ///     erneutes Importieren, falls der Nutzer den migrierten Sound danach wieder löscht).
+        ///     Whether the migration from CustomSounds to SoundLibrary has already run (prevents
+        ///     re-importing if the user later deletes the migrated sound again).
         /// </summary>
         public bool LegacyCustomSoundsMigrated { get; set; }
 

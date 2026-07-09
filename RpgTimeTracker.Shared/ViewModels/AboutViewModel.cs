@@ -5,11 +5,11 @@ using System.Reflection;
 namespace RpgTimeTracker.Shared.ViewModels;
 
 /// <summary>
-///     Datengrundlage für den About-Screen (RpgTimeTracker.Shared.Views.AboutView), gemeinsam
-///     für Host und Client. Der eigentliche Inhalt (Titel + Beschreibung, als Markdown) kommt pro
-///     App vom Aufrufer (siehe AboutWindow in beiden Projekten, lädt seine eigene
-///     About/AboutContent.md) - Version und Lizenzhinweise werden hier zentral aus den
-///     tatsächlichen Daten geladen statt in jeder App erneut getippt zu werden.
+///     Data basis for the About screen (RpgTimeTracker.Shared.Views.AboutView), shared
+///     by host and client. The actual content (title + description, as Markdown) comes per
+///     app from the caller (see AboutWindow in both projects, loads its own
+///     About/AboutContent.md) - version and license notices are loaded centrally here from the
+///     actual data instead of being retyped in every app.
 /// </summary>
 public sealed class AboutViewModel
 {
@@ -27,16 +27,16 @@ public sealed class AboutViewModel
     public string ContentMarkdown { get; }
     public string VersionText { get; }
 
-    /// <summary>Eigene Projektlizenz (MIT), siehe LICENSE an der Repo-Wurzel.</summary>
+    /// <summary>Own project license (MIT), see LICENSE at the repo root.</summary>
     public string LicenseText { get; }
 
     public string ThirdPartyNoticesText { get; }
 
     /// <summary>
-    ///     Liest die "informational version" statt der reinen AssemblyVersion, da Letztere ein
-    ///     Prerelease-Suffix wie "-alpha" (aus Directory.Build.props/&lt;Version&gt;) gar nicht
-    ///     abbilden kann (AssemblyVersion muss rein numerisch sein) - ohne diesen Umweg würde der
-    ///     About-Screen z.B. "1.0.0" statt "1.0.0-alpha" anzeigen und den Alpha-Status verschleiern.
+    ///     Reads the "informational version" instead of the plain AssemblyVersion, since the latter
+    ///     cannot represent a prerelease suffix like "-alpha" (from Directory.Build.props/&lt;Version&gt;)
+    ///     at all (AssemblyVersion must be purely numeric) - without this workaround the
+    ///     About screen would show e.g. "1.0.0" instead of "1.0.0-alpha" and hide the alpha status.
     /// </summary>
     private static string FormatVersion(Assembly assembly)
     {

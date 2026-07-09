@@ -9,10 +9,10 @@ using RpgTimeTracker.Shared.Services.Visuals;
 namespace RpgTimeTracker.ViewModels;
 
 /// <summary>
-///     Ein gerade laufender, an Spieler gesendeter Sound - fürs "Aktuell abgespielte Sounds"-Panel
-///     beim SL. Rein SL-seitige Anzeige (siehe MainWindowViewModel.ActivePlayingSounds); der Sound
-///     selbst läuft komplett unabhängig vom Bild/Video-"aktuelles Medium"-Slot (siehe
-///     MainWindowViewModel.SendSoundAsync-Kommentar).
+///     A currently playing sound sent to players - for the GM's "currently playing sounds"
+///     panel. Purely GM-side display (see MainWindowViewModel.ActivePlayingSounds); the sound
+///     itself runs completely independently of the image/video "current medium" slot (see
+///     MainWindowViewModel.SendSoundAsync comment).
 /// </summary>
 public partial class ActiveSoundViewModel : ObservableObject, IDisposable
 {
@@ -69,7 +69,7 @@ public partial class ActiveSoundViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IconGeometry));
     }
 
-    // Live-Regler im Panel - jede Änderung wird sofort an Host+Client(s) übertragen (media.setVolume).
+    // Live slider in the panel - every change is immediately transmitted to host+client(s) (media.setVolume).
     partial void OnVolumeChanged(int value)
     {
         _onVolumeChanged(this, value);

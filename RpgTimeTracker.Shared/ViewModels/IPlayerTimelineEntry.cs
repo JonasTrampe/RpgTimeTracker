@@ -3,11 +3,11 @@ using Avalonia.Media;
 namespace RpgTimeTracker.Shared.ViewModels;
 
 /// <summary>
-///     Gemeinsamer Anzeige-Vertrag für eine Zeitleisten-Zeile, implementiert sowohl von
-///     TimelineDisplayItemViewModel (Host, SL-seitig) als auch RemoteTimelineItemViewModel
-///     (PlayerClient) - beide hatten bereits identische Property-Namen/-Typen, sodass dieses
-///     Interface keine Umbenennungen brauchte. Macht PlayerTimelineListView (Shared) für beide
-///     Apps verwendbar, ohne die beiden konkreten ViewModel-Typen zusammenzulegen.
+///     Shared display contract for a timeline row, implemented both by
+///     TimelineDisplayItemViewModel (host, GM-side) and RemoteTimelineItemViewModel
+///     (PlayerClient) - both already had identical property names/types, so this
+///     interface needed no renaming. Makes PlayerTimelineListView (Shared) usable by both
+///     apps without merging the two concrete view model types.
 /// </summary>
 public interface IPlayerTimelineEntry
 {

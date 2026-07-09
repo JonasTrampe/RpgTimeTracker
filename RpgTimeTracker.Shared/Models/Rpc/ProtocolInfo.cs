@@ -1,11 +1,11 @@
 namespace RpgTimeTracker.Shared.Models.Rpc;
 
 /// <summary>
-///     Protokoll-Version, ausgetauscht in session.hello/session.helloRejected (siehe RpcMethods) -
-///     erhöhen, wenn sich das Wire-Format so ändert, dass ein älterer Client/Host es nicht mehr
-///     korrekt verarbeiten könnte. Ein Host lehnt eine Verbindung ab, statt sie mit einer
-///     abweichenden Version stillschweigend zu akzeptieren - das ergibt eine klare Fehlermeldung
-///     statt undefiniertem Verhalten, sobald mehrere Client-/Host-Builds im Umlauf sind.
+///     Protocol version, exchanged in session.hello/session.helloRejected (see RpcMethods) -
+///     increment when the wire format changes such that an older client/host could no longer
+///     process it correctly. A host rejects a connection instead of silently accepting it with
+///     a differing version - this results in a clear error message instead of undefined
+///     behavior once multiple client/host builds are in circulation.
 /// </summary>
 public static class ProtocolInfo
 {

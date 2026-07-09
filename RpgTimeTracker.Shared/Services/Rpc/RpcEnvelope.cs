@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace RpgTimeTracker.Shared.Services.Rpc;
 
-/// <summary>Ausgehende Notification mit stark typisierten Params.</summary>
+/// <summary>Outgoing notification with strongly-typed params.</summary>
 public sealed class RpcNotification<TParams>
 {
     public string Jsonrpc { get; set; } = "2.0";
@@ -12,7 +12,7 @@ public sealed class RpcNotification<TParams>
     public TParams? Params { get; set; }
 }
 
-/// <summary>Eingehende Notification, Params zunächst als rohes JSON (Methodenname entscheidet den Zieltyp).</summary>
+/// <summary>Incoming notification, params initially as raw JSON (method name determines the target type).</summary>
 public sealed class RpcNotificationRaw
 {
     public string Jsonrpc { get; set; } = "2.0";
@@ -20,7 +20,7 @@ public sealed class RpcNotificationRaw
     public JsonElement Params { get; set; }
 }
 
-/// <summary>Marker für Notifications ohne Nutzdaten (z.B. clock.started).</summary>
+/// <summary>Marker for notifications without payload data (e.g. clock.started).</summary>
 public sealed class RpcEmptyParams
 {
     public static readonly RpcEmptyParams Instance = new();
@@ -40,7 +40,7 @@ public static class RpcMessage
         return JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions);
     }
 
-    /// <summary>Liefert null bei kaputtem/unerwartetem JSON, statt zu werfen (unvertrauenswürdige Gegenseite).</summary>
+    /// <summary>Returns null on broken/unexpected JSON instead of throwing (untrusted remote party).</summary>
     public static RpcNotificationRaw? TryParseRaw(ReadOnlySpan<byte> utf8Json)
     {
         try

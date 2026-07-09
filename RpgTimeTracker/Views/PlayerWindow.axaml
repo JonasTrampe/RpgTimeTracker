@@ -5,15 +5,13 @@
         xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
         x:Class="RpgTimeTracker.Views.PlayerWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="RPG Zeitverfolgung — Spieleranzeige"
+        Title="{DynamicResource PlayerWindow.WindowTitle}"
         Width="1050" Height="640" MinWidth="780" MinHeight="460"
         Background="{DynamicResource WindowBackgroundBrush}">
 
     <Window.Styles>
         <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
 
-        <!-- Nur Werte, die hier bewusst vom gemeinsamen Chrome abweichen (größere Schrift
-             für ein Fenster, das aus größerer Entfernung gelesen wird). -->
         <Style Selector="Border.windowframe">
             <Setter Property="Background" Value="#20000000" />
             <Setter Property="Padding" Value="14" />
@@ -99,16 +97,12 @@
             </Grid>
         </Border>
 
-        <!-- Nur sichtbar, wenn kein Client verbunden ist (bzw. der Server aus ist) UND dieses
-             Fenster offen ist - läuft ein Client mit, zeigt der ohnehin dasselbe Medium an. -->
         <Panel IsVisible="{Binding ShouldShowMediaLocally}" Background="Black"
                PointerPressed="OnMediaPanelPointerPressed"
-               ToolTip.Tip="Klick: nächstes Bild/Video (Galerie) - Pfeiltasten funktionieren auch">
+               ToolTip.Tip="{DynamicResource MediaWindow.PanelTooltip}">
             <Image Source="{Binding CurrentMediaBitmap}" Stretch="Uniform" IsVisible="{Binding ShowLocalImage}" />
             <vlc:VideoView MediaPlayer="{Binding MediaPlayer}" IsVisible="{Binding ShowLocalVideo}" />
 
-            <!-- Aktuelle Spielzeit bleibt sichtbar, auch wenn das Medium den Rest des Fensters
-                 (inkl. der Kopfzeile mit der Uhr) komplett überdeckt. -->
             <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12"
                     Background="#66000000" CornerRadius="6" Padding="10,6">
                 <TextBlock Text="{Binding CurrentGameTimeText}" Foreground="White" FontWeight="Bold" FontSize="14" />
@@ -124,7 +118,7 @@
                         Foreground="White"
                         BorderThickness="0"
                         FontSize="16"
-                        ToolTip.Tip="Fenster minimieren" />
+                        ToolTip.Tip="{DynamicResource MediaWindow.MinimizeTooltip}" />
                 <Button Command="{Binding ClearMediaCommand}"
                         Content="&#10005;"
                         Width="28" Height="28"
@@ -133,15 +127,12 @@
                         Foreground="White"
                         BorderThickness="0"
                         FontSize="13"
-                        ToolTip.Tip="Medium schließen" />
+                        ToolTip.Tip="{DynamicResource MediaWindow.CloseTooltip}" />
             </StackPanel>
         </Panel>
 
-        <!-- Nur sichtbar, solange dieses Fenster tatsächlich fullscreen ist (siehe PlayerWindow.axaml.cs) -
-             lokaler Notausstieg, falls das SL-weite Vollbild-Umschalten hängen bleibt oder Escape
-             nicht ankommt (z.B. weil ein anderes Steuerelement den Fokus hat). -->
         <Button x:Name="ExitFullscreenButton"
-                Content="Vollbild beenden (Esc)"
+                Content="{DynamicResource PlayerWindow.ExitFullscreenButton}"
                 Click="OnExitFullscreenClick"
                 IsVisible="False"
                 HorizontalAlignment="Right" VerticalAlignment="Bottom"
@@ -151,6 +142,6 @@
                 Background="#66000000"
                 Foreground="White"
                 BorderThickness="0"
-                ToolTip.Tip="Beendet nur lokal das Vollbild dieses Fensters" />
+                ToolTip.Tip="{DynamicResource PlayerWindow.ExitFullscreenTooltip}" />
     </Panel>
 </Window>

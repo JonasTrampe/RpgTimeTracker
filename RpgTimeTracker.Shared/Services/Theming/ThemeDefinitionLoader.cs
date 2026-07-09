@@ -13,21 +13,21 @@ using Serilog;
 namespace RpgTimeTracker.Shared.Services.Theming;
 
 /// <summary>
-///     Lädt SL-Designs aus JSON-Dateien (theme.json + Bilddateien in einem Ordner pro Design) und
-///     baut daraus zur Laufzeit ein Avalonia-ResourceDictionary mit denselben Ressourcennamen, die
-///     die fest einkompilierten Themes/*.axaml-Designs verwenden - beide Quellen sind dadurch für
-///     die Views ununterscheidbar (nur DynamicResource-Lookups).
+///     Loads GM themes from JSON files (theme.json + image files in one folder per theme) and
+///     builds an Avalonia ResourceDictionary at runtime with the same resource names that
+///     the compiled-in Themes/*.axaml themes use - both sources are thus
+///     indistinguishable for the views (only DynamicResource lookups).
 /// </summary>
 public static class ThemeDefinitionLoader
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    /// <summary>Vom SL selbst angelegte/bearbeitete Designs - ein Ordner pro Design, z.B. .../Themes/MeineKampagne/theme.json.</summary>
+    /// <summary>Themes created/edited by the GM themselves - one folder per theme, e.g. .../Themes/MyCampaign/theme.json.</summary>
     public static string CustomThemesDirectory => Path.Combine(GetUserConfigDirectory(), "RpgTimeTracker", "Themes");
 
     /// <summary>
-    ///     Mit der App ausgelieferte JSON-Vorlagen (Extrakte der eingebauten Designs) - rein lesbare Beispiele zum
-    ///     Kopieren/Anpassen.
+    ///     JSON templates shipped with the app (extracts of the built-in themes) - purely readable examples for
+    ///     copying/adapting.
     /// </summary>
     public static string SampleThemesDirectory => Path.Combine(AppContext.BaseDirectory, "SampleThemes");
 
@@ -44,8 +44,8 @@ public static class ThemeDefinitionLoader
     }
 
     /// <summary>
-    ///     Beispiel-Vorlagen zuerst, dann SL-eigene Designs - bei gleicher Id gewinnt das SL-eigene (steht später in der
-    ///     Liste).
+    ///     Sample templates first, then the GM's own themes - with the same Id, the GM's own theme wins (it comes later in
+    ///     the list).
     /// </summary>
     public static List<LoadedTheme> LoadAll()
     {
@@ -70,7 +70,7 @@ public static class ThemeDefinitionLoader
                 var def = JsonSerializer.Deserialize<ThemeDefinitionDto>(json, JsonOptions);
                 if (def is null || string.IsNullOrWhiteSpace(def.Id))
                 {
-                    Log.Warning("Design-JSON ohne gültige Id übersprungen: {Path}", jsonPath);
+                    Log.Warning("Theme JSON without a valid Id skipped: {Path}", jsonPath);
                     continue;
                 }
 
@@ -78,20 +78,19 @@ public static class ThemeDefinitionLoader
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "Design-JSON konnte nicht geladen werden: {Path}", jsonPath);
+                Log.Warning(ex, "Theme JSON could not be loaded: {Path}", jsonPath);
             }
         }
     }
 
     /// <summary>
-    ///     Löst eine gespeicherte/über das Netz empfangene Theme-Id gegen LoadAll() auf - case-
-    ///     insensitiv, und abwärtskompatibel zu zwei älteren Formaten: dem früheren "custom:&lt;Id&gt;"-
-    ///     Präfix (als alle Designs noch zwischen eingebauten AXAML-Designs und JSON-"custom"-Designs
-    ///     unterschieden) und den noch älteren PascalCase AppTheme-Enum-Namen (z.B. "PostApocalyptic"),
-    ///     die zufällig genau den heutigen (kleingeschriebenen) Sample-Ids entsprechen. Gibt null
-    ///     zurück, wenn nichts passt - Aufrufer entscheiden selbst, ob das einen Fallback (Startup)
-    ///     oder ein "Design unverändert lassen" (Client-Sync, siehe ClientMainWindowViewModel.ApplyTheme)
-    ///     bedeutet.
+    ///     Resolves a stored/network-received theme Id against LoadAll() - case-
+    ///     insensitive, and backward-compatible with two older formats: the former "custom:&lt;Id&gt;"
+    ///     prefix (from when all themes still distinguished between built-in AXAML themes and JSON "custom"
+    ///     themes) and the even older PascalCase AppTheme enum names (e.g. "PostApocalyptic"),
+    ///     which happen to match exactly today's (lowercase) sample Ids. Returns null
+    ///     if nothing matches - callers decide for themselves whether that means a fallback (startup)
+    ///     or "leave theme unchanged" (client sync, see ClientMainWindowViewModel.ApplyTheme).
     /// </summary>
     public static LoadedTheme? Resolve(string? rawId)
     {
@@ -114,7 +113,7 @@ public static class ThemeDefinitionLoader
             if (Color.TryParse(hex, out var color))
                 dict[key] = new SolidColorBrush(color);
             else
-                Log.Warning("Design {Id}: ungültige Farbe {Hex} für {Key} übersprungen", def.Id, hex, key);
+                Log.Warning("Theme {Id}: invalid color {Hex} for {Key} skipped", def.Id, hex, key);
 
         foreach (var (key, gradient) in def.Gradients) dict[key] = BuildGradientBrush(def.Id, gradient);
 
@@ -139,7 +138,7 @@ public static class ThemeDefinitionLoader
         return dict;
     }
 
-    /// <summary>Auch für die Ambiente-Automatik genutzt, um ein bestimmtes benanntes Hintergrundbild gezielt zu setzen.</summary>
+    /// <summary>Also used by the ambience automation to specifically set a particular named background image.</summary>
     public static bool TrySetImageBrush(IResourceDictionary dict, string resourceKey, string folderPath,
         string fileName, string themeId)
     {
@@ -153,7 +152,7 @@ public static class ThemeDefinitionLoader
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Design {Id}: Bild {FileName} konnte nicht geladen werden", themeId, fileName);
+            Log.Warning(ex, "Theme {Id}: image {FileName} could not be loaded", themeId, fileName);
             return false;
         }
     }
@@ -170,7 +169,7 @@ public static class ThemeDefinitionLoader
             if (Color.TryParse(stop.Color, out var color))
                 brush.GradientStops.Add(new GradientStop(color, stop.Offset));
             else
-                Log.Warning("Design {Id}: ungültiger Verlaufsfarbwert {Color} übersprungen", themeId, stop.Color);
+                Log.Warning("Theme {Id}: invalid gradient color value {Color} skipped", themeId, stop.Color);
 
         return brush;
     }

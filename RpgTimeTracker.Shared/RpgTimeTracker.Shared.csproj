@@ -26,6 +26,9 @@
              und Client-Ausgabeverzeichnis (siehe ThemeDefinitionLoader.SampleThemesDirectory,
              das relativ zu AppContext.BaseDirectory sucht - funktioniert für beide Apps gleich). -->
         <Content Include="SampleThemes\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+        <!-- UI-Sprachdateien (siehe LocalizationService) - dieselbe Content-Propagation wie
+             SampleThemes oben, damit beide Apps dieselben en.json/de.json nutzen. -->
+        <Content Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>

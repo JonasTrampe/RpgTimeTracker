@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using RpgTimeTracker.Shared.Services.Localization;
 
 namespace RpgTimeTracker.Views.Controls;
 
@@ -18,7 +19,7 @@ public partial class LibraryPanelView : UserControl
         AvaloniaProperty.Register<LibraryPanelView, string?>(nameof(Description));
 
     public static readonly StyledProperty<string?> AddButtonLabelProperty =
-        AvaloniaProperty.Register<LibraryPanelView, string?>(nameof(AddButtonLabel), "+ Zur Bibliothek hinzufügen");
+        AvaloniaProperty.Register<LibraryPanelView, string?>(nameof(AddButtonLabel), LocalizationService.Get("LibraryPanel.AddButtonLabel"));
 
     public static readonly StyledProperty<string?> EmptyStateTextProperty =
         AvaloniaProperty.Register<LibraryPanelView, string?>(nameof(EmptyStateText));
@@ -88,12 +89,12 @@ public partial class LibraryPanelView : UserControl
         set => SetValue(ItemTemplateProperty, value);
     }
 
-    // Datei-Dialog-Konfiguration und die eigentliche Add/Export/Import-Verarbeitung kommen vom
-    // Aufrufer (siehe MainWindow.axaml.cs, OnDataContextChanged) statt hier für jede Bibliothek
-    // dupliziert zu werden - beide unterscheiden sich nur im Dateityp-Filter und der
-    // ViewModel-Methode, die den gewählten Pfad tatsächlich verarbeitet.
-    public string AddDialogTitle { get; set; } = "Datei hinzufügen";
-    public FilePickerFileType AddFileTypeFilter { get; set; } = new("Alle Dateien") { Patterns = ["*.*"] };
+    // File dialog configuration and the actual add/export/import processing come from the
+    // caller (see MainWindow.axaml.cs, OnDataContextChanged) instead of being duplicated here
+    // for each library - both differ only in the file type filter and the
+    // view model method that actually processes the chosen path.
+    public string AddDialogTitle { get; set; } = LocalizationService.Get("LibraryPanel.AddDialogTitle");
+    public FilePickerFileType AddFileTypeFilter { get; set; } = new(LocalizationService.Get("LibraryPanel.AllFiles")) { Patterns = ["*.*"] };
     public Func<string, Task>? AddItemAsync { get; set; }
     public Func<string, Task>? ExportAsync { get; set; }
     public Func<string, Task>? ImportAsync { get; set; }
@@ -119,7 +120,7 @@ public partial class LibraryPanelView : UserControl
             var localPath = files[0].TryGetLocalPath();
             if (string.IsNullOrWhiteSpace(localPath))
             {
-                ErrorMessage = "Datei konnte nicht hinzugefügt werden: kein lokaler Dateipfad verfügbar.";
+                ErrorMessage = LocalizationService.Get("LibraryPanel.Errors.NoLocalFilePath");
                 return;
             }
 
@@ -127,7 +128,7 @@ public partial class LibraryPanelView : UserControl
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Datei konnte nicht hinzugefügt werden: {ex.Message}";
+            ErrorMessage = string.Format(LocalizationService.Get("LibraryPanel.Errors.FileCouldNotBeAdded"), ex.Message);
         }
     }
 

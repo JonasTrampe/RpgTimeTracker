@@ -5,7 +5,7 @@ using RpgTimeTracker.Network;
 
 namespace RpgTimeTracker.ViewModels;
 
-/// <summary>Ein verbundener Spieler-Client in der SL-seitigen Liste, mit der Möglichkeit ihn manuell zu trennen.</summary>
+/// <summary>A connected player client in the GM-side list, with the ability to manually disconnect it.</summary>
 public partial class ConnectedClientItemViewModel : ObservableObject
 {
     private readonly Action<ConnectedClientItemViewModel> _onDisconnectRequested;

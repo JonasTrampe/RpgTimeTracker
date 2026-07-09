@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
+using RpgTimeTracker.Shared.Services.Localization;
 
 namespace RpgTimeTracker.ViewModels;
 
@@ -17,7 +18,7 @@ public partial class JumpMarkerItemViewModel : ObservableObject
 
     [ObservableProperty] private string _name;
 
-    // Editierbarer Text im Format hh:mm.
+    // Editable text in hh:mm format.
     [ObservableProperty] private string _timeOfDayText;
 
     public JumpMarkerItemViewModel(
@@ -45,7 +46,7 @@ public partial class JumpMarkerItemViewModel : ObservableObject
         if (!TimeSpan.TryParse(TimeOfDayText, out var parsed) || parsed < TimeSpan.Zero ||
             parsed >= TimeSpan.FromDays(1))
         {
-            ErrorMessage = "Ungültige Uhrzeit (Format hh:mm)";
+            ErrorMessage = LocalizationService.Get("JumpMarkerItem.ErrorInvalidTime");
             return;
         }
 
@@ -76,7 +77,7 @@ public partial class JumpMarkerItemViewModel : ObservableObject
         _onDeleteRequested(this);
     }
 
-    /// <summary>Erstellt einen serialisierbaren Schnappschuss für das Speichern.</summary>
+    /// <summary>Creates a serializable snapshot for saving.</summary>
     public JumpMarkerDto ToDto()
     {
         return new JumpMarkerDto
@@ -86,7 +87,7 @@ public partial class JumpMarkerItemViewModel : ObservableObject
         };
     }
 
-    /// <summary>Baut ein ViewModel aus einem gespeicherten Zustand wieder auf.</summary>
+    /// <summary>Rebuilds a ViewModel from a saved state.</summary>
     public static JumpMarkerItemViewModel FromDto(
         JumpMarkerDto dto,
         Func<DateTime> getCurrentGameTime,

@@ -6,9 +6,9 @@ using Serilog;
 namespace RpgTimeTracker.PlayerClient.Services;
 
 /// <summary>
-///     Speichert kleine, rein lokale Client-Einstellungen (z.B. Vollbild-Präferenz für das
-///     Medien-Fenster). Wird bewusst nicht über das Netzwerk synchronisiert, da jeder Spieler-
-///     Rechner ein eigenes Bildschirm-Setup hat.
+///     Stores small, purely local client settings (e.g. fullscreen preference for the
+///     media window). Deliberately not synchronized over the network, since each player
+///     machine has its own screen setup.
 /// </summary>
 public static class ClientSettingsService
 {
@@ -32,7 +32,7 @@ public static class ClientSettingsService
         catch (Exception ex)
         {
             Log.Warning(ex,
-                "Client-Einstellungen konnten nicht geladen werden ({SettingsPath}) - verwende Standardwerte",
+                "Client settings could not be loaded ({SettingsPath}) - using default values",
                 SettingsPath);
             return new ClientSettingsDto();
         }
@@ -47,8 +47,8 @@ public static class ClientSettingsService
         }
         catch (Exception ex)
         {
-            // Einstellungen sind Komfort; Fehler sollen die App nicht stoppen.
-            Log.Warning(ex, "Client-Einstellungen konnten nicht gespeichert werden ({SettingsPath})", SettingsPath);
+            // Settings are a convenience; errors should not stop the app.
+            Log.Warning(ex, "Client settings could not be saved ({SettingsPath})", SettingsPath);
         }
     }
 
@@ -56,7 +56,10 @@ public static class ClientSettingsService
     {
         public bool MediaFullscreen { get; set; }
 
-        /// <summary>Zuletzt verwendeter Verbindungs-PIN, siehe ClientMainWindowViewModel.Pin.</summary>
+        /// <summary>Last used connection PIN, see ClientMainWindowViewModel.Pin.</summary>
         public string Pin { get; set; } = string.Empty;
+
+        /// <summary>UI language (see LocalizationService.SupportedLanguages) - separate from the host, see ThemeSettingsService.</summary>
+        public string Language { get; set; } = "en";
     }
 }
