@@ -98,6 +98,12 @@ public partial class AlarmItemViewModel : ObservableObject
     public int SoundRepeatCountToPlay => _model.SoundRepeatCount;
     public TimeSpan? TimeUntilNextEvent => _model.IsTriggered ? null : _model.TimeRemaining(_currentGameTime);
 
+    /// <summary>Called by MainWindowViewModel on LocalizationService.LanguageChanged (see LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).</summary>
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(string.Empty);
+    }
+
     /// <summary>Fires on discrete state changes (edited/triggered/dismissed), not on every clock tick.</summary>
     public event Action? StateChanged;
 

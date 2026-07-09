@@ -377,8 +377,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         CurrentGameTimeText = FormatGameTime(start);
 
         var settings = ThemeSettingsService.LoadSettings();
-        _playerHeaderTitle = settings.PlayerHeaderTitle;
-        _playerHeaderSubtitle = settings.PlayerHeaderSubtitle;
+        _playerHeaderTitle = string.IsNullOrWhiteSpace(settings.PlayerHeaderTitle)
+            ? LocalizationService.Get("MainWindowViewModel.Defaults.PlayerHeaderTitle")
+            : settings.PlayerHeaderTitle;
+        _playerHeaderSubtitle = string.IsNullOrWhiteSpace(settings.PlayerHeaderSubtitle)
+            ? LocalizationService.Get("MainWindowViewModel.Defaults.PlayerHeaderSubtitle")
+            : settings.PlayerHeaderSubtitle;
         _headsUpWarningEnabled = settings.HeadsUpWarningEnabled;
         _headsUpLeadMinutes = (decimal)settings.HeadsUpLeadMinutes;
         _serverName = string.IsNullOrWhiteSpace(settings.ServerName) ? "RpgTimeTracker" : settings.ServerName;
@@ -485,14 +489,39 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _ambienceAutomationEnabled = settings.AmbienceAutomationEnabled;
         _selectedLanguageOption = LanguageDisplayName(settings.Language);
 
-        AddDefaultMarker("Morgengrauen", new TimeSpan(6, 0, 0));
-        AddDefaultMarker("Mittag", new TimeSpan(12, 0, 0));
-        AddDefaultMarker("Abend", new TimeSpan(18, 0, 0));
-        AddDefaultMarker("Mitternacht", TimeSpan.Zero);
+        AddDefaultMarker(LocalizationService.Get("MainWindowViewModel.Defaults.MarkerDawn"), new TimeSpan(6, 0, 0));
+        AddDefaultMarker(LocalizationService.Get("MainWindowViewModel.Defaults.MarkerNoon"), new TimeSpan(12, 0, 0));
+        AddDefaultMarker(LocalizationService.Get("MainWindowViewModel.Defaults.MarkerEvening"), new TimeSpan(18, 0, 0));
+        AddDefaultMarker(LocalizationService.Get("MainWindowViewModel.Defaults.MarkerMidnight"), TimeSpan.Zero);
 
         _calendarMonth = new DateTime(start.Year, start.Month, 1);
         _calendarSelectedDate = start.Date;
         RefreshCalendarViews();
+
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+    }
+
+    /// <summary>
+    ///     Refreshes every computed display property that calls LocalizationService.Get() (e.g.
+    ///     ToggleClockLabel, ToggleNetworkServerLabel, ServerStatusSummary) - a language switch
+    ///     alone doesn't raise property-changed on its own, since these properties only depend on
+    ///     other observable state, not on the active language. Also refreshes every live child
+    ///     item ViewModel (timers/alarms/intervals/timeline/library/sounds/gallery/calendar),
+    ///     since each has its own Get()-based computed properties (status/kind labels) that are
+    ///     equally unaffected by a language switch on their own.
+    /// </summary>
+    private void OnLanguageChanged()
+    {
+        OnPropertyChanged(string.Empty);
+
+        foreach (var timer in Timers) timer.RefreshLocalizedText();
+        foreach (var alarm in Alarms) alarm.RefreshLocalizedText();
+        foreach (var interval in IntervalEvents) interval.RefreshLocalizedText();
+        foreach (var item in TimelineItems) item.RefreshLocalizedText();
+        foreach (var entry in CalendarEntries) entry.RefreshLocalizedText();
+        foreach (var media in MediaLibrary) media.RefreshLocalizedText();
+        foreach (var sound in SoundLibrary) sound.RefreshLocalizedText();
+        foreach (var sent in SentMediaItems) sent.RefreshLocalizedText();
     }
 
     public ObservableCollection<TimerItemViewModel> Timers { get; } = [];
@@ -580,7 +609,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     public bool ShowLocalImage => ShouldShowMediaLocally && CurrentMediaKind == MediaKind.Image;
     public bool ShowLocalVideo => ShouldShowMediaLocally && CurrentMediaKind == MediaKind.Video;
 
-    public string ToggleClockLabel => IsClockRunning ? "⏸ Pause" : "▶ Start";
+    public string ToggleClockLabel => IsClockRunning
+        ? LocalizationService.Get("MainWindowViewModel.Clock.PauseButton")
+        : LocalizationService.Get("MainWindowViewModel.Clock.StartButton");
 
     public string NextEventJumpLabel => GetNextEventDelta() is { } delta
         ? string.Format(LocalizationService.Get("MainWindowViewModel.Clock.NextEventJump"), FormatTimeSpan(delta))

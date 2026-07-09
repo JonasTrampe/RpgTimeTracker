@@ -56,7 +56,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     /// </summary>
     private readonly Dictionary<string, int> _soundRepeatsRemaining = new();
 
-    [ObservableProperty] private string _connectionStatus = "Nicht verbunden";
+    [ObservableProperty] private string _connectionStatus = LocalizationService.Get("PlayerTcpClientService.Status.NotConnected");
     private int _currentGalleryIndex = -1;
     [ObservableProperty] private string _currentGameTimeText = "—";
     [ObservableProperty] private Bitmap? _currentMediaBitmap;
@@ -81,8 +81,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     [ObservableProperty] private string _playerCalendarMonthLabel = string.Empty;
     [ObservableProperty] private DateTime _playerCalendarSelectedDate = DateTime.Today;
     [ObservableProperty] private string _playerCalendarSelectedDateLabel = string.Empty;
-    [ObservableProperty] private string _playerHeaderSubtitle = "Remote Client";
-    [ObservableProperty] private string _playerHeaderTitle = "Spieleranzeige";
+    [ObservableProperty] private string _playerHeaderSubtitle = LocalizationService.Get("ClientMainWindowViewModel.Defaults.PlayerHeaderSubtitle");
+    [ObservableProperty] private string _playerHeaderTitle = LocalizationService.Get("MainWindowViewModel.Defaults.PlayerHeaderTitle");
     [ObservableProperty] private int _port = 48550;
     [ObservableProperty] private DiscoveredRpgTimeTrackerServer? _selectedServer;
     [ObservableProperty] private string _selectedLanguageOption = "English";
@@ -130,11 +130,11 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MediaRetractRequested += mediaId => Dispatcher.UIThread.Post(() => RetractGalleryItem(mediaId));
         _client.MediaHighlightRequested += mediaId => Dispatcher.UIThread.Post(() => ShowGalleryItem(mediaId));
         _client.SlideshowIntervalChanged += seconds => Dispatcher.UIThread.Post(() => ApplySlideshowInterval(seconds));
-        _client.StatusChanged += status => Dispatcher.UIThread.Post(() =>
+        _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
+        _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
-            ConnectionStatus = status;
-            IsConnected = status.StartsWith("Verbunden", StringComparison.OrdinalIgnoreCase);
-            if (IsConnected)
+            IsConnected = connected;
+            if (connected)
             {
                 ShowConnectionSettings = false;
             }
@@ -155,6 +155,15 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
                 OnPropertyChanged(nameof(HasPlayerCalendarEntriesForSelectedDate));
             }
         });
+
+        // Refreshes every computed display property that calls LocalizationService.Get() (e.g.
+        // ConnectionToggleLabel, MediaFullscreenLabel) - a language switch alone doesn't raise
+        // property-changed on its own, since these properties only depend on other observable
+        // state, not on the active language. Per-item entries (Items/PlayerCalendarEntries) are
+        // NOT refreshed here: their display text is re-derived from the underlying model on
+        // every clock tick anyway (see OnLocalClockTick), so they self-correct within about a
+        // second without needing an explicit refresh call.
+        LocalizationService.LanguageChanged += () => Dispatcher.UIThread.Post(() => OnPropertyChanged(string.Empty));
     }
 
     public bool HasMedia => CurrentMediaKind != MediaKind.None;
@@ -167,11 +176,16 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
     public ObservableCollection<DiscoveredRpgTimeTrackerServer> DiscoveredServers { get; } = new();
 
-    public string ConnectionToggleLabel => ShowConnectionSettings ? "Verbindung ausblenden" : "Verbindung anzeigen";
+    public string ConnectionToggleLabel => ShowConnectionSettings
+        ? LocalizationService.Get("ClientMainWindowViewModel.Connection.HideButton")
+        : LocalizationService.Get("ClientMainWindowViewModel.Connection.ShowButton");
+
     public bool HasDiscoveredServers => DiscoveredServers.Count > 0;
     public bool HasNoDiscoveredServers => DiscoveredServers.Count == 0;
 
-    public string MediaFullscreenLabel => MediaFullscreen ? "Medien-Vollbild aus" : "Medien-Vollbild an";
+    public string MediaFullscreenLabel => MediaFullscreen
+        ? LocalizationService.Get("ClientMainWindowViewModel.Media.FullscreenOff")
+        : LocalizationService.Get("ClientMainWindowViewModel.Media.FullscreenOn");
 
     /// <summary>Display names for the language ComboBox; native names on purpose, not translated by LocalizationService itself.</summary>
     public ObservableCollection<string> LanguageOptions { get; } = ["English", "Deutsch"];
@@ -290,7 +304,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             Log.Warning(ex, "Connection to {Host}:{Port} failed", Host, Port);
             IsConnected = false;
             ShowConnectionSettings = true;
-            ConnectionStatus = $"Verbindung fehlgeschlagen: {ex.Message}";
+            ConnectionStatus = string.Format(
+                LocalizationService.Get("ClientMainWindowViewModel.Status.ConnectionFailed"), ex.Message);
         }
     }
 
@@ -301,7 +316,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.Disconnect();
         IsConnected = false;
         ShowConnectionSettings = true;
-        ConnectionStatus = "Nicht verbunden";
+        ConnectionStatus = LocalizationService.Get("PlayerTcpClientService.Status.NotConnected");
         _localClock.Pause();
     }
 

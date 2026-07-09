@@ -5,6 +5,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Shared.Models;
+using RpgTimeTracker.Shared.Services.Localization;
 
 namespace RpgTimeTracker.ViewModels;
 
@@ -61,7 +62,10 @@ public partial class SentMediaItemViewModel : ObservableObject, IDisposable
     /// </summary>
     public bool IsOwnedCache { get; }
 
-    public string KindLabel => Kind == MediaKind.Video ? "Video" : "Bild";
+    public string KindLabel => Kind == MediaKind.Video
+        ? LocalizationService.Get("Calendar.MediaKind.Video")
+        : LocalizationService.Get("Calendar.MediaKind.Image");
+
     public string FallbackIcon => "\U0001F3AC";
     public bool HasThumbnail => Thumbnail is not null;
 
@@ -69,6 +73,12 @@ public partial class SentMediaItemViewModel : ObservableObject, IDisposable
     {
         if (_sourceItem is not null)
             _sourceItem.PropertyChanged -= OnSourceItemPropertyChanged;
+    }
+
+    /// <summary>Called by MainWindowViewModel on LocalizationService.LanguageChanged (see LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).</summary>
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(string.Empty);
     }
 
     private void LoadThumbnail()

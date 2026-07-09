@@ -4,6 +4,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Shared.Models;
+using RpgTimeTracker.Shared.Services.Localization;
 
 namespace RpgTimeTracker.ViewModels;
 
@@ -43,7 +44,9 @@ public partial class MediaLibraryItemViewModel : LibraryItemViewModelBase<MediaL
 
     public MediaKind Kind { get; }
 
-    public string KindLabel => Kind == MediaKind.Video ? "Video" : "Bild";
+    public string KindLabel => Kind == MediaKind.Video
+        ? LocalizationService.Get("Calendar.MediaKind.Video")
+        : LocalizationService.Get("Calendar.MediaKind.Image");
     public bool IsVideo => Kind == MediaKind.Video;
 
     /// <summary>Only video can automatically restart from the beginning instead of notifying the host.</summary>

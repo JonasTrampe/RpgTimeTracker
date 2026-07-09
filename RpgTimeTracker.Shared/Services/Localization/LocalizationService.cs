@@ -31,6 +31,18 @@ public static class LocalizationService
 
     public static IReadOnlyList<string> SupportedLanguages => SupportedLanguagesArray;
 
+    /// <summary>
+    ///     Raised after Apply() swaps in the new language dictionary. XAML-bound {DynamicResource}
+    ///     text updates on its own, but computed C# properties that call Get() (e.g. a button label
+    ///     that picks between two localized strings depending on state) only re-evaluate when their
+    ///     own OnPropertyChanged fires - they don't know the active language changed underneath them.
+    ///     ViewModels with such properties should subscribe here and call their own
+    ///     OnPropertyChanged(string.Empty) (CommunityToolkit/Avalonia convention for "re-read
+    ///     everything") to pick up the new language immediately instead of only on the next
+    ///     unrelated state change.
+    /// </summary>
+    public static event Action? LanguageChanged;
+
     private static string LocalizationDirectory => Path.Combine(AppContext.BaseDirectory, "Localization");
 
     public static void Apply(string? language)
@@ -57,6 +69,7 @@ public static class LocalizationService
         _current = dict;
         _currentStrings = strings;
         CurrentLanguage = code;
+        LanguageChanged?.Invoke();
     }
 
     /// <summary>For C#-side strings that can't use a XAML DynamicResource binding (e.g. status/error messages built in code-behind or view models).</summary>

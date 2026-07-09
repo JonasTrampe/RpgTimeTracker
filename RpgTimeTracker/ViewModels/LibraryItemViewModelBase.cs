@@ -60,4 +60,14 @@ public abstract partial class LibraryItemViewModelBase<TSelf> : ObservableObject
     {
         _onDeleteRequested((TSelf)this);
     }
+
+    /// <summary>
+    ///     Called by MainWindowViewModel on LocalizationService.LanguageChanged - forces every
+    ///     bound property (e.g. a derived class's KindLabel) to be re-read in the new language,
+    ///     since a language switch doesn't otherwise raise property-changed on its own.
+    /// </summary>
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(string.Empty);
+    }
 }

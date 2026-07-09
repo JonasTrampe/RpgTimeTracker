@@ -97,6 +97,12 @@ public partial class IntervalEventItemViewModel : ObservableObject
     public int SoundRepeatCountToPlay => _model.SoundRepeatCount;
     public TimeSpan? TimeUntilNextEvent => _model.IsRunning && !_model.IsCompleted ? _model.Remaining : null;
 
+    /// <summary>Called by MainWindowViewModel on LocalizationService.LanguageChanged (see LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).</summary>
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(string.Empty);
+    }
+
     /// <summary>
     ///     Fires on discrete state changes (edited/started/paused/reset/completed), not on every
     ///     clock tick.

@@ -77,6 +77,19 @@ public partial class CalendarEntryViewModel : ObservableObject
         _ => LocalizationService.Get("Calendar.MediaKind.None")
     };
 
+    /// <summary>
+    ///     Called by MainWindowViewModel on LocalizationService.LanguageChanged (see
+    ///     LibraryItemViewModelBase.RefreshLocalizedText for the same pattern). Deliberately
+    ///     does not touch Recurrence itself - that stored string only gets compared against the
+    ///     current-language RecurrenceOptions elsewhere, never persisted, so re-deriving it here
+    ///     would trigger NotifyChanged() and mark an untouched entry as edited just because the
+    ///     UI language changed.
+    /// </summary>
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(string.Empty);
+    }
+
     partial void OnTitleChanged(string value)
     {
         NotifyChanged();

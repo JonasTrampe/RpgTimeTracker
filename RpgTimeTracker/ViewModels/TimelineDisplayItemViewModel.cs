@@ -454,6 +454,12 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
 
     public bool HasProgress => _timer is not null || _interval is not null;
 
+    /// <summary>Called by MainWindowViewModel on LocalizationService.LanguageChanged (see LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).</summary>
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(string.Empty);
+    }
+
     public bool Wraps(TimerItemViewModel timer)
     {
         return ReferenceEquals(_timer, timer);

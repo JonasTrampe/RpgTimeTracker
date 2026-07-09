@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Models.Rpc;
+using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Network;
 using RpgTimeTracker.Shared.Services.Rpc;
 using Serilog;
@@ -104,12 +105,20 @@ public sealed class PlayerTcpClientService : IDisposable
 
     public event Action<string>? StatusChanged;
 
+    /// <summary>
+    ///     Discrete connection state, separate from the free-text StatusChanged message - the
+    ///     status text is language-dependent (localized) and must never be string-matched to
+    ///     derive state, so callers that need a plain connected/disconnected boolean should use
+    ///     this event instead of inspecting the StatusChanged text.
+    /// </summary>
+    public event Action<bool>? ConnectionStateChanged;
+
     public async Task ConnectAsync(string host, int port, string pin = "")
     {
         Disconnect();
-        // Disconnect() setzt _userDisconnectRequested=true als Nebeneffekt (siehe dort) - das
-        // gilt hier nicht, da gerade aktiv ein NEUER Verbindungsversuch beginnt (egal ob manuell
-        // oder aus ReconnectLoopAsync heraus).
+        // Disconnect() sets _userDisconnectRequested=true as a side effect (see there) - that
+        // doesn't apply here, since a NEW connection attempt is actively starting right now
+        // (whether manual or from within ReconnectLoopAsync).
         _userDisconnectRequested = false;
         _lastHost = host;
         _lastPort = port;
@@ -123,7 +132,7 @@ public sealed class PlayerTcpClientService : IDisposable
             NoDelay = true
         };
 
-        StatusChanged?.Invoke($"Verbinde zu {host}:{port} ...");
+        StatusChanged?.Invoke(string.Format(LocalizationService.Get("PlayerTcpClientService.Status.Connecting"), host, port));
         Log.Information("Connection attempt to {Host}:{Port}", host, port);
 
         // Otherwise a wrong/unreachable manual host can hang for minutes without any
@@ -138,7 +147,8 @@ public sealed class PlayerTcpClientService : IDisposable
         catch (OperationCanceledException) when (!_cts.IsCancellationRequested)
         {
             Log.Warning("Connection to {Host}:{Port} aborted after 5s timeout", host, port);
-            throw new TimeoutException($"Keine Antwort von {host}:{port} innerhalb von 5 Sekunden.");
+            throw new TimeoutException(string.Format(
+                LocalizationService.Get("PlayerTcpClientService.Errors.NoResponseTimeout"), host, port));
         }
         catch (Exception ex)
         {
@@ -146,7 +156,8 @@ public sealed class PlayerTcpClientService : IDisposable
             throw;
         }
 
-        StatusChanged?.Invoke($"Verbunden mit {host}:{port}");
+        StatusChanged?.Invoke(string.Format(LocalizationService.Get("PlayerTcpClientService.Status.Connected"), host, port));
+        ConnectionStateChanged?.Invoke(true);
         Log.Information("Connected to {Host}:{Port}", host, port);
 
         var stream = _client.GetStream();
@@ -293,13 +304,15 @@ public sealed class PlayerTcpClientService : IDisposable
         catch (Exception ex)
         {
             Log.Warning(ex, "Connection closed with error");
-            StatusChanged?.Invoke($"Verbindung beendet: {ex.Message}");
+            StatusChanged?.Invoke(string.Format(
+                LocalizationService.Get("PlayerTcpClientService.Status.ConnectionEnded"), ex.Message));
         }
         finally
         {
             watchdogCts.Cancel();
             await watchdogTask.ConfigureAwait(false);
             CleanupMediaStream();
+            ConnectionStateChanged?.Invoke(false);
 
             // Only reconnect automatically on an UNEXPECTED disconnection - a manual
             // Disconnect() (see there) sets _userDisconnectRequested beforehand, so this
@@ -307,7 +320,7 @@ public sealed class PlayerTcpClientService : IDisposable
             if (!_userDisconnectRequested && _lastHost is not null)
                 _ = ReconnectLoopAsync(_lastHost, _lastPort);
             else
-                StatusChanged?.Invoke("Nicht verbunden");
+                StatusChanged?.Invoke(LocalizationService.Get("PlayerTcpClientService.Status.NotConnected"));
         }
     }
 
@@ -327,7 +340,9 @@ public sealed class PlayerTcpClientService : IDisposable
 
         while (!token.IsCancellationRequested && !_userDisconnectRequested)
         {
-            StatusChanged?.Invoke($"Verbindung verloren - erneuter Versuch in {delay.TotalSeconds:0}s ...");
+            StatusChanged?.Invoke(string.Format(
+                LocalizationService.Get("PlayerTcpClientService.Status.ConnectionLostRetrying"),
+                delay.TotalSeconds.ToString("0")));
             try
             {
                 await Task.Delay(delay, token).ConfigureAwait(false);
@@ -403,9 +418,10 @@ public sealed class PlayerTcpClientService : IDisposable
             {
                 case RpcMethods.SessionHelloRejected:
                     var rejected = raw.GetParams<SessionHelloRejectedParams>();
-                    var reason = rejected?.Reason ?? "Verbindung abgelehnt.";
+                    var reason = rejected?.Reason ?? LocalizationService.Get("PlayerTcpClientService.Status.ConnectionRejectedDefaultReason");
                     Log.Warning("Connection rejected by host: {Reason}", reason);
-                    StatusChanged?.Invoke($"Verbindung abgelehnt: {reason}");
+                    StatusChanged?.Invoke(string.Format(
+                        LocalizationService.Get("PlayerTcpClientService.Status.ConnectionRejected"), reason));
                     // No reconnect attempt with the same (apparently wrong) credentials -
                     // Disconnect() sets _userDisconnectRequested=true, see ReadLoopAsync.
                     Disconnect();

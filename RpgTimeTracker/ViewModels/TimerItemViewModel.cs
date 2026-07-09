@@ -67,9 +67,11 @@ public partial class TimerItemViewModel : ObservableObject
     public bool IsCompleted => _model.IsCompleted;
     public bool CanEditDuration => true;
 
-    public string StartPauseLabel => _model.IsCompleted ? "Abgelaufen" :
-        _model.IsRunning ? "Pause" :
-        _model.Elapsed > TimeSpan.Zero ? "Weiter" : "Start";
+    public string StartPauseLabel => _model.IsCompleted ? LocalizationService.Get("TimelineDisplayItem.StatusExpired") :
+        _model.IsRunning ? LocalizationService.Get("IntervalEvent.StatusPause") :
+        _model.Elapsed > TimeSpan.Zero
+            ? LocalizationService.Get("IntervalEvent.StatusContinue")
+            : LocalizationService.Get("IntervalEvent.StatusStart");
 
     public IBrush? ItemBorderBrush => IsBlinkActive
         ? VisualItemHelper.TryBrush(ColorHex) ?? Brushes.Gold
@@ -80,6 +82,12 @@ public partial class TimerItemViewModel : ObservableObject
 
     public string SoundToPlay => _model.Sound;
     public int SoundRepeatCountToPlay => _model.SoundRepeatCount;
+
+    /// <summary>Called by MainWindowViewModel on LocalizationService.LanguageChanged (see LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).</summary>
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(string.Empty);
+    }
 
     /// <summary>
     ///     Fires on discrete state changes (edited/started/paused/reset/

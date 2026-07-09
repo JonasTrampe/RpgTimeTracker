@@ -133,8 +133,8 @@ public static class ThemeSettingsService
     public sealed class ThemeSettingsDto
     {
         public string? LastTheme { get; set; }
-        public string PlayerHeaderTitle { get; set; } = "Spieleranzeige";
-        public string PlayerHeaderSubtitle { get; set; } = "Timer, Wecker und OnTime";
+        public string PlayerHeaderTitle { get; set; } = string.Empty;
+        public string PlayerHeaderSubtitle { get; set; } = string.Empty;
         public bool HeadsUpWarningEnabled { get; set; }
         public double HeadsUpLeadMinutes { get; set; } = 2;
         public bool AmbienceAutomationEnabled { get; set; }
