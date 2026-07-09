@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using CommunityToolkit.Mvvm.ComponentModel;
 using RpgTimeTracker.Shared.Services.Localization;
 
 namespace RpgTimeTracker.Shared.ViewModels;
@@ -8,30 +9,57 @@ namespace RpgTimeTracker.Shared.ViewModels;
 /// <summary>
 ///     Data basis for the About screen (RpgTimeTracker.Shared.Views.AboutView), shared
 ///     by host and client. The actual content (title + description, as Markdown) comes per
-///     app from the caller (see AboutWindow in both projects, loads its own
-///     About/AboutContent.md) - version and license notices are loaded centrally here from the
-///     actual data instead of being retyped in every app.
+///     app from the caller (see AboutWindow in both projects, which passes a loader for its
+///     own About/AboutContent.{lang}.md) - version and license notices are loaded centrally
+///     here from the actual data instead of being retyped in every app.
 /// </summary>
-public sealed class AboutViewModel
+public sealed partial class AboutViewModel : ObservableObject, IDisposable
 {
     private const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
     private const string LicenseFileName = "LICENSE.txt";
 
-    public AboutViewModel(string contentMarkdown, Assembly assembly)
+    private readonly Func<string> _loadContentMarkdown;
+    private readonly Assembly _assembly;
+
+    [ObservableProperty] private string _contentMarkdown;
+    [ObservableProperty] private string _versionText;
+
+    /// <summary>Own project license (MIT), see LICENSE at the repo root.</summary>
+    [ObservableProperty] private string _licenseText;
+
+    [ObservableProperty] private string _thirdPartyNoticesText;
+
+    public AboutViewModel(Func<string> loadContentMarkdown, Assembly assembly)
     {
-        ContentMarkdown = contentMarkdown;
-        VersionText = FormatVersion(assembly);
+        _loadContentMarkdown = loadContentMarkdown;
+        _assembly = assembly;
+
+        _contentMarkdown = loadContentMarkdown();
+        _versionText = FormatVersion(assembly);
+        _licenseText = LoadTextFile(LicenseFileName);
+        _thirdPartyNoticesText = LoadTextFile(ThirdPartyNoticesFileName);
+
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+    }
+
+    public void Dispose()
+    {
+        LocalizationService.LanguageChanged -= OnLanguageChanged;
+    }
+
+    /// <summary>
+    ///     The About window stays open across a language switch (unlike the main
+    ///     windows, it isn't reconstructed), so unlike the properties in most other
+    ///     ViewModels its Get()-based content needs to be re-read from disk, not just
+    ///     re-announced via OnPropertyChanged.
+    /// </summary>
+    private void OnLanguageChanged()
+    {
+        ContentMarkdown = _loadContentMarkdown();
+        VersionText = FormatVersion(_assembly);
         LicenseText = LoadTextFile(LicenseFileName);
         ThirdPartyNoticesText = LoadTextFile(ThirdPartyNoticesFileName);
     }
-
-    public string ContentMarkdown { get; }
-    public string VersionText { get; }
-
-    /// <summary>Own project license (MIT), see LICENSE at the repo root.</summary>
-    public string LicenseText { get; }
-
-    public string ThirdPartyNoticesText { get; }
 
     /// <summary>
     ///     Reads the "informational version" instead of the plain AssemblyVersion, since the latter

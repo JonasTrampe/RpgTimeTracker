@@ -12,7 +12,9 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
-        DataContext = new AboutViewModel(LoadContentMarkdown(), typeof(App).Assembly);
+        var viewModel = new AboutViewModel(LoadContentMarkdown, typeof(App).Assembly);
+        DataContext = viewModel;
+        Closed += (_, _) => viewModel.Dispose();
     }
 
     private static string LoadContentMarkdown()
