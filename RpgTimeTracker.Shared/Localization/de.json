@@ -192,6 +192,10 @@
   "MainWindow.Settings.RecordSessionLogCheckbox": "Ereignisse aufzeichnen (Zeitsprünge, Auslösungen, gesendete Medien)",
   "MainWindow.Settings.ExportLogButton": "Protokoll exportieren…",
   "MainWindow.Settings.ClearLogButton": "Leeren",
+  "MainWindow.Settings.SaveLoadHeader": "💾 Speichern & Laden",
+  "MainWindow.Settings.AutoSaveOnCloseCheckbox": "Automatisch speichern beim Schließen",
+  "MainWindow.Settings.AutoLoadOnStartupCheckbox": "Automatisch laden beim Start",
+  "MainWindow.Settings.AutoSaveLoadDescription": "Verwendet den Ort der letzten manuellen Speicherung/Ladung - zuerst einmal über 💾/📂 speichern oder laden.",
 
   "MainWindow.StatusBar.PreviousGalleryTooltip": "Vorheriges Galerie-Element hervorheben",
   "MainWindow.StatusBar.NextGalleryTooltip": "Nächstes Galerie-Element hervorheben",

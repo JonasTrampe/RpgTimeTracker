@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using RpgTimeTracker.Models;
+using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
@@ -64,6 +65,12 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+    }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm) vm.TryAutoSaveOnClose();
+        base.OnClosing(e);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -379,6 +386,8 @@ public partial class MainWindow : Window
             stream.SetLength(0);
             await using var writer = new StreamWriter(stream);
             await writer.WriteAsync(json);
+            var localPath = file.TryGetLocalPath();
+            if (localPath is not null) ThemeSettingsService.SaveLastSaveFilePath(localPath);
             vm.NotifyActionStatus(LocalizationService.Get("MainWindow.Status.GameStateSaved"));
         }
         catch (Exception ex)
@@ -409,6 +418,8 @@ public partial class MainWindow : Window
             using var reader = new StreamReader(stream);
             var json = await reader.ReadToEndAsync();
             vm.ImportStateFromJson(json);
+            var localPath = files[0].TryGetLocalPath();
+            if (localPath is not null) ThemeSettingsService.SaveLastSaveFilePath(localPath);
             vm.NotifyActionStatus(LocalizationService.Get("MainWindow.Status.GameStateLoaded"));
         }
         catch (Exception ex)
