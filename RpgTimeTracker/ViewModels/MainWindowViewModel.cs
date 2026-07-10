@@ -196,6 +196,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// <summary>GM-local heads-up warning before a timer/alarm/on-time entry triggers - never sent to players.</summary>
     [ObservableProperty] private bool _headsUpWarningEnabled;
 
+    /// <summary>Writes to ThemeSettingsDto.LastSaveFilePath when the window closes (see TryAutoSaveOnClose).</summary>
+    [ObservableProperty] private bool _autoSaveOnCloseEnabled;
+
+    /// <summary>Loads ThemeSettingsDto.LastSaveFilePath on startup (see TryAutoLoadOnStartup).</summary>
+    [ObservableProperty] private bool _autoLoadOnStartupEnabled;
+
     [ObservableProperty] private bool _isClockRunning;
 
     [ObservableProperty] private bool _isLocalPlayerFullscreen;
@@ -387,6 +393,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _headsUpLeadMinutes = (decimal)settings.HeadsUpLeadMinutes;
         _serverName = string.IsNullOrWhiteSpace(settings.ServerName) ? "RpgTimeTracker" : settings.ServerName;
         _connectionPin = settings.ConnectionPin;
+        _autoSaveOnCloseEnabled = settings.AutoSaveOnCloseEnabled;
+        _autoLoadOnStartupEnabled = settings.AutoLoadOnStartupEnabled;
 
         foreach (var entry in settings.MediaLibrary)
         {
@@ -499,6 +507,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         RefreshCalendarViews();
 
         LocalizationService.LanguageChanged += OnLanguageChanged;
+
+        TryAutoLoadOnStartup(settings);
     }
 
     /// <summary>
@@ -1325,6 +1335,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         SaveUiSettings();
     }
 
+    partial void OnAutoSaveOnCloseEnabledChanged(bool value)
+    {
+        SaveUiSettings();
+    }
+
+    partial void OnAutoLoadOnStartupEnabledChanged(bool value)
+    {
+        SaveUiSettings();
+    }
+
     partial void OnSelectedLanguageOptionChanged(string value)
     {
         LocalizationService.Apply(LanguageCode(value));
@@ -1348,6 +1368,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         settings.ServerName = string.IsNullOrWhiteSpace(ServerName) ? "RpgTimeTracker" : ServerName;
         settings.ConnectionPin = ConnectionPin;
         settings.Language = LanguageCode(SelectedLanguageOption);
+        settings.AutoSaveOnCloseEnabled = AutoSaveOnCloseEnabled;
+        settings.AutoLoadOnStartupEnabled = AutoLoadOnStartupEnabled;
         ThemeSettingsService.SaveSettings(settings);
     }
 
@@ -3384,6 +3406,50 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     }
 
     // ==================== Save & load ====================
+
+    /// <summary>
+    ///     Called once from the constructor. Loads ThemeSettingsDto.LastSaveFilePath instead of
+    ///     starting with a blank state, if the user opted into it - silently does nothing if the
+    ///     toggle is off, no path is known yet (never saved/loaded manually), or the file has
+    ///     since been moved/deleted, since a missing auto-load source shouldn't block startup.
+    /// </summary>
+    private void TryAutoLoadOnStartup(ThemeSettingsService.ThemeSettingsDto settings)
+    {
+        if (!settings.AutoLoadOnStartupEnabled) return;
+        if (string.IsNullOrWhiteSpace(settings.LastSaveFilePath) || !File.Exists(settings.LastSaveFilePath)) return;
+
+        try
+        {
+            ImportStateFromJson(File.ReadAllText(settings.LastSaveFilePath));
+            Log.Information("Auto-loaded game state from {Path}", settings.LastSaveFilePath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warning(ex, "Auto-load failed to read {Path}", settings.LastSaveFilePath);
+        }
+    }
+
+    /// <summary>
+    ///     Called from MainWindow.OnClosing. Writes to ThemeSettingsDto.LastSaveFilePath if the
+    ///     user opted into it and that path is known (i.e. at least one manual save/load already
+    ///     happened) - silently does nothing otherwise, since there's no dialog to fall back to
+    ///     while the app is closing.
+    /// </summary>
+    public void TryAutoSaveOnClose()
+    {
+        var settings = ThemeSettingsService.LoadSettings();
+        if (!settings.AutoSaveOnCloseEnabled || string.IsNullOrWhiteSpace(settings.LastSaveFilePath)) return;
+
+        try
+        {
+            File.WriteAllText(settings.LastSaveFilePath, ExportStateToJson());
+            Log.Information("Auto-saved game state to {Path}", settings.LastSaveFilePath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warning(ex, "Auto-save failed to write {Path}", settings.LastSaveFilePath);
+        }
+    }
 
     /// <summary>Creates the complete state as JSON text (for the file export).</summary>
     public string ExportStateToJson()

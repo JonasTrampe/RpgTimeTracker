@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Optional auto-save on close and auto-load on startup (Host app), using the
+  location of the last manual save/load. Both are opt-in toggles in the
+  Settings tab; existing behavior is unchanged unless enabled.
 ### Fixed
 
 - Date/time display (game clock, calendar, alarm trigger time) and the

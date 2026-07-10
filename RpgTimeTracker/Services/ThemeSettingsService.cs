@@ -96,6 +96,14 @@ public static class ThemeSettingsService
         SaveSettings(settings);
     }
 
+    /// <summary>Records the file path of the last successful manual save/load (see LastSaveFilePath).</summary>
+    public static void SaveLastSaveFilePath(string path)
+    {
+        var settings = LoadSettings();
+        settings.LastSaveFilePath = path;
+        SaveSettings(settings);
+    }
+
     /// <summary>
     ///     Legacy: a single sound added via the old settings page. Only read
     ///     once on startup and migrated to SoundLibrary (see SoundService.MigrateLegacyCustomSounds) -
@@ -148,6 +156,19 @@ public static class ThemeSettingsService
 
         /// <summary>Optional PIN for establishing a connection (see MainWindowViewModel.ConnectionPin); empty = no PIN.</summary>
         public string ConnectionPin { get; set; } = string.Empty;
+
+        /// <summary>
+        ///     Path of the last file written/read via the manual 💾/📂 buttons - updated on every
+        ///     successful save or load regardless of the two toggles below, so that enabling
+        ///     auto-save/auto-load later has somewhere to point at.
+        /// </summary>
+        public string? LastSaveFilePath { get; set; }
+
+        /// <summary>Auto-writes to LastSaveFilePath when the app closes (only if that path is known).</summary>
+        public bool AutoSaveOnCloseEnabled { get; set; }
+
+        /// <summary>Auto-loads LastSaveFilePath on startup instead of starting with a blank state.</summary>
+        public bool AutoLoadOnStartupEnabled { get; set; }
 
         /// <summary>UI language (see LocalizationService.SupportedLanguages) - separate from the PlayerClient, see ClientSettingsService.</summary>
         public string Language { get; set; } = "en";
