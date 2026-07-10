@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -919,12 +920,278 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    private static void WriteZipFileEntry(ZipArchive zip, string entryName, string sourcePath)
+    // ==================== Full session export/import (state + all three libraries in one file) ====================
+
+    /// <summary>
+    ///     Bundles everything needed to fully restore or move a campaign: the game state
+    ///     (same shape as ExportStateToJson/the .rtt-save format) plus the Media, Sound, and
+    ///     Map libraries - into a single .rtt-session zip. Unlike the individual per-library
+    ///     export (folder-based, for backing up/sharing just that one library) or .rtt-save
+    ///     (state only, since libraries are meant to be durable/shared across campaigns), this
+    ///     is the "give me one file with everything" option, e.g. for moving to a new machine.
+    /// </summary>
+    public byte[] ExportFullSessionToZipBytes()
     {
-        var entry = zip.CreateEntry(entryName);
+        using var stream = new MemoryStream();
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            WriteZipTextEntry(zip, "state.json", ExportStateToJson());
+
+            var mediaManifest = new LibraryManifestDto { LibraryType = "Media" };
+            foreach (var item in MediaLibrary)
+            {
+                if (!File.Exists(item.LocalPath)) continue;
+
+                var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(item.LocalPath)}";
+                WriteZipFileEntry(zip, $"media/{fileName}", item.LocalPath);
+                mediaManifest.Items.Add(new LibraryManifestEntryDto
+                {
+                    Name = item.Name, FileName = fileName, MimeType = item.MimeType,
+                    Kind = item.Kind.ToString(), Loop = item.Loop
+                });
+            }
+
+            WriteZipTextEntry(zip, "media/manifest.json", JsonSerializer.Serialize(mediaManifest, LibraryManifestJsonOptions));
+
+            var soundManifest = new LibraryManifestDto { LibraryType = "Sound" };
+            foreach (var item in SoundLibrary)
+            {
+                if (!File.Exists(item.LocalPath)) continue;
+
+                var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(item.LocalPath)}";
+                WriteZipFileEntry(zip, $"sound/{fileName}", item.LocalPath);
+                soundManifest.Items.Add(new LibraryManifestEntryDto
+                {
+                    Name = item.Name, Icon = item.Icon, FileName = fileName, MimeType = item.MimeType, Loop = item.Loop,
+                    Volume = item.Volume, RepeatCount = item.RepeatCount,
+                    TrimStartMs = (long)(item.TrimStartSeconds * 1000), TrimEndMs = (long)(item.TrimEndSeconds * 1000)
+                });
+            }
+
+            WriteZipTextEntry(zip, "sound/manifest.json", JsonSerializer.Serialize(soundManifest, LibraryManifestJsonOptions));
+
+            var mapManifest = new MapLibraryManifestDto();
+            foreach (var map in MapLibrary)
+            {
+                var mapEntry = new MapLibraryManifestEntryDto { Name = map.Name };
+                foreach (var floor in map.Floors)
+                {
+                    if (!File.Exists(floor.ImagePath) || !File.Exists(floor.FogPath)) continue;
+
+                    var imageFileName = $"{Guid.NewGuid():N}{Path.GetExtension(floor.ImagePath)}";
+                    var fogFileName = $"{Guid.NewGuid():N}.fog";
+                    WriteZipFileEntry(zip, $"maps/{imageFileName}", floor.ImagePath);
+                    WriteZipFileEntry(zip, $"maps/{fogFileName}", floor.FogPath);
+                    mapEntry.Floors.Add(new MapFloorManifestEntryDto
+                    {
+                        Name = floor.Name, ImageFileName = imageFileName, FogFileName = fogFileName,
+                        CellSizePx = floor.CellSizePx, GridWidth = floor.GridWidth, GridHeight = floor.GridHeight
+                    });
+                }
+
+                mapManifest.Maps.Add(mapEntry);
+            }
+
+            WriteZipTextEntry(zip, "maps/manifest.json", JsonSerializer.Serialize(mapManifest, LibraryManifestJsonOptions));
+        }
+
+        Log.Information("Full session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps",
+            MediaLibrary.Count, SoundLibrary.Count, MapLibrary.Count);
+        return stream.ToArray();
+    }
+
+    /// <summary>
+    ///     Restores game state (replacing it, like a normal load) and adds every library item
+    ///     found in the bundle (appending, like a normal library import - existing library
+    ///     items are left alone, so importing the same session twice will duplicate entries;
+    ///     this matches the existing single-library import behavior rather than introducing a
+    ///     new merge policy just for this feature).
+    /// </summary>
+    public void ImportFullSessionFromZipBytes(byte[] data)
+    {
+        try
+        {
+            using var stream = new MemoryStream(data);
+            using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
+
+            var stateEntry = zip.GetEntry("state.json");
+            if (stateEntry is null)
+            {
+                MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.NoValidSessionExportFound");
+                return;
+            }
+
+            using (var entryStream = stateEntry.Open())
+            using (var reader = new StreamReader(entryStream, Encoding.UTF8))
+            {
+                ImportStateFromJson(reader.ReadToEnd());
+            }
+
+            var mediaImported = ImportMediaSectionFromZip(zip);
+            var soundImported = ImportSoundSectionFromZip(zip);
+            var mapsImported = ImportMapsSectionFromZip(zip);
+
+            Log.Information("Full session imported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps",
+                mediaImported, soundImported, mapsImported);
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.FullSessionImported"),
+                mediaImported, soundImported, mapsImported));
+        }
+        catch (InvalidDataException)
+        {
+            MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.NoValidSessionExportFound");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Full session import failed");
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+        }
+    }
+
+    private int ImportMediaSectionFromZip(ZipArchive zip)
+    {
+        var manifest = ReadZipJsonEntry<LibraryManifestDto>(zip, "media/manifest.json");
+        if (manifest is null) return 0;
+
+        Directory.CreateDirectory(ThemeSettingsService.MediaLibraryDirectory);
+        var imported = 0;
+        foreach (var item in manifest.Items)
+        {
+            var fileEntry = zip.GetEntry($"media/{item.FileName}");
+            if (fileEntry is null) continue;
+            if (!Enum.TryParse<MediaKind>(item.Kind, out var kind) || kind == MediaKind.Audio) continue;
+
+            var cachedPath = Path.Combine(ThemeSettingsService.MediaLibraryDirectory,
+                $"{Guid.NewGuid():N}{Path.GetExtension(item.FileName)}");
+            using (var entryStream = fileEntry.Open())
+            using (var target = File.Create(cachedPath))
+            {
+                entryStream.CopyTo(target);
+            }
+
+            MediaLibrary.Add(new MediaLibraryItemViewModel(
+                item.Name, cachedPath, kind, item.MimeType, item.Loop,
+                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged));
+            imported++;
+        }
+
+        if (imported > 0)
+        {
+            OnPropertyChanged(nameof(HasNoMediaLibraryItems));
+            SaveMediaLibrarySettings();
+        }
+
+        return imported;
+    }
+
+    private int ImportSoundSectionFromZip(ZipArchive zip)
+    {
+        var manifest = ReadZipJsonEntry<LibraryManifestDto>(zip, "sound/manifest.json");
+        if (manifest is null) return 0;
+
+        Directory.CreateDirectory(ThemeSettingsService.SoundLibraryDirectory);
+        var imported = 0;
+        foreach (var item in manifest.Items)
+        {
+            var fileEntry = zip.GetEntry($"sound/{item.FileName}");
+            if (fileEntry is null) continue;
+
+            var cachedPath = Path.Combine(ThemeSettingsService.SoundLibraryDirectory,
+                $"{Guid.NewGuid():N}{Path.GetExtension(item.FileName)}");
+            using (var entryStream = fileEntry.Open())
+            using (var target = File.Create(cachedPath))
+            {
+                entryStream.CopyTo(target);
+            }
+
+            SoundLibrary.Add(CreateSoundLibraryItem(item.Name, item.Icon ?? VisualItemHelper.IconTimer, cachedPath,
+                item.MimeType, item.Loop, item.Volume ?? 100, item.RepeatCount ?? 1,
+                item.TrimStartMs / 1000.0, item.TrimEndMs / 1000.0));
+            imported++;
+        }
+
+        if (imported > 0)
+        {
+            OnPropertyChanged(nameof(HasNoSoundLibraryItems));
+            SyncSoundServiceLibrary();
+            SaveSoundLibrarySettings();
+        }
+
+        return imported;
+    }
+
+    private int ImportMapsSectionFromZip(ZipArchive zip)
+    {
+        var manifest = ReadZipJsonEntry<MapLibraryManifestDto>(zip, "maps/manifest.json");
+        if (manifest is null) return 0;
+
+        var imported = 0;
+        foreach (var mapEntry in manifest.Maps)
+        {
+            var mapId = Guid.NewGuid();
+            var map = new MapItemViewModel(mapId, mapEntry.Name, RemoveMap, _ => SaveMapLibrarySettings());
+            var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, mapId.ToString("N"));
+            Directory.CreateDirectory(mapDirectory);
+
+            foreach (var floorEntry in mapEntry.Floors)
+            {
+                var imageEntry = zip.GetEntry($"maps/{floorEntry.ImageFileName}");
+                var fogEntry = zip.GetEntry($"maps/{floorEntry.FogFileName}");
+                if (imageEntry is null || fogEntry is null) continue;
+
+                var floorId = Guid.NewGuid();
+                var imagePath = Path.Combine(mapDirectory, $"{floorId:N}{Path.GetExtension(floorEntry.ImageFileName)}");
+                var fogPath = Path.Combine(mapDirectory, $"{floorId:N}.fog");
+                using (var entryStream = imageEntry.Open())
+                using (var target = File.Create(imagePath))
+                {
+                    entryStream.CopyTo(target);
+                }
+
+                using (var entryStream = fogEntry.Open())
+                using (var target = File.Create(fogPath))
+                {
+                    entryStream.CopyTo(target);
+                }
+
+                map.Floors.Add(new MapFloorItemViewModel(
+                    floorId, floorEntry.Name, imagePath, fogPath,
+                    floorEntry.CellSizePx, floorEntry.GridWidth, floorEntry.GridHeight,
+                    LoadMapFloorThumbnail(imagePath),
+                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
+            }
+
+            MapLibrary.Add(map);
+            imported++;
+        }
+
+        if (imported > 0) SaveMapLibrarySettings();
+        return imported;
+    }
+
+    private static void WriteZipTextEntry(ZipArchive zip, string entryName, string content)
+    {
+        var entry = zip.CreateEntry(entryName, CompressionLevel.Optimal);
         using var entryStream = entry.Open();
-        using var sourceStream = File.OpenRead(sourcePath);
+        using var writer = new StreamWriter(entryStream, Encoding.UTF8);
+        writer.Write(content);
+    }
+
+    private static void WriteZipFileEntry(ZipArchive zip, string entryName, string sourceFilePath)
+    {
+        var entry = zip.CreateEntry(entryName, CompressionLevel.Optimal);
+        using var entryStream = entry.Open();
+        using var sourceStream = File.OpenRead(sourceFilePath);
         sourceStream.CopyTo(entryStream);
+    }
+
+    private static T? ReadZipJsonEntry<T>(ZipArchive zip, string entryName)
+    {
+        var entry = zip.GetEntry(entryName);
+        if (entry is null) return default;
+
+        using var entryStream = entry.Open();
+        using var reader = new StreamReader(entryStream, Encoding.UTF8);
+        return JsonSerializer.Deserialize<T>(reader.ReadToEnd());
     }
 
     // ==================== Gallery: session's own list of sent images/videos ====================
@@ -4004,6 +4271,21 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         public string Name { get; init; } = string.Empty;
         public List<MapFloorManifestEntryDto> Floors { get; init; } = [];
+    }
+
+    /// <summary>
+    ///     Manifest for the "maps" section of a full-session export - unlike MapManifestDto (one
+    ///     map per .rtt-map file), a session bundle needs all maps in the library at once.
+    /// </summary>
+    private sealed class MapLibraryManifestEntryDto
+    {
+        public string Name { get; init; } = string.Empty;
+        public List<MapFloorManifestEntryDto> Floors { get; init; } = [];
+    }
+
+    private sealed class MapLibraryManifestDto
+    {
+        public List<MapLibraryManifestEntryDto> Maps { get; init; } = [];
     }
 
     private sealed class CalendarExportDto

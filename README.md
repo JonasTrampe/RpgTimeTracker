@@ -56,6 +56,11 @@ method list, media streaming) can be found in [`docs/protocol.md`](docs/protocol
   the 💾/📂 buttons in the top left, or imported again. Older plain-JSON save
   files from before this format still load fine and are upgraded automatically
   the next time you save.
+- **Full session export/import**: the Settings tab has a "📦 Export
+  session…"/"📦 Import session…" pair that bundles the game state *and* the
+  Media, Sound, and Map libraries into a single `.rtt-session` file - for a
+  full backup or moving everything to a new machine in one step, instead of
+  exporting the save file and each library separately.
 - **Networked player display**: the GM starts a TCP server in the
   control app on a freely selectable port with a freely selectable
   server name (this is included in the mDNS/LAN announcement and thus appears
