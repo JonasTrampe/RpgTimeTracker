@@ -6,6 +6,14 @@ public sealed class MediaHeaderDto
     public const string MediaKindImage = "Image";
     public const string MediaKindVideo = "Video";
     public const string MediaKindAudio = "Audio";
+
+    /// <summary>
+    ///     A map floor image (see RpcMethods.MapShow) - deliberately a distinct Kind rather than
+    ///     reusing MediaKindImage + AddToGallery=false: floor images are cached long-term (kept
+    ///     alive for the whole time the map is open, not deleted after a single display like
+    ///     event-trigger media) and never touch the single-slot "current medium"/gallery logic.
+    /// </summary>
+    public const string MediaKindMapFloor = "MapFloor";
     public string MediaId { get; set; } = string.Empty;
     public string Kind { get; set; } = MediaKindImage;
     public string FileName { get; set; } = string.Empty;

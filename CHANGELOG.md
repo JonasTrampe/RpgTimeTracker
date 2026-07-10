@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Each floor starts fully fogged; the eraser/pen editor and live reveal to
   players are not implemented yet - this only builds the map/floor storage
   and library UI skeleton.
+- (In progress) Fog-of-war maps: network protocol groundwork
+  (`map.show`/`map.fogUpdate`/`map.fogReset`/`map.hide`) so the host can open
+  a map to players, stream floor images, and push reveal/hide updates, with
+  a full resync (all floor images + current fog) to any client that connects
+  or reconnects while a map is open. No GM-facing editor UI or PlayerClient
+  rendering yet - that's the next piece.
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/
