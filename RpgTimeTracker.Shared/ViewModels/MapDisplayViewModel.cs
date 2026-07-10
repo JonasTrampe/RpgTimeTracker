@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -190,7 +191,16 @@ public sealed partial class MapDisplayViewModel : ObservableObject
             return;
         }
 
-        MaskBrush = new ImageBrush(FogOverlayRenderer.BuildMaskBitmap(floor.CurrentFog)) { Stretch = Stretch.Fill };
+        // SourceRect/DestinationRect are set explicitly (not just Stretch) because OpacityMask
+        // maps a TileBrush onto the masked element's bounds differently from Fill/Background -
+        // without them, this tiny (one-pixel-per-cell) bitmap rendered at its native pixel size
+        // in a corner of the image instead of stretching to cover it.
+        MaskBrush = new ImageBrush(FogOverlayRenderer.BuildMaskBitmap(floor.CurrentFog))
+        {
+            Stretch = Stretch.Fill,
+            SourceRect = new RelativeRect(0, 0, 1, 1, RelativeUnit.Relative),
+            DestinationRect = new RelativeRect(0, 0, 1, 1, RelativeUnit.Relative)
+        };
         HasFogMask = true;
     }
 }
