@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -35,6 +36,7 @@ namespace RpgTimeTracker.ViewModels;
 public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayContext
 {
     private const string LibraryManifestFileName = "bibliothek.json";
+    private const string MapManifestEntryName = "map.json";
 
     private const int MaxActionStatusHistory = 20;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
@@ -808,6 +810,121 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             }).ToList()
         }).ToList();
         ThemeSettingsService.SaveSettings(settings);
+    }
+
+    /// <summary>Exports a single map (its floors' images + starting fog) as a self-contained
+    ///     <c>.rtt-map</c> zip - one map per file, unlike the whole-folder Media/Sound library
+    ///     export/import (a map is a single unit a GM shares/backs up, not a batch of many).</summary>
+    public byte[] ExportMapToZipBytes(MapItemViewModel map)
+    {
+        using var stream = new MemoryStream();
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var manifest = new MapManifestDto { Name = map.Name };
+            foreach (var floor in map.Floors)
+            {
+                if (!File.Exists(floor.ImagePath) || !File.Exists(floor.FogPath)) continue;
+
+                var imageFileName = $"{Guid.NewGuid():N}{Path.GetExtension(floor.ImagePath)}";
+                var fogFileName = $"{Guid.NewGuid():N}.fog";
+                WriteZipFileEntry(zip, imageFileName, floor.ImagePath);
+                WriteZipFileEntry(zip, fogFileName, floor.FogPath);
+                manifest.Floors.Add(new MapFloorManifestEntryDto
+                {
+                    Name = floor.Name,
+                    ImageFileName = imageFileName,
+                    FogFileName = fogFileName,
+                    CellSizePx = floor.CellSizePx,
+                    GridWidth = floor.GridWidth,
+                    GridHeight = floor.GridHeight
+                });
+            }
+
+            var manifestEntry = zip.CreateEntry(MapManifestEntryName);
+            using var manifestStream = manifestEntry.Open();
+            using var writer = new StreamWriter(manifestStream);
+            writer.Write(JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
+        }
+
+        Log.Information("Map exported: {MapName} ({FloorCount} floors)", map.Name, map.Floors.Count);
+        return stream.ToArray();
+    }
+
+    public void ImportMapFromZipBytes(byte[] data)
+    {
+        try
+        {
+            using var stream = new MemoryStream(data);
+            using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
+
+            var manifestEntry = zip.GetEntry(MapManifestEntryName);
+            if (manifestEntry is null)
+            {
+                MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.NoValidMapExportFound");
+                return;
+            }
+
+            MapManifestDto? manifest;
+            using (var manifestStream = manifestEntry.Open())
+            using (var reader = new StreamReader(manifestStream))
+                manifest = JsonSerializer.Deserialize<MapManifestDto>(reader.ReadToEnd());
+
+            if (manifest is null)
+            {
+                MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.ManifestCouldNotBeRead");
+                return;
+            }
+
+            var mapId = Guid.NewGuid();
+            var map = new MapItemViewModel(mapId, manifest.Name, RemoveMap, _ => SaveMapLibrarySettings());
+            var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, mapId.ToString("N"));
+            Directory.CreateDirectory(mapDirectory);
+
+            foreach (var floorEntry in manifest.Floors)
+            {
+                var imageEntry = zip.GetEntry(floorEntry.ImageFileName);
+                var fogEntry = zip.GetEntry(floorEntry.FogFileName);
+                if (imageEntry is null || fogEntry is null) continue;
+
+                var floorId = Guid.NewGuid();
+                var imagePath = Path.Combine(mapDirectory, $"{floorId:N}{Path.GetExtension(floorEntry.ImageFileName)}");
+                var fogPath = Path.Combine(mapDirectory, $"{floorId:N}.fog");
+                using (var entryStream = imageEntry.Open())
+                using (var target = File.Create(imagePath))
+                    entryStream.CopyTo(target);
+                using (var entryStream = fogEntry.Open())
+                using (var target = File.Create(fogPath))
+                    entryStream.CopyTo(target);
+
+                map.Floors.Add(new MapFloorItemViewModel(
+                    floorId, floorEntry.Name, imagePath, fogPath,
+                    floorEntry.CellSizePx, floorEntry.GridWidth, floorEntry.GridHeight,
+                    LoadMapFloorThumbnail(imagePath),
+                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
+            }
+
+            MapLibrary.Add(map);
+            SaveMapLibrarySettings();
+            Log.Information("Map imported: {MapName} ({FloorCount} floors)", map.Name, map.Floors.Count);
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MapImported"), map.Name));
+        }
+        catch (InvalidDataException)
+        {
+            MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.NoValidMapExportFound");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Map import failed");
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+        }
+    }
+
+    private static void WriteZipFileEntry(ZipArchive zip, string entryName, string sourcePath)
+    {
+        var entry = zip.CreateEntry(entryName);
+        using var entryStream = entry.Open();
+        using var sourceStream = File.OpenRead(sourcePath);
+        sourceStream.CopyTo(entryStream);
     }
 
     // ==================== Gallery: session's own list of sent images/videos ====================
@@ -3866,6 +3983,27 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         public string LibraryType { get; init; } = string.Empty;
         public List<LibraryManifestEntryDto> Items { get; init; } = [];
+    }
+
+    /// <summary>
+    ///     Manifest for a single exported map (<c>.rtt-map</c> zip) - a map is exported/imported
+    ///     one at a time (unlike the whole-folder Media/Sound library export/import), since it's
+    ///     a single self-contained unit a GM shares/backs up, not a batch of many.
+    /// </summary>
+    private sealed class MapFloorManifestEntryDto
+    {
+        public string Name { get; init; } = string.Empty;
+        public string ImageFileName { get; init; } = string.Empty;
+        public string FogFileName { get; init; } = string.Empty;
+        public int CellSizePx { get; init; }
+        public int GridWidth { get; init; }
+        public int GridHeight { get; init; }
+    }
+
+    private sealed class MapManifestDto
+    {
+        public string Name { get; init; } = string.Empty;
+        public List<MapFloorManifestEntryDto> Floors { get; init; } = [];
     }
 
     private sealed class CalendarExportDto

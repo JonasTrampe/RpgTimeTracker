@@ -61,6 +61,13 @@ public partial class MainWindow : Window
         Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"]
     };
 
+    /// <summary>A single exported map (image + starting fog per floor) as a self-contained zip -
+    ///     see MainWindowViewModel.ExportMapToZipBytes/ImportMapFromZipBytes.</summary>
+    private static readonly FilePickerFileType MapFileType = new(LocalizationService.Get("MainWindow.FileTypes.Map"))
+    {
+        Patterns = ["*.rtt-map"]
+    };
+
     // Event media (timer/alarm/interval) can still also be audio, but image/video
     // now comes exclusively from the media library (see ChooseTriggerMediaFromLibrary) -
     // only for audio does the direct file dialog remain, since there is no separate library concept
@@ -216,6 +223,58 @@ public partial class MainWindow : Window
         var localPath = files[0].TryGetLocalPath();
         if (localPath is not null && DataContext is MainWindowViewModel vmForFloor)
             await vmForFloor.AddFloorToMapAsync(map, localPath);
+    }
+
+    private async void OnExportMapClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm ||
+            sender is not Button { DataContext: MapItemViewModel map }) return;
+
+        var topLevel = GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = LocalizationService.Get("MainWindow.Dialogs.ExportMap"),
+            SuggestedFileName = $"{map.Name}.rtt-map",
+            DefaultExtension = "rtt-map",
+            FileTypeChoices = [MapFileType]
+        });
+        if (file is null) return;
+
+        try
+        {
+            var zipBytes = vm.ExportMapToZipBytes(map);
+            await using var stream = await file.OpenWriteAsync();
+            stream.SetLength(0);
+            await stream.WriteAsync(zipBytes);
+            vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MapExported"), map.Name));
+        }
+        catch (Exception ex)
+        {
+            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+        }
+    }
+
+    private async void OnImportMapClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var topLevel = GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = LocalizationService.Get("MainWindow.Dialogs.ImportMap"),
+            AllowMultiple = false,
+            FileTypeFilter = [MapFileType]
+        });
+        if (files.Count == 0) return;
+
+        await using var stream = await files[0].OpenReadAsync();
+        using var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream);
+        vm.ImportMapFromZipBytes(memoryStream.ToArray());
     }
 
     private async void OnSendMediaClick(object? sender, RoutedEventArgs e)

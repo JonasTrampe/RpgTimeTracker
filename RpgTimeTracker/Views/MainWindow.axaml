@@ -1546,9 +1546,12 @@
                                                         <TextBlock Classes="muted"
                                                                    Text="{DynamicResource MainWindow.Maps.MapsDescription}"
                                                                    TextWrapping="Wrap" />
-                                                        <Button Content="{DynamicResource MainWindow.Maps.AddMapButton}"
-                                                                Command="{Binding AddMapCommand}"
-                                                                HorizontalAlignment="Left" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <Button Content="{DynamicResource MainWindow.Maps.AddMapButton}"
+                                                                    Command="{Binding AddMapCommand}" />
+                                                            <Button Content="{DynamicResource MainWindow.Maps.ImportButton}"
+                                                                    Click="OnImportMapClick" />
+                                                        </StackPanel>
                                                         <TextBlock Classes="muted"
                                                                    Text="{DynamicResource MainWindow.Maps.EmptyState}"
                                                                    IsVisible="{Binding HasNoMaps}"
@@ -1558,7 +1561,7 @@
                                                                  IsVisible="{Binding !HasNoMaps}">
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:MapItemViewModel">
-                                                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto"
                                                                           Margin="0,2">
                                                                         <TextBox Grid.Column="0"
                                                                                  Text="{Binding Name, Mode=TwoWay}" />
@@ -1567,6 +1570,9 @@
                                                                                    VerticalAlignment="Center"
                                                                                    Margin="8,0" />
                                                                         <Button Grid.Column="2"
+                                                                                Content="{DynamicResource MainWindow.Maps.ExportButton}"
+                                                                                Click="OnExportMapClick" />
+                                                                        <Button Grid.Column="3"
                                                                                 Content="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
                                                                                 Command="{Binding DeleteCommand}" />
                                                                     </Grid>
