@@ -62,6 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fog-of-war maps: a floor's image never fully arrived on connected
+  clients (or the Host's own local preview) - the map-floor media
+  transfer never set the expected total byte count, so the client
+  considered the transfer "complete" after the very first chunk,
+  decoded/used a truncated file, and silently dropped the rest of that
+  floor's data. This was the actual cause of "the client doesn't show
+  anything" for maps.
 - Fog-of-war maps: a floor could render as a solid near-black block
   instead of the map image whenever its fog data hadn't resolved yet
   (e.g. still deserializing on the PlayerClient) - an Avalonia
