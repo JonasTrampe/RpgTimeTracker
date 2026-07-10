@@ -38,6 +38,16 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     [ObservableProperty] private IBrush? _maskBrush;
     [ObservableProperty] private string _currentFloorName = string.Empty;
 
+    /// <summary>
+    ///     Whether MaskBrush is actually set. Bound to IsVisible on the blurred-image and tint
+    ///     layers in MapDisplayView.axaml so they're skipped entirely (never rendered) instead of
+    ///     relying on a null OpacityMask to mean "fully transparent" - it doesn't: an element with
+    ///     no OpacityMask renders at full, UNCLIPPED opacity, which turned the tint layer (opaque
+    ///     by default) into a solid block covering the whole sharp image underneath whenever a
+    ///     floor's fog hadn't been resolved yet (e.g. still deserializing on the PlayerClient).
+    /// </summary>
+    [ObservableProperty] private bool _hasFogMask;
+
     /// <summary>Player-side fog render style (see issue #22) - one global GM preference, applied
     ///     via ApplyRenderStyle by both the Host (from its own settings) and the PlayerClient
     ///     (from session.snapshot/map.renderStyleChanged).</summary>
@@ -92,6 +102,7 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         _floors.Clear();
         CurrentFloorImageBitmap = null;
         MaskBrush = null;
+        HasFogMask = false;
         CurrentFloorName = string.Empty;
     }
 
@@ -172,9 +183,15 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         if (CurrentFloorIndex < 0 || CurrentFloorIndex >= _floors.Count) return;
 
         var floor = _floors[CurrentFloorIndex];
-        MaskBrush = floor.CurrentFog is null
-            ? null
-            : new ImageBrush(FogOverlayRenderer.BuildMaskBitmap(floor.CurrentFog)) { Stretch = Stretch.Fill };
+        if (floor.CurrentFog is null)
+        {
+            MaskBrush = null;
+            HasFogMask = false;
+            return;
+        }
+
+        MaskBrush = new ImageBrush(FogOverlayRenderer.BuildMaskBitmap(floor.CurrentFog)) { Stretch = Stretch.Fill };
+        HasFogMask = true;
     }
 }
 

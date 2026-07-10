@@ -21,12 +21,13 @@
                    Height="{Binding CurrentFloorImageBitmap.PixelSize.Height}">
                 <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Fill" />
                 <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Fill"
-                       OpacityMask="{Binding MaskBrush}">
+                       OpacityMask="{Binding MaskBrush}" IsVisible="{Binding HasFogMask}">
                     <Image.Effect>
                         <BlurEffect Radius="{Binding BlurRadius}" />
                     </Image.Effect>
                 </Image>
-                <Rectangle Fill="{Binding TintBrush}" OpacityMask="{Binding MaskBrush}" />
+                <Rectangle Fill="{Binding TintBrush}" OpacityMask="{Binding MaskBrush}"
+                           IsVisible="{Binding HasFogMask}" />
             </Panel>
         </Viewbox>
 
