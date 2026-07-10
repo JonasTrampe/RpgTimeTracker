@@ -6,8 +6,10 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Models.Rpc;
+using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Network;
 using RpgTimeTracker.Shared.Services.Rpc;
 using Serilog;
@@ -83,6 +85,15 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     a late-joining client would need to wait for (see PublishMediaAsync).
     /// </summary>
     private (MediaHeaderDto Header, byte[] FileBytes)? _lastMedia;
+
+    /// <summary>
+    ///     The map currently open to players, if any - cached so a newly connecting/reconnecting
+    ///     client gets a full resync (floor images + current fog) instead of an incremental
+    ///     replay, per the "never partially revealed/hidden by accident" requirement. Updated
+    ///     in place as fog changes (PublishMapFogUpdateAsync/PublishMapFogResetAsync) so the
+    ///     cache always reflects exactly what clients currently see.
+    /// </summary>
+    private OpenMapState? _openMap;
 
     private TcpListener? _listener;
 
@@ -291,6 +302,145 @@ public sealed class TcpPlayerServerService : IDisposable
     {
         return BroadcastRpcAsync(RpcMethods.MediaSlideshowInterval,
             new MediaSlideshowIntervalParams { Seconds = seconds });
+    }
+
+    /// <summary>
+    ///     Opens a map to all connected clients: streams each floor's image (chunk pipeline,
+    ///     Kind=MediaKindMapFloor) followed by the map.show metadata (fog masks base64-encoded).
+    ///     Caches the open state so later-connecting clients get the same full resync.
+    /// </summary>
+    public async Task PublishMapShowAsync(Guid mapId, string mapName, List<OpenMapFloor> floors)
+    {
+        if (!IsRunning) return;
+
+        lock (_mediaGate)
+        {
+            _openMap = new OpenMapState(mapId, mapName, floors);
+        }
+
+        ClientConnection[] clients;
+        lock (_gate)
+        {
+            clients = _clients.ToArray();
+        }
+
+        Log.Information("Map opened: {MapName} ({FloorCount} floors) to {ClientCount} client(s)",
+            mapName, floors.Count, clients.Length);
+
+        await _mediaSendLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            foreach (var client in clients)
+                await SendMapShowToClientAsync(client, mapId, mapName, floors).ConfigureAwait(false);
+        }
+        finally
+        {
+            _mediaSendLock.Release();
+        }
+    }
+
+    /// <summary>
+    ///     Debounced reveal/hide update for one floor of the currently open map. Also applies the
+    ///     same cells to the cached current fog, so a client that connects afterward sees the
+    ///     latest state via a full map.show rather than this incremental delta.
+    /// </summary>
+    public Task PublishMapFogUpdateAsync(Guid floorId, List<FogCellDto> cells)
+    {
+        lock (_mediaGate)
+        {
+            var floor = _openMap?.Floors.FirstOrDefault(f => f.FloorId == floorId);
+            if (floor is not null)
+                foreach (var cell in cells)
+                    floor.CurrentFog.SetRevealed(cell.X, cell.Y, cell.Revealed);
+        }
+
+        return BroadcastRpcAsync(RpcMethods.MapFogUpdate, new MapFogUpdateParams { FloorId = floorId, Cells = cells });
+    }
+
+    /// <summary>Resets one floor's live fog back to its starting template on all clients.</summary>
+    public Task PublishMapFogResetAsync(Guid floorId)
+    {
+        lock (_mediaGate)
+        {
+            var floor = _openMap?.Floors.FirstOrDefault(f => f.FloorId == floorId);
+            if (floor is not null) floor.CurrentFog = floor.StartingFog.Clone();
+        }
+
+        return BroadcastRpcAsync(RpcMethods.MapFogReset, new MapFogResetParams { FloorId = floorId });
+    }
+
+    /// <summary>Closes the currently open map on all clients; they return to the previous gallery display.</summary>
+    public Task PublishMapHideAsync()
+    {
+        lock (_mediaGate)
+        {
+            _openMap = null;
+        }
+
+        Log.Debug("Map closed (map.hide to all clients)");
+        return BroadcastRpcAsync(RpcMethods.MapHide, RpcEmptyParams.Instance);
+    }
+
+    private async Task SendMapShowToClientAsync(ClientConnection client, Guid mapId, string mapName,
+        List<OpenMapFloor> floors)
+    {
+        foreach (var floor in floors)
+        {
+            var header = new MediaHeaderDto
+            {
+                MediaId = floor.FloorId.ToString(),
+                Kind = MediaHeaderDto.MediaKindMapFloor,
+                FileName = floor.ImageFileName,
+                MimeType = floor.ImageMimeType
+            };
+            await SendMediaToClientAsync(client, header, floor.ImageBytes).ConfigureAwait(false);
+        }
+
+        var showParams = new MapShowParams
+        {
+            MapId = mapId,
+            MapName = mapName,
+            Floors = floors.Select(f => new MapFloorShowDto
+            {
+                FloorId = f.FloorId,
+                FloorName = f.FloorName,
+                ImageMediaId = f.FloorId.ToString(),
+                CellSizePx = f.CellSizePx,
+                GridWidth = f.GridWidth,
+                GridHeight = f.GridHeight,
+                StartingFogBase64 = Convert.ToBase64String(FogMaskSerializer.Serialize(f.StartingFog)),
+                CurrentFogBase64 = Convert.ToBase64String(FogMaskSerializer.Serialize(f.CurrentFog))
+            }).ToList()
+        };
+
+        var payload = RpcMessage.Serialize(RpcMethods.MapShow, showParams);
+        if (!await client.TryWriteFrameAsync(NetworkFrame.TypeRpc, payload).ConfigureAwait(false))
+        {
+            Log.Warning("map.show to {Client} failed - connection is being closed", client);
+            RemoveClient(client);
+        }
+    }
+
+    /// <summary>One floor of the currently open map, cached server-side for resync (see _openMap).</summary>
+    public sealed class OpenMapFloor
+    {
+        public Guid FloorId { get; init; }
+        public string FloorName { get; init; } = string.Empty;
+        public string ImageFileName { get; init; } = string.Empty;
+        public string ImageMimeType { get; init; } = string.Empty;
+        public byte[] ImageBytes { get; init; } = [];
+        public int CellSizePx { get; init; }
+        public int GridWidth { get; init; }
+        public int GridHeight { get; init; }
+        public FogMask StartingFog { get; init; } = FogMask.CreateFullyHidden(1, 1, 32);
+        public FogMask CurrentFog { get; set; } = FogMask.CreateFullyHidden(1, 1, 32);
+    }
+
+    private sealed class OpenMapState(Guid mapId, string mapName, List<OpenMapFloor> floors)
+    {
+        public Guid MapId { get; } = mapId;
+        public string MapName { get; } = mapName;
+        public List<OpenMapFloor> Floors { get; } = floors;
     }
 
     private async Task SendMediaToClientAsync(ClientConnection client, MediaHeaderDto header, byte[] fileBytes)
@@ -505,6 +655,18 @@ public sealed class TcpPlayerServerService : IDisposable
 
         if (cachedMedia is not null)
             await SendMediaToClientAsync(connection, cachedMedia.Value.Header, cachedMedia.Value.FileBytes)
+                .ConfigureAwait(false);
+
+        OpenMapState? openMap;
+        lock (_mediaGate)
+        {
+            openMap = _openMap;
+        }
+
+        // Full resync (all floor images + current fog), never an incremental replay - a
+        // reconnecting client must never end up with a fog state that's partially stale.
+        if (openMap is not null)
+            await SendMapShowToClientAsync(connection, openMap.MapId, openMap.MapName, openMap.Floors)
                 .ConfigureAwait(false);
     }
 
