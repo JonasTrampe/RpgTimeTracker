@@ -118,6 +118,54 @@ public sealed class MediaSlideshowIntervalParams
     public double Seconds { get; set; }
 }
 
+/// <summary>Server-to-client: opens a map (see RpcMethods.MapShow).</summary>
+public sealed class MapShowParams
+{
+    public Guid MapId { get; set; }
+    public string MapName { get; set; } = string.Empty;
+    public List<MapFloorShowDto> Floors { get; set; } = [];
+}
+
+/// <summary>
+///     One floor's metadata for map.show - the image itself is transferred separately via the
+///     existing media.begin + TypeMediaChunk pipeline, keyed by ImageMediaId (= FloorId).
+/// </summary>
+public sealed class MapFloorShowDto
+{
+    public Guid FloorId { get; set; }
+    public string FloorName { get; set; } = string.Empty;
+    public string ImageMediaId { get; set; } = string.Empty;
+    public int CellSizePx { get; set; }
+    public int GridWidth { get; set; }
+    public int GridHeight { get; set; }
+
+    /// <summary>Binary FogMask format (see FogMaskSerializer), base64-encoded - already a
+    ///     "whole grid" transfer conceptually identical to the at-rest format.</summary>
+    public string StartingFogBase64 { get; set; } = string.Empty;
+
+    public string CurrentFogBase64 { get; set; } = string.Empty;
+}
+
+/// <summary>Server-to-client: debounced reveal/hide update for one floor (see RpcMethods.MapFogUpdate).</summary>
+public sealed class MapFogUpdateParams
+{
+    public Guid FloorId { get; set; }
+    public List<FogCellDto> Cells { get; set; } = [];
+}
+
+public sealed class FogCellDto
+{
+    public int X { get; set; }
+    public int Y { get; set; }
+    public bool Revealed { get; set; }
+}
+
+/// <summary>Server-to-client: reset one floor's live fog back to its starting template (see RpcMethods.MapFogReset).</summary>
+public sealed class MapFogResetParams
+{
+    public Guid FloorId { get; set; }
+}
+
 /// <summary>
 ///     Full state of a timer/alarm/interval for "upsert" (created or structurally
 ///     changed - start/pause/reset/completed/triggered/edited). NOT sent for pure

@@ -103,6 +103,19 @@ public sealed class PlayerTcpClientService : IDisposable
     /// <summary>Automatic advance time per image (seconds, 0 = manual).</summary>
     public event Action<double>? SlideshowIntervalChanged;
 
+    /// <summary>
+    ///     A map floor's image finished transferring (see MediaHeaderDto.MediaKindMapFloor) -
+    ///     kept as its own event/temp file rather than routed through MediaCompleted, since a
+    ///     map floor is cached long-term for the whole time the map stays open, not displayed
+    ///     once and discarded like gallery/event media.
+    /// </summary>
+    public event Action<Guid, string>? MapFloorImageReceived;
+
+    public event Action<MapShowParams>? MapShowReceived;
+    public event Action<MapFogUpdateParams>? MapFogUpdateReceived;
+    public event Action<Guid>? MapFogResetReceived;
+    public event Action? MapHideReceived;
+
     public event Action<string>? StatusChanged;
 
     /// <summary>
@@ -505,6 +518,21 @@ public sealed class PlayerTcpClientService : IDisposable
                     var slideshow = raw.GetParams<MediaSlideshowIntervalParams>();
                     if (slideshow is not null) SlideshowIntervalChanged?.Invoke(slideshow.Seconds);
                     break;
+                case RpcMethods.MapShow:
+                    var mapShow = raw.GetParams<MapShowParams>();
+                    if (mapShow is not null) MapShowReceived?.Invoke(mapShow);
+                    break;
+                case RpcMethods.MapFogUpdate:
+                    var fogUpdate = raw.GetParams<MapFogUpdateParams>();
+                    if (fogUpdate is not null) MapFogUpdateReceived?.Invoke(fogUpdate);
+                    break;
+                case RpcMethods.MapFogReset:
+                    var fogReset = raw.GetParams<MapFogResetParams>();
+                    if (fogReset is not null) MapFogResetReceived?.Invoke(fogReset.FloorId);
+                    break;
+                case RpcMethods.MapHide:
+                    MapHideReceived?.Invoke();
+                    break;
                 default:
                     Log.Debug("Unknown incoming RPC method {Method} ignored", raw.Method);
                     break;
@@ -547,10 +575,14 @@ public sealed class PlayerTcpClientService : IDisposable
             Log.Information("media.begin: {FileName} ({Kind}, {SizeKb} KB, Loop={Loop}) -> {TempPath}",
                 header.FileName, header.Kind, header.TotalLength / 1024, header.Loop, _mediaTempPath);
 
-            // For videos, playback can start immediately (VLC tolerates a growing file);
-            // for images, the caller waits for MediaCompleted since a partial image
-            // cannot be decoded.
-            MediaBeginReceived?.Invoke(header, _mediaTempPath);
+            // Map floor images are a separate concern from the gallery/current-medium slot
+            // (see MapFloorImageReceived) - never raise MediaBeginReceived for them, so
+            // gallery/event-media handling never has to special-case this Kind.
+            if (header.Kind != MediaHeaderDto.MediaKindMapFloor)
+                // For videos, playback can start immediately (VLC tolerates a growing file);
+                // for images, the caller waits for MediaCompleted since a partial image
+                // cannot be decoded.
+                MediaBeginReceived?.Invoke(header, _mediaTempPath);
         }
         catch (Exception ex)
         {
@@ -577,7 +609,16 @@ public sealed class PlayerTcpClientService : IDisposable
                 _mediaFile = null;
                 Log.Information("Medium {FileName} fully received ({Bytes} bytes)", header.FileName,
                     _mediaBytesWritten);
-                MediaCompleted?.Invoke(header, path);
+
+                if (header.Kind == MediaHeaderDto.MediaKindMapFloor)
+                {
+                    if (Guid.TryParse(header.MediaId, out var floorId))
+                        MapFloorImageReceived?.Invoke(floorId, path);
+                }
+                else
+                {
+                    MediaCompleted?.Invoke(header, path);
+                }
             }
         }
         catch (Exception ex)

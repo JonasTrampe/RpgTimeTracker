@@ -94,4 +94,28 @@ public static class RpcMethods
     ///     only to images, never to videos (see design-decisions.md).
     /// </summary>
     public const string MediaSlideshowInterval = "media.slideshowInterval";
+
+    /// <summary>
+    ///     GM opens a map to players (replaces the gallery display). Floor images are announced/
+    ///     streamed beforehand via the existing media.begin + TypeMediaChunk pipeline (one per
+    ///     floor, MediaHeaderDto.Kind = MediaKindMapFloor), then this metadata message follows
+    ///     once all floor images have started transferring. Sent in full (not incrementally) to
+    ///     any client that connects or reconnects while a map is open - see
+    ///     TcpPlayerServerService.SendCatchUpAsync.
+    /// </summary>
+    public const string MapShow = "map.show";
+
+    /// <summary>
+    ///     Debounced per-brush-stroke reveal/hide update for one floor of the currently open map.
+    /// </summary>
+    public const string MapFogUpdate = "map.fogUpdate";
+
+    /// <summary>
+    ///     GM resets one floor's live fog back to its starting template - the client already has
+    ///     both (from map.show), so this just tells it to copy locally, no fog data resent.
+    /// </summary>
+    public const string MapFogReset = "map.fogReset";
+
+    /// <summary>GM closes the map; clients return to the previous gallery display.</summary>
+    public const string MapHide = "map.hide";
 }
