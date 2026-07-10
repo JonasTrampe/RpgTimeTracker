@@ -35,13 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (Shared project) instead of duplicating the rendering logic per app.
 - Fog-of-war maps: player-side render style is now configurable in
   Settings ("Fog of war (player view)" - color picker, opacity slider,
-  blur slider), one shared preference pushed live to all connected
-  players (`map.renderStyleChanged`) and sent to newly connecting/
-  reconnecting clients as part of `session.snapshot`. Hidden cells now
-  show a blurred, tinted view of the actual map underneath (cut out via
-  the fog shape) rather than a flat blurred color block, so the blur
-  slider has a real visible effect; brush size in the map editor also
-  got finer-grained (smaller default grid cells, wider brush range).
+  blur on/off toggle, blur strength slider), one shared preference
+  pushed live to all connected players (`map.renderStyleChanged`) and
+  sent to newly connecting/reconnecting clients as part of
+  `session.snapshot`. Hidden cells now show a blurred, tinted view of
+  the actual map underneath (cut out via the fog shape) rather than a
+  flat blurred color block, so the blur slider has a real visible
+  effect; the blur toggle turns that image-content blur off entirely
+  (leaving just the flat tint) without losing the configured strength.
+  Brush size in the map editor also got finer-grained (smaller default
+  grid cells, wider brush range).
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/
