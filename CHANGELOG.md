@@ -53,6 +53,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   workflow (`tests.yml`, separate from the plain compile check in
   `build.yml`) with its own status badge, so a broken test shows up
   distinctly from "does it compile".
+- End-to-end map/fog integration tests (`MapFogIntegrationTests`) that spin
+  up a real Host server and PlayerClient over an actual localhost socket
+  (not mocks) and exercise the same wire path as a real session: a floor
+  image larger than one network chunk, fog reveal/hide/reset, render-style
+  settings, and reconnect resync. Directly guards against the class of
+  bugs found and fixed this session (a map-floor transfer silently
+  truncating, a fog mask only covering a corner of the image).
+- `--no-discovery` CLI flag (Host app) skips starting the mDNS/LAN-broadcast
+  responders when the network server starts - useful on restricted
+  networks or when running multiple local instances side by side.
 - Optional auto-save on close and auto-load on startup (Host app), using the
   location of the last manual save/load. Both are opt-in toggles in the
   Settings tab; existing behavior is unchanged unless enabled.
