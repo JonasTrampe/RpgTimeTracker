@@ -12,9 +12,9 @@
             </StackPanel>
 
             <StackPanel Grid.Column="1" Spacing="2" HorizontalAlignment="Right">
-                <TextBlock Classes="muted" Text="Aktuelle Spielzeit" HorizontalAlignment="Right" />
+                <TextBlock Classes="muted" Text="{DynamicResource MainWindow.Clock.CurrentGameTime}" HorizontalAlignment="Right" />
                 <TextBlock Classes="clockValue" Text="{Binding CurrentGameTimeText}" HorizontalAlignment="Right" />
-                <TextBlock Classes="muted" Text="{Binding SpeedMultiplierDisplay, StringFormat='Geschwindigkeit: {0}'}"
+                <TextBlock Classes="muted" Text="{Binding SpeedLabel}"
                            HorizontalAlignment="Right" />
             </StackPanel>
         </Grid>

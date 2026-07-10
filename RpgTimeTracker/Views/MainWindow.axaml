@@ -306,6 +306,7 @@
                                                 Maximum="100"
                                                 Increment="0.1"
                                                 FormatString="0.0"
+                                                NumberFormat="{DynamicResource App.NumberFormat}"
                                                 HorizontalAlignment="Center" Width="300"
                                                 HorizontalContentAlignment="Center"
                                                 Margin="0,0,8,0" />
@@ -1392,6 +1393,7 @@
                                                                                                         Minimum="0"
                                                                                                         FormatString="0.0"
                                                                                                         Increment="0.5"
+                                                                                                        NumberFormat="{DynamicResource App.NumberFormat}"
                                                                                                         HorizontalAlignment="Stretch" />
                                                                                                 </StackPanel>
                                                                                                 <StackPanel
@@ -1407,6 +1409,7 @@
                                                                                                         Minimum="0"
                                                                                                         FormatString="0.0"
                                                                                                         Increment="0.5"
+                                                                                                        NumberFormat="{DynamicResource App.NumberFormat}"
                                                                                                         HorizontalAlignment="Stretch" />
                                                                                                 </StackPanel>
                                                                                             </Grid>
@@ -1879,7 +1882,9 @@
                                                                     <NumericUpDown Grid.Column="1"
                                                                             Value="{Binding HeadsUpLeadMinutes, Mode=TwoWay}"
                                                                             Minimum="0.1" Maximum="60" Increment="0.5"
-                                                                            FormatString="0.0" Width="110" />
+                                                                            FormatString="0.0"
+                                                                            NumberFormat="{DynamicResource App.NumberFormat}"
+                                                                            Width="110" />
                                                                 </Grid>
                                                                 <TextBlock Classes="muted"
                                                                            Text="{DynamicResource MainWindow.Settings.HeadsUpDescription}"
@@ -1947,7 +1952,7 @@
                                                                                     <TextBlock
                                                                                         Text="{Binding RemoteEndpoint}" />
                                                                                     <TextBlock Classes="muted"
-                                                                                        Text="{Binding ConnectedSinceDisplay, StringFormat='seit {0}'}" />
+                                                                                        Text="{Binding ConnectedSinceDisplay}" />
                                                                                 </StackPanel>
                                                                                 <Button Grid.Column="1"
                                                                                     Content="{DynamicResource MainWindow.Settings.DisconnectButton}"
@@ -1973,6 +1978,7 @@
                                                                     <NumericUpDown Grid.Column="1"
                                                                             Value="{Binding SlideshowSecondsPerImage}"
                                                                             Minimum="0" FormatString="0"
+                                                                            NumberFormat="{DynamicResource App.NumberFormat}"
                                                                             HorizontalAlignment="Stretch"
                                                                             ToolTip.Tip="{DynamicResource MainWindow.Settings.SlideshowTooltip}" />
                                                                 </Grid>
@@ -2020,6 +2026,23 @@
                                                                         </ItemsControl>
                                                                     </ScrollViewer>
                                                                 </Border>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="settingsGroup">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="{DynamicResource MainWindow.Settings.SaveLoadHeader}" />
+                                                            <StackPanel Spacing="4">
+                                                                <CheckBox
+                                                                    Content="{DynamicResource MainWindow.Settings.AutoSaveOnCloseCheckbox}"
+                                                                    IsChecked="{Binding AutoSaveOnCloseEnabled, Mode=TwoWay}" />
+                                                                <CheckBox
+                                                                    Content="{DynamicResource MainWindow.Settings.AutoLoadOnStartupCheckbox}"
+                                                                    IsChecked="{Binding AutoLoadOnStartupEnabled, Mode=TwoWay}" />
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Settings.AutoSaveLoadDescription}"
+                                                                           TextWrapping="Wrap" />
                                                             </StackPanel>
                                                         </StackPanel>
                                                     </Border>
