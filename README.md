@@ -52,8 +52,10 @@ method list, media streaming) can be found in [`docs/protocol.md`](docs/protocol
   recurring (e.g. every 24 game hours). Jumping back in time before the
   target time "disarms" an already-triggered alarm again.
 - **Save & load**: the complete state (game time, speed,
-  all timers, alarms, and bookmarks) can be exported as a JSON file via the
-  💾/📂 buttons in the top left, or imported again.
+  all timers, alarms, and bookmarks) can be exported as a `.rtt-save` file via
+  the 💾/📂 buttons in the top left, or imported again. Older plain-JSON save
+  files from before this format still load fine and are upgraded automatically
+  the next time you save.
 - **Networked player display**: the GM starts a TCP server in the
   control app on a freely selectable port with a freely selectable
   server name (this is included in the mDNS/LAN announcement and thus appears

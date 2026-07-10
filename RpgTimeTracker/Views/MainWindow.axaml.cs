@@ -18,7 +18,19 @@ namespace RpgTimeTracker.Views;
 
 public partial class MainWindow : Window
 {
-    private static readonly FilePickerFileType JsonFileType = new(LocalizationService.Get("MainWindow.FileTypes.GameState"))
+    /// <summary>
+    ///     The new save format (a zip container - see MainWindowViewModel.ExportStateToZipBytes/
+    ///     ImportStateFromZipOrJson). A distinct extension (rather than keeping .json now that the
+    ///     content is a zip) was chosen specifically to avoid confusion with other data.
+    /// </summary>
+    private static readonly FilePickerFileType RttSaveFileType = new(LocalizationService.Get("MainWindow.FileTypes.GameState"))
+    {
+        Patterns = ["*.rtt-save"]
+    };
+
+    /// <summary>Old plain-JSON save format, kept only so Load still finds pre-.rtt-save files - see
+    ///     MainWindowViewModel.ImportStateFromZipOrJson for the upgrade path.</summary>
+    private static readonly FilePickerFileType JsonFileType = new(LocalizationService.Get("MainWindow.FileTypes.GameStateLegacyJson"))
     {
         Patterns = ["*.json"]
     };
@@ -373,19 +385,18 @@ public partial class MainWindow : Window
         var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = LocalizationService.Get("MainWindow.Dialogs.SaveGameState"),
-            SuggestedFileName = $"rpg-zeit-{DateTime.Now:yyyy-MM-dd_HHmm}.json",
-            DefaultExtension = "json",
-            FileTypeChoices = [JsonFileType]
+            SuggestedFileName = $"rpg-zeit-{DateTime.Now:yyyy-MM-dd_HHmm}.rtt-save",
+            DefaultExtension = "rtt-save",
+            FileTypeChoices = [RttSaveFileType]
         });
         if (file is null) return;
 
         try
         {
-            var json = vm.ExportStateToJson();
+            var zipBytes = vm.ExportStateToZipBytes();
             await using var stream = await file.OpenWriteAsync();
             stream.SetLength(0);
-            await using var writer = new StreamWriter(stream);
-            await writer.WriteAsync(json);
+            await stream.WriteAsync(zipBytes);
             var localPath = file.TryGetLocalPath();
             if (localPath is not null) ThemeSettingsService.SaveLastSaveFilePath(localPath);
             vm.NotifyActionStatus(LocalizationService.Get("MainWindow.Status.GameStateSaved"));
@@ -407,7 +418,9 @@ public partial class MainWindow : Window
         {
             Title = LocalizationService.Get("MainWindow.Dialogs.LoadGameState"),
             AllowMultiple = false,
-            FileTypeFilter = [JsonFileType]
+            // Both the current .rtt-save format and the old plain-JSON format are accepted here -
+            // ImportStateFromZipOrJson tells them apart and upgrades old saves transparently.
+            FileTypeFilter = [RttSaveFileType, JsonFileType]
         });
 
         if (files.Count == 0) return;
@@ -415,9 +428,9 @@ public partial class MainWindow : Window
         try
         {
             await using var stream = await files[0].OpenReadAsync();
-            using var reader = new StreamReader(stream);
-            var json = await reader.ReadToEndAsync();
-            vm.ImportStateFromJson(json);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            vm.ImportStateFromZipOrJson(memoryStream.ToArray());
             var localPath = files[0].TryGetLocalPath();
             if (localPath is not null) ThemeSettingsService.SaveLastSaveFilePath(localPath);
             vm.NotifyActionStatus(LocalizationService.Get("MainWindow.Status.GameStateLoaded"));

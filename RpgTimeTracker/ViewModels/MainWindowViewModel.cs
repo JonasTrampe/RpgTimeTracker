@@ -3420,7 +3420,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         try
         {
-            ImportStateFromJson(File.ReadAllText(settings.LastSaveFilePath));
+            ImportStateFromZipOrJson(File.ReadAllBytes(settings.LastSaveFilePath));
             Log.Information("Auto-loaded game state from {Path}", settings.LastSaveFilePath);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -3442,7 +3442,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         try
         {
-            File.WriteAllText(settings.LastSaveFilePath, ExportStateToJson());
+            File.WriteAllBytes(settings.LastSaveFilePath, ExportStateToZipBytes());
             Log.Information("Auto-saved game state to {Path}", settings.LastSaveFilePath);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -3474,6 +3474,23 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         Log.Information("Game state exported: {TimerCount} timers, {AlarmCount} alarms, {IntervalCount} intervals",
             dto.Timers.Count, dto.Alarms.Count, dto.IntervalEvents.Count);
         return JsonSerializer.Serialize(dto, JsonOptions);
+    }
+
+    /// <summary>
+    ///     Creates the complete state as a .rtt-save zip container (state.json inside a
+    ///     zip archive, rather than a bare JSON file) - see SaveFileArchive.Wrap and
+    ///     ImportStateFromZipOrJson for the corresponding read side/upgrade path.
+    /// </summary>
+    public byte[] ExportStateToZipBytes()
+    {
+        return SaveFileArchive.Wrap(ExportStateToJson());
+    }
+
+    /// <summary>Restores state from a .rtt-save zip container, or an old plain-JSON save
+    ///     (see SaveFileArchive.Unwrap for the upgrade-path fallback).</summary>
+    public void ImportStateFromZipOrJson(byte[] data)
+    {
+        ImportStateFromJson(SaveFileArchive.Unwrap(data));
     }
 
     /// <summary>Restores the complete state from previously exported JSON text.</summary>

@@ -1574,3 +1574,39 @@ superseded path strings just to preserve pixel-identical glyphs, those
 constants were repointed to today's closest equivalent icon (e.g.
 `alarm-fill`, `gear-fill`) - the same identifier still selects a sensible
 bell/gear/etc. icon, just the current Bootstrap rendering of it.
+
+## Save file: a `.rtt-save` zip container instead of a bare JSON file
+
+The save/load feature originally wrote/read a single plain-JSON file
+(`MainWindowViewModel.ExportStateToJson`/`ImportStateFromJson`). The
+in-progress fog-of-war map feature needs to store fog reveal/hide state
+per floor as compact binary data (a GZip-compressed bitset - see
+`FogMaskSerializer`), and JSON/base64 is a poor fit for a bitmap: it
+inflates the size for no benefit and adds parsing overhead for data that
+was never structured text to begin with.
+
+Rather than only special-casing the fog data, the save file itself
+became a zip container: `state.json` (the exact same `AppStateDto` shape
+as before, unchanged) as one entry, with room for future binary entries
+(e.g. `maps/{mapId}/{floorId}.fog`) alongside it -
+`MainWindowViewModel.ExportStateToZipBytes`/`ImportStateFromZipOrJson`.
+This also generalizes past fog data specifically: any future addition
+that doesn't belong in JSON now has somewhere to go without a second
+format migration.
+
+**Extension**: `.rtt-save`, chosen (over keeping `.json`) specifically so
+a save file isn't mistaken for arbitrary JSON data by the user or by
+other tools - the ".json" file-picker association would otherwise be
+shared with every other application on the machine that also happens to
+emit JSON.
+
+**Upgrade path from old plain-JSON saves**: `ImportStateFromZipOrJson`
+tries to open the bytes as a zip archive first; if that throws
+`InvalidDataException` (not a valid zip at all), it falls back to
+treating the whole payload as the old plain-JSON text and calls the
+unchanged `ImportStateFromJson` parsing path. No separate migration tool
+or version-bump logic was needed - opening an old `.json` save in the
+now `.rtt-save`-primary Load dialog (which still lists `*.json` as a
+selectable file type) just works, and the next manual save (or the
+auto-save feature, if enabled) upgrades it to the new format
+transparently.
