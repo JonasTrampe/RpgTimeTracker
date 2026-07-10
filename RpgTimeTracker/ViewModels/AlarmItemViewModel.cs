@@ -70,7 +70,7 @@ public partial class AlarmItemViewModel : ObservableObject
 
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);
 
-    public string TriggerAtText => _model.TriggerAt.ToString("dddd, dd.MM.yyyy HH:mm");
+    public string TriggerAtText => _model.TriggerAt.ToString("dddd, dd.MM.yyyy HH:mm", LocalizationService.Culture);
 
     public string RepeatIntervalDisplay => _model.RepeatInterval.HasValue
         ? FormatTimeSpan(_model.RepeatInterval.Value)
