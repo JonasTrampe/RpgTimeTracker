@@ -103,7 +103,7 @@ public partial class ClientMainWindow : Window
     private void OnRemoteFullscreenRequested(bool fullscreen)
     {
         var vm = DataContext as ClientMainWindowViewModel;
-        var hasVisibleMedia = (vm?.HasMedia == true || vm?.IsShowingMap == true) &&
+        var hasVisibleMedia = (vm?.HasMedia == true || vm?.MapDisplay.IsShowingMap == true) &&
                               _mediaWindow is { IsVisible: true };
         Window target = hasVisibleMedia ? _mediaWindow! : this;
 

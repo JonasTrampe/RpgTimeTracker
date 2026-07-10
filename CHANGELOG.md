@@ -30,8 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   see hidden cells as a solid opaque block (configurable color/blur/
   opacity is a later update) and can browse between floors locally,
   independent of what the GM is currently editing. The Host's own local
-  player-window preview doesn't show the map yet (a known gap, tracked
-  separately) - use the real PlayerClient to see the live result.
+  player-window preview shows the exact same live map (when no client is
+  connected, mirroring how local media preview already worked) - both
+  reuse a shared `MapDisplayView`/`MapDisplayViewModel` (Shared project)
+  instead of duplicating the rendering logic per app.
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/

@@ -141,7 +141,13 @@ public partial class MapEditorWindow : Window
             changed = true;
         }
 
-        if (changed) RefreshOverlay();
+        if (changed)
+        {
+            RefreshOverlay();
+            // Same FogMask instance as the local player-window preview (MapDisplay) already
+            // uses - just tell it to re-render, no cell list to hand over.
+            _vm.MapDisplay.NotifyFogChanged(_floor.Id);
+        }
     }
 
     private async Task FlushPendingAsync()

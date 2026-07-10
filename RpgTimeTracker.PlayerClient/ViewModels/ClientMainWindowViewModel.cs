@@ -177,41 +177,15 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
     // ==================== Map display (fog of war) ====================
     // Replaces the gallery/current-medium display while open (mutually exclusive, matching how
-    // event-trigger media temporarily takes over) - navigation between floors is purely local,
-    // the same pattern as gallery highlight navigation (see PreviousGalleryItemCommand): no
-    // server round-trip, each client browses its own floors independently.
+    // event-trigger media temporarily takes over). Rendering/floor-navigation logic lives in the
+    // shared MapDisplayViewModel (also used by the Host's local player-window preview,
+    // MainWindowViewModel.MapDisplay) - only the network-specific plumbing (temp image paths,
+    // base64 fog decoding) stays here.
 
-    private readonly List<MapFloorClientState> _mapFloors = [];
     private readonly Dictionary<Guid, string> _pendingFloorImagePaths = new();
+    private readonly Dictionary<Guid, FogMask> _floorStartingFogs = new();
 
-    [ObservableProperty] private bool _isShowingMap;
-    [ObservableProperty] private string _mapName = string.Empty;
-    [ObservableProperty] private int _currentFloorIndex;
-    [ObservableProperty] private Bitmap? _currentFloorImageBitmap;
-    [ObservableProperty] private WriteableBitmap? _currentFloorOverlayBitmap;
-    [ObservableProperty] private string _currentFloorName = string.Empty;
-
-    public bool HasMultipleFloors => _mapFloors.Count > 1;
-
-    [RelayCommand]
-    private void PreviousFloor()
-    {
-        NavigateFloor(-1);
-    }
-
-    [RelayCommand]
-    private void NextFloor()
-    {
-        NavigateFloor(1);
-    }
-
-    private void NavigateFloor(int direction)
-    {
-        if (_mapFloors.Count == 0) return;
-
-        CurrentFloorIndex = (CurrentFloorIndex + direction + _mapFloors.Count) % _mapFloors.Count;
-        DisplayCurrentFloor();
-    }
+    public MapDisplayViewModel MapDisplay { get; } = new();
 
     private void OnMapFloorImageReceived(Guid floorId, string tempPath)
     {
@@ -220,7 +194,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
     private void OnMapShow(MapShowParams mapShow)
     {
-        _mapFloors.Clear();
+        _floorStartingFogs.Clear();
+        var floors = new List<MapDisplayFloor>();
         foreach (var floor in mapShow.Floors)
         {
             Bitmap? bitmap = null;
@@ -246,83 +221,40 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
                 Log.Warning(ex, "Map floor fog could not be decoded ({FloorName})", floor.FloorName);
             }
 
-            _mapFloors.Add(new MapFloorClientState
+            if (startingFog is not null) _floorStartingFogs[floor.FloorId] = startingFog;
+            floors.Add(new MapDisplayFloor
             {
                 FloorId = floor.FloorId,
                 Name = floor.FloorName,
                 Image = bitmap,
-                StartingFog = startingFog,
                 CurrentFog = currentFog
             });
         }
 
         _pendingFloorImagePaths.Clear();
-        MapName = mapShow.MapName;
-        CurrentFloorIndex = 0;
-        IsShowingMap = true;
-        OnPropertyChanged(nameof(HasMultipleFloors));
-        DisplayCurrentFloor();
+        MapDisplay.ShowMap(mapShow.MapName, floors);
         MediaWindowShouldShow?.Invoke();
-        Log.Information("Map shown: {MapName} ({FloorCount} floors)", mapShow.MapName, _mapFloors.Count);
+        Log.Information("Map shown: {MapName} ({FloorCount} floors)", mapShow.MapName, floors.Count);
     }
 
     private void OnMapFogUpdate(MapFogUpdateParams update)
     {
-        var floor = _mapFloors.FirstOrDefault(f => f.FloorId == update.FloorId);
-        if (floor?.CurrentFog is null) return;
-
-        foreach (var cell in update.Cells) floor.CurrentFog.SetRevealed(cell.X, cell.Y, cell.Revealed);
-        if (_mapFloors.IndexOf(floor) == CurrentFloorIndex) RefreshCurrentFloorOverlay();
+        MapDisplay.ApplyFogCells(update.FloorId, update.Cells);
     }
 
     private void OnMapFogReset(Guid floorId)
     {
-        var floor = _mapFloors.FirstOrDefault(f => f.FloorId == floorId);
-        if (floor?.StartingFog is null) return;
-
-        floor.CurrentFog = floor.StartingFog.Clone();
-        if (_mapFloors.IndexOf(floor) == CurrentFloorIndex) RefreshCurrentFloorOverlay();
+        if (_floorStartingFogs.TryGetValue(floorId, out var startingFog))
+            MapDisplay.ResetFloorFog(floorId, startingFog.Clone());
     }
 
     private void OnMapHide()
     {
-        IsShowingMap = false;
-        _mapFloors.Clear();
+        MapDisplay.HideMap();
+        _floorStartingFogs.Clear();
         _pendingFloorImagePaths.Clear();
-        CurrentFloorImageBitmap = null;
-        CurrentFloorOverlayBitmap = null;
-        CurrentFloorName = string.Empty;
         MediaWindowShouldHide?.Invoke();
         Log.Information("Map hidden");
-    }
-
-    private void DisplayCurrentFloor()
-    {
-        if (CurrentFloorIndex < 0 || CurrentFloorIndex >= _mapFloors.Count) return;
-
-        var floor = _mapFloors[CurrentFloorIndex];
-        CurrentFloorName = floor.Name;
-        CurrentFloorImageBitmap = floor.Image;
-        RefreshCurrentFloorOverlay();
-    }
-
-    private void RefreshCurrentFloorOverlay()
-    {
-        if (CurrentFloorIndex < 0 || CurrentFloorIndex >= _mapFloors.Count) return;
-
-        var floor = _mapFloors[CurrentFloorIndex];
-        CurrentFloorOverlayBitmap = floor.CurrentFog is null
-            ? null
-            : FogOverlayRenderer.BuildOverlayBitmap(floor.CurrentFog, FogOverlayRenderer.PlayerHiddenColor);
-    }
-
-    private sealed class MapFloorClientState
-    {
-        public Guid FloorId { get; init; }
-        public string Name { get; init; } = string.Empty;
-        public Bitmap? Image { get; init; }
-        public FogMask? StartingFog { get; init; }
-        public FogMask? CurrentFog { get; set; }
     }
 
     public ObservableCollection<RemoteTimelineItemViewModel> Items { get; } = new();
