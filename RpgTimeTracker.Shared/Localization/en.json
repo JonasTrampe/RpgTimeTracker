@@ -204,7 +204,8 @@
   "MainWindow.StatusBar.NotificationsHeader": "Notifications",
   "MainWindow.StatusBar.NoNotifications": "No notifications yet.",
 
-  "MainWindow.FileTypes.GameState": "Game state (JSON)",
+  "MainWindow.FileTypes.GameState": "Game state (.rtt-save)",
+  "MainWindow.FileTypes.GameStateLegacyJson": "Game state (legacy JSON)",
   "MainWindow.FileTypes.Calendar": "Calendar (JSON)",
   "MainWindow.FileTypes.SoundFile": "Sound file",
   "MainWindow.FileTypes.ImageOrVideo": "Image or video",

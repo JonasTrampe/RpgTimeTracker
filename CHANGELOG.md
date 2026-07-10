@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Optional auto-save on close and auto-load on startup (Host app), using the
   location of the last manual save/load. Both are opt-in toggles in the
   Settings tab; existing behavior is unchanged unless enabled.
+- The save/load file format is now a zip container with the `.rtt-save`
+  extension (was a bare `.json` file) - chosen so a save file isn't mistaken
+  for arbitrary JSON data, and to make room for upcoming binary data
+  (fog-of-war maps) that doesn't belong in JSON. Old `.json` saves still
+  load fine and are upgraded to the new format automatically the next time
+  you save.
+
 ### Fixed
 
 - Date/time display (game clock, calendar, alarm trigger time) and the
