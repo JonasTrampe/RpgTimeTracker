@@ -12,6 +12,23 @@
         <Image Source="{Binding CurrentMediaBitmap}" Stretch="Uniform" IsVisible="{Binding HasImageMedia}" />
         <vlc:VideoView MediaPlayer="{Binding MediaPlayer}" IsVisible="{Binding HasVideoMedia}" />
 
+        <Panel IsVisible="{Binding IsShowingMap}">
+            <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Uniform" />
+            <Image Source="{Binding CurrentFloorOverlayBitmap}" Stretch="Uniform"
+                   RenderOptions.BitmapInterpolationMode="None" />
+
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom" Margin="0,0,0,16" IsVisible="{Binding HasMultipleFloors}">
+                <Button Content="&#8249;" Command="{Binding PreviousFloorCommand}"
+                        Background="#66000000" Foreground="White" BorderThickness="0" />
+                <Border Background="#66000000" CornerRadius="6" Padding="10,6">
+                    <TextBlock Text="{Binding CurrentFloorName}" Foreground="White" />
+                </Border>
+                <Button Content="&#8250;" Command="{Binding NextFloorCommand}"
+                        Background="#66000000" Foreground="White" BorderThickness="0" />
+            </StackPanel>
+        </Panel>
+
         <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12"
                 Background="#66000000" CornerRadius="6" Padding="10,6">
             <TextBlock Text="{Binding CurrentGameTimeText}" Foreground="White" FontWeight="Bold" FontSize="14" />

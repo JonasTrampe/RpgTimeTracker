@@ -129,6 +129,12 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MediaRetractRequested += mediaId => Dispatcher.UIThread.Post(() => RetractGalleryItem(mediaId));
         _client.MediaHighlightRequested += mediaId => Dispatcher.UIThread.Post(() => ShowGalleryItem(mediaId));
         _client.SlideshowIntervalChanged += seconds => Dispatcher.UIThread.Post(() => ApplySlideshowInterval(seconds));
+        _client.MapFloorImageReceived += (floorId, path) =>
+            Dispatcher.UIThread.Post(() => OnMapFloorImageReceived(floorId, path));
+        _client.MapShowReceived += mapShow => Dispatcher.UIThread.Post(() => OnMapShow(mapShow));
+        _client.MapFogUpdateReceived += fogUpdate => Dispatcher.UIThread.Post(() => OnMapFogUpdate(fogUpdate));
+        _client.MapFogResetReceived += floorId => Dispatcher.UIThread.Post(() => OnMapFogReset(floorId));
+        _client.MapHideReceived += () => Dispatcher.UIThread.Post(OnMapHide);
         _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
         _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
@@ -168,6 +174,156 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     public bool HasMedia => CurrentMediaKind != MediaKind.None;
     public bool HasImageMedia => CurrentMediaKind == MediaKind.Image;
     public bool HasVideoMedia => CurrentMediaKind == MediaKind.Video;
+
+    // ==================== Map display (fog of war) ====================
+    // Replaces the gallery/current-medium display while open (mutually exclusive, matching how
+    // event-trigger media temporarily takes over) - navigation between floors is purely local,
+    // the same pattern as gallery highlight navigation (see PreviousGalleryItemCommand): no
+    // server round-trip, each client browses its own floors independently.
+
+    private readonly List<MapFloorClientState> _mapFloors = [];
+    private readonly Dictionary<Guid, string> _pendingFloorImagePaths = new();
+
+    [ObservableProperty] private bool _isShowingMap;
+    [ObservableProperty] private string _mapName = string.Empty;
+    [ObservableProperty] private int _currentFloorIndex;
+    [ObservableProperty] private Bitmap? _currentFloorImageBitmap;
+    [ObservableProperty] private WriteableBitmap? _currentFloorOverlayBitmap;
+    [ObservableProperty] private string _currentFloorName = string.Empty;
+
+    public bool HasMultipleFloors => _mapFloors.Count > 1;
+
+    [RelayCommand]
+    private void PreviousFloor()
+    {
+        NavigateFloor(-1);
+    }
+
+    [RelayCommand]
+    private void NextFloor()
+    {
+        NavigateFloor(1);
+    }
+
+    private void NavigateFloor(int direction)
+    {
+        if (_mapFloors.Count == 0) return;
+
+        CurrentFloorIndex = (CurrentFloorIndex + direction + _mapFloors.Count) % _mapFloors.Count;
+        DisplayCurrentFloor();
+    }
+
+    private void OnMapFloorImageReceived(Guid floorId, string tempPath)
+    {
+        _pendingFloorImagePaths[floorId] = tempPath;
+    }
+
+    private void OnMapShow(MapShowParams mapShow)
+    {
+        _mapFloors.Clear();
+        foreach (var floor in mapShow.Floors)
+        {
+            Bitmap? bitmap = null;
+            if (_pendingFloorImagePaths.TryGetValue(floor.FloorId, out var imagePath))
+                try
+                {
+                    using var stream = File.OpenRead(imagePath);
+                    bitmap = new Bitmap(stream);
+                }
+                catch (Exception ex) when (ex is IOException or NotSupportedException)
+                {
+                    Log.Warning(ex, "Map floor image could not be decoded ({FloorName})", floor.FloorName);
+                }
+
+            FogMask? startingFog = null, currentFog = null;
+            try
+            {
+                startingFog = FogMaskSerializer.Deserialize(Convert.FromBase64String(floor.StartingFogBase64));
+                currentFog = FogMaskSerializer.Deserialize(Convert.FromBase64String(floor.CurrentFogBase64));
+            }
+            catch (Exception ex) when (ex is FormatException or ArgumentException)
+            {
+                Log.Warning(ex, "Map floor fog could not be decoded ({FloorName})", floor.FloorName);
+            }
+
+            _mapFloors.Add(new MapFloorClientState
+            {
+                FloorId = floor.FloorId,
+                Name = floor.FloorName,
+                Image = bitmap,
+                StartingFog = startingFog,
+                CurrentFog = currentFog
+            });
+        }
+
+        _pendingFloorImagePaths.Clear();
+        MapName = mapShow.MapName;
+        CurrentFloorIndex = 0;
+        IsShowingMap = true;
+        OnPropertyChanged(nameof(HasMultipleFloors));
+        DisplayCurrentFloor();
+        MediaWindowShouldShow?.Invoke();
+        Log.Information("Map shown: {MapName} ({FloorCount} floors)", mapShow.MapName, _mapFloors.Count);
+    }
+
+    private void OnMapFogUpdate(MapFogUpdateParams update)
+    {
+        var floor = _mapFloors.FirstOrDefault(f => f.FloorId == update.FloorId);
+        if (floor?.CurrentFog is null) return;
+
+        foreach (var cell in update.Cells) floor.CurrentFog.SetRevealed(cell.X, cell.Y, cell.Revealed);
+        if (_mapFloors.IndexOf(floor) == CurrentFloorIndex) RefreshCurrentFloorOverlay();
+    }
+
+    private void OnMapFogReset(Guid floorId)
+    {
+        var floor = _mapFloors.FirstOrDefault(f => f.FloorId == floorId);
+        if (floor?.StartingFog is null) return;
+
+        floor.CurrentFog = floor.StartingFog.Clone();
+        if (_mapFloors.IndexOf(floor) == CurrentFloorIndex) RefreshCurrentFloorOverlay();
+    }
+
+    private void OnMapHide()
+    {
+        IsShowingMap = false;
+        _mapFloors.Clear();
+        _pendingFloorImagePaths.Clear();
+        CurrentFloorImageBitmap = null;
+        CurrentFloorOverlayBitmap = null;
+        CurrentFloorName = string.Empty;
+        MediaWindowShouldHide?.Invoke();
+        Log.Information("Map hidden");
+    }
+
+    private void DisplayCurrentFloor()
+    {
+        if (CurrentFloorIndex < 0 || CurrentFloorIndex >= _mapFloors.Count) return;
+
+        var floor = _mapFloors[CurrentFloorIndex];
+        CurrentFloorName = floor.Name;
+        CurrentFloorImageBitmap = floor.Image;
+        RefreshCurrentFloorOverlay();
+    }
+
+    private void RefreshCurrentFloorOverlay()
+    {
+        if (CurrentFloorIndex < 0 || CurrentFloorIndex >= _mapFloors.Count) return;
+
+        var floor = _mapFloors[CurrentFloorIndex];
+        CurrentFloorOverlayBitmap = floor.CurrentFog is null
+            ? null
+            : FogOverlayRenderer.BuildOverlayBitmap(floor.CurrentFog, FogOverlayRenderer.PlayerHiddenColor);
+    }
+
+    private sealed class MapFloorClientState
+    {
+        public Guid FloorId { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public Bitmap? Image { get; init; }
+        public FogMask? StartingFog { get; init; }
+        public FogMask? CurrentFog { get; set; }
+    }
 
     public ObservableCollection<RemoteTimelineItemViewModel> Items { get; } = new();
     public ObservableCollection<PlayerCalendarDayViewModel> PlayerCalendarDays { get; } = new();

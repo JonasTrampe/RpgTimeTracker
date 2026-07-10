@@ -232,6 +232,15 @@ public partial class MainWindow : Window
             await vmForFloor.AddFloorToMapAsync(map, localPath);
     }
 
+    private void OnEditMapClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm ||
+            sender is not Button { DataContext: MapItemViewModel map }) return;
+
+        var editor = new MapEditorWindow(vm, map);
+        editor.Show(this);
+    }
+
     private async void OnExportMapClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm ||

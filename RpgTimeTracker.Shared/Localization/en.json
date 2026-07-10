@@ -144,6 +144,12 @@
   "MainWindow.Maps.EmptyState": "No maps yet.",
   "MainWindow.Maps.AddFloorButton": "+ Add floor",
   "MainWindow.Maps.NoFloorsState": "No floors yet.",
+  "MainWindow.Maps.EditButton": "Edit…",
+
+  "MapEditor.RevealToolButton": "👁 Reveal",
+  "MapEditor.BrushSizeLabel": "Brush size",
+  "MapEditor.ResetButton": "Reset to starting",
+  "MapEditor.OpenToPlayersButton": "Show to players",
 
   "MainWindow.Calendar.Title": "Calendar",
   "MainWindow.Calendar.Description": "Month view with a day list. In the player window, the toggle only appears if player-visible entries exist.",

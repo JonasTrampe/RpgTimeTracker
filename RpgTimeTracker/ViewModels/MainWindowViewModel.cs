@@ -813,6 +813,93 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         ThemeSettingsService.SaveSettings(settings);
     }
 
+    // ==================== Map display (open to players, live fog editing) ====================
+    // "Starting" fog lives on disk per floor (MapFloorItemViewModel.FogPath, the library
+    // template); "current/live" fog is session-only, kept here in memory (not written back to
+    // FogPath) and initialized from the starting fog the first time a floor is touched.
+
+    [ObservableProperty] private MapItemViewModel? _openMap;
+    [ObservableProperty] private MapFloorItemViewModel? _editingFloor;
+    [ObservableProperty] private bool _isMapOpenToPlayers;
+
+    private readonly Dictionary<Guid, FogMask> _liveFog = new();
+
+    public bool HasNoFloorsInEditor => EditingFloor is null;
+
+    /// <summary>The live (current) fog for a floor - loaded from its starting template on first
+    ///     access, then mutated in place as the GM paints.</summary>
+    public FogMask GetLiveFog(MapFloorItemViewModel floor)
+    {
+        if (_liveFog.TryGetValue(floor.Id, out var fog)) return fog;
+
+        fog = File.Exists(floor.FogPath)
+            ? FogMaskSerializer.Deserialize(File.ReadAllBytes(floor.FogPath))
+            : FogMask.CreateFullyHidden(floor.GridWidth, floor.GridHeight, floor.CellSizePx);
+        _liveFog[floor.Id] = fog;
+        return fog;
+    }
+
+    [RelayCommand]
+    private async Task OpenMapToPlayersAsync(MapItemViewModel map)
+    {
+        var floors = new List<TcpPlayerServerService.OpenMapFloor>();
+        foreach (var floor in map.Floors)
+        {
+            if (!File.Exists(floor.ImagePath) || !File.Exists(floor.FogPath)) continue;
+
+            var startingFog = FogMaskSerializer.Deserialize(await File.ReadAllBytesAsync(floor.FogPath));
+            MediaTypeHelper.TryGetKind(floor.ImagePath, out _, out var mimeType);
+            floors.Add(new TcpPlayerServerService.OpenMapFloor
+            {
+                FloorId = floor.Id,
+                FloorName = floor.Name,
+                ImageFileName = Path.GetFileName(floor.ImagePath),
+                ImageMimeType = mimeType,
+                ImageBytes = await File.ReadAllBytesAsync(floor.ImagePath),
+                CellSizePx = floor.CellSizePx,
+                GridWidth = floor.GridWidth,
+                GridHeight = floor.GridHeight,
+                StartingFog = startingFog,
+                CurrentFog = GetLiveFog(floor)
+            });
+        }
+
+        OpenMap = map;
+        EditingFloor ??= map.Floors.FirstOrDefault();
+        IsMapOpenToPlayers = true;
+        await _playerServer.PublishMapShowAsync(map.Id, map.Name, floors);
+        Log.Information("Map opened to players: {MapName} ({FloorCount} floors)", map.Name, floors.Count);
+    }
+
+    [RelayCommand]
+    private async Task CloseMapToPlayersAsync()
+    {
+        IsMapOpenToPlayers = false;
+        await _playerServer.PublishMapHideAsync();
+        Log.Information("Map closed to players");
+    }
+
+    /// <summary>
+    ///     Broadcasts a debounced batch of already-applied reveal/hide cells (the editor paints
+    ///     the live FogMask returned by GetLiveFog directly, for immediate visual feedback - this
+    ///     just tells connected players). Harmless to call for a floor that isn't the currently
+    ///     open map: the server-side cache update and the broadcast are both no-ops for clients
+    ///     that don't have that floor loaded.
+    /// </summary>
+    public Task BroadcastFogCellsAsync(Guid floorId, List<FogCellDto> cells)
+    {
+        return cells.Count == 0 ? Task.CompletedTask : _playerServer.PublishMapFogUpdateAsync(floorId, cells);
+    }
+
+    public async Task ResetFloorFogToStartingAsync(MapFloorItemViewModel floor)
+    {
+        var startingFog = File.Exists(floor.FogPath)
+            ? FogMaskSerializer.Deserialize(await File.ReadAllBytesAsync(floor.FogPath))
+            : FogMask.CreateFullyHidden(floor.GridWidth, floor.GridHeight, floor.CellSizePx);
+        _liveFog[floor.Id] = startingFog;
+        await _playerServer.PublishMapFogResetAsync(floor.Id);
+    }
+
     /// <summary>Exports a single map (its floors' images + starting fog) as a self-contained
     ///     <c>.rtt-map</c> zip - one map per file, unlike the whole-folder Media/Sound library
     ///     export/import (a map is a single unit a GM shares/backs up, not a batch of many).</summary>

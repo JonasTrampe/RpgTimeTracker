@@ -102,7 +102,8 @@ public partial class ClientMainWindow : Window
     // mirrors the same priority as the local fullscreen toggle on the host side.
     private void OnRemoteFullscreenRequested(bool fullscreen)
     {
-        var hasVisibleMedia = (DataContext as ClientMainWindowViewModel)?.HasMedia == true &&
+        var vm = DataContext as ClientMainWindowViewModel;
+        var hasVisibleMedia = (vm?.HasMedia == true || vm?.IsShowingMap == true) &&
                               _mediaWindow is { IsVisible: true };
         Window target = hasVisibleMedia ? _mediaWindow! : this;
 
