@@ -2980,7 +2980,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             NetworkServerPort = port;
             var announcedName = string.IsNullOrWhiteSpace(ServerName) ? "RpgTimeTracker" : ServerName.Trim();
             if (announcedName.Length > 60) announcedName = announcedName[..60];
-            _playerServer.Start(port, announcedName);
+            _playerServer.Start(port, announcedName, enableDiscovery: !Program.DisableNetworkDiscovery);
             IsNetworkServerRunning = true;
             OnPropertyChanged(nameof(CanToggleDisplayFullscreen));
             NetworkServerAddress = PlayerMdnsAnnouncer.GetBestLocalIPv4()?.ToString();

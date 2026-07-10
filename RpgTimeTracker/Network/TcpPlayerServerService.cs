@@ -133,7 +133,18 @@ public sealed class TcpPlayerServerService : IDisposable
     /// <summary>A client reports that a non-looping video has finished on its end (background thread).</summary>
     public event Action<string>? ClientReportedPlaybackEnded;
 
-    public void Start(int port = DefaultPort, string serverName = "RpgTimeTracker")
+    /// <summary>
+    ///     Starts the TCP listener, and by default the mDNS + LAN-broadcast discovery responders
+    ///     alongside it. <paramref name="enableDiscovery"/> lets a caller skip those - the real
+    ///     app exposes this as the <c>--no-discovery</c> CLI flag (see Program.cs) for restricted
+    ///     networks, and integration tests use it to avoid best-effort UDP broadcast noise/flakiness
+    ///     in CI sandboxes that don't need it (tests connect directly by IP:port, never via discovery).
+    ///
+    ///     <paramref name="port"/> of 0 asks the OS for a free ephemeral port instead of a fixed
+    ///     one - <see cref="Port"/> is updated to the actual bound port afterward, so a caller
+    ///     (currently only tests) can read it back. Real usage always passes an explicit port.
+    /// </summary>
+    public void Start(int port = DefaultPort, string serverName = "RpgTimeTracker", bool enableDiscovery = true)
     {
         if (IsRunning) return;
 
@@ -141,18 +152,23 @@ public sealed class TcpPlayerServerService : IDisposable
         _cts = new CancellationTokenSource();
         _listener = new TcpListener(IPAddress.Any, Port);
         _listener.Start(8);
+        Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
         IsRunning = true;
 
         _acceptTask = Task.Run(() => AcceptLoopAsync(_cts.Token));
         _heartbeatTask = Task.Run(() => HeartbeatLoopAsync(_cts.Token));
 
-        _announcer = new PlayerMdnsAnnouncer(Port, serverName);
-        _announcer.Start();
+        if (enableDiscovery)
+        {
+            _announcer = new PlayerMdnsAnnouncer(Port, serverName);
+            _announcer.Start();
 
-        _lanDiscoveryResponder = new LanDiscoveryResponder(Port, serverName);
-        _lanDiscoveryResponder.Start();
+            _lanDiscoveryResponder = new LanDiscoveryResponder(Port, serverName);
+            _lanDiscoveryResponder.Start();
+        }
 
-        Log.Information("TCP player server started on port {Port} (server name {ServerName})", Port, serverName);
+        Log.Information("TCP player server started on port {Port} (server name {ServerName}, discovery={EnableDiscovery})",
+            Port, serverName, enableDiscovery);
     }
 
     // ==================== Granular state events ====================
