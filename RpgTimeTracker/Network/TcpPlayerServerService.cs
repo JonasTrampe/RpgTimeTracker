@@ -406,7 +406,8 @@ public sealed class TcpPlayerServerService : IDisposable
                 MediaId = floor.FloorId.ToString(),
                 Kind = MediaHeaderDto.MediaKindMapFloor,
                 FileName = floor.ImageFileName,
-                MimeType = floor.ImageMimeType
+                MimeType = floor.ImageMimeType,
+                TotalLength = floor.ImageBytes.Length
             };
             await SendMediaToClientAsync(client, header, floor.ImageBytes).ConfigureAwait(false);
         }
