@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:RpgTimeTracker.PlayerClient.ViewModels"
         xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+        xmlns:views="using:RpgTimeTracker.Shared.Views"
         x:Class="RpgTimeTracker.PlayerClient.Views.MediaWindow"
         x:DataType="vm:ClientMainWindowViewModel"
         Title="{Binding CurrentMediaFileName, StringFormat='Medium: {0}'}"
@@ -11,6 +12,8 @@
            ToolTip.Tip="{DynamicResource MediaWindow.PanelTooltip}">
         <Image Source="{Binding CurrentMediaBitmap}" Stretch="Uniform" IsVisible="{Binding HasImageMedia}" />
         <vlc:VideoView MediaPlayer="{Binding MediaPlayer}" IsVisible="{Binding HasVideoMedia}" />
+
+        <views:MapDisplayView DataContext="{Binding MapDisplay}" />
 
         <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12"
                 Background="#66000000" CornerRadius="6" Padding="10,6">

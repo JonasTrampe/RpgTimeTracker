@@ -129,6 +129,12 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MediaRetractRequested += mediaId => Dispatcher.UIThread.Post(() => RetractGalleryItem(mediaId));
         _client.MediaHighlightRequested += mediaId => Dispatcher.UIThread.Post(() => ShowGalleryItem(mediaId));
         _client.SlideshowIntervalChanged += seconds => Dispatcher.UIThread.Post(() => ApplySlideshowInterval(seconds));
+        _client.MapFloorImageReceived += (floorId, path) =>
+            Dispatcher.UIThread.Post(() => OnMapFloorImageReceived(floorId, path));
+        _client.MapShowReceived += mapShow => Dispatcher.UIThread.Post(() => OnMapShow(mapShow));
+        _client.MapFogUpdateReceived += fogUpdate => Dispatcher.UIThread.Post(() => OnMapFogUpdate(fogUpdate));
+        _client.MapFogResetReceived += floorId => Dispatcher.UIThread.Post(() => OnMapFogReset(floorId));
+        _client.MapHideReceived += () => Dispatcher.UIThread.Post(OnMapHide);
         _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
         _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
@@ -168,6 +174,88 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     public bool HasMedia => CurrentMediaKind != MediaKind.None;
     public bool HasImageMedia => CurrentMediaKind == MediaKind.Image;
     public bool HasVideoMedia => CurrentMediaKind == MediaKind.Video;
+
+    // ==================== Map display (fog of war) ====================
+    // Replaces the gallery/current-medium display while open (mutually exclusive, matching how
+    // event-trigger media temporarily takes over). Rendering/floor-navigation logic lives in the
+    // shared MapDisplayViewModel (also used by the Host's local player-window preview,
+    // MainWindowViewModel.MapDisplay) - only the network-specific plumbing (temp image paths,
+    // base64 fog decoding) stays here.
+
+    private readonly Dictionary<Guid, string> _pendingFloorImagePaths = new();
+    private readonly Dictionary<Guid, FogMask> _floorStartingFogs = new();
+
+    public MapDisplayViewModel MapDisplay { get; } = new();
+
+    private void OnMapFloorImageReceived(Guid floorId, string tempPath)
+    {
+        _pendingFloorImagePaths[floorId] = tempPath;
+    }
+
+    private void OnMapShow(MapShowParams mapShow)
+    {
+        _floorStartingFogs.Clear();
+        var floors = new List<MapDisplayFloor>();
+        foreach (var floor in mapShow.Floors)
+        {
+            Bitmap? bitmap = null;
+            if (_pendingFloorImagePaths.TryGetValue(floor.FloorId, out var imagePath))
+                try
+                {
+                    using var stream = File.OpenRead(imagePath);
+                    bitmap = new Bitmap(stream);
+                }
+                catch (Exception ex) when (ex is IOException or NotSupportedException)
+                {
+                    Log.Warning(ex, "Map floor image could not be decoded ({FloorName})", floor.FloorName);
+                }
+
+            FogMask? startingFog = null, currentFog = null;
+            try
+            {
+                startingFog = FogMaskSerializer.Deserialize(Convert.FromBase64String(floor.StartingFogBase64));
+                currentFog = FogMaskSerializer.Deserialize(Convert.FromBase64String(floor.CurrentFogBase64));
+            }
+            catch (Exception ex) when (ex is FormatException or ArgumentException)
+            {
+                Log.Warning(ex, "Map floor fog could not be decoded ({FloorName})", floor.FloorName);
+            }
+
+            if (startingFog is not null) _floorStartingFogs[floor.FloorId] = startingFog;
+            floors.Add(new MapDisplayFloor
+            {
+                FloorId = floor.FloorId,
+                Name = floor.FloorName,
+                Image = bitmap,
+                CurrentFog = currentFog
+            });
+        }
+
+        _pendingFloorImagePaths.Clear();
+        MapDisplay.ShowMap(mapShow.MapName, floors);
+        MediaWindowShouldShow?.Invoke();
+        Log.Information("Map shown: {MapName} ({FloorCount} floors)", mapShow.MapName, floors.Count);
+    }
+
+    private void OnMapFogUpdate(MapFogUpdateParams update)
+    {
+        MapDisplay.ApplyFogCells(update.FloorId, update.Cells);
+    }
+
+    private void OnMapFogReset(Guid floorId)
+    {
+        if (_floorStartingFogs.TryGetValue(floorId, out var startingFog))
+            MapDisplay.ResetFloorFog(floorId, startingFog.Clone());
+    }
+
+    private void OnMapHide()
+    {
+        MapDisplay.HideMap();
+        _floorStartingFogs.Clear();
+        _pendingFloorImagePaths.Clear();
+        MediaWindowShouldHide?.Invoke();
+        Log.Information("Map hidden");
+    }
 
     public ObservableCollection<RemoteTimelineItemViewModel> Items { get; } = new();
     public ObservableCollection<PlayerCalendarDayViewModel> PlayerCalendarDays { get; } = new();

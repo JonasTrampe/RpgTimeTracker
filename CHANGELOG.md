@@ -18,18 +18,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (appending, like the existing per-library imports).
 
 
-- (In progress) Fog-of-war maps: a new "Maps" tab lets the GM prepare
-  multi-floor maps ahead of time (name a map, add floor images, export/import
-  a single map as a self-contained `.rtt-map` file to back it up or share it).
-  Each floor starts fully fogged; the eraser/pen editor and live reveal to
-  players are not implemented yet - this only builds the map/floor storage
-  and library UI skeleton.
-- (In progress) Fog-of-war maps: network protocol groundwork
-  (`map.show`/`map.fogUpdate`/`map.fogReset`/`map.hide`) so the host can open
-  a map to players, stream floor images, and push reveal/hide updates, with
-  a full resync (all floor images + current fog) to any client that connects
-  or reconnects while a map is open. No GM-facing editor UI or PlayerClient
-  rendering yet - that's the next piece.
+- Fog-of-war maps: a new "Maps" tab lets the GM prepare multi-floor maps
+  ahead of time (name a map, add floor images, export/import a single map
+  as a self-contained `.rtt-map` file to back it up or share it), plus a
+  new "Edit…" window per map with a brush (reveal/hide, adjustable size),
+  "Reset to starting", and a "Show to players" toggle. Revealed/hidden
+  cells stream live to connected players (`map.show`/`map.fogUpdate`/
+  `map.fogReset`/`map.hide`), with a full resync (all floor images +
+  current fog) to any client that connects or reconnects while a map is
+  open, so nothing ends up partially revealed/hidden by accident. Players
+  see hidden cells as a solid opaque block (configurable color/blur/
+  opacity is a later update) and can browse between floors locally,
+  independent of what the GM is currently editing. The Host's own local
+  player-window preview shows the exact same live map (when no client is
+  connected, mirroring how local media preview already worked) - both
+  reuse a shared `MapDisplayView`/`MapDisplayViewModel` (Shared project)
+  instead of duplicating the rendering logic per app.
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/

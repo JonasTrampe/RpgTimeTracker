@@ -813,6 +813,129 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         ThemeSettingsService.SaveSettings(settings);
     }
 
+    // ==================== Map display (open to players, live fog editing) ====================
+    // "Starting" fog lives on disk per floor (MapFloorItemViewModel.FogPath, the library
+    // template); "current/live" fog is session-only, kept here in memory (not written back to
+    // FogPath) and initialized from the starting fog the first time a floor is touched.
+
+    [ObservableProperty] private MapItemViewModel? _openMap;
+    [ObservableProperty] private MapFloorItemViewModel? _editingFloor;
+    [ObservableProperty] private bool _isMapOpenToPlayers;
+
+    private readonly Dictionary<Guid, FogMask> _liveFog = new();
+
+    /// <summary>
+    ///     Shared "what a player currently sees" display, reused for the local player-window
+    ///     preview (PlayerWindow.axaml, see ShouldShowMapLocally) - the exact same component the
+    ///     real PlayerClient uses (RpgTimeTracker.Shared.ViewModels.MapDisplayViewModel). Since
+    ///     both this and GetLiveFog live in the same process, the Host feeds it the SAME FogMask
+    ///     instances it paints into (see MapEditorWindow) rather than a serialized copy, and only
+    ///     needs to say "something changed" (NotifyFogChanged) instead of resending cell data.
+    /// </summary>
+    public MapDisplayViewModel MapDisplay { get; } = new();
+
+    /// <summary>No client connected (or server off) AND the local player window is open -
+    ///     mirrors ShouldShowMediaLocally's gating for the map preview.</summary>
+    public bool ShouldShowMapLocally =>
+        MapDisplay.IsShowingMap && IsPlayerWindowOpen && (!IsNetworkServerRunning || ConnectedClientCount == 0);
+
+    public bool HasNoFloorsInEditor => EditingFloor is null;
+
+    /// <summary>The live (current) fog for a floor - loaded from its starting template on first
+    ///     access, then mutated in place as the GM paints.</summary>
+    public FogMask GetLiveFog(MapFloorItemViewModel floor)
+    {
+        if (_liveFog.TryGetValue(floor.Id, out var fog)) return fog;
+
+        fog = File.Exists(floor.FogPath)
+            ? FogMaskSerializer.Deserialize(File.ReadAllBytes(floor.FogPath))
+            : FogMask.CreateFullyHidden(floor.GridWidth, floor.GridHeight, floor.CellSizePx);
+        _liveFog[floor.Id] = fog;
+        return fog;
+    }
+
+    [RelayCommand]
+    private async Task OpenMapToPlayersAsync(MapItemViewModel map)
+    {
+        var floors = new List<TcpPlayerServerService.OpenMapFloor>();
+        var displayFloors = new List<MapDisplayFloor>();
+        foreach (var floor in map.Floors)
+        {
+            if (!File.Exists(floor.ImagePath) || !File.Exists(floor.FogPath)) continue;
+
+            var startingFog = FogMaskSerializer.Deserialize(await File.ReadAllBytesAsync(floor.FogPath));
+            var liveFog = GetLiveFog(floor);
+            MediaTypeHelper.TryGetKind(floor.ImagePath, out _, out var mimeType);
+            floors.Add(new TcpPlayerServerService.OpenMapFloor
+            {
+                FloorId = floor.Id,
+                FloorName = floor.Name,
+                ImageFileName = Path.GetFileName(floor.ImagePath),
+                ImageMimeType = mimeType,
+                ImageBytes = await File.ReadAllBytesAsync(floor.ImagePath),
+                CellSizePx = floor.CellSizePx,
+                GridWidth = floor.GridWidth,
+                GridHeight = floor.GridHeight,
+                StartingFog = startingFog,
+                CurrentFog = liveFog
+            });
+
+            using var imageStream = File.OpenRead(floor.ImagePath);
+            displayFloors.Add(new MapDisplayFloor
+            {
+                FloorId = floor.Id,
+                Name = floor.Name,
+                Image = new Bitmap(imageStream),
+                CurrentFog = liveFog
+            });
+        }
+
+        OpenMap = map;
+        EditingFloor ??= map.Floors.FirstOrDefault();
+        IsMapOpenToPlayers = true;
+        await _playerServer.PublishMapShowAsync(map.Id, map.Name, floors);
+        MapDisplay.ShowMap(map.Name, displayFloors);
+        OnPropertyChanged(nameof(ShouldShowMapLocally));
+        Log.Information("Map opened to players: {MapName} ({FloorCount} floors)", map.Name, floors.Count);
+    }
+
+    [RelayCommand]
+    private async Task CloseMapToPlayersAsync()
+    {
+        IsMapOpenToPlayers = false;
+        await _playerServer.PublishMapHideAsync();
+        MapDisplay.HideMap();
+        OnPropertyChanged(nameof(ShouldShowMapLocally));
+        Log.Information("Map closed to players");
+    }
+
+    /// <summary>
+    ///     Broadcasts a debounced batch of already-applied reveal/hide cells (the editor paints
+    ///     the live FogMask returned by GetLiveFog directly, for immediate visual feedback - this
+    ///     just tells connected players). Harmless to call for a floor that isn't the currently
+    ///     open map: the server-side cache update and the broadcast are both no-ops for clients
+    ///     that don't have that floor loaded.
+    /// </summary>
+    public Task BroadcastFogCellsAsync(Guid floorId, List<FogCellDto> cells)
+    {
+        return cells.Count == 0 ? Task.CompletedTask : _playerServer.PublishMapFogUpdateAsync(floorId, cells);
+    }
+
+    public async Task ResetFloorFogToStartingAsync(MapFloorItemViewModel floor)
+    {
+        var startingFog = File.Exists(floor.FogPath)
+            ? FogMaskSerializer.Deserialize(await File.ReadAllBytesAsync(floor.FogPath))
+            : FogMask.CreateFullyHidden(floor.GridWidth, floor.GridHeight, floor.CellSizePx);
+
+        // Mutated in place (not replacing the dictionary entry) so the exact same FogMask
+        // instance already shared with MapDisplay/MapEditorWindow stays valid - see GetLiveFog.
+        var live = GetLiveFog(floor);
+        live.RevealedBits = startingFog.RevealedBits;
+
+        await _playerServer.PublishMapFogResetAsync(floor.Id);
+        MapDisplay.NotifyFogChanged(floor.Id);
+    }
+
     /// <summary>Exports a single map (its floors' images + starting fog) as a self-contained
     ///     <c>.rtt-map</c> zip - one map per file, unlike the whole-folder Media/Sound library
     ///     export/import (a map is a single unit a GM shares/backs up, not a batch of many).</summary>
@@ -1316,6 +1439,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         if (!value) IsLocalPlayerFullscreen = false;
         OnPropertyChanged(nameof(CanToggleDisplayFullscreen));
         RefreshLocalMediaPreview();
+        OnPropertyChanged(nameof(ShouldShowMapLocally));
     }
 
     /// <summary>
@@ -1365,6 +1489,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         RefreshLocalMediaPreview();
         if (value == 0) ClearRemoteOnlyActiveSounds();
         OnPropertyChanged(nameof(ServerStatusSummary));
+        OnPropertyChanged(nameof(ShouldShowMapLocally));
     }
 
     partial void OnNetworkServerPortChanged(int value)
@@ -1831,6 +1956,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         OnPropertyChanged(nameof(ToggleNetworkServerLabel));
         OnPropertyChanged(nameof(ServerStatusSummary));
         RefreshLocalMediaPreview();
+        OnPropertyChanged(nameof(ShouldShowMapLocally));
     }
 
     partial void OnSpeedMultiplierInputChanged(decimal value)

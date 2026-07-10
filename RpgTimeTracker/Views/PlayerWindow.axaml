@@ -131,6 +131,10 @@
             </StackPanel>
         </Panel>
 
+        <Panel IsVisible="{Binding ShouldShowMapLocally}" Background="Black">
+            <views:MapDisplayView DataContext="{Binding MapDisplay}" />
+        </Panel>
+
         <Button x:Name="ExitFullscreenButton"
                 Content="{DynamicResource PlayerWindow.ExitFullscreenButton}"
                 Click="OnExitFullscreenClick"

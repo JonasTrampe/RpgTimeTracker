@@ -144,6 +144,12 @@
   "MainWindow.Maps.EmptyState": "Noch keine Karten.",
   "MainWindow.Maps.AddFloorButton": "+ Ebene hinzufügen",
   "MainWindow.Maps.NoFloorsState": "Noch keine Ebenen.",
+  "MainWindow.Maps.EditButton": "Bearbeiten…",
+
+  "MapEditor.RevealToolButton": "👁 Aufdecken",
+  "MapEditor.BrushSizeLabel": "Pinselgröße",
+  "MapEditor.ResetButton": "Auf Ausgangszustand zurücksetzen",
+  "MapEditor.OpenToPlayersButton": "Spielern zeigen",
 
   "MainWindow.Calendar.Title": "Kalender",
   "MainWindow.Calendar.Description": "Monatsansicht mit Tagesliste. Im Spielerfenster erscheint die Umschaltung nur, wenn spielersichtbare Einträge existieren.",
