@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RpgTimeTracker.PlayerClient
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RpgTimeTracker.Shared", "RpgTimeTracker.Shared\RpgTimeTracker.Shared.csproj", "{6BEAEDF5-F7FD-4039-B972-499468E2ABB6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RpgTimeTracker.Tests", "RpgTimeTracker.Tests\RpgTimeTracker.Tests.csproj", "{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{6BEAEDF5-F7FD-4039-B972-499468E2ABB6}.Release|x64.Build.0 = Release|Any CPU
 		{6BEAEDF5-F7FD-4039-B972-499468E2ABB6}.Release|x86.ActiveCfg = Release|Any CPU
 		{6BEAEDF5-F7FD-4039-B972-499468E2ABB6}.Release|x86.Build.0 = Release|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Debug|x64.Build.0 = Debug|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Debug|x86.Build.0 = Debug|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Release|x64.ActiveCfg = Release|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Release|x64.Build.0 = Release|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Release|x86.ActiveCfg = Release|Any CPU
+		{31B8BA6C-4E9A-4626-B5B2-D39A0F103AB4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

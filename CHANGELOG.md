@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
+  (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/
+  `IntervalEventItem` model logic that both the Host and PlayerClient use to
+  reconstruct timer/alarm state from time-jump deltas. Now runs as part of
+  CI (`build.yml`).
+
 ## [1.0.0] - 2026-07-10
 
 Initial release: a GM-side control app (`RpgTimeTracker`) and a read-only
