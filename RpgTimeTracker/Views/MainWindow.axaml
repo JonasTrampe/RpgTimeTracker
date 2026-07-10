@@ -2172,7 +2172,7 @@
                                                             <TextBlock Classes="muted"
                                                                        Text="{DynamicResource MainWindow.Settings.FogOfWarDescription}"
                                                                        TextWrapping="Wrap" />
-                                                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto"
+                                                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto"
                                                                   ColumnSpacing="10" RowSpacing="8">
                                                                 <TextBlock Grid.Row="0" Grid.Column="0"
                                                                            Text="{DynamicResource MainWindow.Settings.FogColorLabel}"
@@ -2194,10 +2194,17 @@
                                                                 </Grid>
 
                                                                 <TextBlock Grid.Row="2" Grid.Column="0"
+                                                                           Text="{DynamicResource MainWindow.Settings.FogBlurEnabledLabel}"
+                                                                           VerticalAlignment="Center" />
+                                                                <CheckBox Grid.Row="2" Grid.Column="1"
+                                                                          IsChecked="{Binding FogBlurEnabled, Mode=TwoWay}" />
+
+                                                                <TextBlock Grid.Row="3" Grid.Column="0"
                                                                            Text="{DynamicResource MainWindow.Settings.FogBlurLabel}"
                                                                            VerticalAlignment="Center" />
-                                                                <Grid Grid.Row="2" Grid.Column="1"
-                                                                      ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                                <Grid Grid.Row="3" Grid.Column="1"
+                                                                      ColumnDefinitions="*,Auto" ColumnSpacing="8"
+                                                                      IsEnabled="{Binding FogBlurEnabled}">
                                                                     <Slider Grid.Column="0" Minimum="0" Maximum="30"
                                                                             TickFrequency="1" IsSnapToTickEnabled="True"
                                                                             Value="{Binding FogBlurRadius, Mode=TwoWay}" />

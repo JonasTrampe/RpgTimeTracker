@@ -33,6 +33,7 @@ public sealed class SessionSnapshotParams
 
     public int FogOpacityPercent { get; set; } = 100;
     public double FogBlurRadius { get; set; }
+    public bool FogBlurEnabled { get; set; } = true;
 }
 
 public sealed class ClockSpeedChangedParams
@@ -178,6 +179,7 @@ public sealed class MapRenderStyleChangedParams
     public string ColorHex { get; set; } = "#0C0C0C";
     public int OpacityPercent { get; set; } = 100;
     public double BlurRadius { get; set; }
+    public bool BlurEnabled { get; set; } = true;
 }
 
 /// <summary>

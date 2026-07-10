@@ -219,7 +219,8 @@
   "MainWindow.Settings.FogOfWarDescription": "How hidden map cells look on the players' screens - one shared setting for everyone.",
   "MainWindow.Settings.FogColorLabel": "Color",
   "MainWindow.Settings.FogOpacityLabel": "Opacity",
-  "MainWindow.Settings.FogBlurLabel": "Blur",
+  "MainWindow.Settings.FogBlurEnabledLabel": "Blur enabled",
+  "MainWindow.Settings.FogBlurLabel": "Blur strength",
 
   "MainWindow.StatusBar.PreviousGalleryTooltip": "Highlight previous gallery item",
   "MainWindow.StatusBar.NextGalleryTooltip": "Highlight next gallery item",

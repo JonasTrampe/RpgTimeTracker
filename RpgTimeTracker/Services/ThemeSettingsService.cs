@@ -218,5 +218,6 @@ public static class ThemeSettingsService
 
         public int FogOpacityPercent { get; set; } = 100;
         public double FogBlurRadius { get; set; }
+        public bool FogBlurEnabled { get; set; } = true;
     }
 }

@@ -21,7 +21,7 @@
                    Height="{Binding CurrentFloorImageBitmap.PixelSize.Height}">
                 <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Fill" />
                 <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Fill"
-                       OpacityMask="{Binding MaskBrush}" IsVisible="{Binding HasFogMask}">
+                       OpacityMask="{Binding MaskBrush}" IsVisible="{Binding ShowBlurLayer}">
                     <Image.Effect>
                         <BlurEffect Radius="{Binding BlurRadius}" />
                     </Image.Effect>

@@ -219,7 +219,8 @@
   "MainWindow.Settings.FogOfWarDescription": "Wie verdeckte Kartenfelder auf den Bildschirmen der Spieler aussehen - eine gemeinsame Einstellung für alle.",
   "MainWindow.Settings.FogColorLabel": "Farbe",
   "MainWindow.Settings.FogOpacityLabel": "Deckkraft",
-  "MainWindow.Settings.FogBlurLabel": "Unschärfe",
+  "MainWindow.Settings.FogBlurEnabledLabel": "Unschärfe aktiviert",
+  "MainWindow.Settings.FogBlurLabel": "Unschärfe-Stärke",
 
   "MainWindow.StatusBar.PreviousGalleryTooltip": "Vorheriges Galerie-Element hervorheben",
   "MainWindow.StatusBar.NextGalleryTooltip": "Nächstes Galerie-Element hervorheben",

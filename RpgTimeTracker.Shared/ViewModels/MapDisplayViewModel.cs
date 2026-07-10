@@ -55,21 +55,42 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     [ObservableProperty] private Color _hiddenColor = FogOverlayRenderer.PlayerHiddenColor;
 
     /// <summary>Blur radius (device-independent pixels) applied to the blurred map-image layer -
-    ///     bound directly to a BlurEffect in MapDisplayView.axaml, no bitmap rebuild needed.</summary>
+    ///     bound directly to a BlurEffect in MapDisplayView.axaml, no bitmap rebuild needed. Kept
+    ///     even while BlurEnabled is false, so re-enabling restores the previous strength.</summary>
     [ObservableProperty] private double _blurRadius;
+
+    /// <summary>Whether the blurred-image layer is used at all - independent of BlurRadius so
+    ///     toggling it off/on doesn't lose the configured strength. When false, only the flat
+    ///     tint layer obscures hidden cells (no image-content blur).</summary>
+    [ObservableProperty] private bool _blurEnabled = true;
 
     /// <summary>Solid-color brush for the tint layer, kept in sync with HiddenColor.</summary>
     [ObservableProperty] private IBrush _tintBrush = new SolidColorBrush(FogOverlayRenderer.PlayerHiddenColor);
+
+    /// <summary>Bound to IsVisible on the blurred-image layer in MapDisplayView.axaml - shown only
+    ///     when there's a real fog mask to clip against AND blur is enabled.</summary>
+    public bool ShowBlurLayer => HasFogMask && BlurEnabled;
 
     partial void OnHiddenColorChanged(Color value)
     {
         TintBrush = new SolidColorBrush(value);
     }
 
-    public void ApplyRenderStyle(Color color, double blurRadius)
+    partial void OnHasFogMaskChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowBlurLayer));
+    }
+
+    partial void OnBlurEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowBlurLayer));
+    }
+
+    public void ApplyRenderStyle(Color color, double blurRadius, bool blurEnabled)
     {
         HiddenColor = color;
         BlurRadius = blurRadius;
+        BlurEnabled = blurEnabled;
     }
 
     public bool HasMultipleFloors => _floors.Count > 1;

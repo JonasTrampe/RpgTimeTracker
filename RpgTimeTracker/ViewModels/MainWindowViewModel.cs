@@ -343,6 +343,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     [ObservableProperty] private int _fogOpacityPercent = 100;
     [ObservableProperty] private double _fogBlurRadius;
+    [ObservableProperty] private bool _fogBlurEnabled = true;
 
     [ObservableProperty] private bool _showPlayerCalendarView;
 
@@ -411,7 +412,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _fogColorHex = string.IsNullOrWhiteSpace(settings.FogColorHex) ? "#0C0C0C" : settings.FogColorHex;
         _fogOpacityPercent = settings.FogOpacityPercent;
         _fogBlurRadius = settings.FogBlurRadius;
-        MapDisplay.ApplyRenderStyle(FogOverlayRenderer.BuildHiddenColor(_fogColorHex, _fogOpacityPercent), _fogBlurRadius);
+        _fogBlurEnabled = settings.FogBlurEnabled;
+        MapDisplay.ApplyRenderStyle(FogOverlayRenderer.BuildHiddenColor(_fogColorHex, _fogOpacityPercent), _fogBlurRadius,
+            _fogBlurEnabled);
 
         foreach (var entry in settings.MediaLibrary)
         {
@@ -859,13 +862,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private void ApplyAndBroadcastFogStyle()
     {
-        MapDisplay.ApplyRenderStyle(FogOverlayRenderer.BuildHiddenColor(FogColorHex, FogOpacityPercent), FogBlurRadius);
-        _ = _playerServer.PublishMapRenderStyleAsync(FogColorHex, FogOpacityPercent, FogBlurRadius);
+        MapDisplay.ApplyRenderStyle(FogOverlayRenderer.BuildHiddenColor(FogColorHex, FogOpacityPercent), FogBlurRadius,
+            FogBlurEnabled);
+        _ = _playerServer.PublishMapRenderStyleAsync(FogColorHex, FogOpacityPercent, FogBlurRadius, FogBlurEnabled);
 
         var settings = ThemeSettingsService.LoadSettings();
         settings.FogColorHex = FogColorHex;
         settings.FogOpacityPercent = FogOpacityPercent;
         settings.FogBlurRadius = FogBlurRadius;
+        settings.FogBlurEnabled = FogBlurEnabled;
         ThemeSettingsService.SaveSettings(settings);
     }
 
@@ -880,6 +885,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     }
 
     partial void OnFogBlurRadiusChanged(double value)
+    {
+        ApplyAndBroadcastFogStyle();
+    }
+
+    partial void OnFogBlurEnabledChanged(bool value)
     {
         ApplyAndBroadcastFogStyle();
     }
@@ -4374,6 +4384,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             FogColorHex = FogColorHex,
             FogOpacityPercent = FogOpacityPercent,
             FogBlurRadius = FogBlurRadius,
+            FogBlurEnabled = FogBlurEnabled,
             CalendarEntries = CalendarEntries
                 .Select(item => item.TryBuildDefinition(out var definition) ? definition : null)
                 .Where(definition => definition is not null && definition.IsPlayerVisible)

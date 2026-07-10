@@ -386,13 +386,14 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     #22). No server-side cache needed for reconnect: the current value is read directly
     ///     from the Host's own settings each time session.snapshot is built.
     /// </summary>
-    public Task PublishMapRenderStyleAsync(string colorHex, int opacityPercent, double blurRadius)
+    public Task PublishMapRenderStyleAsync(string colorHex, int opacityPercent, double blurRadius, bool blurEnabled)
     {
         return BroadcastRpcAsync(RpcMethods.MapRenderStyleChanged, new MapRenderStyleChangedParams
         {
             ColorHex = colorHex,
             OpacityPercent = opacityPercent,
-            BlurRadius = blurRadius
+            BlurRadius = blurRadius,
+            BlurEnabled = blurEnabled
         });
     }
 
