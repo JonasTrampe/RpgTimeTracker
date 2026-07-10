@@ -208,5 +208,15 @@ public static class ThemeSettingsService
         public List<MediaLibraryEntryDto> MediaLibrary { get; set; } = [];
         public List<SoundLibraryEntryDto> SoundLibrary { get; set; } = [];
         public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
+
+        /// <summary>
+        ///     Player-side fog-of-war render style (see MapDisplayViewModel/FogOverlayRenderer) -
+        ///     one global GM preference, not per-map/per-floor (see issue #22 design note), pushed
+        ///     to all clients on connect (session.snapshot) and live on change (map.renderStyleChanged).
+        /// </summary>
+        public string FogColorHex { get; set; } = "#0C0C0C";
+
+        public int FogOpacityPercent { get; set; } = 100;
+        public double FogBlurRadius { get; set; }
     }
 }

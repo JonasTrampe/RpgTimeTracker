@@ -118,4 +118,12 @@ public static class RpcMethods
 
     /// <summary>GM closes the map; clients return to the previous gallery display.</summary>
     public const string MapHide = "map.hide";
+
+    /// <summary>
+    ///     GM changed the player-side fog render style (color/opacity/blur) live - one global
+    ///     preference, not per-map (see issue #22). The current style is also sent as part of
+    ///     session.snapshot for newly connecting clients, mirroring how ThemeChangedParams/
+    ///     SessionSnapshotParams.Theme both carry the theme.
+    /// </summary>
+    public const string MapRenderStyleChanged = "map.renderStyleChanged";
 }

@@ -2159,10 +2159,52 @@
                                                                             HorizontalAlignment="Stretch"
                                                                             HorizontalContentAlignment="Center" />
                                                                 </Grid>
-                                                                <TextBlock Classes="muted"
+                                                <TextBlock Classes="muted"
                                                                            Text="{DynamicResource MainWindow.Settings.SessionExportDescription}"
                                                                            TextWrapping="Wrap" />
                                                             </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="settingsGroup">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="{DynamicResource MainWindow.Settings.FogOfWarHeader}" />
+                                                            <TextBlock Classes="muted"
+                                                                       Text="{DynamicResource MainWindow.Settings.FogOfWarDescription}"
+                                                                       TextWrapping="Wrap" />
+                                                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto"
+                                                                  ColumnSpacing="10" RowSpacing="8">
+                                                                <TextBlock Grid.Row="0" Grid.Column="0"
+                                                                           Text="{DynamicResource MainWindow.Settings.FogColorLabel}"
+                                                                           VerticalAlignment="Center" />
+                                                                <ColorPicker Grid.Row="0" Grid.Column="1"
+                                                                             HorizontalAlignment="Left"
+                                                                             Color="{Binding FogColorHex, Converter={x:Static conv:HexColorConverter.Instance}, Mode=TwoWay}" />
+
+                                                                <TextBlock Grid.Row="1" Grid.Column="0"
+                                                                           Text="{DynamicResource MainWindow.Settings.FogOpacityLabel}"
+                                                                           VerticalAlignment="Center" />
+                                                                <Grid Grid.Row="1" Grid.Column="1"
+                                                                      ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                                    <Slider Grid.Column="0" Minimum="0" Maximum="100"
+                                                                            Value="{Binding FogOpacityPercent, Mode=TwoWay}" />
+                                                                    <TextBlock Grid.Column="1"
+                                                                               Text="{Binding FogOpacityPercent, StringFormat='{}{0}%'}"
+                                                                               VerticalAlignment="Center" />
+                                                                </Grid>
+
+                                                                <TextBlock Grid.Row="2" Grid.Column="0"
+                                                                           Text="{DynamicResource MainWindow.Settings.FogBlurLabel}"
+                                                                           VerticalAlignment="Center" />
+                                                                <Grid Grid.Row="2" Grid.Column="1"
+                                                                      ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                                    <Slider Grid.Column="0" Minimum="0" Maximum="20"
+                                                                            Value="{Binding FogBlurRadius, Mode=TwoWay}" />
+                                                                    <TextBlock Grid.Column="1"
+                                                                               Text="{Binding FogBlurRadius, StringFormat='{}{0:0}px'}"
+                                                                               VerticalAlignment="Center" />
+                                                                </Grid>
+                                                            </Grid>
                                                         </StackPanel>
                                                     </Border>
                                                 </StackPanel>

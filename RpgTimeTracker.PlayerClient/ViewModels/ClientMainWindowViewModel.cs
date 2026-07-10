@@ -135,6 +135,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MapFogUpdateReceived += fogUpdate => Dispatcher.UIThread.Post(() => OnMapFogUpdate(fogUpdate));
         _client.MapFogResetReceived += floorId => Dispatcher.UIThread.Post(() => OnMapFogReset(floorId));
         _client.MapHideReceived += () => Dispatcher.UIThread.Post(OnMapHide);
+        _client.MapRenderStyleChanged += style => Dispatcher.UIThread.Post(() => MapDisplay.ApplyRenderStyle(
+            FogOverlayRenderer.BuildHiddenColor(style.ColorHex, style.OpacityPercent), style.BlurRadius));
         _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
         _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
@@ -475,6 +477,9 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         PlayerHeaderTitle = Limit(snapshot.PlayerHeaderTitle, 120);
         PlayerHeaderSubtitle = Limit(snapshot.PlayerHeaderSubtitle, 180);
         ApplyTheme(snapshot.Theme);
+        MapDisplay.ApplyRenderStyle(
+            FogOverlayRenderer.BuildHiddenColor(snapshot.FogColorHex, snapshot.FogOpacityPercent),
+            snapshot.FogBlurRadius);
 
         _localClock.SpeedMultiplier = snapshot.SpeedMultiplier <= 0 ? 1.0 : snapshot.SpeedMultiplier;
         _localClock.SetTime(snapshot.CurrentGameTime);

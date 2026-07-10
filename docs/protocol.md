@@ -51,7 +51,7 @@ it is **notification-only** — no request IDs, no responses:
 
 | Method | Params | Fired when |
 |---|---|---|
-| `session.snapshot` | `SessionSnapshotParams` (full state incl. all timeline items) | Once per new connection; also on demand for a full resync (e.g. after loading a save file) |
+| `session.snapshot` | `SessionSnapshotParams` (full state incl. all timeline items, plus the current fog render style: `fogColorHex`/`fogOpacityPercent`/`fogBlurRadius`) | Once per new connection; also on demand for a full resync (e.g. after loading a save file) |
 | `session.heartbeat` | `ClockHeartbeatParams` (current game time, speed, running) | Every 5s (`TcpPlayerServerService.HeartbeatInterval`), always — doubles as the client's dead-connection signal *and* periodic clock-drift correction |
 | `clock.started` / `clock.stopped` | *(none)* | Clock paused/resumed |
 | `clock.speedChanged` | `{ speedMultiplier }` | Speed slider changed |
@@ -72,6 +72,7 @@ it is **notification-only** — no request IDs, no responses:
 | `map.fogUpdate` | `{ floorId, cells: [{ x, y, revealed }] }` | Debounced per-brush-stroke reveal/hide update for one floor of the currently open map |
 | `map.fogReset` | `{ floorId }` | SL resets one floor's live fog back to its starting template - the client already has both fog masks from `map.show`, so no fog data is resent |
 | `map.hide` | *(none)* | SL closes the map; clients return to the previous gallery display |
+| `map.renderStyleChanged` | `{ colorHex, opacityPercent, blurRadius }` | SL changed the player-side fog render style live (Settings tab) - one global preference for all clients, not per-map (see issue #22). Also sent as part of `session.snapshot` for newly connecting/reconnecting clients |
 
 ## Methods (Client → Host)
 

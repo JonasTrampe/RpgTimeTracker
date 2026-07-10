@@ -115,6 +115,7 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action<MapFogUpdateParams>? MapFogUpdateReceived;
     public event Action<Guid>? MapFogResetReceived;
     public event Action? MapHideReceived;
+    public event Action<MapRenderStyleChangedParams>? MapRenderStyleChanged;
 
     public event Action<string>? StatusChanged;
 
@@ -532,6 +533,10 @@ public sealed class PlayerTcpClientService : IDisposable
                     break;
                 case RpcMethods.MapHide:
                     MapHideReceived?.Invoke();
+                    break;
+                case RpcMethods.MapRenderStyleChanged:
+                    var renderStyle = raw.GetParams<MapRenderStyleChangedParams>();
+                    if (renderStyle is not null) MapRenderStyleChanged?.Invoke(renderStyle);
                     break;
                 default:
                     Log.Debug("Unknown incoming RPC method {Method} ignored", raw.Method);

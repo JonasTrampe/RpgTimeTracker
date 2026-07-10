@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -332,6 +333,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// <summary>UI language, independent from the PlayerClient's own setting (see ClientMainWindowViewModel).</summary>
     [ObservableProperty] private string _selectedLanguageOption = "English";
 
+    /// <summary>
+    ///     Player-side fog render style (see issue #22, MapDisplayViewModel) - one global GM
+    ///     preference in the Settings tab, pushed to all clients live (map.renderStyleChanged)
+    ///     and on connect (session.snapshot).
+    /// </summary>
+    [ObservableProperty] private string _fogColorHex = "#0C0C0C";
+
+    [ObservableProperty] private int _fogOpacityPercent = 100;
+    [ObservableProperty] private double _fogBlurRadius;
+
     [ObservableProperty] private bool _showPlayerCalendarView;
 
     /// <summary>
@@ -398,6 +409,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _connectionPin = settings.ConnectionPin;
         _autoSaveOnCloseEnabled = settings.AutoSaveOnCloseEnabled;
         _autoLoadOnStartupEnabled = settings.AutoLoadOnStartupEnabled;
+        _fogColorHex = string.IsNullOrWhiteSpace(settings.FogColorHex) ? "#0C0C0C" : settings.FogColorHex;
+        _fogOpacityPercent = settings.FogOpacityPercent;
+        _fogBlurRadius = settings.FogBlurRadius;
+        MapDisplay.ApplyRenderStyle(FogOverlayRenderer.BuildHiddenColor(_fogColorHex, _fogOpacityPercent), _fogBlurRadius);
 
         foreach (var entry in settings.MediaLibrary)
         {
@@ -840,6 +855,33 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         MapDisplay.IsShowingMap && IsPlayerWindowOpen && (!IsNetworkServerRunning || ConnectedClientCount == 0);
 
     public bool HasNoFloorsInEditor => EditingFloor is null;
+
+    private void ApplyAndBroadcastFogStyle()
+    {
+        MapDisplay.ApplyRenderStyle(FogOverlayRenderer.BuildHiddenColor(FogColorHex, FogOpacityPercent), FogBlurRadius);
+        _ = _playerServer.PublishMapRenderStyleAsync(FogColorHex, FogOpacityPercent, FogBlurRadius);
+
+        var settings = ThemeSettingsService.LoadSettings();
+        settings.FogColorHex = FogColorHex;
+        settings.FogOpacityPercent = FogOpacityPercent;
+        settings.FogBlurRadius = FogBlurRadius;
+        ThemeSettingsService.SaveSettings(settings);
+    }
+
+    partial void OnFogColorHexChanged(string value)
+    {
+        ApplyAndBroadcastFogStyle();
+    }
+
+    partial void OnFogOpacityPercentChanged(int value)
+    {
+        ApplyAndBroadcastFogStyle();
+    }
+
+    partial void OnFogBlurRadiusChanged(double value)
+    {
+        ApplyAndBroadcastFogStyle();
+    }
 
     /// <summary>The live (current) fog for a floor - loaded from its starting template on first
     ///     access, then mutated in place as the GM paints.</summary>
@@ -4331,6 +4373,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             PlayerHeaderTitle = PlayerHeaderTitle,
             PlayerHeaderSubtitle = PlayerHeaderSubtitle,
             Theme = GetCurrentThemeWireValue(),
+            FogColorHex = FogColorHex,
+            FogOpacityPercent = FogOpacityPercent,
+            FogBlurRadius = FogBlurRadius,
             CalendarEntries = CalendarEntries
                 .Select(item => item.TryBuildDefinition(out var definition) ? definition : null)
                 .Where(definition => definition is not null && definition.IsPlayerVisible)

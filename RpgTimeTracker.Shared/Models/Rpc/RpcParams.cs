@@ -27,6 +27,12 @@ public sealed class SessionSnapshotParams
     public string Theme { get; set; } = "Shadowrun";
     public List<TimelineItemSnapshotDto> Items { get; set; } = new();
     public List<CalendarEntryDefinition> CalendarEntries { get; set; } = new();
+
+    /// <summary>Player-side fog render style, current at connect time - see MapRenderStyleChangedParams.</summary>
+    public string FogColorHex { get; set; } = "#0C0C0C";
+
+    public int FogOpacityPercent { get; set; } = 100;
+    public double FogBlurRadius { get; set; }
 }
 
 public sealed class ClockSpeedChangedParams
@@ -164,6 +170,14 @@ public sealed class FogCellDto
 public sealed class MapFogResetParams
 {
     public Guid FloorId { get; set; }
+}
+
+/// <summary>Server-to-client: live change of the player-side fog render style (see RpcMethods.MapRenderStyleChanged).</summary>
+public sealed class MapRenderStyleChangedParams
+{
+    public string ColorHex { get; set; } = "#0C0C0C";
+    public int OpacityPercent { get; set; } = 100;
+    public double BlurRadius { get; set; }
 }
 
 /// <summary>

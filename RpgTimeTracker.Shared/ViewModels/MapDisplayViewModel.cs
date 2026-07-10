@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -29,6 +30,26 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     [ObservableProperty] private Bitmap? _currentFloorImageBitmap;
     [ObservableProperty] private WriteableBitmap? _currentFloorOverlayBitmap;
     [ObservableProperty] private string _currentFloorName = string.Empty;
+
+    /// <summary>Player-side fog render style (see issue #22) - one global GM preference, applied
+    ///     via ApplyRenderStyle by both the Host (from its own settings) and the PlayerClient
+    ///     (from session.snapshot/map.renderStyleChanged).</summary>
+    [ObservableProperty] private Color _hiddenColor = FogOverlayRenderer.PlayerHiddenColor;
+
+    /// <summary>Gaussian blur radius (pixels) applied to the overlay at display time - bound
+    ///     directly to a BlurEffect in MapDisplayView.axaml, no bitmap rebuild needed.</summary>
+    [ObservableProperty] private double _blurRadius;
+
+    partial void OnHiddenColorChanged(Color value)
+    {
+        RefreshOverlay();
+    }
+
+    public void ApplyRenderStyle(Color color, double blurRadius)
+    {
+        HiddenColor = color;
+        BlurRadius = blurRadius;
+    }
 
     public bool HasMultipleFloors => _floors.Count > 1;
 
@@ -129,7 +150,7 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         var floor = _floors[CurrentFloorIndex];
         CurrentFloorOverlayBitmap = floor.CurrentFog is null
             ? null
-            : FogOverlayRenderer.BuildOverlayBitmap(floor.CurrentFog, FogOverlayRenderer.PlayerHiddenColor);
+            : FogOverlayRenderer.BuildOverlayBitmap(floor.CurrentFog, HiddenColor);
     }
 }
 

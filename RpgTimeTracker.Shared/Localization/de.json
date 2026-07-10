@@ -215,6 +215,11 @@
   "MainWindow.Settings.ExportSessionButton": "📦 Sitzung exportieren…",
   "MainWindow.Settings.ImportSessionButton": "📦 Sitzung importieren…",
   "MainWindow.Settings.SessionExportDescription": "Bündelt den Spielstand sowie die Medien-, Sound- und Kartenbibliothek in einer Datei - für ein vollständiges Backup oder den Umzug auf einen neuen Rechner. Beim Importieren werden bestehende Bibliotheken ergänzt, nicht ersetzt.",
+  "MainWindow.Settings.FogOfWarHeader": "Nebel des Krieges (Spieleransicht)",
+  "MainWindow.Settings.FogOfWarDescription": "Wie verdeckte Kartenfelder auf den Bildschirmen der Spieler aussehen - eine gemeinsame Einstellung für alle.",
+  "MainWindow.Settings.FogColorLabel": "Farbe",
+  "MainWindow.Settings.FogOpacityLabel": "Deckkraft",
+  "MainWindow.Settings.FogBlurLabel": "Unschärfe",
 
   "MainWindow.StatusBar.PreviousGalleryTooltip": "Vorheriges Galerie-Element hervorheben",
   "MainWindow.StatusBar.NextGalleryTooltip": "Nächstes Galerie-Element hervorheben",

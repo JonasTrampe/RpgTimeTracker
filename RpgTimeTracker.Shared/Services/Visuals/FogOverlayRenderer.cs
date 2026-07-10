@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Media;
@@ -26,6 +27,16 @@ public static class FogOverlayRenderer
     ///     v1 default.
     /// </summary>
     public static readonly Color PlayerHiddenColor = Color.FromArgb(255, 12, 12, 12);
+
+    /// <summary>Combines a GM-configured color hex + opacity percent (see issue #22) into the
+    ///     alpha-baked Color BuildOverlayBitmap expects - shared by the Host (Settings tab) and
+    ///     the PlayerClient (session.snapshot/map.renderStyleChanged).</summary>
+    public static Color BuildHiddenColor(string colorHex, int opacityPercent)
+    {
+        var baseColor = Color.TryParse(colorHex, out var parsed) ? parsed : Color.FromRgb(12, 12, 12);
+        var alpha = (byte)Math.Clamp(opacityPercent * 255 / 100, 0, 255);
+        return new Color(alpha, baseColor.R, baseColor.G, baseColor.B);
+    }
 
     public static WriteableBitmap BuildOverlayBitmap(FogMask fog, Color hiddenColor)
     {

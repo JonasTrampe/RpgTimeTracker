@@ -381,6 +381,21 @@ public sealed class TcpPlayerServerService : IDisposable
         return BroadcastRpcAsync(RpcMethods.MapHide, RpcEmptyParams.Instance);
     }
 
+    /// <summary>
+    ///     Live change of the player-side fog render style (one global preference - see issue
+    ///     #22). No server-side cache needed for reconnect: the current value is read directly
+    ///     from the Host's own settings each time session.snapshot is built.
+    /// </summary>
+    public Task PublishMapRenderStyleAsync(string colorHex, int opacityPercent, double blurRadius)
+    {
+        return BroadcastRpcAsync(RpcMethods.MapRenderStyleChanged, new MapRenderStyleChangedParams
+        {
+            ColorHex = colorHex,
+            OpacityPercent = opacityPercent,
+            BlurRadius = blurRadius
+        });
+    }
+
     private async Task SendMapShowToClientAsync(ClientConnection client, Guid mapId, string mapName,
         List<OpenMapFloor> floors)
     {

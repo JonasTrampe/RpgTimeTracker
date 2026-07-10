@@ -27,13 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `map.fogReset`/`map.hide`), with a full resync (all floor images +
   current fog) to any client that connects or reconnects while a map is
   open, so nothing ends up partially revealed/hidden by accident. Players
-  see hidden cells as a solid opaque block (configurable color/blur/
-  opacity is a later update) and can browse between floors locally,
-  independent of what the GM is currently editing. The Host's own local
-  player-window preview shows the exact same live map (when no client is
-  connected, mirroring how local media preview already worked) - both
-  reuse a shared `MapDisplayView`/`MapDisplayViewModel` (Shared project)
-  instead of duplicating the rendering logic per app.
+  see hidden cells as a solid opaque block by default and can browse
+  between floors locally, independent of what the GM is currently
+  editing. The Host's own local player-window preview shows the exact
+  same live map (when no client is connected, mirroring how local media
+  preview already worked) - both reuse a shared `MapDisplayView`/
+  `MapDisplayViewModel` (Shared project) instead of duplicating the
+  rendering logic per app.
+- Fog-of-war maps: player-side render style is now configurable in
+  Settings ("Fog of war (player view)" - color picker, opacity slider,
+  blur slider), one shared preference pushed live to all connected
+  players (`map.renderStyleChanged`) and sent to newly connecting/
+  reconnecting clients as part of `session.snapshot`.
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/

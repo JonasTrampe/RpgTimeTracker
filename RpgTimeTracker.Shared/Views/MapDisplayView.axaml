@@ -11,7 +11,11 @@
     <Panel IsVisible="{Binding IsShowingMap}">
         <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Uniform" />
         <Image Source="{Binding CurrentFloorOverlayBitmap}" Stretch="Uniform"
-               RenderOptions.BitmapInterpolationMode="None" />
+               RenderOptions.BitmapInterpolationMode="None">
+            <Image.Effect>
+                <BlurEffect Radius="{Binding BlurRadius}" />
+            </Image.Effect>
+        </Image>
 
         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center"
                     VerticalAlignment="Bottom" Margin="0,0,0,16" IsVisible="{Binding HasMultipleFloors}">
