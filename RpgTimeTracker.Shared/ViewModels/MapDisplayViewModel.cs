@@ -36,11 +36,16 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     ///     (from session.snapshot/map.renderStyleChanged).</summary>
     [ObservableProperty] private Color _hiddenColor = FogOverlayRenderer.PlayerHiddenColor;
 
-    /// <summary>Gaussian blur radius (pixels) applied to the overlay at display time - bound
-    ///     directly to a BlurEffect in MapDisplayView.axaml, no bitmap rebuild needed.</summary>
+    /// <summary>Softening radius in grid cells (0 = crisp per-cell edges), baked directly into
+    ///     the overlay bitmap - see FogOverlayRenderer.BuildOverlayBitmap.</summary>
     [ObservableProperty] private double _blurRadius;
 
     partial void OnHiddenColorChanged(Color value)
+    {
+        RefreshOverlay();
+    }
+
+    partial void OnBlurRadiusChanged(double value)
     {
         RefreshOverlay();
     }
@@ -150,7 +155,7 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         var floor = _floors[CurrentFloorIndex];
         CurrentFloorOverlayBitmap = floor.CurrentFog is null
             ? null
-            : FogOverlayRenderer.BuildOverlayBitmap(floor.CurrentFog, HiddenColor);
+            : FogOverlayRenderer.BuildOverlayBitmap(floor.CurrentFog, HiddenColor, BlurRadius);
     }
 }
 

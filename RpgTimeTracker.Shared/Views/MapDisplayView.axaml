@@ -6,16 +6,15 @@
 
     <!-- Shared by the Host's local player-window preview (PlayerWindow.axaml) and the real
          PlayerClient (MediaWindow.axaml) - both set DataContext="{Binding MapDisplay}" on this
-         control, see MapDisplayViewModel. Floor image + fog overlay + local floor navigation;
-         a solid opaque fog block for now, configurable color/blur/opacity is a later update. -->
+         control, see MapDisplayViewModel. Floor image + fog overlay + local floor navigation.
+         Blur (if any) is baked directly into the overlay bitmap by FogOverlayRenderer rather
+         than applied here as a render Effect - a declarative BlurEffect's radius is next to
+         invisible once a one-pixel-per-cell bitmap gets stretched across a large map, since
+         each "step" between cells is still a single source pixel no matter the kernel size. -->
     <Panel IsVisible="{Binding IsShowingMap}">
         <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Uniform" />
         <Image Source="{Binding CurrentFloorOverlayBitmap}" Stretch="Uniform"
-               RenderOptions.BitmapInterpolationMode="None">
-            <Image.Effect>
-                <BlurEffect Radius="{Binding BlurRadius}" />
-            </Image.Effect>
-        </Image>
+               RenderOptions.BitmapInterpolationMode="None" />
 
         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center"
                     VerticalAlignment="Bottom" Margin="0,0,0,16" IsVisible="{Binding HasMultipleFloors}">

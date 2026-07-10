@@ -2198,10 +2198,11 @@
                                                                            VerticalAlignment="Center" />
                                                                 <Grid Grid.Row="2" Grid.Column="1"
                                                                       ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                                    <Slider Grid.Column="0" Minimum="0" Maximum="20"
+                                                                    <Slider Grid.Column="0" Minimum="0" Maximum="5"
+                                                                            TickFrequency="0.5" IsSnapToTickEnabled="True"
                                                                             Value="{Binding FogBlurRadius, Mode=TwoWay}" />
                                                                     <TextBlock Grid.Column="1"
-                                                                               Text="{Binding FogBlurRadius, StringFormat='{}{0:0}px'}"
+                                                                               Text="{Binding FogBlurRadius, StringFormat='{}{0:0.0}'}"
                                                                                VerticalAlignment="Center" />
                                                                 </Grid>
                                                             </Grid>
