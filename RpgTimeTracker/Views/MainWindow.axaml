@@ -2141,6 +2141,23 @@
                                                                 <TextBlock Classes="muted"
                                                                            Text="{DynamicResource MainWindow.Settings.AutoSaveLoadDescription}"
                                                                            TextWrapping="Wrap" />
+                                                                <Separator Background="{DynamicResource BorderBrush}" />
+                                                                <Grid ColumnDefinitions="*,*">
+                                                                    <Button Grid.Column="0"
+                                                                            Content="{DynamicResource MainWindow.Settings.ExportSessionButton}"
+                                                                            Click="OnExportFullSessionClick"
+                                                                            HorizontalAlignment="Stretch"
+                                                                            HorizontalContentAlignment="Center"
+                                                                            Margin="0,0,4,0" />
+                                                                    <Button Grid.Column="1"
+                                                                            Content="{DynamicResource MainWindow.Settings.ImportSessionButton}"
+                                                                            Click="OnImportFullSessionClick"
+                                                                            HorizontalAlignment="Stretch"
+                                                                            HorizontalContentAlignment="Center" />
+                                                                </Grid>
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Settings.SessionExportDescription}"
+                                                                           TextWrapping="Wrap" />
                                                             </StackPanel>
                                                         </StackPanel>
                                                     </Border>
