@@ -107,9 +107,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private readonly Dictionary<string, string> _localSoundCleanupPaths = new();
 
     /// <summary>
-    ///     Plays a sent sound locally at the GM - only as a preview, when no
-    ///     player client is already playing the same file (the same condition as ShouldShowMediaLocally
-    ///     for image/video, but here without UI binding, since sounds are deliberately not displayed).
+    ///     Plays a sent sound locally at the GM whenever the local player window is open (same
+    ///     condition as ShouldShowMediaLocally for image/video, but here without UI binding,
+    ///     since sounds are deliberately not displayed) - regardless of whether real player
+    ///     clients are also connected, so the GM always hears what's playing.
     /// </summary>
     /// <summary>
     ///     Remaining playbacks per MediaId (-1 = endless/loop, otherwise counts down on every
@@ -182,10 +183,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private bool _currentMediaIsOwnedCache;
 
     // ==================== Media (image/video for players) ====================
-    // By default, only the player client displays media. The host additionally shows it
-    // itself (above the player window), but ONLY if no client is connected or the
-    // server is off AND the local player window is open - see ShouldShowMediaLocally.
-    // If a client is connected, no local display is needed since the player sees it anyway.
+    // The player client displays media, and the Host additionally shows the same thing itself
+    // (above the player window) whenever the local player window is open - regardless of
+    // whether a real client is connected, so the GM can always see what's currently being shown
+    // instead of only when testing solo. See ShouldShowMediaLocally.
 
     [ObservableProperty] private MediaKind _currentMediaKind = MediaKind.None;
 
@@ -374,8 +375,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         // the client continues calculating time locally from the last jump using the known speed,
         // see RpgTimeTracker.Shared.Services.GameClockService on the client side.
         _clock.Jumped += newTime => _ = _playerServer.PublishClockTimeJumpedAsync(newTime);
-        // Controls whether a currently running medium is additionally shown locally (above the
-        // player window) - see ShouldShowMediaLocally.
         _playerServer.ClientCountChanged += count => Dispatcher.UIThread.Post(() => ConnectedClientCount = count);
         _playerServer.ClientsChanged += clients => Dispatcher.UIThread.Post(() => UpdateConnectedClients(clients));
         // Decisive for video-end tracking (loop/close, optional clock pause) - see BeginVideoTracking.
@@ -648,9 +647,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         ? LocalizationService.Get("MainWindowViewModel.Display.ExitPlayerFullscreen")
         : LocalizationService.Get("MainWindowViewModel.Display.PlayerFullscreen");
 
-    /// <summary>No client connected (or server off) AND the local player window is open.</summary>
-    public bool ShouldShowMediaLocally =>
-        HasMedia && IsPlayerWindowOpen && (!IsNetworkServerRunning || ConnectedClientCount == 0);
+    /// <summary>
+    ///     The local player window is open - shown regardless of whether real clients are
+    ///     connected too, so the GM can always see exactly what players are seeing while running
+    ///     the session, not just when testing solo.
+    /// </summary>
+    public bool ShouldShowMediaLocally => HasMedia && IsPlayerWindowOpen;
 
     public bool ShowLocalImage => ShouldShowMediaLocally && CurrentMediaKind == MediaKind.Image;
     public bool ShowLocalVideo => ShouldShowMediaLocally && CurrentMediaKind == MediaKind.Video;
@@ -689,7 +691,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     /// <summary>Default grid cell size for a newly added floor - configurable per floor later
     ///     (e.g. via the SL Map Editor Window in a later milestone), not yet exposed in this UI.</summary>
-    private const int DefaultMapCellSizePx = 32;
+    private const int DefaultMapCellSizePx = 16;
 
     [RelayCommand]
     private void AddMap()
@@ -849,10 +851,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// </summary>
     public MapDisplayViewModel MapDisplay { get; } = new();
 
-    /// <summary>No client connected (or server off) AND the local player window is open -
-    ///     mirrors ShouldShowMediaLocally's gating for the map preview.</summary>
-    public bool ShouldShowMapLocally =>
-        MapDisplay.IsShowingMap && IsPlayerWindowOpen && (!IsNetworkServerRunning || ConnectedClientCount == 0);
+    /// <summary>The local player window is open - shown regardless of connected clients, same
+    ///     as ShouldShowMediaLocally.</summary>
+    public bool ShouldShowMapLocally => MapDisplay.IsShowingMap && IsPlayerWindowOpen;
 
     public bool HasNoFloorsInEditor => EditingFloor is null;
 
@@ -1528,10 +1529,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     partial void OnConnectedClientCountChanged(int value)
     {
-        RefreshLocalMediaPreview();
         if (value == 0) ClearRemoteOnlyActiveSounds();
         OnPropertyChanged(nameof(ServerStatusSummary));
-        OnPropertyChanged(nameof(ShouldShowMapLocally));
     }
 
     partial void OnNetworkServerPortChanged(int value)
@@ -1997,8 +1996,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         OnPropertyChanged(nameof(CanToggleDisplayFullscreen));
         OnPropertyChanged(nameof(ToggleNetworkServerLabel));
         OnPropertyChanged(nameof(ServerStatusSummary));
-        RefreshLocalMediaPreview();
-        OnPropertyChanged(nameof(ShouldShowMapLocally));
     }
 
     partial void OnSpeedMultiplierInputChanged(decimal value)
@@ -3901,8 +3898,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private void PlayLocalSoundIfNeeded(MediaHeaderDto header, string localPath, bool deleteAfterPlayback)
     {
-        var shouldPlayLocally = IsPlayerWindowOpen && (!IsNetworkServerRunning || ConnectedClientCount == 0);
-        if (!shouldPlayLocally)
+        // Plays locally whenever the player window is open, same as local media/map preview -
+        // regardless of connected clients, so the GM hears what players hear.
+        if (!IsPlayerWindowOpen)
         {
             if (deleteAfterPlayback) DeleteFileQuietly(localPath);
             return;

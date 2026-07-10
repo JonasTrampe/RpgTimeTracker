@@ -26,7 +26,7 @@
                           IsChecked="True" />
 
             <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" VerticalAlignment="Center" />
-            <Slider Name="BrushSizeSlider" Minimum="0" Maximum="10" Value="1" Width="120"
+            <Slider Name="BrushSizeSlider" Minimum="0" Maximum="20" Value="2" Width="140"
                     TickFrequency="1" IsSnapToTickEnabled="True" />
 
             <Button Content="{DynamicResource MapEditor.ResetButton}" Click="OnResetClick" />

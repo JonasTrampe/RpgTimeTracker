@@ -6,15 +6,29 @@
 
     <!-- Shared by the Host's local player-window preview (PlayerWindow.axaml) and the real
          PlayerClient (MediaWindow.axaml) - both set DataContext="{Binding MapDisplay}" on this
-         control, see MapDisplayViewModel. Floor image + fog overlay + local floor navigation.
-         Blur (if any) is baked directly into the overlay bitmap by FogOverlayRenderer rather
-         than applied here as a render Effect - a declarative BlurEffect's radius is next to
-         invisible once a one-pixel-per-cell bitmap gets stretched across a large map, since
-         each "step" between cells is still a single source pixel no matter the kernel size. -->
+         control, see MapDisplayViewModel. Three layers, all sized identically via the inner
+         fixed-size Panel (so they line up regardless of window aspect ratio, unlike a plain
+         Stretch="Uniform" Rectangle which wouldn't letterbox the same way an Image does):
+           1. The sharp floor image, always visible.
+           2. A blurred copy of the SAME image, clipped to hidden cells via MaskBrush - blurring
+              the actual map content (not a flat fog-colored blob) so the blur is visible at all.
+           3. A color-tint layer, also clipped via MaskBrush, applied on top of the blur.
+         Cell edges stay crisp; the blur shows up in the content peeking through, not the
+         boundary shape. -->
     <Panel IsVisible="{Binding IsShowingMap}">
-        <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Uniform" />
-        <Image Source="{Binding CurrentFloorOverlayBitmap}" Stretch="Uniform"
-               RenderOptions.BitmapInterpolationMode="None" />
+        <Viewbox Stretch="Uniform">
+            <Panel Width="{Binding CurrentFloorImageBitmap.PixelSize.Width}"
+                   Height="{Binding CurrentFloorImageBitmap.PixelSize.Height}">
+                <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Fill" />
+                <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Fill"
+                       OpacityMask="{Binding MaskBrush}">
+                    <Image.Effect>
+                        <BlurEffect Radius="{Binding BlurRadius}" />
+                    </Image.Effect>
+                </Image>
+                <Rectangle Fill="{Binding TintBrush}" OpacityMask="{Binding MaskBrush}" />
+            </Panel>
+        </Viewbox>
 
         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center"
                     VerticalAlignment="Bottom" Margin="0,0,0,16" IsVisible="{Binding HasMultipleFloors}">

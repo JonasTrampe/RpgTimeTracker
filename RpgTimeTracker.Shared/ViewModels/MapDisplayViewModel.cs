@@ -14,11 +14,18 @@ namespace RpgTimeTracker.Shared.ViewModels;
 /// <summary>
 ///     Shared "what does a map look like right now" display state, used by both the Host's local
 ///     player-window preview (MainWindowViewModel.MapDisplay) and the real PlayerClient
-///     (ClientMainWindowViewModel.MapDisplay) - floor image + fog overlay + local floor
+///     (ClientMainWindowViewModel.MapDisplay) - floor image + fog cutout + local floor
 ///     navigation, identical in both places. The two owners differ only in how they feed data
 ///     in: the PlayerClient deserializes fog from the network, the Host shares the exact same
 ///     FogMask instance it's painting into (see NotifyFogChanged) - see ApplyFogCells vs
 ///     NotifyFogChanged below.
+///
+///     Rendering model (see MapDisplayView.axaml): the sharp floor image is always shown;
+///     hidden cells are cut out of a second, blurred copy of the *same* image plus a color-tint
+///     layer, both clipped via MaskBrush (an opacity mask built from the live FogMask, see
+///     FogOverlayRenderer.BuildMaskBitmap). Blurring the actual map content (rather than a flat
+///     fog-colored blob) is what issue #22's blur setting visibly does now - blurring a one-
+///     pixel-per-cell colored bitmap was next to invisible once stretched across a large map.
 /// </summary>
 public sealed partial class MapDisplayViewModel : ObservableObject
 {
@@ -28,7 +35,7 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     [ObservableProperty] private string _mapName = string.Empty;
     [ObservableProperty] private int _currentFloorIndex;
     [ObservableProperty] private Bitmap? _currentFloorImageBitmap;
-    [ObservableProperty] private WriteableBitmap? _currentFloorOverlayBitmap;
+    [ObservableProperty] private IBrush? _maskBrush;
     [ObservableProperty] private string _currentFloorName = string.Empty;
 
     /// <summary>Player-side fog render style (see issue #22) - one global GM preference, applied
@@ -36,18 +43,16 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     ///     (from session.snapshot/map.renderStyleChanged).</summary>
     [ObservableProperty] private Color _hiddenColor = FogOverlayRenderer.PlayerHiddenColor;
 
-    /// <summary>Softening radius in grid cells (0 = crisp per-cell edges), baked directly into
-    ///     the overlay bitmap - see FogOverlayRenderer.BuildOverlayBitmap.</summary>
+    /// <summary>Blur radius (device-independent pixels) applied to the blurred map-image layer -
+    ///     bound directly to a BlurEffect in MapDisplayView.axaml, no bitmap rebuild needed.</summary>
     [ObservableProperty] private double _blurRadius;
+
+    /// <summary>Solid-color brush for the tint layer, kept in sync with HiddenColor.</summary>
+    [ObservableProperty] private IBrush _tintBrush = new SolidColorBrush(FogOverlayRenderer.PlayerHiddenColor);
 
     partial void OnHiddenColorChanged(Color value)
     {
-        RefreshOverlay();
-    }
-
-    partial void OnBlurRadiusChanged(double value)
-    {
-        RefreshOverlay();
+        TintBrush = new SolidColorBrush(value);
     }
 
     public void ApplyRenderStyle(Color color, double blurRadius)
@@ -86,12 +91,12 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         IsShowingMap = false;
         _floors.Clear();
         CurrentFloorImageBitmap = null;
-        CurrentFloorOverlayBitmap = null;
+        MaskBrush = null;
         CurrentFloorName = string.Empty;
     }
 
     /// <summary>
-    ///     Applies reveal/hide cells to a floor's own FogMask and refreshes the overlay if it's
+    ///     Applies reveal/hide cells to a floor's own FogMask and refreshes the mask if it's
     ///     currently displayed - for a caller whose FogMask is an independent copy that must be
     ///     told about each change explicitly (the PlayerClient, after deserializing from the
     ///     network).
@@ -125,9 +130,23 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         if (floor is not null) RefreshIfCurrent(floor);
     }
 
+    /// <summary>
+    ///     Updates a floor's map image after the fact - covers the case where the image arrives
+    ///     (or is decoded) after ShowMap already ran for this map, so the display self-heals
+    ///     instead of staying blank until the next full resync.
+    /// </summary>
+    public void UpdateFloorImage(Guid floorId, Bitmap? image)
+    {
+        var floor = _floors.FirstOrDefault(f => f.FloorId == floorId);
+        if (floor is null) return;
+
+        floor.Image = image;
+        if (_floors.IndexOf(floor) == CurrentFloorIndex) CurrentFloorImageBitmap = image;
+    }
+
     private void RefreshIfCurrent(MapDisplayFloor floor)
     {
-        if (_floors.IndexOf(floor) == CurrentFloorIndex) RefreshOverlay();
+        if (_floors.IndexOf(floor) == CurrentFloorIndex) RefreshMask();
     }
 
     private void Navigate(int direction)
@@ -145,17 +164,17 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         var floor = _floors[CurrentFloorIndex];
         CurrentFloorName = floor.Name;
         CurrentFloorImageBitmap = floor.Image;
-        RefreshOverlay();
+        RefreshMask();
     }
 
-    private void RefreshOverlay()
+    private void RefreshMask()
     {
         if (CurrentFloorIndex < 0 || CurrentFloorIndex >= _floors.Count) return;
 
         var floor = _floors[CurrentFloorIndex];
-        CurrentFloorOverlayBitmap = floor.CurrentFog is null
+        MaskBrush = floor.CurrentFog is null
             ? null
-            : FogOverlayRenderer.BuildOverlayBitmap(floor.CurrentFog, HiddenColor, BlurRadius);
+            : new ImageBrush(FogOverlayRenderer.BuildMaskBitmap(floor.CurrentFog)) { Stretch = Stretch.Fill };
     }
 }
 
@@ -165,6 +184,6 @@ public sealed class MapDisplayFloor
 {
     public Guid FloorId { get; init; }
     public string Name { get; init; } = string.Empty;
-    public Bitmap? Image { get; init; }
+    public Bitmap? Image { get; set; }
     public FogMask? CurrentFog { get; set; }
 }
