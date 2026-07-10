@@ -413,6 +413,23 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0));
         }
 
+        foreach (var mapEntry in settings.MapLibrary)
+        {
+            var map = new MapItemViewModel(mapEntry.Id, mapEntry.Name, RemoveMap, _ => SaveMapLibrarySettings());
+            foreach (var floorEntry in mapEntry.Floors)
+            {
+                if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
+
+                map.Floors.Add(new MapFloorItemViewModel(
+                    floorEntry.Id, floorEntry.Name, floorEntry.ImagePath, floorEntry.FogPath,
+                    floorEntry.CellSizePx, floorEntry.GridWidth, floorEntry.GridHeight,
+                    LoadMapFloorThumbnail(floorEntry.ImagePath),
+                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
+            }
+
+            MapLibrary.Add(map);
+        }
+
         // One-time migration of old data so that nothing is lost when switching to the separate
         // sound library: (a) sounds from the old "+ add sound" settings function,
         // (b) audio entries that had ended up in the image/video library before the split.
@@ -643,6 +660,155 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     public ObservableCollection<SoundLibraryItemViewModel> SoundLibrary { get; } = [];
 
     public bool HasNoSoundLibraryItems => SoundLibrary.Count == 0;
+
+    // ==================== Map library (fog-of-war maps, multiple floors each) ====================
+
+    public ObservableCollection<MapItemViewModel> MapLibrary { get; } = [];
+
+    public bool HasNoMaps => MapLibrary.Count == 0;
+
+    [ObservableProperty] private MapItemViewModel? _selectedMap;
+
+    /// <summary>Default grid cell size for a newly added floor - configurable per floor later
+    ///     (e.g. via the SL Map Editor Window in a later milestone), not yet exposed in this UI.</summary>
+    private const int DefaultMapCellSizePx = 32;
+
+    [RelayCommand]
+    private void AddMap()
+    {
+        var map = new MapItemViewModel(Guid.NewGuid(),
+            LocalizationService.Get("MainWindowViewModel.Defaults.NewMapName"), RemoveMap,
+            _ => SaveMapLibrarySettings());
+        MapLibrary.Add(map);
+        SelectedMap = map;
+        SaveMapLibrarySettings();
+    }
+
+    private void RemoveMap(MapItemViewModel map)
+    {
+        MapLibrary.Remove(map);
+        if (SelectedMap == map) SelectedMap = null;
+
+        try
+        {
+            var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, map.Id.ToString("N"));
+            if (Directory.Exists(mapDirectory)) Directory.Delete(mapDirectory, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warning(ex, "Could not delete map directory for {MapName} ({MapId})", map.Name, map.Id);
+        }
+
+        SaveMapLibrarySettings();
+    }
+
+    public async Task AddFloorToMapAsync(MapItemViewModel map, string sourcePath)
+    {
+        if (!MediaTypeHelper.TryGetKind(sourcePath, out var kind, out _) || kind != MediaKind.Image)
+        {
+            MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.UnsupportedMapFloorFormat");
+            return;
+        }
+
+        if (!File.Exists(sourcePath))
+        {
+            MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.FileNotFound");
+            return;
+        }
+
+        try
+        {
+            var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, map.Id.ToString("N"));
+            Directory.CreateDirectory(mapDirectory);
+
+            var floorId = Guid.NewGuid();
+            var imagePath = Path.Combine(mapDirectory, $"{floorId:N}{Path.GetExtension(sourcePath)}");
+            await using (var source = File.OpenRead(sourcePath))
+            await using (var target = File.Create(imagePath))
+            {
+                await source.CopyToAsync(target);
+            }
+
+            int gridWidth, gridHeight;
+            await using (var dimensionStream = File.OpenRead(imagePath))
+            {
+                var bitmap = new Bitmap(dimensionStream);
+                gridWidth = Math.Max(1, (bitmap.PixelSize.Width + DefaultMapCellSizePx - 1) / DefaultMapCellSizePx);
+                gridHeight = Math.Max(1, (bitmap.PixelSize.Height + DefaultMapCellSizePx - 1) / DefaultMapCellSizePx);
+            }
+
+            var fogPath = Path.Combine(mapDirectory, $"{floorId:N}.fog");
+            var startingFog = FogMask.CreateFullyHidden(gridWidth, gridHeight, DefaultMapCellSizePx);
+            await File.WriteAllBytesAsync(fogPath, FogMaskSerializer.Serialize(startingFog));
+
+            var floor = new MapFloorItemViewModel(
+                floorId, Path.GetFileNameWithoutExtension(sourcePath), imagePath, fogPath,
+                DefaultMapCellSizePx, gridWidth, gridHeight, LoadMapFloorThumbnail(imagePath),
+                f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings());
+            map.Floors.Add(floor);
+            SaveMapLibrarySettings();
+            Log.Information("Floor added to map {MapName}: {FloorName} ({GridWidth}x{GridHeight} cells)",
+                map.Name, floor.Name, gridWidth, gridHeight);
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedFloorToMap"), floor.Name, map.Name));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Floor could not be added to map {MapName} ({SourcePath})", map.Name, sourcePath);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MediaCouldNotBeAddedToLibrary"), ex.Message);
+        }
+    }
+
+    private void RemoveFloorFromMap(MapItemViewModel map, MapFloorItemViewModel floor)
+    {
+        map.Floors.Remove(floor);
+
+        try
+        {
+            if (File.Exists(floor.ImagePath)) File.Delete(floor.ImagePath);
+            if (File.Exists(floor.FogPath)) File.Delete(floor.FogPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warning(ex, "Could not delete floor files for {FloorName} ({FloorId})", floor.Name, floor.Id);
+        }
+
+        SaveMapLibrarySettings();
+    }
+
+    private static Bitmap? LoadMapFloorThumbnail(string imagePath)
+    {
+        try
+        {
+            using var stream = File.OpenRead(imagePath);
+            return Bitmap.DecodeToWidth(stream, 96);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            Log.Warning(ex, "Map floor thumbnail could not be loaded ({ImagePath})", imagePath);
+            return null;
+        }
+    }
+
+    private void SaveMapLibrarySettings()
+    {
+        var settings = ThemeSettingsService.LoadSettings();
+        settings.MapLibrary = MapLibrary.Select(map => new ThemeSettingsService.MapLibraryEntryDto
+        {
+            Id = map.Id,
+            Name = map.Name,
+            Floors = map.Floors.Select(floor => new ThemeSettingsService.MapFloorEntryDto
+            {
+                Id = floor.Id,
+                Name = floor.Name,
+                ImagePath = floor.ImagePath,
+                FogPath = floor.FogPath,
+                CellSizePx = floor.CellSizePx,
+                GridWidth = floor.GridWidth,
+                GridHeight = floor.GridHeight
+            }).ToList()
+        }).ToList();
+        ThemeSettingsService.SaveSettings(settings);
+    }
 
     // ==================== Gallery: session's own list of sent images/videos ====================
     // Unlike the single-slot model above (CurrentMediaKind), NOTHING is discarded here on the next

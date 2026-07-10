@@ -1535,6 +1535,98 @@
                                         </ScrollViewer>
                                     </TabItem>
 
+                                    <TabItem Header="{DynamicResource MainWindow.Tabs.Maps}">
+                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
+                                                      VerticalScrollBarVisibility="Visible">
+                                            <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
+                                                <Border Grid.Column="0" Classes="settingsGroup" Margin="0 0 4 0">
+                                                    <StackPanel Spacing="10">
+                                                        <TextBlock Classes="settingsGroupTitle"
+                                                                   Text="{DynamicResource MainWindow.Maps.MapsTitle}" />
+                                                        <TextBlock Classes="muted"
+                                                                   Text="{DynamicResource MainWindow.Maps.MapsDescription}"
+                                                                   TextWrapping="Wrap" />
+                                                        <Button Content="{DynamicResource MainWindow.Maps.AddMapButton}"
+                                                                Command="{Binding AddMapCommand}"
+                                                                HorizontalAlignment="Left" />
+                                                        <TextBlock Classes="muted"
+                                                                   Text="{DynamicResource MainWindow.Maps.EmptyState}"
+                                                                   IsVisible="{Binding HasNoMaps}"
+                                                                   FontStyle="Italic" />
+                                                        <ListBox ItemsSource="{Binding MapLibrary}"
+                                                                 SelectedItem="{Binding SelectedMap, Mode=TwoWay}"
+                                                                 IsVisible="{Binding !HasNoMaps}">
+                                                            <ListBox.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:MapItemViewModel">
+                                                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                                                          Margin="0,2">
+                                                                        <TextBox Grid.Column="0"
+                                                                                 Text="{Binding Name, Mode=TwoWay}" />
+                                                                        <TextBlock Grid.Column="1" Classes="muted"
+                                                                                   Text="{Binding Floors.Count}"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Margin="8,0" />
+                                                                        <Button Grid.Column="2"
+                                                                                Content="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
+                                                                                Command="{Binding DeleteCommand}" />
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ListBox.ItemTemplate>
+                                                        </ListBox>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <Border Grid.Column="1" Classes="settingsGroup" Margin="4 0 0 0"
+                                                        IsVisible="{Binding SelectedMap, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                    <StackPanel Spacing="10">
+                                                        <TextBlock Classes="settingsGroupTitle"
+                                                                   Text="{Binding SelectedMap.Name}" />
+                                                        <Button Content="{DynamicResource MainWindow.Maps.AddFloorButton}"
+                                                                Click="OnAddMapFloorClick"
+                                                                HorizontalAlignment="Left" />
+                                                        <TextBlock Classes="muted"
+                                                                   Text="{DynamicResource MainWindow.Maps.NoFloorsState}"
+                                                                   IsVisible="{Binding SelectedMap.HasNoFloors}"
+                                                                   FontStyle="Italic" />
+                                                        <ItemsControl ItemsSource="{Binding SelectedMap.Floors}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <WrapPanel />
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:MapFloorItemViewModel">
+                                                                    <Border Classes="item" Width="140"
+                                                                            Margin="0,0,10,10">
+                                                                        <StackPanel Spacing="4">
+                                                                            <Panel Height="80">
+                                                                                <Image Source="{Binding Thumbnail}"
+                                                                                       Stretch="UniformToFill" />
+                                                                                <!-- Solid placeholder for the fully-hidden
+                                                                                     starting fog - real per-cell fog editing
+                                                                                     comes in a later milestone. -->
+                                                                                <Border Background="#B0000000" />
+                                                                                <TextBlock Text="🌫"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        FontSize="22" />
+                                                                            </Panel>
+                                                                            <TextBox Text="{Binding Name, Mode=TwoWay}" />
+                                                                            <Button Content="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
+                                                                                    Command="{Binding DeleteCommand}"
+                                                                                    HorizontalAlignment="Stretch"
+                                                                                    HorizontalContentAlignment="Center" />
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+                                        </ScrollViewer>
+                                    </TabItem>
+
                                     <TabItem Header="{DynamicResource MainWindow.Tabs.Calendar}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">

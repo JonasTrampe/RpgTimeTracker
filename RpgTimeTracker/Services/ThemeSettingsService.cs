@@ -30,6 +30,8 @@ public static class ThemeSettingsService
 
     public static string SoundLibraryDirectory => Path.Combine(SettingsDirectory, "SoundLibrary");
 
+    public static string MapLibraryDirectory => Path.Combine(SettingsDirectory, "MapLibrary");
+
     private static string GetUserConfigDirectory()
     {
         // Cross-platform:
@@ -138,6 +140,27 @@ public static class ThemeSettingsService
         public long TrimEndMs { get; set; }
     }
 
+    /// <summary>One floor image of a map, plus its "starting" fog template (see FogMask/FogMaskSerializer) -
+    ///     the GM-authored initial reveal state, as opposed to the session-specific "current" fog
+    ///     that lives in the save file (AppStateDto.MapProgress, added in a later milestone).</summary>
+    public sealed class MapFloorEntryDto
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; } = string.Empty;
+        public string ImagePath { get; set; } = string.Empty;
+        public string FogPath { get; set; } = string.Empty;
+        public int CellSizePx { get; set; } = 32;
+        public int GridWidth { get; set; }
+        public int GridHeight { get; set; }
+    }
+
+    public sealed class MapLibraryEntryDto
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; } = string.Empty;
+        public List<MapFloorEntryDto> Floors { get; set; } = [];
+    }
+
     public sealed class ThemeSettingsDto
     {
         public string? LastTheme { get; set; }
@@ -184,5 +207,6 @@ public static class ThemeSettingsService
 
         public List<MediaLibraryEntryDto> MediaLibrary { get; set; } = [];
         public List<SoundLibraryEntryDto> SoundLibrary { get; set; } = [];
+        public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
     }
 }

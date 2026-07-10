@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- (In progress) Fog-of-war maps: a new "Maps" tab lets the GM prepare
+  multi-floor maps ahead of time (name a map, add floor images). Each floor
+  starts fully fogged; the eraser/pen editor and live reveal to players are
+  not implemented yet - this only builds the map/floor storage and library
+  UI skeleton.
+
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/
   `IntervalEventItem` model logic that both the Host and PlayerClient use to

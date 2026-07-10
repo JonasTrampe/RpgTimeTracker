@@ -54,6 +54,13 @@ public partial class MainWindow : Window
         ]
     };
 
+    /// <summary>Map floors are image-only for now - see MapItemViewModel/AddFloorToMapAsync.
+    ///     Looping video as a floor background is a deferred follow-up (issue #16).</summary>
+    private static readonly FilePickerFileType MapFloorImageFileType = new(LocalizationService.Get("MainWindow.FileTypes.MapFloorImage"))
+    {
+        Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"]
+    };
+
     // Event media (timer/alarm/interval) can still also be audio, but image/video
     // now comes exclusively from the media library (see ChooseTriggerMediaFromLibrary) -
     // only for audio does the direct file dialog remain, since there is no separate library concept
@@ -188,6 +195,27 @@ public partial class MainWindow : Window
 
         var picker = new IconPickerWindow(icon => item.Icon = icon);
         picker.Show(this);
+    }
+
+    private async void OnAddMapFloorClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedMap: { } map }) return;
+
+        var topLevel = GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = LocalizationService.Get("MainWindow.Dialogs.AddFloorToMap"),
+            AllowMultiple = false,
+            FileTypeFilter = [MapFloorImageFileType]
+        });
+
+        if (files.Count == 0) return;
+
+        var localPath = files[0].TryGetLocalPath();
+        if (localPath is not null && DataContext is MainWindowViewModel vmForFloor)
+            await vmForFloor.AddFloorToMapAsync(map, localPath);
     }
 
     private async void OnSendMediaClick(object? sender, RoutedEventArgs e)
