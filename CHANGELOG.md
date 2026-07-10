@@ -62,6 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fog-of-war maps: a floor could render as a solid near-black block
+  instead of the map image whenever its fog data hadn't resolved yet
+  (e.g. still deserializing on the PlayerClient) - an Avalonia
+  `OpacityMask` bound to a not-yet-set brush renders fully opaque and
+  unclipped rather than fully transparent, so the tint layer briefly (or
+  permanently, if fog never arrived) covered the whole image. The blur
+  and tint layers are now skipped entirely until a real fog mask exists.
 - Date/time display (game clock, calendar, alarm trigger time) and the
   speed-factor/trim/lead-time number inputs now follow the app's own
   selected UI language (English/German) instead of the OS locale - a
