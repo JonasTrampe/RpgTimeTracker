@@ -2023,6 +2023,23 @@
                                                             </StackPanel>
                                                         </StackPanel>
                                                     </Border>
+                                                    <Border Classes="settingsGroup">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="{DynamicResource MainWindow.Settings.SaveLoadHeader}" />
+                                                            <StackPanel Spacing="4">
+                                                                <CheckBox
+                                                                    Content="{DynamicResource MainWindow.Settings.AutoSaveOnCloseCheckbox}"
+                                                                    IsChecked="{Binding AutoSaveOnCloseEnabled, Mode=TwoWay}" />
+                                                                <CheckBox
+                                                                    Content="{DynamicResource MainWindow.Settings.AutoLoadOnStartupCheckbox}"
+                                                                    IsChecked="{Binding AutoLoadOnStartupEnabled, Mode=TwoWay}" />
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Settings.AutoSaveLoadDescription}"
+                                                                           TextWrapping="Wrap" />
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
                                                 </StackPanel>
                                             </Grid>
                                         </ScrollViewer>

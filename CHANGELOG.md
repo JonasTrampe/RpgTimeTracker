@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Optional auto-save on close and auto-load on startup (Host app), using the
+  location of the last manual save/load. Both are opt-in toggles in the
+  Settings tab; existing behavior is unchanged unless enabled.
+
 ## [1.0.0] - 2026-07-10
 
 Initial release: a GM-side control app (`RpgTimeTracker`) and a read-only

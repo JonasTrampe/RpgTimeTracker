@@ -190,6 +190,10 @@
   "MainWindow.Settings.RecordSessionLogCheckbox": "Record events (time jumps, triggers, sent media)",
   "MainWindow.Settings.ExportLogButton": "Export log…",
   "MainWindow.Settings.ClearLogButton": "Clear",
+  "MainWindow.Settings.SaveLoadHeader": "💾 Save & load",
+  "MainWindow.Settings.AutoSaveOnCloseCheckbox": "Auto-save on close",
+  "MainWindow.Settings.AutoLoadOnStartupCheckbox": "Auto-load on startup",
+  "MainWindow.Settings.AutoSaveLoadDescription": "Uses the location of the last manual save/load - save or load once via 💾/📂 first.",
 
   "MainWindow.StatusBar.PreviousGalleryTooltip": "Highlight previous gallery item",
   "MainWindow.StatusBar.NextGalleryTooltip": "Highlight next gallery item",
