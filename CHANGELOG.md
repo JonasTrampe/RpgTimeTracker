@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
+  (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/
+  `IntervalEventItem` model logic that both the Host and PlayerClient use to
+  reconstruct timer/alarm state from time-jump deltas. Now runs as part of
+  CI (`build.yml`).
 - Optional auto-save on close and auto-load on startup (Host app), using the
   location of the last manual save/load. Both are opt-in toggles in the
   Settings tab; existing behavior is unchanged unless enabled.
