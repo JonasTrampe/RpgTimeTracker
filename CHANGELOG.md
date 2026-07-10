@@ -12,6 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Optional auto-save on close and auto-load on startup (Host app), using the
   location of the last manual save/load. Both are opt-in toggles in the
   Settings tab; existing behavior is unchanged unless enabled.
+### Fixed
+
+- Date/time display (game clock, calendar, alarm trigger time) and the
+  speed-factor/trim/lead-time number inputs now follow the app's own
+  selected UI language (English/German) instead of the OS locale - a
+  German-Windows user switching the app to English no longer sees German
+  day names or a comma decimal separator, and vice versa.
+- Two remaining hardcoded German UI strings (connected-since label,
+  player-header speed label) moved to the localization files.
 
 ## [1.0.0] - 2026-07-10
 
