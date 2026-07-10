@@ -68,6 +68,13 @@ public partial class MainWindow : Window
         Patterns = ["*.rtt-map"]
     };
 
+    /// <summary>Bundles game state + all three libraries into one file - see
+    ///     MainWindowViewModel.ExportFullSessionToZipBytes/ImportFullSessionFromZipBytes.</summary>
+    private static readonly FilePickerFileType FullSessionFileType = new(LocalizationService.Get("MainWindow.FileTypes.FullSession"))
+    {
+        Patterns = ["*.rtt-session"]
+    };
+
     // Event media (timer/alarm/interval) can still also be audio, but image/video
     // now comes exclusively from the media library (see ChooseTriggerMediaFromLibrary) -
     // only for audio does the direct file dialog remain, since there is no separate library concept
@@ -275,6 +282,65 @@ public partial class MainWindow : Window
         using var memoryStream = new MemoryStream();
         await stream.CopyToAsync(memoryStream);
         vm.ImportMapFromZipBytes(memoryStream.ToArray());
+    }
+
+    private async void OnExportFullSessionClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var topLevel = GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = LocalizationService.Get("MainWindow.Dialogs.ExportFullSession"),
+            SuggestedFileName = $"rpg-zeit-sitzung-{DateTime.Now:yyyy-MM-dd_HHmm}.rtt-session",
+            DefaultExtension = "rtt-session",
+            FileTypeChoices = [FullSessionFileType]
+        });
+        if (file is null) return;
+
+        try
+        {
+            var zipBytes = vm.ExportFullSessionToZipBytes();
+            await using var stream = await file.OpenWriteAsync();
+            stream.SetLength(0);
+            await stream.WriteAsync(zipBytes);
+            vm.NotifyActionStatus(LocalizationService.Get("MainWindow.Status.SessionExported"));
+        }
+        catch (Exception ex)
+        {
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+        }
+    }
+
+    private async void OnImportFullSessionClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var topLevel = GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = LocalizationService.Get("MainWindow.Dialogs.ImportFullSession"),
+            AllowMultiple = false,
+            FileTypeFilter = [FullSessionFileType]
+        });
+
+        if (files.Count == 0) return;
+
+        try
+        {
+            await using var stream = await files[0].OpenReadAsync();
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            vm.ImportFullSessionFromZipBytes(memoryStream.ToArray());
+        }
+        catch (Exception ex)
+        {
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+        }
     }
 
     private async void OnSendMediaClick(object? sender, RoutedEventArgs e)

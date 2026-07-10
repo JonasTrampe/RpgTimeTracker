@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Full session export/import: a "📦 Export session…"/"📦 Import session…"
+  pair in Settings > Save & load bundles the game state and the Media,
+  Sound, and Map libraries into a single `.rtt-session` file - for a full
+  backup or moving everything to a new machine in one step, rather than
+  exporting the save file and each library separately. Import restores game
+  state (replacing it, like a normal load) and adds library items
+  (appending, like the existing per-library imports).
+
+
 - (In progress) Fog-of-war maps: a new "Maps" tab lets the GM prepare
   multi-floor maps ahead of time (name a map, add floor images, export/import
   a single map as a self-contained `.rtt-map` file to back it up or share it).

@@ -1610,3 +1610,43 @@ now `.rtt-save`-primary Load dialog (which still lists `*.json` as a
 selectable file type) just works, and the next manual save (or the
 auto-save feature, if enabled) upgrades it to the new format
 transparently.
+
+## Full session export/import: a separate `.rtt-session` bundle, not folded into `.rtt-save`
+
+Once maps needed their own library (image + fog per floor, stored
+outside the save file - see the fog-of-war design), it became clear that
+moving a whole campaign to a new machine, or making one full backup,
+meant separately exporting the `.rtt-save` file *and* each of the three
+libraries (Media/Sound/Map) via their own folder-based export. That's a
+real gap for anyone actually migrating machines, so
+`MainWindowViewModel.ExportFullSessionToZipBytes`/
+`ImportFullSessionFromZipBytes` bundle all of it into one `.rtt-session`
+zip: `state.json` at the root (identical shape to `.rtt-save`'s), plus a
+`media/`, `sound/`, and `maps/` folder each holding their own
+`manifest.json` and asset files.
+
+**Why not just extend `.rtt-save` itself** to include the libraries: the
+save file's whole reason for being lean is that it's meant to be saved
+and loaded *often* (every session, potentially with auto-save/auto-load
+enabled) - baking multi-hundred-MB media/sound/map assets into that same
+file on every quick save would make the routine path slow and the file
+huge for no benefit, since libraries are durable and shared across
+however many campaigns/save files reuse them. A full session export is a
+deliberately separate, occasional action instead.
+
+**Why a distinct manifest schema per library section, not the existing
+generic `LibraryManifestDto`/`MapLibraryManifestDto` unmodified**: they
+*are* reused as-is here - the point was specifically to avoid inventing
+a third manifest shape. What's new is only the container: the same
+per-library manifest JSON now lives inside a subfolder of one zip
+instead of being written to `bibliothek.json`/`maps.json` in an
+arbitrary folder chosen via a folder picker.
+
+**Import behavior - replace state, but append libraries**: game state is
+restored exactly like a normal Load (it replaces the current state,
+since there's only ever one "current campaign clock"). Library items are
+*added* to whatever's already in each library, matching the existing
+single-library import behavior, rather than introducing a new merge
+policy just for this feature - deliberately simple, at the cost that
+importing the same session twice duplicates its library entries (the
+same trade-off the pre-existing per-library import already makes).
