@@ -13,6 +13,9 @@ on:
         description: 'Existing tag to build and attach artifacts to (e.g. v1.0.0)'
         required: true
 
+permissions:
+  contents: write
+
 jobs:
   publish:
     strategy:
