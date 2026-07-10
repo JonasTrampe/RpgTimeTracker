@@ -62,6 +62,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fog-of-war maps: the fog mask only affected a small corner of the
+  floor image instead of the whole thing - the mask brush needed an
+  explicit source/destination rect to stretch across the image; Stretch
+  alone isn't enough for a brush used as an OpacityMask.
 - Fog-of-war maps: a floor's image never fully arrived on connected
   clients (or the Host's own local preview) - the map-floor media
   transfer never set the expected total byte count, so the client
