@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - (In progress) Fog-of-war maps: a new "Maps" tab lets the GM prepare
   multi-floor maps ahead of time (name a map, add floor images, export/import
-  the whole map library to a folder like the Media/Sound libraries). Each
-  floor starts fully fogged; the eraser/pen editor and live reveal to
+  a single map as a self-contained `.rtt-map` file to back it up or share it).
+  Each floor starts fully fogged; the eraser/pen editor and live reveal to
   players are not implemented yet - this only builds the map/floor storage
   and library UI skeleton.
 
