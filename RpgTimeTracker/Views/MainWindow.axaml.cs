@@ -218,6 +218,36 @@ public partial class MainWindow : Window
             await vmForFloor.AddFloorToMapAsync(map, localPath);
     }
 
+    private async void OnExportMapLibraryClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var folder = await PickFolderAsync(LocalizationService.Get("MainWindow.Dialogs.ExportMapLibrary"));
+        if (folder is not null) await vm.ExportMapLibraryAsync(folder);
+    }
+
+    private async void OnImportMapLibraryClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var folder = await PickFolderAsync(LocalizationService.Get("MainWindow.Dialogs.ImportMapLibrary"));
+        if (folder is not null) await vm.ImportMapLibraryAsync(folder);
+    }
+
+    private async Task<string?> PickFolderAsync(string title)
+    {
+        var topLevel = GetTopLevel(this);
+        if (topLevel is null) return null;
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false
+        });
+
+        return folders.Count == 0 ? null : folders[0].TryGetLocalPath();
+    }
+
     private async void OnSendMediaClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;

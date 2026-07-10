@@ -1546,9 +1546,15 @@
                                                         <TextBlock Classes="muted"
                                                                    Text="{DynamicResource MainWindow.Maps.MapsDescription}"
                                                                    TextWrapping="Wrap" />
-                                                        <Button Content="{DynamicResource MainWindow.Maps.AddMapButton}"
-                                                                Command="{Binding AddMapCommand}"
-                                                                HorizontalAlignment="Left" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <Button Content="{DynamicResource MainWindow.Maps.AddMapButton}"
+                                                                    Command="{Binding AddMapCommand}" />
+                                                            <Button Content="{DynamicResource MainWindow.Maps.ExportButton}"
+                                                                    Click="OnExportMapLibraryClick"
+                                                                    IsEnabled="{Binding !HasNoMaps}" />
+                                                            <Button Content="{DynamicResource MainWindow.Maps.ImportButton}"
+                                                                    Click="OnImportMapLibraryClick" />
+                                                        </StackPanel>
                                                         <TextBlock Classes="muted"
                                                                    Text="{DynamicResource MainWindow.Maps.EmptyState}"
                                                                    IsVisible="{Binding HasNoMaps}"

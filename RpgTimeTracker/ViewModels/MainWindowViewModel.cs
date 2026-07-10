@@ -35,6 +35,7 @@ namespace RpgTimeTracker.ViewModels;
 public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayContext
 {
     private const string LibraryManifestFileName = "bibliothek.json";
+    private const string MapLibraryManifestFileName = "maps.json";
 
     private const int MaxActionStatusHistory = 20;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
@@ -808,6 +809,108 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             }).ToList()
         }).ToList();
         ThemeSettingsService.SaveSettings(settings);
+    }
+
+    public async Task ExportMapLibraryAsync(string targetFolder)
+    {
+        try
+        {
+            var manifest = new MapLibraryManifestDto();
+            foreach (var map in MapLibrary)
+            {
+                var mapEntry = new MapLibraryManifestEntryDto { Name = map.Name };
+                foreach (var floor in map.Floors)
+                {
+                    if (!File.Exists(floor.ImagePath) || !File.Exists(floor.FogPath)) continue;
+
+                    var imageFileName = $"{Guid.NewGuid():N}{Path.GetExtension(floor.ImagePath)}";
+                    var fogFileName = $"{Guid.NewGuid():N}.fog";
+                    File.Copy(floor.ImagePath, Path.Combine(targetFolder, imageFileName), true);
+                    File.Copy(floor.FogPath, Path.Combine(targetFolder, fogFileName), true);
+                    mapEntry.Floors.Add(new MapFloorManifestEntryDto
+                    {
+                        Name = floor.Name,
+                        ImageFileName = imageFileName,
+                        FogFileName = fogFileName,
+                        CellSizePx = floor.CellSizePx,
+                        GridWidth = floor.GridWidth,
+                        GridHeight = floor.GridHeight
+                    });
+                }
+
+                manifest.Maps.Add(mapEntry);
+            }
+
+            await File.WriteAllTextAsync(Path.Combine(targetFolder, MapLibraryManifestFileName),
+                JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
+            Log.Information("Map library exported to {Folder} ({Count} maps)", targetFolder, manifest.Maps.Count);
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MapLibraryExported"), manifest.Maps.Count));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Map library export failed ({Folder})", targetFolder);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+        }
+    }
+
+    public async Task ImportMapLibraryAsync(string sourceFolder)
+    {
+        try
+        {
+            var manifestPath = Path.Combine(sourceFolder, MapLibraryManifestFileName);
+            if (!File.Exists(manifestPath))
+            {
+                MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.NoValidLibraryExportFound");
+                return;
+            }
+
+            var manifest = JsonSerializer.Deserialize<MapLibraryManifestDto>(await File.ReadAllTextAsync(manifestPath));
+            if (manifest is null)
+            {
+                MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.ManifestCouldNotBeRead");
+                return;
+            }
+
+            var imported = 0;
+            foreach (var mapEntry in manifest.Maps)
+            {
+                var mapId = Guid.NewGuid();
+                var map = new MapItemViewModel(mapId, mapEntry.Name, RemoveMap, _ => SaveMapLibrarySettings());
+                var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, mapId.ToString("N"));
+                Directory.CreateDirectory(mapDirectory);
+
+                foreach (var floorEntry in mapEntry.Floors)
+                {
+                    var sourceImage = Path.Combine(sourceFolder, floorEntry.ImageFileName);
+                    var sourceFog = Path.Combine(sourceFolder, floorEntry.FogFileName);
+                    if (!File.Exists(sourceImage) || !File.Exists(sourceFog)) continue;
+
+                    var floorId = Guid.NewGuid();
+                    var imagePath = Path.Combine(mapDirectory, $"{floorId:N}{Path.GetExtension(floorEntry.ImageFileName)}");
+                    var fogPath = Path.Combine(mapDirectory, $"{floorId:N}.fog");
+                    File.Copy(sourceImage, imagePath, true);
+                    File.Copy(sourceFog, fogPath, true);
+
+                    map.Floors.Add(new MapFloorItemViewModel(
+                        floorId, floorEntry.Name, imagePath, fogPath,
+                        floorEntry.CellSizePx, floorEntry.GridWidth, floorEntry.GridHeight,
+                        LoadMapFloorThumbnail(imagePath),
+                        f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
+                }
+
+                MapLibrary.Add(map);
+                imported++;
+            }
+
+            SaveMapLibrarySettings();
+            Log.Information("Map library imported from {Folder} ({Count} maps)", sourceFolder, imported);
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MapLibraryImported"), imported));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Map library import failed ({Folder})", sourceFolder);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+        }
     }
 
     // ==================== Gallery: session's own list of sent images/videos ====================
@@ -3866,6 +3969,35 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         public string LibraryType { get; init; } = string.Empty;
         public List<LibraryManifestEntryDto> Items { get; init; } = [];
+    }
+
+    /// <summary>
+    ///     Separate manifest shape from LibraryManifestDto (rather than reusing it) since a map
+    ///     is a folder of floors, each with two files (image + fog), not one file per entry -
+    ///     forcing that into the flat Media/Sound shape would be more awkward than a small
+    ///     dedicated type. A distinct file name (not "bibliothek.json") means importing the
+    ///     wrong kind of export folder fails cleanly (manifest not found) instead of silently
+    ///     misparsing.
+    /// </summary>
+    private sealed class MapFloorManifestEntryDto
+    {
+        public string Name { get; init; } = string.Empty;
+        public string ImageFileName { get; init; } = string.Empty;
+        public string FogFileName { get; init; } = string.Empty;
+        public int CellSizePx { get; init; }
+        public int GridWidth { get; init; }
+        public int GridHeight { get; init; }
+    }
+
+    private sealed class MapLibraryManifestEntryDto
+    {
+        public string Name { get; init; } = string.Empty;
+        public List<MapFloorManifestEntryDto> Floors { get; init; } = [];
+    }
+
+    private sealed class MapLibraryManifestDto
+    {
+        public List<MapLibraryManifestEntryDto> Maps { get; init; } = [];
     }
 
     private sealed class CalendarExportDto
