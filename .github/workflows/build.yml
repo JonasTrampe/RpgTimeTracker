@@ -1,12 +1,15 @@
 name: Build
 
-# Compile check plus the RpgTimeTracker.Tests unit tests, on both supported
-# operating systems (see README "Requirements") - no publish/release
-# artifact, see release.yml for that. LibVLCSharp/VideoLAN.LibVLC.Windows
-# don't need a system-installed VLC library for this: the native Windows DLL
-# comes bundled as a NuGet package (referenced only on Windows, see the
-# csproj condition), and the rest is pure managed binding that only needs an
-# installed VLC at runtime, not to build.
+# Plain compile check (both apps + Shared), on both supported operating
+# systems (see README "Requirements") - no publish/release artifact, see
+# release.yml for that. The RpgTimeTracker.Tests unit tests run as their
+# own dedicated workflow (tests.yml), not a step here, so a broken test
+# shows up as its own check/status badge distinct from "does it compile".
+# LibVLCSharp/VideoLAN.LibVLC.Windows don't need a system-installed VLC
+# library for this: the native Windows DLL comes bundled as a NuGet package
+# (referenced only on Windows, see the csproj condition), and the rest is
+# pure managed binding that only needs an installed VLC at runtime, not to
+# build.
 on:
   push:
     branches: [ main ]
@@ -36,6 +39,3 @@ jobs:
 
       - name: Build (Release)
         run: dotnet build RpgTimeTracker.sln -c Release --no-restore
-
-      - name: Test
-        run: dotnet test RpgTimeTracker.Tests/RpgTimeTracker.Tests.csproj -c Release --no-build

@@ -1,6 +1,7 @@
 # RPG Time Tracker
 
 [![Build](https://github.com/JonasTrampe/RpgTimeTracker/actions/workflows/build.yml/badge.svg)](https://github.com/JonasTrampe/RpgTimeTracker/actions/workflows/build.yml)
+[![Tests](https://github.com/JonasTrampe/RpgTimeTracker/actions/workflows/tests.yml/badge.svg)](https://github.com/JonasTrampe/RpgTimeTracker/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/github/license/JonasTrampe/RpgTimeTracker)](LICENSE)
 
 > **Status: 1.0.0.** See [CHANGELOG.md](CHANGELOG.md) for a history of

@@ -1,0 +1,35 @@
+name: Tests
+
+# Dedicated workflow (not just a step inside build.yml) for the
+# RpgTimeTracker.Tests unit tests, so a broken test shows up as its own
+# check/status badge, distinct from "does it compile" - see build.yml for
+# the plain compile check on both supported operating systems.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest, ubuntu-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore
+        run: dotnet restore RpgTimeTracker.Tests/RpgTimeTracker.Tests.csproj
+
+      - name: Test
+        run: dotnet test RpgTimeTracker.Tests/RpgTimeTracker.Tests.csproj -c Release
