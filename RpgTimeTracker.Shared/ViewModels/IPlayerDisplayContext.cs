@@ -17,6 +17,7 @@ public interface IPlayerDisplayContext
     string PlayerHeaderSubtitle { get; }
     string CurrentGameTimeText { get; }
     string SpeedMultiplierDisplay { get; }
+    string SpeedLabel { get; }
     bool HasPlayerVisibleCalendarEntries { get; }
     bool ShowPlayerCalendarView { get; set; }
     bool ShowPlayerTimelineView { get; }

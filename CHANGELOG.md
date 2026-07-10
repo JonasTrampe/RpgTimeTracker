@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `IntervalEventItem` model logic that both the Host and PlayerClient use to
   reconstruct timer/alarm state from time-jump deltas. Now runs as part of
   CI (`build.yml`).
+### Fixed
+
+- Date/time display (game clock, calendar, alarm trigger time) and the
+  speed-factor/trim/lead-time number inputs now follow the app's own
+  selected UI language (English/German) instead of the OS locale - a
+  German-Windows user switching the app to English no longer sees German
+  day names or a comma decimal separator, and vice versa.
+- Two remaining hardcoded German UI strings (connected-since label,
+  player-header speed label) moved to the localization files.
 
 ## [1.0.0] - 2026-07-10
 

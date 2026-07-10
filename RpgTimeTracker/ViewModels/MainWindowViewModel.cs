@@ -522,6 +522,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var media in MediaLibrary) media.RefreshLocalizedText();
         foreach (var sound in SoundLibrary) sound.RefreshLocalizedText();
         foreach (var sent in SentMediaItems) sent.RefreshLocalizedText();
+        foreach (var client in ConnectedClientItems) client.RefreshLocalizedText();
     }
 
     public ObservableCollection<TimerItemViewModel> Timers { get; } = [];
@@ -741,7 +742,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     IEnumerable IPlayerDisplayContext.CalendarMonthDays => PlayerCalendarDays;
     IEnumerable IPlayerDisplayContext.CalendarEntries => PlayerCalendarEntries;
 
-    public string SpeedMultiplierDisplay => $"{SpeedMultiplier:0.0}×";
+    public string SpeedMultiplierDisplay => SpeedMultiplier.ToString("0.0", LocalizationService.Culture) + "×";
+
+    public string SpeedLabel => string.Format(LocalizationService.Get("PlayerHeaderView.SpeedLabel"), SpeedMultiplierDisplay);
 
     partial void OnNetworkServerAddressChanged(string? value)
     {
@@ -1075,9 +1078,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private void RefreshCalendarViews()
     {
         CalendarMonth = new DateTime(CalendarMonth.Year, CalendarMonth.Month, 1);
-        PlayerCalendarMonthLabel = CalendarMonth.ToString("MMMM yyyy", CultureInfo.CurrentCulture);
+        PlayerCalendarMonthLabel = CalendarMonth.ToString("MMMM yyyy", LocalizationService.Culture);
         PlayerCalendarSelectedDateLabel =
-            CalendarSelectedDate.ToString("dddd, dd.MM.yyyy", CultureInfo.CurrentCulture);
+            CalendarSelectedDate.ToString("dddd, dd.MM.yyyy", LocalizationService.Culture);
 
         var validDefinitions = CalendarEntries
             .Select(item =>
@@ -1258,6 +1261,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         var asDecimal = (decimal)rounded;
         if (SpeedMultiplierInput != asDecimal) SpeedMultiplierInput = asDecimal;
         OnPropertyChanged(nameof(SpeedMultiplierDisplay));
+        OnPropertyChanged(nameof(SpeedLabel));
         _ = _playerServer.PublishClockSpeedChangedAsync(rounded);
     }
 
@@ -3376,7 +3380,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private static string FormatGameTime(DateTime time)
     {
-        return time.ToString("dddd, dd.MM.yyyy — HH:mm:ss");
+        return time.ToString("dddd, dd.MM.yyyy — HH:mm:ss", LocalizationService.Culture);
     }
 
     // ==================== Save & load ====================

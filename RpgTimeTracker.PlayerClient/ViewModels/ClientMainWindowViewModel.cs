@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -106,7 +105,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.ClockSpeedChanged += speed => Dispatcher.UIThread.Post(() =>
         {
             _localClock.SpeedMultiplier = speed <= 0 ? 1.0 : speed;
-            SpeedMultiplierDisplay = $"{_localClock.SpeedMultiplier:0.0}×";
+            SpeedMultiplierDisplay = _localClock.SpeedMultiplier.ToString("0.0", LocalizationService.Culture) + "×";
         });
         _client.ClockTimeJumped += newTime => Dispatcher.UIThread.Post(() => _localClock.SetTime(newTime));
         _client.ClockHeartbeatReceived += (gameTime, speed, isRunning) =>
@@ -226,6 +225,13 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
     IEnumerable IPlayerDisplayContext.CalendarMonthDays => PlayerCalendarDays;
     IEnumerable IPlayerDisplayContext.CalendarEntries => PlayerCalendarEntries;
+
+    public string SpeedLabel => string.Format(LocalizationService.Get("PlayerHeaderView.SpeedLabel"), SpeedMultiplierDisplay);
+
+    partial void OnSpeedMultiplierDisplayChanged(string value)
+    {
+        OnPropertyChanged(nameof(SpeedLabel));
+    }
 
     /// <summary>GM requests toggling the display (medium if open, otherwise timeline) to fullscreen.</summary>
     public event Action<bool>? RemoteFullscreenRequested;
@@ -386,7 +392,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _localClock.SetTime(snapshot.CurrentGameTime);
         if (snapshot.IsClockRunning) _localClock.Start();
         else _localClock.Pause();
-        SpeedMultiplierDisplay = $"{_localClock.SpeedMultiplier:0.0}×";
+        SpeedMultiplierDisplay = _localClock.SpeedMultiplier.ToString("0.0", LocalizationService.Culture) + "×";
         CurrentGameTimeText = FormatGameTime(_localClock.CurrentTime);
 
         _entries.Clear();
@@ -411,7 +417,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     private void OnClockHeartbeat(DateTime gameTime, double speedMultiplier, bool isRunning)
     {
         _localClock.SpeedMultiplier = speedMultiplier <= 0 ? 1.0 : speedMultiplier;
-        SpeedMultiplierDisplay = $"{_localClock.SpeedMultiplier:0.0}×";
+        SpeedMultiplierDisplay = _localClock.SpeedMultiplier.ToString("0.0", LocalizationService.Culture) + "×";
         _localClock.SetTime(gameTime);
         if (isRunning) _localClock.Start();
         else _localClock.Pause();
@@ -523,9 +529,9 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
     private void RefreshPlayerCalendar()
     {
-        PlayerCalendarMonthLabel = PlayerCalendarMonth.ToString("MMMM yyyy", CultureInfo.CurrentCulture);
+        PlayerCalendarMonthLabel = PlayerCalendarMonth.ToString("MMMM yyyy", LocalizationService.Culture);
         PlayerCalendarSelectedDateLabel =
-            PlayerCalendarSelectedDate.ToString("dddd, dd.MM.yyyy", CultureInfo.CurrentCulture);
+            PlayerCalendarSelectedDate.ToString("dddd, dd.MM.yyyy", LocalizationService.Culture);
 
         PlayerCalendarDays.Clear();
         var firstOfMonth = new DateTime(PlayerCalendarMonth.Year, PlayerCalendarMonth.Month, 1);
@@ -576,7 +582,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         }
 
         PlayerCalendarSelectedDateLabel =
-            PlayerCalendarSelectedDate.ToString("dddd, dd.MM.yyyy", CultureInfo.CurrentCulture);
+            PlayerCalendarSelectedDate.ToString("dddd, dd.MM.yyyy", LocalizationService.Culture);
     }
 
     private void SelectPlayerCalendarDate(DateTime date)
@@ -1145,7 +1151,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
     private static string FormatGameTime(DateTime time)
     {
-        return time.ToString("dddd, dd.MM.yyyy — HH:mm:ss");
+        return time.ToString("dddd, dd.MM.yyyy — HH:mm:ss", LocalizationService.Culture);
     }
 
     private static string FormatTimeSpan(TimeSpan ts)

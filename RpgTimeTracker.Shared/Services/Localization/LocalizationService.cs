@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -28,6 +29,15 @@ public static class LocalizationService
     private static Dictionary<string, string> _currentStrings = new();
 
     public static string CurrentLanguage { get; private set; } = DefaultLanguage;
+
+    /// <summary>
+    ///     A culture matching the app's own selected language (not the OS/thread culture) - so
+    ///     that date/number formatting stays consistent with the app's language setting even if
+    ///     the OS is set to a different locale. Used for every date/number format that is actually
+    ///     displayed to the user (not for internal round-trip formats, which stay
+    ///     CultureInfo.InvariantCulture regardless of language).
+    /// </summary>
+    public static CultureInfo Culture { get; private set; } = new("en-US");
 
     public static IReadOnlyList<string> SupportedLanguages => SupportedLanguagesArray;
 
@@ -61,14 +71,21 @@ public static class LocalizationService
         var app = Application.Current;
         if (app is null) return;
 
+        var culture = new CultureInfo(code == "de" ? "de-DE" : "en-US");
+
         var dict = new ResourceDictionary();
         foreach (var (key, value) in strings) dict[key] = value;
+        // Not a string, but ResourceDictionary holds arbitrary objects - NumericUpDown.NumberFormat
+        // in XAML can bind {DynamicResource App.NumberFormat} directly, same live-update mechanism
+        // as every other localized value here.
+        dict["App.NumberFormat"] = culture.NumberFormat;
 
         if (_current is not null) app.Resources.MergedDictionaries.Remove(_current);
         app.Resources.MergedDictionaries.Add(dict);
         _current = dict;
         _currentStrings = strings;
         CurrentLanguage = code;
+        Culture = culture;
         LanguageChanged?.Invoke();
     }
 
