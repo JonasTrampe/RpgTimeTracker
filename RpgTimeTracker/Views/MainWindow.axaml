@@ -2205,7 +2205,7 @@
                                                                 <Grid Grid.Row="3" Grid.Column="1"
                                                                       ColumnDefinitions="*,Auto" ColumnSpacing="8"
                                                                       IsEnabled="{Binding FogBlurEnabled}">
-                                                                    <Slider Grid.Column="0" Minimum="0" Maximum="30"
+                                                                    <Slider Grid.Column="0" Minimum="0" Maximum="60"
                                                                             TickFrequency="1" IsSnapToTickEnabled="True"
                                                                             Value="{Binding FogBlurRadius, Mode=TwoWay}" />
                                                                     <TextBlock Grid.Column="1"
