@@ -163,6 +163,21 @@ public static class ThemeSettingsService
         public int Volume { get; set; } = 100;
     }
 
+    /// <summary>
+    ///     A named, ordered playlist of Music Library tracks (referenced by
+    ///     MusicLibraryEntryDto.Id - see that type's doc comment). Playback itself (which track is
+    ///     currently playing, live transport state) is session-only and not persisted here; this
+    ///     is just the editable definition of "what's in this playlist and how it cycles."
+    /// </summary>
+    public sealed class PlaylistEntryDto
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; } = string.Empty;
+        public List<Guid> TrackIds { get; set; } = [];
+        public bool LoopPlaylist { get; set; } = true;
+        public bool Shuffle { get; set; }
+    }
+
     /// <summary>One floor image of a map, plus its "starting" fog template (see FogMask/FogMaskSerializer) -
     ///     the GM-authored initial reveal state, as opposed to the session-specific "current" fog
     ///     that lives in the save file (AppStateDto.MapProgress, added in a later milestone).</summary>
@@ -231,6 +246,7 @@ public static class ThemeSettingsService
         public List<MediaLibraryEntryDto> MediaLibrary { get; set; } = [];
         public List<SoundLibraryEntryDto> SoundLibrary { get; set; } = [];
         public List<MusicLibraryEntryDto> MusicLibrary { get; set; } = [];
+        public List<PlaylistEntryDto> Playlists { get; set; } = [];
         public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
 
         /// <summary>

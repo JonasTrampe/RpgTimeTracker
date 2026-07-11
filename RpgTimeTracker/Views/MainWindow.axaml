@@ -1538,8 +1538,8 @@
                                     <TabItem Header="{DynamicResource MainWindow.Tabs.Music}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">
-                                            <Grid Margin="4,14,13,16">
-                                                <Border Classes="settingsGroup">
+                                            <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
+                                                <Border Grid.Column="0" Classes="settingsGroup" Margin="0 0 4 0">
                                                     <controls:LibraryPanelView x:Name="MusicLibraryPanel"
                                                                                Title="{DynamicResource MainWindow.Music.LibraryTitle}"
                                                                                Description="{DynamicResource MainWindow.Music.LibraryDescription}"
@@ -1609,6 +1609,112 @@
                                                             </DataTemplate>
                                                         </controls:LibraryPanelView.ItemTemplate>
                                                     </controls:LibraryPanelView>
+                                                </Border>
+
+                                                <Border Grid.Column="1" Classes="settingsGroup">
+                                                    <StackPanel Spacing="10">
+                                                        <TextBlock Classes="settingsGroupTitle"
+                                                                   Text="{DynamicResource MainWindow.Music.PlaylistsTitle}" />
+                                                        <TextBlock Classes="muted"
+                                                                   Text="{DynamicResource MainWindow.Music.PlaylistsDescription}"
+                                                                   TextWrapping="Wrap" />
+                                                        <Button Content="{DynamicResource MainWindow.Music.AddPlaylistButton}"
+                                                                Command="{Binding AddPlaylistCommand}" />
+                                                        <TextBlock Classes="muted"
+                                                                   Text="{DynamicResource MainWindow.Music.PlaylistsEmptyState}"
+                                                                   IsVisible="{Binding HasNoPlaylists}"
+                                                                   FontStyle="Italic" />
+                                                        <ListBox ItemsSource="{Binding Playlists}"
+                                                                 SelectedItem="{Binding SelectedPlaylist, Mode=TwoWay}"
+                                                                 IsVisible="{Binding !HasNoPlaylists}"
+                                                                 MaxHeight="180">
+                                                            <ListBox.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:PlaylistViewModel">
+                                                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                                                          Margin="0,2">
+                                                                        <TextBox Grid.Column="0"
+                                                                                 Text="{Binding Name, Mode=TwoWay}" />
+                                                                        <TextBlock Grid.Column="1" Classes="muted"
+                                                                                   Text="{Binding Tracks.Count}"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Margin="8,0" />
+                                                                        <Button Grid.Column="2"
+                                                                                Classes="iconsquare"
+                                                                                Content="&#10005;"
+                                                                                Command="{Binding DeleteCommand}"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
+                                                                                Width="22" Height="22"
+                                                                                FontSize="10" />
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ListBox.ItemTemplate>
+                                                        </ListBox>
+
+                                                        <StackPanel Spacing="8"
+                                                                    IsVisible="{Binding SelectedPlaylist, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                            <Separator Background="{DynamicResource BorderBrush}" />
+                                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                                                <CheckBox Grid.Column="0"
+                                                                          Content="{DynamicResource MainWindow.Music.LoopPlaylistCheckbox}"
+                                                                          IsChecked="{Binding SelectedPlaylist.LoopPlaylist}" />
+                                                                <CheckBox Grid.Column="1"
+                                                                          Content="{DynamicResource MainWindow.Music.ShuffleCheckbox}"
+                                                                          IsChecked="{Binding SelectedPlaylist.Shuffle}" />
+                                                            </Grid>
+
+                                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                                <ComboBox Grid.Column="0"
+                                                                          ItemsSource="{Binding MusicLibrary}"
+                                                                          SelectedItem="{Binding PlaylistTrackToAdd, Mode=TwoWay}"
+                                                                          DisplayMemberBinding="{Binding Name}"
+                                                                          HorizontalAlignment="Stretch"
+                                                                          PlaceholderText="{DynamicResource MainWindow.Music.AddTrackPlaceholder}" />
+                                                                <Button Grid.Column="1"
+                                                                        Content="{DynamicResource MainWindow.Music.AddTrackButton}"
+                                                                        Command="{Binding AddSelectedTrackToSelectedPlaylistCommand}" />
+                                                            </Grid>
+
+                                                            <TextBlock Classes="muted"
+                                                                       Text="{DynamicResource MainWindow.Music.PlaylistEmptyState}"
+                                                                       IsVisible="{Binding SelectedPlaylist.HasNoTracks}"
+                                                                       FontStyle="Italic" />
+                                                            <ItemsControl ItemsSource="{Binding SelectedPlaylist.Tracks}"
+                                                                          IsVisible="{Binding !SelectedPlaylist.HasNoTracks}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:PlaylistTrackViewModel">
+                                                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+                                                                              Margin="0,2">
+                                                                            <TextBlock Grid.Column="0"
+                                                                                       Text="{Binding Track.Name}"
+                                                                                       VerticalAlignment="Center"
+                                                                                       TextTrimming="CharacterEllipsis" />
+                                                                            <Button Grid.Column="1"
+                                                                                    Classes="iconsquare"
+                                                                                    Content="&#8593;"
+                                                                                    Command="{Binding MoveUpCommand}"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Music.MoveUpTooltip}"
+                                                                                    Width="22" Height="22"
+                                                                                    FontSize="10" />
+                                                                            <Button Grid.Column="2"
+                                                                                    Classes="iconsquare"
+                                                                                    Content="&#8595;"
+                                                                                    Command="{Binding MoveDownCommand}"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Music.MoveDownTooltip}"
+                                                                                    Width="22" Height="22"
+                                                                                    FontSize="10" />
+                                                                            <Button Grid.Column="3"
+                                                                                    Classes="iconsquare"
+                                                                                    Content="&#10005;"
+                                                                                    Command="{Binding RemoveCommand}"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Music.RemoveTrackTooltip}"
+                                                                                    Width="22" Height="22"
+                                                                                    FontSize="10" />
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </StackPanel>
                                                 </Border>
                                             </Grid>
                                         </ScrollViewer>
