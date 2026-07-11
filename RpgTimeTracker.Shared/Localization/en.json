@@ -215,6 +215,12 @@
   "MainWindow.Settings.ExportSessionButton": "📦 Export session…",
   "MainWindow.Settings.ImportSessionButton": "📦 Import session…",
   "MainWindow.Settings.SessionExportDescription": "Bundles the game state and the Media, Sound, and Map libraries into one file - for a full backup or moving everything to a new machine. Importing adds to your existing libraries rather than replacing them.",
+  "MainWindow.Settings.FogOfWarHeader": "Fog of war (player view)",
+  "MainWindow.Settings.FogOfWarDescription": "How hidden map cells look on the players' screens - one shared setting for everyone.",
+  "MainWindow.Settings.FogColorLabel": "Color",
+  "MainWindow.Settings.FogOpacityLabel": "Opacity",
+  "MainWindow.Settings.FogBlurEnabledLabel": "Blur enabled",
+  "MainWindow.Settings.FogBlurLabel": "Blur strength",
 
   "MainWindow.StatusBar.PreviousGalleryTooltip": "Highlight previous gallery item",
   "MainWindow.StatusBar.NextGalleryTooltip": "Highlight next gallery item",

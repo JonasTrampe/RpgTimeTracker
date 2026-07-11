@@ -135,6 +135,9 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MapFogUpdateReceived += fogUpdate => Dispatcher.UIThread.Post(() => OnMapFogUpdate(fogUpdate));
         _client.MapFogResetReceived += floorId => Dispatcher.UIThread.Post(() => OnMapFogReset(floorId));
         _client.MapHideReceived += () => Dispatcher.UIThread.Post(OnMapHide);
+        _client.MapRenderStyleChanged += style => Dispatcher.UIThread.Post(() => MapDisplay.ApplyRenderStyle(
+            FogOverlayRenderer.BuildHiddenColor(style.ColorHex, style.OpacityPercent), style.BlurRadius,
+            style.BlurEnabled));
         _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
         _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
@@ -190,6 +193,27 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     private void OnMapFloorImageReceived(Guid floorId, string tempPath)
     {
         _pendingFloorImagePaths[floorId] = tempPath;
+
+        // Self-heals a floor whose image arrives (or is retried) after ShowMap already ran for
+        // this map - e.g. if this event happens to be processed out of order relative to
+        // MapShowReceived, the display picks it up as soon as it does show up instead of
+        // needing a full reconnect to recover.
+        var bitmap = TryDecodeFloorImage(tempPath, floorId);
+        if (bitmap is not null) MapDisplay.UpdateFloorImage(floorId, bitmap);
+    }
+
+    private static Bitmap? TryDecodeFloorImage(string imagePath, Guid floorId)
+    {
+        try
+        {
+            using var stream = File.OpenRead(imagePath);
+            return new Bitmap(stream);
+        }
+        catch (Exception ex) when (ex is IOException or NotSupportedException)
+        {
+            Log.Warning(ex, "Map floor image could not be decoded ({FloorId})", floorId);
+            return null;
+        }
     }
 
     private void OnMapShow(MapShowParams mapShow)
@@ -200,15 +224,10 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         {
             Bitmap? bitmap = null;
             if (_pendingFloorImagePaths.TryGetValue(floor.FloorId, out var imagePath))
-                try
-                {
-                    using var stream = File.OpenRead(imagePath);
-                    bitmap = new Bitmap(stream);
-                }
-                catch (Exception ex) when (ex is IOException or NotSupportedException)
-                {
-                    Log.Warning(ex, "Map floor image could not be decoded ({FloorName})", floor.FloorName);
-                }
+                bitmap = TryDecodeFloorImage(imagePath, floor.FloorId);
+            else
+                Log.Warning("Map floor image for {FloorName} ({FloorId}) not yet received when map.show arrived - " +
+                            "will self-heal once media.begin/chunks for it complete", floor.FloorName, floor.FloorId);
 
             FogMask? startingFog = null, currentFog = null;
             try
@@ -475,6 +494,9 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         PlayerHeaderTitle = Limit(snapshot.PlayerHeaderTitle, 120);
         PlayerHeaderSubtitle = Limit(snapshot.PlayerHeaderSubtitle, 180);
         ApplyTheme(snapshot.Theme);
+        MapDisplay.ApplyRenderStyle(
+            FogOverlayRenderer.BuildHiddenColor(snapshot.FogColorHex, snapshot.FogOpacityPercent),
+            snapshot.FogBlurRadius, snapshot.FogBlurEnabled);
 
         _localClock.SpeedMultiplier = snapshot.SpeedMultiplier <= 0 ? 1.0 : snapshot.SpeedMultiplier;
         _localClock.SetTime(snapshot.CurrentGameTime);

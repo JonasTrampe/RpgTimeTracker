@@ -27,13 +27,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `map.fogReset`/`map.hide`), with a full resync (all floor images +
   current fog) to any client that connects or reconnects while a map is
   open, so nothing ends up partially revealed/hidden by accident. Players
-  see hidden cells as a solid opaque block (configurable color/blur/
-  opacity is a later update) and can browse between floors locally,
-  independent of what the GM is currently editing. The Host's own local
-  player-window preview shows the exact same live map (when no client is
-  connected, mirroring how local media preview already worked) - both
-  reuse a shared `MapDisplayView`/`MapDisplayViewModel` (Shared project)
-  instead of duplicating the rendering logic per app.
+  see hidden cells as a solid opaque block by default and can browse
+  between floors locally, independent of what the GM is currently
+  editing. The Host's own local player-window preview always shows the
+  exact same live map/media as connected players (not just when testing
+  solo) - both reuse a shared `MapDisplayView`/`MapDisplayViewModel`
+  (Shared project) instead of duplicating the rendering logic per app.
+- Fog-of-war maps: player-side render style is now configurable in
+  Settings ("Fog of war (player view)" - color picker, opacity slider,
+  blur on/off toggle, blur strength slider), one shared preference
+  pushed live to all connected players (`map.renderStyleChanged`) and
+  sent to newly connecting/reconnecting clients as part of
+  `session.snapshot`. Hidden cells now show a blurred, tinted view of
+  the actual map underneath (cut out via the fog shape) rather than a
+  flat blurred color block, so the blur slider has a real visible
+  effect; the blur toggle turns that image-content blur off entirely
+  (leaving just the flat tint) without losing the configured strength.
+  Brush size in the map editor also got finer-grained (smaller default
+  grid cells, wider brush range).
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/
@@ -42,6 +53,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   workflow (`tests.yml`, separate from the plain compile check in
   `build.yml`) with its own status badge, so a broken test shows up
   distinctly from "does it compile".
+- End-to-end map/fog integration tests (`MapFogIntegrationTests`) that spin
+  up a real Host server and PlayerClient over an actual localhost socket
+  (not mocks) and exercise the same wire path as a real session: a floor
+  image larger than one network chunk, fog reveal/hide/reset, render-style
+  settings, and reconnect resync. Directly guards against the class of
+  bugs found and fixed this session (a map-floor transfer silently
+  truncating, a fog mask only covering a corner of the image).
+- `--no-discovery` CLI flag (Host app) skips starting the mDNS/LAN-broadcast
+  responders when the network server starts - useful on restricted
+  networks or when running multiple local instances side by side.
 - Optional auto-save on close and auto-load on startup (Host app), using the
   location of the last manual save/load. Both are opt-in toggles in the
   Settings tab; existing behavior is unchanged unless enabled.
@@ -54,6 +75,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fog-of-war maps: the fog mask only affected a small corner of the
+  floor image instead of the whole thing - the mask brush needed an
+  explicit source/destination rect to stretch across the image; Stretch
+  alone isn't enough for a brush used as an OpacityMask.
+- Fog-of-war maps: a floor's image never fully arrived on connected
+  clients (or the Host's own local preview) - the map-floor media
+  transfer never set the expected total byte count, so the client
+  considered the transfer "complete" after the very first chunk,
+  decoded/used a truncated file, and silently dropped the rest of that
+  floor's data. This was the actual cause of "the client doesn't show
+  anything" for maps.
+- Fog-of-war maps: a floor could render as a solid near-black block
+  instead of the map image whenever its fog data hadn't resolved yet
+  (e.g. still deserializing on the PlayerClient) - an Avalonia
+  `OpacityMask` bound to a not-yet-set brush renders fully opaque and
+  unclipped rather than fully transparent, so the tint layer briefly (or
+  permanently, if fog never arrived) covered the whole image. The blur
+  and tint layers are now skipped entirely until a real fog mask exists.
 - Date/time display (game clock, calendar, alarm trigger time) and the
   speed-factor/trim/lead-time number inputs now follow the app's own
   selected UI language (English/German) instead of the OS locale - a

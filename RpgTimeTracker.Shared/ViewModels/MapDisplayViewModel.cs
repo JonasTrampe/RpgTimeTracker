@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,11 +15,18 @@ namespace RpgTimeTracker.Shared.ViewModels;
 /// <summary>
 ///     Shared "what does a map look like right now" display state, used by both the Host's local
 ///     player-window preview (MainWindowViewModel.MapDisplay) and the real PlayerClient
-///     (ClientMainWindowViewModel.MapDisplay) - floor image + fog overlay + local floor
+///     (ClientMainWindowViewModel.MapDisplay) - floor image + fog cutout + local floor
 ///     navigation, identical in both places. The two owners differ only in how they feed data
 ///     in: the PlayerClient deserializes fog from the network, the Host shares the exact same
 ///     FogMask instance it's painting into (see NotifyFogChanged) - see ApplyFogCells vs
 ///     NotifyFogChanged below.
+///
+///     Rendering model (see MapDisplayView.axaml): the sharp floor image is always shown;
+///     hidden cells are cut out of a second, blurred copy of the *same* image plus a color-tint
+///     layer, both clipped via MaskBrush (an opacity mask built from the live FogMask, see
+///     FogOverlayRenderer.BuildMaskBitmap). Blurring the actual map content (rather than a flat
+///     fog-colored blob) is what issue #22's blur setting visibly does now - blurring a one-
+///     pixel-per-cell colored bitmap was next to invisible once stretched across a large map.
 /// </summary>
 public sealed partial class MapDisplayViewModel : ObservableObject
 {
@@ -27,8 +36,62 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     [ObservableProperty] private string _mapName = string.Empty;
     [ObservableProperty] private int _currentFloorIndex;
     [ObservableProperty] private Bitmap? _currentFloorImageBitmap;
-    [ObservableProperty] private WriteableBitmap? _currentFloorOverlayBitmap;
+    [ObservableProperty] private IBrush? _maskBrush;
     [ObservableProperty] private string _currentFloorName = string.Empty;
+
+    /// <summary>
+    ///     Whether MaskBrush is actually set. Bound to IsVisible on the blurred-image and tint
+    ///     layers in MapDisplayView.axaml so they're skipped entirely (never rendered) instead of
+    ///     relying on a null OpacityMask to mean "fully transparent" - it doesn't: an element with
+    ///     no OpacityMask renders at full, UNCLIPPED opacity, which turned the tint layer (opaque
+    ///     by default) into a solid block covering the whole sharp image underneath whenever a
+    ///     floor's fog hadn't been resolved yet (e.g. still deserializing on the PlayerClient).
+    /// </summary>
+    [ObservableProperty] private bool _hasFogMask;
+
+    /// <summary>Player-side fog render style (see issue #22) - one global GM preference, applied
+    ///     via ApplyRenderStyle by both the Host (from its own settings) and the PlayerClient
+    ///     (from session.snapshot/map.renderStyleChanged).</summary>
+    [ObservableProperty] private Color _hiddenColor = FogOverlayRenderer.PlayerHiddenColor;
+
+    /// <summary>Blur radius (device-independent pixels) applied to the blurred map-image layer -
+    ///     bound directly to a BlurEffect in MapDisplayView.axaml, no bitmap rebuild needed. Kept
+    ///     even while BlurEnabled is false, so re-enabling restores the previous strength.</summary>
+    [ObservableProperty] private double _blurRadius;
+
+    /// <summary>Whether the blurred-image layer is used at all - independent of BlurRadius so
+    ///     toggling it off/on doesn't lose the configured strength. When false, only the flat
+    ///     tint layer obscures hidden cells (no image-content blur).</summary>
+    [ObservableProperty] private bool _blurEnabled = true;
+
+    /// <summary>Solid-color brush for the tint layer, kept in sync with HiddenColor.</summary>
+    [ObservableProperty] private IBrush _tintBrush = new SolidColorBrush(FogOverlayRenderer.PlayerHiddenColor);
+
+    /// <summary>Bound to IsVisible on the blurred-image layer in MapDisplayView.axaml - shown only
+    ///     when there's a real fog mask to clip against AND blur is enabled.</summary>
+    public bool ShowBlurLayer => HasFogMask && BlurEnabled;
+
+    partial void OnHiddenColorChanged(Color value)
+    {
+        TintBrush = new SolidColorBrush(value);
+    }
+
+    partial void OnHasFogMaskChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowBlurLayer));
+    }
+
+    partial void OnBlurEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowBlurLayer));
+    }
+
+    public void ApplyRenderStyle(Color color, double blurRadius, bool blurEnabled)
+    {
+        HiddenColor = color;
+        BlurRadius = blurRadius;
+        BlurEnabled = blurEnabled;
+    }
 
     public bool HasMultipleFloors => _floors.Count > 1;
 
@@ -60,12 +123,13 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         IsShowingMap = false;
         _floors.Clear();
         CurrentFloorImageBitmap = null;
-        CurrentFloorOverlayBitmap = null;
+        MaskBrush = null;
+        HasFogMask = false;
         CurrentFloorName = string.Empty;
     }
 
     /// <summary>
-    ///     Applies reveal/hide cells to a floor's own FogMask and refreshes the overlay if it's
+    ///     Applies reveal/hide cells to a floor's own FogMask and refreshes the mask if it's
     ///     currently displayed - for a caller whose FogMask is an independent copy that must be
     ///     told about each change explicitly (the PlayerClient, after deserializing from the
     ///     network).
@@ -99,9 +163,23 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         if (floor is not null) RefreshIfCurrent(floor);
     }
 
+    /// <summary>
+    ///     Updates a floor's map image after the fact - covers the case where the image arrives
+    ///     (or is decoded) after ShowMap already ran for this map, so the display self-heals
+    ///     instead of staying blank until the next full resync.
+    /// </summary>
+    public void UpdateFloorImage(Guid floorId, Bitmap? image)
+    {
+        var floor = _floors.FirstOrDefault(f => f.FloorId == floorId);
+        if (floor is null) return;
+
+        floor.Image = image;
+        if (_floors.IndexOf(floor) == CurrentFloorIndex) CurrentFloorImageBitmap = image;
+    }
+
     private void RefreshIfCurrent(MapDisplayFloor floor)
     {
-        if (_floors.IndexOf(floor) == CurrentFloorIndex) RefreshOverlay();
+        if (_floors.IndexOf(floor) == CurrentFloorIndex) RefreshMask();
     }
 
     private void Navigate(int direction)
@@ -119,17 +197,32 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         var floor = _floors[CurrentFloorIndex];
         CurrentFloorName = floor.Name;
         CurrentFloorImageBitmap = floor.Image;
-        RefreshOverlay();
+        RefreshMask();
     }
 
-    private void RefreshOverlay()
+    private void RefreshMask()
     {
         if (CurrentFloorIndex < 0 || CurrentFloorIndex >= _floors.Count) return;
 
         var floor = _floors[CurrentFloorIndex];
-        CurrentFloorOverlayBitmap = floor.CurrentFog is null
-            ? null
-            : FogOverlayRenderer.BuildOverlayBitmap(floor.CurrentFog, FogOverlayRenderer.PlayerHiddenColor);
+        if (floor.CurrentFog is null)
+        {
+            MaskBrush = null;
+            HasFogMask = false;
+            return;
+        }
+
+        // SourceRect/DestinationRect are set explicitly (not just Stretch) because OpacityMask
+        // maps a TileBrush onto the masked element's bounds differently from Fill/Background -
+        // without them, this tiny (one-pixel-per-cell) bitmap rendered at its native pixel size
+        // in a corner of the image instead of stretching to cover it.
+        MaskBrush = new ImageBrush(FogOverlayRenderer.BuildMaskBitmap(floor.CurrentFog))
+        {
+            Stretch = Stretch.Fill,
+            SourceRect = new RelativeRect(0, 0, 1, 1, RelativeUnit.Relative),
+            DestinationRect = new RelativeRect(0, 0, 1, 1, RelativeUnit.Relative)
+        };
+        HasFogMask = true;
     }
 }
 
@@ -139,6 +232,6 @@ public sealed class MapDisplayFloor
 {
     public Guid FloorId { get; init; }
     public string Name { get; init; } = string.Empty;
-    public Bitmap? Image { get; init; }
+    public Bitmap? Image { get; set; }
     public FogMask? CurrentFog { get; set; }
 }

@@ -77,7 +77,7 @@ public partial class MapEditorWindow : Window
         if (_floor is null) return;
 
         var fog = _vm.GetLiveFog(_floor);
-        FogOverlayControl.Source = FogOverlayRenderer.BuildOverlayBitmap(fog, FogOverlayRenderer.EditorHiddenColor);
+        FogOverlayControl.Source = FogOverlayRenderer.BuildColoredOverlayBitmap(fog, FogOverlayRenderer.EditorHiddenColor);
     }
 
     private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
