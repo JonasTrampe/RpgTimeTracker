@@ -14,6 +14,15 @@ public sealed class MediaHeaderDto
     ///     event-trigger media) and never touch the single-slot "current medium"/gallery logic.
     /// </summary>
     public const string MediaKindMapFloor = "MapFloor";
+
+    /// <summary>
+    ///     A music track (see RpcMethods.MusicStop/MusicSetVolume/MusicTrackEnded) - deliberately
+    ///     a distinct Kind from MediaKindAudio: music plays on its own independent channel/
+    ///     transport (a Host-driven playlist sequencer), routed via its own client-side event
+    ///     (MusicTrackReceived, not MediaBeginReceived) so it never touches the sound-effect
+    ///     ActiveSoundViewModel tracking or the image/video "current medium" gallery slot.
+    /// </summary>
+    public const string MediaKindMusic = "Music";
     public string MediaId { get; set; } = string.Empty;
     public string Kind { get; set; } = MediaKindImage;
     public string FileName { get; set; } = string.Empty;

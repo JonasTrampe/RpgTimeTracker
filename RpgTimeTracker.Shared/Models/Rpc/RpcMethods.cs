@@ -126,4 +126,21 @@ public static class RpcMethods
     ///     SessionSnapshotParams.Theme both carry the theme.
     /// </summary>
     public const string MapRenderStyleChanged = "map.renderStyleChanged";
+
+    /// <summary>
+    ///     GM stops the currently playing music track/playlist - independent of the image/video
+    ///     "current medium" slot and of sound effects, see MediaHeaderDto.MediaKindMusic.
+    /// </summary>
+    public const string MusicStop = "music.stop";
+
+    /// <summary>GM adjusts the volume of the currently playing music track live.</summary>
+    public const string MusicSetVolume = "music.setVolume";
+
+    /// <summary>
+    ///     Client-to-server: the currently playing music track has actually ended - the Host's
+    ///     playlist sequencer uses this (alongside its own local-preview playback and a duration-
+    ///     estimate fallback timeout, mirroring MediaPlaybackEnded's video-tracking pattern) to
+    ///     decide when to advance to the next track.
+    /// </summary>
+    public const string MusicTrackEnded = "music.trackEnded";
 }
