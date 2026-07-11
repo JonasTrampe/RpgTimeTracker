@@ -30,6 +30,11 @@ public static class ThemeSettingsService
 
     public static string SoundLibraryDirectory => Path.Combine(SettingsDirectory, "SoundLibrary");
 
+    /// <summary>Separate from SoundLibraryDirectory on purpose - music tracks are a distinct
+    ///     library from sound effects (see issue tracking the Music Library/playlist feature),
+    ///     and will later be referenced by Scenes.</summary>
+    public static string MusicLibraryDirectory => Path.Combine(SettingsDirectory, "MusicLibrary");
+
     public static string MapLibraryDirectory => Path.Combine(SettingsDirectory, "MapLibrary");
 
     private static string GetUserConfigDirectory()
@@ -140,6 +145,24 @@ public static class ThemeSettingsService
         public long TrimEndMs { get; set; }
     }
 
+    /// <summary>
+    ///     A track in the Music Library - separate from SoundLibraryEntryDto (music plays
+    ///     independently of sound effects, on its own playback channel/transport, and will later
+    ///     be referenced by Scenes). Has a stable Id (unlike Media/SoundLibraryEntryDto, which are
+    ///     matched by name/path) so a future Scene or a Playlist can reference a track by value.
+    /// </summary>
+    public sealed class MusicLibraryEntryDto
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; } = string.Empty;
+        public string Path { get; set; } = string.Empty;
+        public string MimeType { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+
+        /// <summary>Default volume (0-100) with which this track is played.</summary>
+        public int Volume { get; set; } = 100;
+    }
+
     /// <summary>One floor image of a map, plus its "starting" fog template (see FogMask/FogMaskSerializer) -
     ///     the GM-authored initial reveal state, as opposed to the session-specific "current" fog
     ///     that lives in the save file (AppStateDto.MapProgress, added in a later milestone).</summary>
@@ -207,6 +230,7 @@ public static class ThemeSettingsService
 
         public List<MediaLibraryEntryDto> MediaLibrary { get; set; } = [];
         public List<SoundLibraryEntryDto> SoundLibrary { get; set; } = [];
+        public List<MusicLibraryEntryDto> MusicLibrary { get; set; } = [];
         public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
 
         /// <summary>
