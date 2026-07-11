@@ -128,6 +128,12 @@ public partial class MainWindow : Window
             SoundLibraryPanel.ExportAsync = vm.ExportSoundLibraryAsync;
             SoundLibraryPanel.ImportAsync = vm.ImportSoundLibraryAsync;
 
+            MusicLibraryPanel.AddDialogTitle = LocalizationService.Get("MainWindow.Dialogs.AddMusicToLibrary");
+            MusicLibraryPanel.AddFileTypeFilter = AudioFileType;
+            MusicLibraryPanel.AddItemAsync = vm.AddMusicToLibraryFromPathAsync;
+            MusicLibraryPanel.ExportAsync = vm.ExportMusicLibraryAsync;
+            MusicLibraryPanel.ImportAsync = vm.ImportMusicLibraryAsync;
+
             vm.ConfirmTriggerMediaDeleteAsync = ShowConfirmTriggerMediaDeleteAsync;
             return;
         }
@@ -206,6 +212,18 @@ public partial class MainWindow : Window
         e.Handled = true;
         if (e.ClickCount < 2 || sender is not Control control ||
             control.DataContext is not SoundLibraryItemViewModel item) return;
+
+        var picker = new IconPickerWindow(icon => item.Icon = icon);
+        picker.Show(this);
+    }
+
+    private void OnMusicIconPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // Same reasoning as OnSoundIconPointerPressed: mark handled immediately so the tile's own
+        // PointerPressed (OnMusicLibraryItemPointerPressed) never fires for a click on the icon.
+        e.Handled = true;
+        if (e.ClickCount < 2 || sender is not Control control ||
+            control.DataContext is not MusicLibraryItemViewModel item) return;
 
         var picker = new IconPickerWindow(icon => item.Icon = icon);
         picker.Show(this);
@@ -421,6 +439,12 @@ public partial class MainWindow : Window
     private void OnSoundLibraryItemPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is Control control && control.DataContext is SoundLibraryItemViewModel item)
+            item.PlayCommand.Execute(null);
+    }
+
+    private void OnMusicLibraryItemPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Control control && control.DataContext is MusicLibraryItemViewModel item)
             item.PlayCommand.Execute(null);
     }
 

@@ -365,6 +365,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// </summary>
     private MediaPlayer? _testSoundPlayer;
 
+    /// <summary>Same purpose as _testSoundPlayer, kept separate so testing a music track never
+    ///     stops/collides with a sound library test playing at the same time.</summary>
+    private MediaPlayer? _testMusicPlayer;
+
     public MainWindowViewModel()
     {
         // Reasonable fantasy start time, can be changed immediately.
@@ -431,6 +435,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             if (!File.Exists(entry.Path)) continue;
             SoundLibrary.Add(CreateSoundLibraryItem(entry.Name, entry.Icon, entry.Path, entry.MimeType, entry.Loop,
                 entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0));
+        }
+
+        foreach (var musicEntry in settings.MusicLibrary)
+        {
+            if (!File.Exists(musicEntry.Path)) continue;
+            MusicLibrary.Add(CreateMusicLibraryItem(musicEntry.Id, musicEntry.Name, musicEntry.Icon,
+                musicEntry.Path, musicEntry.MimeType, musicEntry.Volume));
         }
 
         foreach (var mapEntry in settings.MapLibrary)
@@ -568,6 +579,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var entry in CalendarEntries) entry.RefreshLocalizedText();
         foreach (var media in MediaLibrary) media.RefreshLocalizedText();
         foreach (var sound in SoundLibrary) sound.RefreshLocalizedText();
+        foreach (var music in MusicLibrary) music.RefreshLocalizedText();
         foreach (var sent in SentMediaItems) sent.RefreshLocalizedText();
         foreach (var client in ConnectedClientItems) client.RefreshLocalizedText();
     }
@@ -683,6 +695,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     public ObservableCollection<SoundLibraryItemViewModel> SoundLibrary { get; } = [];
 
     public bool HasNoSoundLibraryItems => SoundLibrary.Count == 0;
+
+    // ==================== Music library (separate from sound effects - see MusicLibraryItemViewModel) ====================
+
+    public ObservableCollection<MusicLibraryItemViewModel> MusicLibrary { get; } = [];
+
+    public bool HasNoMusicLibraryItems => MusicLibrary.Count == 0;
 
     // ==================== Map library (fog-of-war maps, multiple floors each) ====================
 
@@ -2718,6 +2736,208 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         catch (Exception ex)
         {
             Log.Error(ex, "Sound library import failed ({Folder})", sourceFolder);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+        }
+    }
+
+    public async Task AddMusicToLibraryFromPathAsync(string sourcePath)
+    {
+        if (!MediaTypeHelper.TryGetKind(sourcePath, out var kind, out var mimeType) || kind != MediaKind.Audio)
+        {
+            MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.UnsupportedMusicFormat");
+            return;
+        }
+
+        if (!File.Exists(sourcePath))
+        {
+            MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.FileNotFound");
+            return;
+        }
+
+        try
+        {
+            var cachedPath = await CopyIntoMusicLibraryAsync(sourcePath);
+            var item = CreateMusicLibraryItem(Guid.NewGuid(), Path.GetFileNameWithoutExtension(sourcePath),
+                VisualItemHelper.IconTimer, cachedPath, mimeType, 100);
+            MusicLibrary.Add(item);
+            OnPropertyChanged(nameof(HasNoMusicLibraryItems));
+            SaveMusicLibrarySettings();
+            MediaErrorMessage = null;
+            Log.Information("Music track added to library: {Name}", item.Name);
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedToMusicLibrary"), item.Name));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Music track could not be added to library ({SourcePath})", sourcePath);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MusicCouldNotBeAddedToLibrary"), ex.Message);
+        }
+    }
+
+    private static async Task<string> CopyIntoMusicLibraryAsync(string sourcePath)
+    {
+        Directory.CreateDirectory(ThemeSettingsService.MusicLibraryDirectory);
+        var cachedPath = Path.Combine(ThemeSettingsService.MusicLibraryDirectory,
+            $"{Guid.NewGuid():N}{Path.GetExtension(sourcePath)}");
+        await using var source = File.OpenRead(sourcePath);
+        await using var target = File.Create(cachedPath);
+        await source.CopyToAsync(target);
+
+        return cachedPath;
+    }
+
+    private MusicLibraryItemViewModel CreateMusicLibraryItem(
+        Guid id, string name, string icon, string localPath, string mimeType, int volume)
+    {
+        return new MusicLibraryItemViewModel(id, name, icon, localPath, mimeType, volume,
+            RemoveMusicLibraryItem,
+            PlayMusicLibraryItem,
+            TestMusicLibraryItem,
+            OnMusicLibraryItemChanged);
+    }
+
+    private void RemoveMusicLibraryItem(MusicLibraryItemViewModel item)
+    {
+        MusicLibrary.Remove(item);
+        OnPropertyChanged(nameof(HasNoMusicLibraryItems));
+        DeleteFileQuietly(item.LocalPath);
+        SaveMusicLibrarySettings();
+        Log.Information("Music track removed from library: {Name}", item.Name);
+    }
+
+    /// <summary>
+    ///     "Play" button: for now (before the playback/routing milestones land) this only
+    ///     previews locally at the GM's side, same as Test - there is no network distribution or
+    ///     playlist sequencing yet. Kept as a separate command from Test so the UI/wiring already
+    ///     matches its eventual shape (send-to-players vs. local-only preview).
+    /// </summary>
+    private void PlayMusicLibraryItem(MusicLibraryItemViewModel item)
+    {
+        Log.Information("Music track played locally (network playback not implemented yet): {Name}", item.Name);
+        PlayMusicLocalPreview(item);
+    }
+
+    /// <summary>"Test" button: plays the track ONLY locally at the GM, to check the configured volume.</summary>
+    private void TestMusicLibraryItem(MusicLibraryItemViewModel item)
+    {
+        PlayMusicLocalPreview(item);
+    }
+
+    private void PlayMusicLocalPreview(MusicLibraryItemViewModel item)
+    {
+        if (!VlcMediaService.TryGetLibVlc(out var libVlc) || libVlc is null) return;
+        if (!File.Exists(item.LocalPath)) return;
+
+        try
+        {
+            _testMusicPlayer?.Stop();
+            _testMusicPlayer?.Dispose();
+
+            var player = new MediaPlayer(libVlc);
+            player.EndReached += (_, _) => Dispatcher.UIThread.Post(() =>
+            {
+                if (!ReferenceEquals(_testMusicPlayer, player)) return;
+                player.Stop();
+                player.Dispose();
+                _testMusicPlayer = null;
+            });
+            _testMusicPlayer = player;
+
+            using var media = new Media(libVlc, item.LocalPath);
+            player.Play(media);
+            player.Volume = Math.Clamp(item.Volume, 0, 100);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Music track preview failed: {Name}", item.Name);
+        }
+    }
+
+    private void OnMusicLibraryItemChanged(MusicLibraryItemViewModel item)
+    {
+        SaveMusicLibrarySettings();
+    }
+
+    private void SaveMusicLibrarySettings()
+    {
+        var settings = ThemeSettingsService.LoadSettings();
+        settings.MusicLibrary = MusicLibrary
+            .Select(m => new ThemeSettingsService.MusicLibraryEntryDto
+            {
+                Id = m.Id,
+                Name = m.Name,
+                Icon = m.Icon,
+                Path = m.LocalPath,
+                MimeType = m.MimeType,
+                Volume = m.Volume
+            })
+            .ToList();
+        ThemeSettingsService.SaveSettings(settings);
+    }
+
+    public async Task ExportMusicLibraryAsync(string targetFolder)
+    {
+        try
+        {
+            var manifest = new LibraryManifestDto { LibraryType = "Music" };
+            foreach (var item in MusicLibrary)
+            {
+                if (!File.Exists(item.LocalPath)) continue;
+
+                var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(item.LocalPath)}";
+                File.Copy(item.LocalPath, Path.Combine(targetFolder, fileName), true);
+                manifest.Items.Add(new LibraryManifestEntryDto
+                {
+                    Name = item.Name,
+                    Icon = item.Icon,
+                    FileName = fileName,
+                    MimeType = item.MimeType,
+                    Volume = item.Volume
+                });
+            }
+
+            await File.WriteAllTextAsync(Path.Combine(targetFolder, LibraryManifestFileName),
+                JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
+            Log.Information("Music library exported to {Folder} ({Count} files)", targetFolder,
+                manifest.Items.Count);
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MusicLibraryExported"), manifest.Items.Count));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Music library export failed ({Folder})", targetFolder);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+        }
+    }
+
+    public async Task ImportMusicLibraryAsync(string sourceFolder)
+    {
+        try
+        {
+            var manifest = await ReadLibraryManifestAsync(sourceFolder);
+            if (manifest is null) return;
+
+            Directory.CreateDirectory(ThemeSettingsService.MusicLibraryDirectory);
+            var imported = 0;
+            foreach (var entry in manifest.Items)
+            {
+                var sourceFile = Path.Combine(sourceFolder, entry.FileName);
+                if (!File.Exists(sourceFile)) continue;
+
+                var cachedPath = Path.Combine(ThemeSettingsService.MusicLibraryDirectory,
+                    $"{Guid.NewGuid():N}{Path.GetExtension(entry.FileName)}");
+                File.Copy(sourceFile, cachedPath, true);
+                MusicLibrary.Add(CreateMusicLibraryItem(Guid.NewGuid(), entry.Name,
+                    entry.Icon ?? VisualItemHelper.IconTimer, cachedPath, entry.MimeType, entry.Volume ?? 100));
+                imported++;
+            }
+
+            OnPropertyChanged(nameof(HasNoMusicLibraryItems));
+            SaveMusicLibrarySettings();
+            Log.Information("Music library imported from {Folder} ({Count} files)", sourceFolder, imported);
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MusicImported"), imported));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Music library import failed ({Folder})", sourceFolder);
             MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
         }
     }

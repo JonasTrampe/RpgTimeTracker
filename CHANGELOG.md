@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- New "Music" tab with its own Music Library, deliberately separate from
+  the existing Sound Library (own storage directory, own settings section,
+  own export/import) - music will later be organized into playlists and
+  referenced by a planned Scenes feature, so it needs to stay independent
+  of one-off sound effects rather than sharing their list. This first pass
+  covers the library itself (add/rename/set icon+volume/delete/export/
+  import, single-click local preview); playlists, network playback to
+  players, and per-window (Host/Client) routing controls are follow-up
+  milestones.
 - Full session export/import: a "📦 Export session…"/"📦 Import session…"
   pair in Settings > Save & load bundles the game state and the Media,
   Sound, and Map libraries into a single `.rtt-session` file - for a full
