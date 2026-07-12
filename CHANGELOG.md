@@ -21,6 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Music Library, reorder or remove them, and toggle "loop playlist" /
   "shuffle" per playlist. Purely local editing for now - actually playing
   a playlist to connected players is a follow-up milestone.
+- Playlist playback: pressing Play on a playlist now actually streams music
+  to all connected players and the Host's own local preview, entirely on
+  its own channel from Sound Library effects (separate `Music` media kind,
+  own player instance client-side, so a sound effect never interrupts or
+  gets interrupted by music). The Host drives playback: it decides what
+  plays next (respecting Loop/Shuffle) once a client reports a track ended,
+  with a duration-estimate fallback so playback never gets stuck if no
+  client is connected. A "Now Playing" bar in the Music tab shows the
+  current playlist/track with Previous/Next/Stop and a live volume slider.
+  Per-window (Host/Client) routing toggles for which windows play Music
+  vs. Sound are a follow-up milestone.
 - Full session export/import: a "📦 Export session…"/"📦 Import session…"
   pair in Settings > Save & load bundles the game state and the Media,
   Sound, and Map libraries into a single `.rtt-session` file - for a full

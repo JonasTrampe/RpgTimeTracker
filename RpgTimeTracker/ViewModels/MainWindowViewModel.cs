@@ -293,6 +293,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private string? _pendingVideoMediaId;
     private bool _pendingVideoPauseClock;
+
+    // ==================== Music-track-end tracking (mirrors video-end tracking above) ====================
+    // Same "first of {client report, local-preview EndReached, duration-estimate fallback} wins,
+    // idempotent" design as _pendingVideoMediaId/ResolvePendingVideo - see BeginMusicTracking.
+    private CancellationTokenSource? _pendingMusicFallbackCts;
+    private string? _pendingMusicMediaId;
     [ObservableProperty] private string _playerCalendarMonthLabel = string.Empty;
     [ObservableProperty] private string _playerCalendarSelectedDateLabel = string.Empty;
 
@@ -369,6 +375,21 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     ///     stops/collides with a sound library test playing at the same time.</summary>
     private MediaPlayer? _testMusicPlayer;
 
+    /// <summary>
+    ///     The Host's own local playback of whatever the playlist sequencer currently has playing
+    ///     - separate again from _testMusicPlayer (testing a library track) and _testSoundPlayer,
+    ///     mirroring how CreateLocalMediaPlayer/PlayLocalSoundIfNeeded give the GM the same audio
+    ///     players hear, gated on IsPlayerWindowOpen (see PlayLocalMusicIfNeeded).
+    /// </summary>
+    private MediaPlayer? _localMusicPlayer;
+
+    /// <summary>Ordered playback sequence for CurrentPlaylist - indices into its Tracks list,
+    ///     shuffled once per PlayPlaylist call when CurrentPlaylist.Shuffle is set (see
+    ///     BuildPlaybackOrder). _playbackPosition indexes into THIS list, not directly into Tracks.</summary>
+    private List<int> _playbackOrder = [];
+
+    private int _playbackPosition;
+
     public MainWindowViewModel()
     {
         // Reasonable fantasy start time, can be changed immediately.
@@ -385,6 +406,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         // Decisive for video-end tracking (loop/close, optional clock pause) - see BeginVideoTracking.
         _playerServer.ClientReportedPlaybackEnded +=
             mediaId => Dispatcher.UIThread.Post(() => ResolvePendingVideo(mediaId));
+        // Decisive for the playlist sequencer's "when does the current track end" tracking - see
+        // BeginMusicTracking.
+        _playerServer.ClientReportedMusicTrackEnded +=
+            mediaId => Dispatcher.UIThread.Post(() => ResolvePendingMusicTrack(mediaId));
 
         _blinkTimer = new DispatcherTimer
         {
@@ -730,6 +755,32 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// <summary>Library track chosen in the Music tab's "add to playlist" picker, not yet added.</summary>
     [ObservableProperty] private MusicLibraryItemViewModel? _playlistTrackToAdd;
 
+    // ==================== Now Playing (playlist sequencer) ====================
+    // Deliberately separate from SelectedPlaylist: SelectedPlaylist is just "which playlist is
+    // being edited in the UI" - CurrentPlaylist is "which playlist is actually playing," and the
+    // two are independent (editing one playlist while a different one plays is normal).
+
+    /// <summary>The playlist currently playing (or null if nothing is), started via PlayPlaylist.</summary>
+    [ObservableProperty] private PlaylistViewModel? _currentPlaylist;
+
+    /// <summary>The track from CurrentPlaylist currently playing.</summary>
+    [ObservableProperty] private MusicLibraryItemViewModel? _currentPlaylistTrack;
+
+    [ObservableProperty] private bool _isPlaylistPlaying;
+
+    /// <summary>Live volume (0-100) of the currently playing track - bound to the Now Playing
+    ///     slider. Reset to the track's own default whenever a new track starts (see
+    ///     PlayCurrentPlaylistTrackAsync), then adjustable live from there.</summary>
+    [ObservableProperty] private int _currentPlaylistVolume = 100;
+
+    partial void OnCurrentPlaylistVolumeChanged(int value)
+    {
+        if (!IsPlaylistPlaying) return;
+
+        if (_localMusicPlayer is not null) _localMusicPlayer.Volume = Math.Clamp(value, 0, 100);
+        _ = _playerServer.PublishMusicSetVolumeAsync(value);
+    }
+
     [RelayCommand]
     private void AddPlaylist()
     {
@@ -744,6 +795,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private void RemovePlaylist(PlaylistViewModel playlist)
     {
+        if (CurrentPlaylist == playlist) StopPlaylistPlayback();
+
         Playlists.Remove(playlist);
         OnPropertyChanged(nameof(HasNoPlaylists));
         if (SelectedPlaylist == playlist) SelectedPlaylist = null;
@@ -2869,6 +2922,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private void RemoveMusicLibraryItem(MusicLibraryItemViewModel item)
     {
+        // Stop rather than try to skip past it mid-deletion - simpler and safer than juggling
+        // playback indices while the very file/track object the sequencer is playing disappears.
+        if (CurrentPlaylistTrack == item) StopPlaylistPlayback();
+
         MusicLibrary.Remove(item);
         OnPropertyChanged(nameof(HasNoMusicLibraryItems));
         DeleteFileQuietly(item.LocalPath);
@@ -2878,14 +2935,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     }
 
     /// <summary>
-    ///     "Play" button: for now (before the playback/routing milestones land) this only
-    ///     previews locally at the GM's side, same as Test - there is no network distribution or
-    ///     playlist sequencing yet. Kept as a separate command from Test so the UI/wiring already
-    ///     matches its eventual shape (send-to-players vs. local-only preview).
+    ///     "Play" button on a single Music Library tile: still a local-only preview, same as
+    ///     Test - real network distribution only happens through a Playlist (see PlayPlaylist),
+    ///     since sending an ad-hoc single track outside any playlist has no sequencing/routing
+    ///     context to advance from. Kept as a separate command from Test for UI clarity.
     /// </summary>
     private void PlayMusicLibraryItem(MusicLibraryItemViewModel item)
     {
-        Log.Information("Music track played locally (network playback not implemented yet): {Name}", item.Name);
         PlayMusicLocalPreview(item);
     }
 
@@ -2923,6 +2979,244 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             Log.Error(ex, "Music track preview failed: {Name}", item.Name);
         }
+    }
+
+    /// <summary>Starts a playlist playing (to all connected players and the Host's own local
+    ///     preview, if the player window is open) - the actual "start" action the GM asked for.</summary>
+    [RelayCommand]
+    private async Task PlayPlaylistAsync(PlaylistViewModel playlist)
+    {
+        StopPlaylistPlayback();
+
+        if (playlist.Tracks.Count == 0) return;
+
+        CurrentPlaylist = playlist;
+        BuildPlaybackOrder(playlist);
+        _playbackPosition = 0;
+        IsPlaylistPlaying = true;
+        await PlayCurrentPlaylistTrackAsync();
+    }
+
+    [RelayCommand]
+    private void StopPlaylist()
+    {
+        StopPlaylistPlayback();
+    }
+
+    [RelayCommand]
+    private async Task NextPlaylistTrackAsync()
+    {
+        if (!IsPlaylistPlaying) return;
+
+        await AdvancePlaylistAsync();
+    }
+
+    [RelayCommand]
+    private async Task PreviousPlaylistTrackAsync()
+    {
+        if (!IsPlaylistPlaying || _playbackOrder.Count == 0) return;
+
+        _playbackPosition = (_playbackPosition - 1 + _playbackOrder.Count) % _playbackOrder.Count;
+        await PlayCurrentPlaylistTrackAsync();
+    }
+
+    /// <summary>Builds the order tracks play in - the list order itself, or a one-time shuffle of
+    ///     it if CurrentPlaylist.Shuffle is set (re-shuffled every time the playlist (re)starts,
+    ///     not live while playing, so the current+next track stay predictable mid-playback).</summary>
+    private void BuildPlaybackOrder(PlaylistViewModel playlist)
+    {
+        var indices = Enumerable.Range(0, playlist.Tracks.Count).ToList();
+        if (playlist.Shuffle)
+            for (var i = indices.Count - 1; i > 0; i--)
+            {
+                var j = Random.Shared.Next(i + 1);
+                (indices[i], indices[j]) = (indices[j], indices[i]);
+            }
+
+        _playbackOrder = indices;
+    }
+
+    private async Task PlayCurrentPlaylistTrackAsync()
+    {
+        if (CurrentPlaylist is null || _playbackPosition < 0 || _playbackPosition >= _playbackOrder.Count)
+        {
+            StopPlaylistPlayback();
+            return;
+        }
+
+        var trackIndex = _playbackOrder[_playbackPosition];
+        if (trackIndex >= CurrentPlaylist.Tracks.Count)
+        {
+            // The library shrank (a track was deleted) since BuildPlaybackOrder ran - rebuild
+            // against the current track count rather than risk an out-of-range index.
+            BuildPlaybackOrder(CurrentPlaylist);
+            if (_playbackOrder.Count == 0)
+            {
+                StopPlaylistPlayback();
+                return;
+            }
+
+            _playbackPosition %= _playbackOrder.Count;
+            trackIndex = _playbackOrder[_playbackPosition];
+        }
+
+        var track = CurrentPlaylist.Tracks[trackIndex].Track;
+        CurrentPlaylistTrack = track;
+        CurrentPlaylistVolume = track.Volume;
+
+        if (!File.Exists(track.LocalPath))
+        {
+            Log.Warning("Playlist track file missing, skipping: {Name} ({Path})", track.Name, track.LocalPath);
+            await AdvancePlaylistAsync();
+            return;
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = await File.ReadAllBytesAsync(track.LocalPath);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Playlist track could not be read, skipping: {Name} ({Path})", track.Name, track.LocalPath);
+            await AdvancePlaylistAsync();
+            return;
+        }
+
+        var header = new MediaHeaderDto
+        {
+            MediaId = Guid.NewGuid().ToString("N"),
+            Kind = MediaHeaderDto.MediaKindMusic,
+            FileName = track.Name,
+            MimeType = track.MimeType,
+            Volume = track.Volume
+        };
+
+        Log.Information("Playlist {PlaylistName} playing track {TrackName} ({Position}/{Count})",
+            CurrentPlaylist.Name, track.Name, _playbackPosition + 1, _playbackOrder.Count);
+        await _playerServer.PublishMusicTrackAsync(header, bytes);
+        PlayLocalMusicIfNeeded(header, track.LocalPath);
+        BeginMusicTracking(header, track.LocalPath);
+    }
+
+    /// <summary>Advances to the next track in _playbackOrder, wrapping around (and reshuffling,
+    ///     if Shuffle is on) when CurrentPlaylist.LoopPlaylist is set, otherwise stopping.</summary>
+    private async Task AdvancePlaylistAsync()
+    {
+        if (CurrentPlaylist is null) return;
+
+        _playbackPosition++;
+        if (_playbackPosition >= _playbackOrder.Count)
+        {
+            if (!CurrentPlaylist.LoopPlaylist)
+            {
+                StopPlaylistPlayback();
+                return;
+            }
+
+            BuildPlaybackOrder(CurrentPlaylist);
+            _playbackPosition = 0;
+        }
+
+        await PlayCurrentPlaylistTrackAsync();
+    }
+
+    /// <summary>Stops playback entirely: cancels pending-track tracking, stops the Host's own
+    ///     local preview player, tells all clients to stop, and clears the Now Playing state.</summary>
+    private void StopPlaylistPlayback()
+    {
+        CancelPendingMusicTracking();
+
+        _localMusicPlayer?.Stop();
+        _localMusicPlayer?.Dispose();
+        _localMusicPlayer = null;
+
+        if (IsPlaylistPlaying) _ = _playerServer.PublishMusicStopAsync();
+
+        CurrentPlaylist = null;
+        CurrentPlaylistTrack = null;
+        IsPlaylistPlaying = false;
+        _playbackOrder = [];
+        _playbackPosition = 0;
+    }
+
+    /// <summary>
+    ///     Plays the current playlist track locally too, whenever the player window is open -
+    ///     same rule as PlayLocalSoundIfNeeded/ShouldShowMediaLocally, so the GM hears exactly
+    ///     what players hear regardless of connected client count.
+    /// </summary>
+    private void PlayLocalMusicIfNeeded(MediaHeaderDto header, string localPath)
+    {
+        if (!IsPlayerWindowOpen) return;
+        if (!VlcMediaService.TryGetLibVlc(out var libVlc) || libVlc is null) return;
+
+        try
+        {
+            var player = new MediaPlayer(libVlc);
+            var mediaId = header.MediaId;
+            player.EndReached += (_, _) => Dispatcher.UIThread.Post(() => ResolvePendingMusicTrack(mediaId));
+
+            _localMusicPlayer = player;
+
+            using var media = new Media(libVlc, localPath);
+            player.Play(media);
+            player.Volume = Math.Clamp(header.Volume, 0, 100);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Music track could not be played locally: {Path}", localPath);
+        }
+    }
+
+    /// <summary>
+    ///     Starts tracking when the currently playing track (mediaId) has ended, so the sequencer
+    ///     can advance - mirrors BeginVideoTracking exactly: whichever of {a client's
+    ///     music.trackEnded report, the Host's own local-preview EndReached, a duration-estimate
+    ///     fallback timeout} fires first wins, via the same idempotent ResolvePendingMusicTrack.
+    /// </summary>
+    private void BeginMusicTracking(MediaHeaderDto header, string localPath)
+    {
+        CancelPendingMusicTracking();
+        _pendingMusicMediaId = header.MediaId;
+
+        var cts = new CancellationTokenSource();
+        _pendingMusicFallbackCts = cts;
+        _ = RunMusicFallbackTimeoutAsync(header.MediaId, localPath, cts.Token);
+    }
+
+    private void CancelPendingMusicTracking()
+    {
+        _pendingMusicFallbackCts?.Cancel();
+        _pendingMusicFallbackCts?.Dispose();
+        _pendingMusicFallbackCts = null;
+        _pendingMusicMediaId = null;
+    }
+
+    /// <summary>Safety net: if no client (and no local preview) reports the track ending, don't
+    ///     stay stuck on it forever - e.g. no client connected and the player window closed.</summary>
+    private async Task RunMusicFallbackTimeoutAsync(string mediaId, string localPath, CancellationToken token)
+    {
+        var duration = await TryGetMediaDurationAsync(localPath) ?? TimeSpan.FromMinutes(10);
+        var fallback = duration + TimeSpan.FromSeconds(15);
+
+        try
+        {
+            await Task.Delay(fallback, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        ResolvePendingMusicTrack(mediaId);
+    }
+
+    private void ResolvePendingMusicTrack(string mediaId)
+    {
+        if (_pendingMusicMediaId != mediaId) return;
+
+        CancelPendingMusicTracking();
+        _ = AdvancePlaylistAsync();
     }
 
     private void OnMusicLibraryItemChanged(MusicLibraryItemViewModel item)

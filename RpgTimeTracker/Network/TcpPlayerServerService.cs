@@ -133,6 +133,10 @@ public sealed class TcpPlayerServerService : IDisposable
     /// <summary>A client reports that a non-looping video has finished on its end (background thread).</summary>
     public event Action<string>? ClientReportedPlaybackEnded;
 
+    /// <summary>A client reports that the currently playing music track has finished (background
+    ///     thread) - see RpcMethods.MusicTrackEnded.</summary>
+    public event Action<string>? ClientReportedMusicTrackEnded;
+
     /// <summary>
     ///     Starts the TCP listener, and by default the mDNS + LAN-broadcast discovery responders
     ///     alongside it. <paramref name="enableDiscovery"/> lets a caller skip those - the real
@@ -231,8 +235,11 @@ public sealed class TcpPlayerServerService : IDisposable
     }
 
     /// <summary>
-    ///     Distributes an image, video, or sound in chunks (media.begin + N binary chunks).
-    ///     Image/video are additionally cached for late-joining clients (see _lastMedia), sounds are not.
+    ///     Distributes an image, video, sound, or music track in chunks (media.begin + N binary
+    ///     chunks). Image/video are additionally cached for late-joining clients (see
+    ///     _lastMedia); sounds and music are not - neither is a "currently displayed" medium a
+    ///     late-joining client would need to catch up on (music has its own Host-driven playlist
+    ///     sequencer instead, see MainWindowViewModel).
     /// </summary>
     public async Task PublishMediaAsync(MediaHeaderDto header, byte[] fileBytes)
     {
@@ -246,7 +253,7 @@ public sealed class TcpPlayerServerService : IDisposable
 
         header.TotalLength = fileBytes.Length;
 
-        if (header.Kind != MediaHeaderDto.MediaKindAudio)
+        if (header.Kind != MediaHeaderDto.MediaKindAudio && header.Kind != MediaHeaderDto.MediaKindMusic)
             lock (_mediaGate)
             {
                 _lastMedia = (header, fileBytes);
@@ -299,6 +306,31 @@ public sealed class TcpPlayerServerService : IDisposable
     {
         return BroadcastRpcAsync(RpcMethods.MediaSetVolume,
             new MediaSetVolumeParams { MediaId = mediaId, Volume = volume });
+    }
+
+    /// <summary>
+    ///     Distributes a music track (media.begin + chunks, Kind=MediaKindMusic) - thin wrapper
+    ///     around PublishMediaAsync kept as its own named method for symmetry with
+    ///     PublishMusicStopAsync/PublishMusicSetVolumeAsync, and so a future per-client routing
+    ///     filter (see the Music/Playlists plan's per-window milestone) has one obvious place to
+    ///     change instead of touching the shared image/video/sound send path.
+    /// </summary>
+    public Task PublishMusicTrackAsync(MediaHeaderDto header, byte[] fileBytes)
+    {
+        header.Kind = MediaHeaderDto.MediaKindMusic;
+        return PublishMediaAsync(header, fileBytes);
+    }
+
+    /// <summary>Stops the currently playing music track/playlist on all clients.</summary>
+    public Task PublishMusicStopAsync()
+    {
+        return BroadcastRpcAsync(RpcMethods.MusicStop, RpcEmptyParams.Instance);
+    }
+
+    /// <summary>Adjusts the volume of the currently playing music track live on all clients (0-100).</summary>
+    public Task PublishMusicSetVolumeAsync(int volume)
+    {
+        return BroadcastRpcAsync(RpcMethods.MusicSetVolume, new MusicSetVolumeParams { Volume = volume });
     }
 
     /// <summary>Removes an image/video from the gallery on all clients specifically (by MediaId).</summary>
@@ -768,6 +800,15 @@ public sealed class TcpPlayerServerService : IDisposable
                     {
                         Log.Information("Client reports playback ended for {MediaId}", ended.MediaId);
                         ClientReportedPlaybackEnded?.Invoke(ended.MediaId);
+                    }
+
+                    break;
+                case RpcMethods.MusicTrackEnded:
+                    var musicEnded = raw.GetParams<MusicTrackEndedParams>();
+                    if (musicEnded is not null)
+                    {
+                        Log.Information("Client reports music track ended for {MediaId}", musicEnded.MediaId);
+                        ClientReportedMusicTrackEnded?.Invoke(musicEnded.MediaId);
                     }
 
                     break;

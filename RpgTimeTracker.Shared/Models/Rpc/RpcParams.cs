@@ -182,6 +182,19 @@ public sealed class MapRenderStyleChangedParams
     public bool BlurEnabled { get; set; } = true;
 }
 
+/// <summary>Server-to-client: adjusts the volume of the currently playing music track live (0-100).</summary>
+public sealed class MusicSetVolumeParams
+{
+    public int Volume { get; set; } = 100;
+}
+
+/// <summary>Client-to-server: the currently playing music track (identified by MediaId, matching
+///     the MediaHeaderDto.MediaId it was sent with) has actually ended.</summary>
+public sealed class MusicTrackEndedParams
+{
+    public string MediaId { get; set; } = string.Empty;
+}
+
 /// <summary>
 ///     Full state of a timer/alarm/interval for "upsert" (created or structurally
 ///     changed - start/pause/reset/completed/triggered/edited). NOT sent for pure

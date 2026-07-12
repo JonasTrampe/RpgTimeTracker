@@ -34,6 +34,14 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     // gets its own, short-lived MediaPlayer instead of the shared video player.
 
     private readonly Dictionary<string, MediaPlayer> _activeSoundPlayers = new();
+
+    // ==================== Music: independent playback channel, one track at a time ====================
+    // Separate from _activeSoundPlayers (sound effects) and MediaPlayer (video/current-medium) -
+    // music is driven by the Host's playlist sequencer, never by this client, so it only ever
+    // plays/stops/reports end for whatever single track the Host currently sent.
+    private MediaPlayer? _musicPlayer;
+    private string? _musicTempPath;
+
     private readonly List<CalendarEntryDefinition> _calendarEntries = new();
     private readonly PlayerTcpClientService _client = new();
     private readonly MdnsDiscoveryService _discovery = new();
@@ -138,6 +146,9 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MapRenderStyleChanged += style => Dispatcher.UIThread.Post(() => MapDisplay.ApplyRenderStyle(
             FogOverlayRenderer.BuildHiddenColor(style.ColorHex, style.OpacityPercent), style.BlurRadius,
             style.BlurEnabled));
+        _client.MusicTrackReceived += (header, path) => Dispatcher.UIThread.Post(() => PlayMusicTrack(path, header));
+        _client.MusicStopRequested += () => Dispatcher.UIThread.Post(StopMusic);
+        _client.MusicVolumeChangeRequested += volume => Dispatcher.UIThread.Post(() => ApplyMusicVolume(volume));
         _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
         _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
@@ -154,6 +165,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
                 // Immediately stop all still-running sounds - without a host connection the
                 // client device should not keep playing uncontrolled (e.g. a looping ambience).
                 StopAllSounds();
+                StopMusic();
                 ClearGallery();
                 _calendarEntries.Clear();
                 PlayerCalendarDays.Clear();
@@ -1001,6 +1013,81 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         player.Dispose();
         DeleteFileQuietly(tempPath);
         _ = _client.SendMediaPlaybackEndedAsync(mediaId);
+    }
+
+    /// <summary>
+    ///     Plays a music track received from the Host's playlist sequencer. Any previously
+    ///     playing track is stopped first - the Host only ever has one track active at a time,
+    ///     so this client never needs to track more than one MediaPlayer for music.
+    /// </summary>
+    private void PlayMusicTrack(string tempPath, MediaHeaderDto header)
+    {
+        StopMusic();
+
+        if (!VlcMediaService.TryGetLibVlc(out var libVlc) || libVlc is null)
+        {
+            Log.Error("Music track cannot be played: LibVLC not available ({Error})", VlcMediaService.LastError);
+            DeleteFileQuietly(tempPath);
+            return;
+        }
+
+        try
+        {
+            var mediaId = header.MediaId;
+            var player = new MediaPlayer(libVlc);
+            player.EndReached += (_, _) => Dispatcher.UIThread.Post(() => OnMusicEndReached(mediaId));
+
+            _musicPlayer = player;
+            _musicTempPath = tempPath;
+
+            using var media = new Media(libVlc, tempPath);
+            player.Play(media);
+            player.Volume = Math.Clamp(header.Volume, 0, 100);
+            Log.Information("Music track playing: {FileName} ({MediaId})", header.FileName, mediaId);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Music track could not be played: {TempPath}", tempPath);
+            DeleteFileQuietly(tempPath);
+        }
+    }
+
+    /// <summary>GM stops the current music track/playlist (music.stop), or the connection dropped.</summary>
+    private void StopMusic()
+    {
+        if (_musicPlayer is null) return;
+
+        _musicPlayer.Stop();
+        _musicPlayer.Dispose();
+        _musicPlayer = null;
+
+        if (_musicTempPath is not null) DeleteFileQuietly(_musicTempPath);
+        _musicTempPath = null;
+    }
+
+    private void ApplyMusicVolume(int volume)
+    {
+        if (_musicPlayer is not null) _musicPlayer.Volume = Math.Clamp(volume, 0, 100);
+    }
+
+    /// <summary>
+    ///     A track ended naturally - unlike sounds, music never loops/repeats locally: the Host's
+    ///     playlist sequencer decides what plays next (respecting loop/shuffle) and sends it, so
+    ///     this just reports the end and clears local state.
+    /// </summary>
+    private void OnMusicEndReached(string mediaId)
+    {
+        if (_musicPlayer is null) return;
+
+        Log.Information("Music track ended: {MediaId}", mediaId);
+        var tempPath = _musicTempPath;
+        _musicPlayer.Stop();
+        _musicPlayer.Dispose();
+        _musicPlayer = null;
+        _musicTempPath = null;
+
+        if (tempPath is not null) DeleteFileQuietly(tempPath);
+        _ = _client.SendMusicTrackEndedAsync(mediaId);
     }
 
     /// <summary>Reports the actual (LibVLC-determined) video duration to the host once.</summary>

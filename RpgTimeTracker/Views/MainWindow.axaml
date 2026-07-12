@@ -1538,7 +1538,46 @@
                                     <TabItem Header="{DynamicResource MainWindow.Tabs.Music}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">
-                                            <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Top" Classes="settingsGroup"
+                                                        Margin="4,14,13,4"
+                                                        IsVisible="{Binding IsPlaylistPlaying}">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,140"
+                                                          ColumnSpacing="10">
+                                                        <TextBlock Grid.Column="0"
+                                                                   Text="{DynamicResource MainWindow.Music.NowPlayingLabel}"
+                                                                   FontWeight="Bold"
+                                                                   VerticalAlignment="Center" />
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding CurrentPlaylist.Name}"
+                                                                       FontWeight="Bold"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="{Binding CurrentPlaylistTrack.Name}"
+                                                                       Classes="muted" FontSize="11"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                        <Button Grid.Column="2" Classes="iconsquare" Content="&#9198;"
+                                                                Command="{Binding PreviousPlaylistTrackCommand}"
+                                                                ToolTip.Tip="{DynamicResource MainWindow.Music.PreviousTooltip}"
+                                                                Width="28" Height="28" VerticalAlignment="Center" />
+                                                        <Button Grid.Column="3" Classes="iconsquare" Content="&#9199;"
+                                                                Command="{Binding NextPlaylistTrackCommand}"
+                                                                ToolTip.Tip="{DynamicResource MainWindow.Music.NextTooltip}"
+                                                                Width="28" Height="28" VerticalAlignment="Center" />
+                                                        <Button Grid.Column="4" Classes="iconsquare" Content="&#9209;"
+                                                                Command="{Binding StopPlaylistCommand}"
+                                                                ToolTip.Tip="{DynamicResource MainWindow.Music.StopTooltip}"
+                                                                Width="28" Height="28" VerticalAlignment="Center" />
+                                                        <TextBlock Grid.Column="5"
+                                                                   Text="{DynamicResource MainWindow.Common.Volume}"
+                                                                   Classes="muted" VerticalAlignment="Center" />
+                                                        <Slider Grid.Column="6" Minimum="0" Maximum="100"
+                                                                Value="{Binding CurrentPlaylistVolume}"
+                                                                VerticalAlignment="Center"
+                                                                ToolTip.Tip="{DynamicResource MainWindow.Music.VolumeTooltip}" />
+                                                    </Grid>
+                                                </Border>
+                                                <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
                                                 <Border Grid.Column="0" Classes="settingsGroup" Margin="0 0 4 0">
                                                     <controls:LibraryPanelView x:Name="MusicLibraryPanel"
                                                                                Title="{DynamicResource MainWindow.Music.LibraryTitle}"
@@ -1630,7 +1669,7 @@
                                                                  MaxHeight="180">
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:PlaylistViewModel">
-                                                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto"
                                                                           Margin="0,2">
                                                                         <TextBox Grid.Column="0"
                                                                                  Text="{Binding Name, Mode=TwoWay}" />
@@ -1639,6 +1678,14 @@
                                                                                    VerticalAlignment="Center"
                                                                                    Margin="8,0" />
                                                                         <Button Grid.Column="2"
+                                                                                Classes="iconsquare"
+                                                                                Content="&#9654;"
+                                                                                Command="{Binding $parent[TabItem].DataContext.PlayPlaylistCommand}"
+                                                                                CommandParameter="{Binding}"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Music.PlayTooltip}"
+                                                                                Width="22" Height="22"
+                                                                                FontSize="10" />
+                                                                        <Button Grid.Column="3"
                                                                                 Classes="iconsquare"
                                                                                 Content="&#10005;"
                                                                                 Command="{Binding DeleteCommand}"
@@ -1716,7 +1763,8 @@
                                                         </StackPanel>
                                                     </StackPanel>
                                                 </Border>
-                                            </Grid>
+                                                </Grid>
+                                            </DockPanel>
                                         </ScrollViewer>
                                     </TabItem>
 

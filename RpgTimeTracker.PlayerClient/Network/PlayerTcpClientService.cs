@@ -117,6 +117,20 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action? MapHideReceived;
     public event Action<MapRenderStyleChangedParams>? MapRenderStyleChanged;
 
+    /// <summary>
+    ///     A music track finished transferring (see MediaHeaderDto.MediaKindMusic) - kept as its
+    ///     own event/temp file rather than routed through MediaCompleted, since music plays on
+    ///     its own independent channel (a Host-driven playlist sequencer), never touching the
+    ///     image/video gallery slot or the sound-effect ActiveSoundViewModel tracking.
+    /// </summary>
+    public event Action<MediaHeaderDto, string>? MusicTrackReceived;
+
+    /// <summary>GM stops the currently playing music track/playlist.</summary>
+    public event Action? MusicStopRequested;
+
+    /// <summary>GM adjusts the volume of the currently playing music track live (0-100).</summary>
+    public event Action<int>? MusicVolumeChangeRequested;
+
     public event Action<string>? StatusChanged;
 
     /// <summary>
@@ -246,6 +260,13 @@ public sealed class PlayerTcpClientService : IDisposable
     public Task SendMediaPlaybackEndedAsync(string mediaId)
     {
         return SendRpcAsync(RpcMethods.MediaPlaybackEnded, new MediaPlaybackEndedParams { MediaId = mediaId });
+    }
+
+    /// <summary>Reports to the host that the currently playing music track has ended, so the
+    ///     Host's playlist sequencer can advance to the next track.</summary>
+    public Task SendMusicTrackEndedAsync(string mediaId)
+    {
+        return SendRpcAsync(RpcMethods.MusicTrackEnded, new MusicTrackEndedParams { MediaId = mediaId });
     }
 
     private async Task SendRpcAsync<TParams>(string method, TParams @params)
@@ -538,6 +559,13 @@ public sealed class PlayerTcpClientService : IDisposable
                     var renderStyle = raw.GetParams<MapRenderStyleChangedParams>();
                     if (renderStyle is not null) MapRenderStyleChanged?.Invoke(renderStyle);
                     break;
+                case RpcMethods.MusicStop:
+                    MusicStopRequested?.Invoke();
+                    break;
+                case RpcMethods.MusicSetVolume:
+                    var musicVolume = raw.GetParams<MusicSetVolumeParams>();
+                    if (musicVolume is not null) MusicVolumeChangeRequested?.Invoke(musicVolume.Volume);
+                    break;
                 default:
                     Log.Debug("Unknown incoming RPC method {Method} ignored", raw.Method);
                     break;
@@ -569,6 +597,7 @@ public sealed class PlayerTcpClientService : IDisposable
                 {
                     MediaHeaderDto.MediaKindVideo => ".mp4",
                     MediaHeaderDto.MediaKindAudio => ".mp3",
+                    MediaHeaderDto.MediaKindMusic => ".mp3",
                     _ => ".img"
                 };
 
@@ -580,10 +609,11 @@ public sealed class PlayerTcpClientService : IDisposable
             Log.Information("media.begin: {FileName} ({Kind}, {SizeKb} KB, Loop={Loop}) -> {TempPath}",
                 header.FileName, header.Kind, header.TotalLength / 1024, header.Loop, _mediaTempPath);
 
-            // Map floor images are a separate concern from the gallery/current-medium slot
-            // (see MapFloorImageReceived) - never raise MediaBeginReceived for them, so
-            // gallery/event-media handling never has to special-case this Kind.
-            if (header.Kind != MediaHeaderDto.MediaKindMapFloor)
+            // Map floor images and music tracks are separate concerns from the gallery/
+            // current-medium slot (see MapFloorImageReceived/MusicTrackReceived) - never raise
+            // MediaBeginReceived for them, so gallery/event-media handling never has to
+            // special-case either Kind.
+            if (header.Kind != MediaHeaderDto.MediaKindMapFloor && header.Kind != MediaHeaderDto.MediaKindMusic)
                 // For videos, playback can start immediately (VLC tolerates a growing file);
                 // for images, the caller waits for MediaCompleted since a partial image
                 // cannot be decoded.
@@ -619,6 +649,10 @@ public sealed class PlayerTcpClientService : IDisposable
                 {
                     if (Guid.TryParse(header.MediaId, out var floorId))
                         MapFloorImageReceived?.Invoke(floorId, path);
+                }
+                else if (header.Kind == MediaHeaderDto.MediaKindMusic)
+                {
+                    MusicTrackReceived?.Invoke(header, path);
                 }
                 else
                 {
