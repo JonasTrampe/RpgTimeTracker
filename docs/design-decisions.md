@@ -1650,3 +1650,38 @@ single-library import behavior, rather than introducing a new merge
 policy just for this feature - deliberately simple, at the cost that
 importing the same session twice duplicates its library entries (the
 same trade-off the pre-existing per-library import already makes).
+
+## Explicit floor `Order` field, instead of relying on list position
+
+Once a map's floors became reorderable (up/down buttons, since floors are
+stacked layers where order is meaningful - see the Maps tab layout
+decision above), that order had to actually survive a save/load
+round-trip through three separate places: `ThemeSettingsService`
+(settings.json), a single-map `.rtt-map` export, and a full-session
+`.rtt-session` export. All three already serialize floors as a `List<T>`,
+so the reordered sequence *would* survive by implicit list position alone
+- but only as long as every future serialization path continues to
+preserve list order exactly, silently, which is a fragile invariant to
+depend on forever (e.g. it would break the moment any load/import path
+was rewritten to build the collection some other way, such as sorting by
+name or ID first, with no compiler error to catch the regression).
+
+Instead, `Order` (an `int`) is written explicitly at every save/export
+site from the in-memory list's current index, and every load/import site
+sorts by it (`.OrderBy(f => f.Order)`) before adding floors to the map,
+rather than trusting the source list/array order as-is. This makes the
+ordering guarantee explicit and self-documenting in the data itself
+instead of an implicit property of "whatever order this list happens to
+be in right now."
+
+## Map `FormatVersion`, added before any format change actually needs one
+
+`MapItemViewModel.CurrentFormatVersion`/`FormatVersion` and the matching
+field on `MapLibraryEntryDto`/`MapManifestDto`/`MapLibraryManifestEntryDto`
+were added purely as groundwork: every map/export today is version 1, and
+nothing yet reads this value to change behavior. The point is that the
+very first time the on-disk map/floor shape needs to change in a
+backward-incompatible way, a load/import path can check this field and
+apply an explicit upgrade step, instead of the far worse alternative of
+having to guess a version for every already-exported map that predates
+the concept of versioning at all.
