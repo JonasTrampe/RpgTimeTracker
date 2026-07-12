@@ -1772,8 +1772,8 @@
                                     <TabItem Header="{DynamicResource MainWindow.Tabs.Maps}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">
-                                            <Grid ColumnDefinitions="420,*" Margin="4,14,13,16">
-                                                <Border Grid.Column="0" Classes="settingsGroup" Width="420" Margin="0,0,14,14">
+                                            <Grid ColumnDefinitions="300,*" Margin="4,14,13,16">
+                                                <Border Grid.Column="0" Classes="settingsGroup" Width="300" Margin="0,0,14,14">
                                                     <StackPanel Spacing="10">
                                                         <TextBlock Classes="settingsGroupTitle"
                                                                    Text="{DynamicResource MainWindow.Maps.MapsTitle}" />
@@ -1827,37 +1827,39 @@
                                                     <StackPanel Spacing="10">
                                                         <TextBlock Classes="settingsGroupTitle"
                                                                    Text="{Binding SelectedMap.Name}" />
-                                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                                            <Button Content="{DynamicResource MainWindow.Maps.AddFloorButton}"
-                                                                    Click="OnAddMapFloorClick" />
-                                                            <Button Content="{DynamicResource MainWindow.Maps.EditButton}"
-                                                                    Click="OnEditSelectedFloorClick"
-                                                                    IsEnabled="{Binding !IsSelectedMapOpenToPlayers}"
-                                                                    ToolTip.Tip="{DynamicResource MainWindow.Maps.EditDisabledWhileShownTooltip}" />
-                                                            <Button Content="{DynamicResource MainWindow.Maps.ShowButton}"
-                                                                    Click="OnShowMapClick"
-                                                                    IsEnabled="{Binding CanShowSelectedMap}"
-                                                                    ToolTip.Tip="{DynamicResource MainWindow.Maps.ShowDisabledWhilePreparingTooltip}" />
-                                                            <TextBlock Text="{DynamicResource MainWindow.Maps.ShownToPlayersLabel}"
-                                                                       VerticalAlignment="Center"
-                                                                       Classes="muted"
-                                                                       IsVisible="{Binding IsSelectedMapOpenToPlayers}" />
-                                                        </StackPanel>
                                                         <TextBlock Classes="muted"
                                                                    Text="{DynamicResource MainWindow.Maps.NoFloorsState}"
                                                                    IsVisible="{Binding SelectedMap.HasNoFloors}"
                                                                    FontStyle="Italic" />
-                                                        <!-- Plain, unsortable list (insertion order only, no drag
-                                                             reordering) - a map's floors are a fixed stack, not
-                                                             something the GM should be able to shuffle. -->
+                                                        <!-- Floors are layers of the same map, so their order is
+                                                             meaningful - sortable via the up/down buttons below,
+                                                             unlike the map library list itself. -->
                                                         <ListBox ItemsSource="{Binding SelectedMap.Floors}"
                                                                  SelectedItem="{Binding EditingFloor, Mode=TwoWay}">
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:MapFloorItemViewModel">
-                                                                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                                                                        <TextBox Grid.Column="0"
-                                                                                 Text="{Binding Name, Mode=TwoWay}" />
-                                                                        <Button Grid.Column="1" Classes="iconsquare"
+                                                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                                                                          ColumnSpacing="4" Margin="0,2">
+                                                                        <Image Grid.Column="0"
+                                                                               Source="{Binding Thumbnail}"
+                                                                               Width="32" Height="32"
+                                                                               Stretch="UniformToFill" />
+                                                                        <TextBox Grid.Column="1"
+                                                                                 Text="{Binding Name, Mode=TwoWay}"
+                                                                                 VerticalAlignment="Center" />
+                                                                        <Button Grid.Column="2" Classes="iconsquare"
+                                                                                Content="&#9650;"
+                                                                                Width="22" Height="22"
+                                                                                FontSize="9"
+                                                                                Click="OnMoveFloorUpClick"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Maps.MoveUpTooltip}" />
+                                                                        <Button Grid.Column="3" Classes="iconsquare"
+                                                                                Content="&#9660;"
+                                                                                Width="22" Height="22"
+                                                                                FontSize="9"
+                                                                                Click="OnMoveFloorDownClick"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Maps.MoveDownTooltip}" />
+                                                                        <Button Grid.Column="4" Classes="iconsquare"
                                                                                 Content="&#10005;"
                                                                                 Width="22" Height="22"
                                                                                 FontSize="10"
@@ -1867,6 +1869,30 @@
                                                                 </DataTemplate>
                                                             </ListBox.ItemTemplate>
                                                         </ListBox>
+
+                                                        <!-- WrapPanel (not a horizontal StackPanel) so these wrap
+                                                             onto more than one line instead of overflowing/squishing
+                                                             the panel when it's resized narrower. -->
+                                                        <WrapPanel Orientation="Horizontal">
+                                                            <Button Margin="0,0,6,6"
+                                                                    Content="{DynamicResource MainWindow.Maps.AddFloorButton}"
+                                                                    Click="OnAddMapFloorClick" />
+                                                            <Button Margin="0,0,6,6"
+                                                                    Content="{DynamicResource MainWindow.Maps.EditButton}"
+                                                                    Click="OnEditSelectedFloorClick"
+                                                                    IsEnabled="{Binding !IsSelectedMapOpenToPlayers}"
+                                                                    ToolTip.Tip="{DynamicResource MainWindow.Maps.EditDisabledWhileShownTooltip}" />
+                                                            <Button Margin="0,0,6,6"
+                                                                    Content="{DynamicResource MainWindow.Maps.ShowButton}"
+                                                                    Click="OnShowMapClick"
+                                                                    IsEnabled="{Binding CanShowSelectedMap}"
+                                                                    ToolTip.Tip="{DynamicResource MainWindow.Maps.ShowDisabledWhilePreparingTooltip}" />
+                                                            <TextBlock Margin="0,0,6,6"
+                                                                       Text="{DynamicResource MainWindow.Maps.ShownToPlayersLabel}"
+                                                                       VerticalAlignment="Center"
+                                                                       Classes="muted"
+                                                                       IsVisible="{Binding IsSelectedMapOpenToPlayers}" />
+                                                        </WrapPanel>
                                                     </StackPanel>
                                                 </Border>
                                             </Grid>

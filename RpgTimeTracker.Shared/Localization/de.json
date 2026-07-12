@@ -168,7 +168,7 @@
   "MainWindow.Sounds.VolumeLiveTooltip": "Lautstärke live anpassen",
 
   "MainWindow.Maps.MapsTitle": "🗺 Karten",
-  "MainWindow.Maps.MapsDescription": "Mehrstöckige Karten mit Nebel des Krieges. Karte hier vorbereiten; der Radierer/Stift-Editor und die Live-Aufdeckung für Spieler kommen in einem späteren Update.",
+  "MainWindow.Maps.MapsDescription": "Mehrstöckige Karten mit Nebel des Krieges.",
   "MainWindow.Maps.AddMapButton": "+ Karte hinzufügen",
   "MainWindow.Maps.ExportButton": "Exportieren…",
   "MainWindow.Maps.MoreActionsTooltip": "Weitere Aktionen (Exportieren/Entfernen)",
@@ -181,6 +181,8 @@
   "MainWindow.Maps.ShownToPlayersLabel": "Wird Spielern gezeigt",
   "MainWindow.Maps.ShowDisabledWhilePreparingTooltip": "Schließe das Bearbeiten-Fenster, bevor du diese Karte den Spielern zeigst.",
   "MainWindow.Maps.EditDisabledWhileShownTooltip": "Schließe das Anzeigen-Fenster, bevor du diese Ebene bearbeitest.",
+  "MainWindow.Maps.MoveUpTooltip": "Ebene nach oben verschieben",
+  "MainWindow.Maps.MoveDownTooltip": "Ebene nach unten verschieben",
 
   "MapEditor.RevealToolButton": "👁 Aufdecken",
   "MapEditor.BrushSizeLabel": "Pinselgröße",

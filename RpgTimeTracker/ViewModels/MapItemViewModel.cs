@@ -91,4 +91,25 @@ public sealed partial class MapItemViewModel : ObservableObject
     {
         _onDeleteRequested(this);
     }
+
+    /// <summary>Floors are layers of the same building/map, so their order is meaningful (unlike
+    ///     the map library list itself) - the GM can reorder them via the floor list's up/down
+    ///     buttons.</summary>
+    public void MoveFloorUp(MapFloorItemViewModel floor)
+    {
+        var index = Floors.IndexOf(floor);
+        if (index <= 0) return;
+
+        Floors.Move(index, index - 1);
+        _onChanged?.Invoke(this);
+    }
+
+    public void MoveFloorDown(MapFloorItemViewModel floor)
+    {
+        var index = Floors.IndexOf(floor);
+        if (index < 0 || index >= Floors.Count - 1) return;
+
+        Floors.Move(index, index + 1);
+        _onChanged?.Invoke(this);
+    }
 }

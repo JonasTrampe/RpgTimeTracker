@@ -168,7 +168,7 @@
   "MainWindow.Sounds.VolumeLiveTooltip": "Adjust volume live",
 
   "MainWindow.Maps.MapsTitle": "🗺 Maps",
-  "MainWindow.Maps.MapsDescription": "Multi-floor maps with fog of war. Prepare a map here; the eraser/pen editor and live reveal to players come in a later update.",
+  "MainWindow.Maps.MapsDescription": "Multi-floor maps with fog of war.",
   "MainWindow.Maps.AddMapButton": "+ Add map",
   "MainWindow.Maps.ExportButton": "Export…",
   "MainWindow.Maps.MoreActionsTooltip": "More actions (Export/Remove)",
@@ -181,6 +181,8 @@
   "MainWindow.Maps.ShownToPlayersLabel": "Shown to players",
   "MainWindow.Maps.ShowDisabledWhilePreparingTooltip": "Close the Edit window before showing this map to players.",
   "MainWindow.Maps.EditDisabledWhileShownTooltip": "Close the Show window before editing this floor.",
+  "MainWindow.Maps.MoveUpTooltip": "Move floor up",
+  "MainWindow.Maps.MoveDownTooltip": "Move floor down",
 
   "MapEditor.RevealToolButton": "👁 Reveal",
   "MapEditor.BrushSizeLabel": "Brush size",

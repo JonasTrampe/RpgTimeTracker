@@ -131,15 +131,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   way to work at a larger effective resolution. A newly opened floor starts
   fit-to-window as before; zooming keeps whatever point was centered in
   view centered afterward instead of jumping to a corner.
-- Maps tab layout: the map-library panel stays a fixed width (sized for its
-  entries), while the floor-gallery panel now resizes with the window
-  instead of a fixed width, so wider windows actually use the extra space.
-  The per-floor "Edit" button moved out of each floor row to a single
-  button at the top of the floor panel (next to "+ Add floor"/"Show"),
-  acting on whichever floor is selected in the list below. Floors are now
-  shown as a plain name list instead of a thumbnail-card grid - insertion
-  order only, no drag-to-reorder, since a map's floor stack isn't meant to
-  be shuffled.
+- Maps tab layout: the map-library panel is narrower and stays a fixed
+  width (sized for its entries), while the floor-gallery panel now resizes
+  with the window instead of a fixed width, so wider windows actually use
+  the extra space. Floors show as a name list with a small thumbnail
+  (instead of a thumbnail-card grid) and can be reordered with per-row
+  up/down buttons - a map's floors are stacked layers, so their order is
+  meaningful, unlike the map library list itself. The Add floor/Edit/Show
+  buttons moved to the bottom of the floor panel in a wrapping row, so they
+  drop to a second line instead of overflowing when the panel is narrow.
+  The Maps tab's description text is now as short as the other tabs'.
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/

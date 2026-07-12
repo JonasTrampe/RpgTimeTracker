@@ -269,6 +269,22 @@ public partial class MainWindow : Window
         editor.Show(this);
     }
 
+    private void OnMoveFloorUpClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map ||
+            sender is not Control { DataContext: MapFloorItemViewModel floor }) return;
+
+        map.MoveFloorUp(floor);
+    }
+
+    private void OnMoveFloorDownClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map ||
+            sender is not Control { DataContext: MapFloorItemViewModel floor }) return;
+
+        map.MoveFloorDown(floor);
+    }
+
     private void OnShowMapClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map) return;
