@@ -56,6 +56,18 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     // but only on the GM side in the "currently playing sounds" panel (ActivePlayingSounds).
 
     private readonly Dictionary<string, MediaPlayer> _activeLocalSoundPlayers = new();
+
+    /// <summary>Header+bytes (+ start time/duration once known) of every currently active sound,
+    ///     keyed by MediaId - kept only for as long as the sound is active (added in
+    ///     AddActiveSound, removed in RemoveActiveSound), so a client whose Sound routing is
+    ///     re-enabled can be resent everything currently playing (see ClientSoundRoutingEnabled)
+    ///     instead of staying silent until the next brand-new sound happens to play. StartedAtUtc/
+    ///     DurationMs feed the estimated mid-playback seek for sounds longer than
+    ///     SoundSeekThresholdMs (see ResendActiveSoundsToClient) - DurationMs is null until the
+    ///     async parse in UpdateActiveSoundDurationAsync resolves.</summary>
+    private readonly Dictionary<string, (MediaHeaderDto Header, byte[] FileBytes, DateTime StartedAtUtc, long?
+        DurationMs)> _activeSoundData = new();
+
     private readonly DispatcherTimer _blinkTimer;
 
     private readonly GameClockService _clock;
@@ -214,6 +226,45 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [ObservableProperty] private bool _isNetworkServerRunning;
 
     [ObservableProperty] private bool _isPlayerWindowOpen;
+
+    /// <summary>Whether the Host's own local preview plays Music/Sound - the "Host (local)" row
+    ///     in the Music tab's routing list, parallel to the per-client MusicEnabled/SoundEnabled
+    ///     flags on TcpPlayerServerService. Session-scoped (not persisted), default true.</summary>
+    [ObservableProperty] private bool _playMusicLocally = true;
+
+    [ObservableProperty] private bool _playSoundLocally = true;
+
+    partial void OnPlayMusicLocallyChanged(bool value)
+    {
+        // Mirrors SetClientMusicEnabled's targeted stop/resume, just for the Host's own preview:
+        // turning this off must stop whatever is already playing locally (not just gate future
+        // tracks), and turning it back on must resume the current track with an estimated seek
+        // instead of staying silent until the next one - remote clients/other windows unaffected.
+        if (!value)
+        {
+            _localMusicPlayer?.Stop();
+            _localMusicPlayer?.Dispose();
+            _localMusicPlayer = null;
+            return;
+        }
+
+        if (_currentMusicPlayback is not { } playback) return;
+
+        var elapsedMs = Math.Max(0, (long)(DateTime.UtcNow - playback.StartedAtUtc).TotalMilliseconds);
+        PlayLocalMusicIfNeeded(playback.Header, playback.LocalPath, elapsedMs);
+    }
+
+    partial void OnPlaySoundLocallyChanged(bool value)
+    {
+        if (!value) StopLocalSoundPreviewOnly();
+    }
+
+    /// <summary>Minimum sound duration (ms) worth estimating a mid-playback seek for when
+    ///     resending it to a client whose Sound routing was just re-enabled - see
+    ///     ResendActiveSoundsToClient. Persisted, GM-configurable (Settings tab).</summary>
+    [ObservableProperty] private int _soundSeekThresholdMs = 10_000;
+
+    partial void OnSoundSeekThresholdMsChanged(int value) => SaveUiSettings();
 
     // Free-form time jump, e.g. "08:00:00" forward or "-1.00:00:00" back one day.
     [ObservableProperty] private string _jumpAmountText = "08:00:00";
@@ -383,6 +434,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// </summary>
     private MediaPlayer? _localMusicPlayer;
 
+    /// <summary>The currently playing track's header/localPath/start time - kept only while a
+    ///     playlist is playing (set in PlayCurrentPlaylistTrackAsync, cleared in
+    ///     StopPlaylistPlayback), so re-enabling PlayMusicLocally can resume the local preview
+    ///     with an estimated seek instead of staying silent until the next track (see
+    ///     OnPlayMusicLocallyChanged) - mirrors TcpPlayerServerService._currentMusicTrack, which
+    ///     does the same thing for remote clients.</summary>
+    private (MediaHeaderDto Header, string LocalPath, DateTime StartedAtUtc)? _currentMusicPlayback;
+
     /// <summary>Ordered playback sequence for CurrentPlaylist - indices into its Tracks list,
     ///     shuffled once per PlayPlaylist call when CurrentPlaylist.Shuffle is set (see
     ///     BuildPlaybackOrder). _playbackPosition indexes into THIS list, not directly into Tracks.</summary>
@@ -403,13 +462,30 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _clock.Jumped += newTime => _ = _playerServer.PublishClockTimeJumpedAsync(newTime);
         _playerServer.ClientCountChanged += count => Dispatcher.UIThread.Post(() => ConnectedClientCount = count);
         _playerServer.ClientsChanged += clients => Dispatcher.UIThread.Post(() => UpdateConnectedClients(clients));
-        // Decisive for video-end tracking (loop/close, optional clock pause) - see BeginVideoTracking.
-        _playerServer.ClientReportedPlaybackEnded +=
-            mediaId => Dispatcher.UIThread.Post(() => ResolvePendingVideo(mediaId));
+        // Shared by video AND sound (the client reuses media.playbackEnded for both, see
+        // ClientMainWindowViewModel.OnSoundEndReached) - ResolvePendingVideo only acts if this is
+        // the currently-tracked video, but a sound that finished purely on remote clients (no
+        // local Host preview to fire OnLocalSoundEnded, e.g. player window closed or Sound-locally
+        // disabled) would otherwise never leave ActivePlayingSounds - RemoveActiveSound is a no-op
+        // if mediaId isn't an active sound, so calling it unconditionally here is safe.
+        _playerServer.ClientReportedPlaybackEnded += mediaId => Dispatcher.UIThread.Post(() =>
+        {
+            ResolvePendingVideo(mediaId);
+            RemoveActiveSound(mediaId);
+        });
         // Decisive for the playlist sequencer's "when does the current track end" tracking - see
         // BeginMusicTracking.
         _playerServer.ClientReportedMusicTrackEnded +=
             mediaId => Dispatcher.UIThread.Post(() => ResolvePendingMusicTrack(mediaId));
+        // The server only knows a client's Sound routing was turned off, not what's currently
+        // playing - only this ViewModel's ActivePlayingSounds does, so it owns "stop each active
+        // sound on that one client" rather than leaving them running until they end on their own.
+        _playerServer.ClientSoundRoutingDisabled +=
+            remoteEndpoint => Dispatcher.UIThread.Post(() => StopAllSoundsForClient(remoteEndpoint));
+        // Mirror image: re-enabling shouldn't leave the client silent until the next brand-new
+        // sound happens to play - resend everything currently active to just that client.
+        _playerServer.ClientSoundRoutingEnabled +=
+            remoteEndpoint => Dispatcher.UIThread.Post(() => ResendActiveSoundsToClient(remoteEndpoint));
 
         _blinkTimer = new DispatcherTimer
         {
@@ -434,6 +510,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             : settings.PlayerHeaderSubtitle;
         _headsUpWarningEnabled = settings.HeadsUpWarningEnabled;
         _headsUpLeadMinutes = (decimal)settings.HeadsUpLeadMinutes;
+        _soundSeekThresholdMs = settings.SoundSeekThresholdMs;
         _serverName = string.IsNullOrWhiteSpace(settings.ServerName) ? "RpgTimeTracker" : settings.ServerName;
         _connectionPin = settings.ConnectionPin;
         _autoSaveOnCloseEnabled = settings.AutoSaveOnCloseEnabled;
@@ -2232,6 +2309,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         settings.PlayerHeaderSubtitle = PlayerHeaderSubtitle;
         settings.HeadsUpWarningEnabled = HeadsUpWarningEnabled;
         settings.HeadsUpLeadMinutes = (double)HeadsUpLeadMinutes;
+        settings.SoundSeekThresholdMs = SoundSeekThresholdMs;
         settings.AmbienceAutomationEnabled = AmbienceAutomationEnabled;
         settings.ServerName = string.IsNullOrWhiteSpace(ServerName) ? "RpgTimeTracker" : ServerName;
         settings.ConnectionPin = ConnectionPin;
@@ -2373,6 +2451,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             MediaId = Guid.NewGuid().ToString("N"),
             Kind = kind.ToString(),
+            Layer = MediaHeaderDto.LayerSound,
             FileName = fileName,
             MimeType = mimeType,
             Loop = SendSoundLoop,
@@ -2638,6 +2717,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             MediaId = Guid.NewGuid().ToString("N"),
             Kind = nameof(MediaKind.Audio),
+            Layer = MediaHeaderDto.LayerSound,
             FileName = item.Name,
             MimeType = item.MimeType,
             Loop = item.Loop,
@@ -3086,7 +3166,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         var header = new MediaHeaderDto
         {
             MediaId = Guid.NewGuid().ToString("N"),
-            Kind = MediaHeaderDto.MediaKindMusic,
+            Kind = MediaHeaderDto.MediaKindAudio,
+            Layer = MediaHeaderDto.LayerMusic,
             FileName = track.Name,
             MimeType = track.MimeType,
             Volume = track.Volume
@@ -3094,6 +3175,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         Log.Information("Playlist {PlaylistName} playing track {TrackName} ({Position}/{Count})",
             CurrentPlaylist.Name, track.Name, _playbackPosition + 1, _playbackOrder.Count);
+        _currentMusicPlayback = (header, track.LocalPath, DateTime.UtcNow);
         await _playerServer.PublishMusicTrackAsync(header, bytes);
         PlayLocalMusicIfNeeded(header, track.LocalPath);
         BeginMusicTracking(header, track.LocalPath);
@@ -3130,6 +3212,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _localMusicPlayer?.Stop();
         _localMusicPlayer?.Dispose();
         _localMusicPlayer = null;
+        _currentMusicPlayback = null;
 
         if (IsPlaylistPlaying) _ = _playerServer.PublishMusicStopAsync();
 
@@ -3143,11 +3226,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// <summary>
     ///     Plays the current playlist track locally too, whenever the player window is open -
     ///     same rule as PlayLocalSoundIfNeeded/ShouldShowMediaLocally, so the GM hears exactly
-    ///     what players hear regardless of connected client count.
+    ///     what players hear regardless of connected client count. seekToMs is only non-zero when
+    ///     resuming after PlayMusicLocally was re-enabled mid-track (see OnPlayMusicLocallyChanged) -
+    ///     a fresh track start never needs one.
     /// </summary>
-    private void PlayLocalMusicIfNeeded(MediaHeaderDto header, string localPath)
+    private void PlayLocalMusicIfNeeded(MediaHeaderDto header, string localPath, long seekToMs = 0)
     {
-        if (!IsPlayerWindowOpen) return;
+        if (!IsPlayerWindowOpen || !PlayMusicLocally) return;
         if (!VlcMediaService.TryGetLibVlc(out var libVlc) || libVlc is null) return;
 
         try
@@ -3161,6 +3246,21 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             using var media = new Media(libVlc, localPath);
             player.Play(media);
             player.Volume = Math.Clamp(header.Volume, 0, 100);
+
+            // Estimated resume position (see PlayMusicLocally re-enable) - VLC needs the media to
+            // actually start playing before a seek sticks, hence the one-shot handler instead of
+            // setting player.Time immediately after Play() (same approach as the client's
+            // ClientMainWindowViewModel.PlayMusicTrack/PlaySound for the analogous network case).
+            if (seekToMs > 0)
+            {
+                EventHandler<MediaPlayerTimeChangedEventArgs>? onFirstTimeChanged = null;
+                onFirstTimeChanged = (_, _) =>
+                {
+                    player.TimeChanged -= onFirstTimeChanged;
+                    Dispatcher.UIThread.Post(() => player.Time = seekToMs);
+                };
+                player.TimeChanged += onFirstTimeChanged;
+            }
         }
         catch (Exception ex)
         {
@@ -4189,6 +4289,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             MediaId = Guid.NewGuid().ToString("N"),
             Kind = MediaKind.Audio.ToString(),
+            Layer = MediaHeaderDto.LayerSound,
             FileName = name,
             MimeType = soundItem?.MimeType ?? "audio/*",
             Loop = loop,
@@ -4384,6 +4485,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             // replace a currently shown image/video or cut off its end tracking. Instead
             // bound to this event via _triggerSoundMediaIds, so StopMediaIfTriggeredBy also ends it
             // when the triggering timer/alarm/interval is reset.
+            header.Layer = MediaHeaderDto.LayerSound;
             _triggerSoundMediaIds[config] = header.MediaId;
             await SendSoundAsync(header, bytes, path, false);
         }
@@ -4410,10 +4512,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         await _playerServer.PublishMediaAsync(header, bytes);
         PlayLocalSoundIfNeeded(header, localPath, deleteLocalAfterPlayback);
-        AddActiveSound(header, localPath);
+        AddActiveSound(header, bytes, localPath);
     }
 
-    private void AddActiveSound(MediaHeaderDto header, string localPath)
+    private void AddActiveSound(MediaHeaderDto header, byte[] bytes, string localPath)
     {
         var sourceItem = FindSoundLibraryItemByPath(localPath);
         var entry = new ActiveSoundViewModel(
@@ -4432,7 +4534,24 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             sourceItem);
 
         ActivePlayingSounds.Add(entry);
+        _activeSoundData[header.MediaId] = (header, bytes, DateTime.UtcNow, null);
         OnPropertyChanged(nameof(HasNoActivePlayingSounds));
+
+        _ = UpdateActiveSoundDurationAsync(header.MediaId, localPath);
+    }
+
+    /// <summary>Resolves this sound's duration (async VLC parse, same helper used for the video
+    ///     fallback-timeout estimate) and records it in _activeSoundData - needed to decide
+    ///     whether a resend (re-enabling Sound routing for a client) is worth an estimated seek
+    ///     (see ResendActiveSoundsToClient/SoundSeekThresholdMs). A no-op if the sound already
+    ///     ended (and was removed) before the parse resolves.</summary>
+    private async Task UpdateActiveSoundDurationAsync(string mediaId, string localPath)
+    {
+        var duration = await TryGetMediaDurationAsync(localPath);
+        if (duration is null) return;
+        if (!_activeSoundData.TryGetValue(mediaId, out var data)) return;
+
+        _activeSoundData[mediaId] = (data.Header, data.FileBytes, data.StartedAtUtc, (long)duration.Value.TotalMilliseconds);
     }
 
     /// <summary>
@@ -4447,6 +4566,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 ActivePlayingSounds[i].Dispose();
                 ActivePlayingSounds.RemoveAt(i);
             }
+
+        _activeSoundData.Remove(mediaId);
 
         OnPropertyChanged(nameof(HasNoActivePlayingSounds));
 
@@ -4493,11 +4614,68 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var sound in ActivePlayingSounds.ToList()) StopSound(sound.MediaId);
     }
 
+    /// <summary>Stops every currently-active sound on exactly one client window (its Sound
+    ///     routing was just turned off) - unlike StopSound, this must NOT touch the Host's own
+    ///     local preview or the ActivePlayingSounds panel, since the sound keeps playing for
+    ///     every other still-enabled window.</summary>
+    private void StopAllSoundsForClient(string remoteEndpoint)
+    {
+        foreach (var sound in ActivePlayingSounds)
+            _ = _playerServer.PublishStopSoundToClientAsync(sound.MediaId, remoteEndpoint);
+    }
+
+    /// <summary>Resends every currently-active sound to exactly one client window (its Sound
+    ///     routing was just turned back on) - the mirror image of StopAllSoundsForClient, using
+    ///     the header+bytes cached in _activeSoundData since this service doesn't keep the file
+    ///     bytes around after the original send. Sounds longer than SoundSeekThresholdMs get an
+    ///     estimated mid-playback seek (elapsed wall-clock time since the sound started, wrapped
+    ///     into its own trimmed duration so a looping/repeating sound seeks within its current
+    ///     cycle rather than some multiple of it) - short one-off effects just restart from 0,
+    ///     since seeking into them isn't meaningful and the duration may not even be known yet
+    ///     (see UpdateActiveSoundDurationAsync).</summary>
+    private void ResendActiveSoundsToClient(string remoteEndpoint)
+    {
+        var thresholdMs = SoundSeekThresholdMs;
+        foreach (var (header, bytes, startedAtUtc, durationMs) in _activeSoundData.Values)
+        {
+            var toSend = header;
+            if (durationMs is { } duration && duration > thresholdMs)
+            {
+                var effectiveDurationMs = (header.TrimEndMs > 0 ? header.TrimEndMs : duration) - header.TrimStartMs;
+                if (effectiveDurationMs > 0)
+                {
+                    var elapsedMs = Math.Max(0, (long)(DateTime.UtcNow - startedAtUtc).TotalMilliseconds);
+                    var positionMs = header.TrimStartMs + elapsedMs % effectiveDurationMs;
+                    toSend = header.CloneWithSeek(positionMs);
+                }
+            }
+
+            _ = _playerServer.PublishMediaToClientAsync(toSend, bytes, remoteEndpoint);
+        }
+    }
+
+    /// <summary>Stops the Host's own local sound preview players only (see OnPlaySoundLocallyChanged) -
+    ///     unlike StopSound, this must NOT touch remote clients or the ActivePlayingSounds panel,
+    ///     since the sound keeps playing for every connected player regardless.</summary>
+    private void StopLocalSoundPreviewOnly()
+    {
+        foreach (var (mediaId, player) in _activeLocalSoundPlayers.ToList())
+        {
+            player.Stop();
+            player.Dispose();
+            _localSoundRepeatsRemaining.Remove(mediaId);
+            if (_localSoundCleanupPaths.Remove(mediaId, out var path)) DeleteFileQuietly(path);
+        }
+
+        _activeLocalSoundPlayers.Clear();
+    }
+
     private void PlayLocalSoundIfNeeded(MediaHeaderDto header, string localPath, bool deleteAfterPlayback)
     {
         // Plays locally whenever the player window is open, same as local media/map preview -
-        // regardless of connected clients, so the GM hears what players hear.
-        if (!IsPlayerWindowOpen)
+        // regardless of connected clients, so the GM hears what players hear - unless the GM
+        // has turned off Sound for their own "Host (local)" window (see PlaySoundLocally).
+        if (!IsPlayerWindowOpen || !PlaySoundLocally)
         {
             if (deleteAfterPlayback) DeleteFileQuietly(localPath);
             return;
@@ -4661,13 +4839,24 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         ConnectedClientItems.Clear();
         foreach (var info in clients)
-            ConnectedClientItems.Add(new ConnectedClientItemViewModel(info, DisconnectClientRequested));
+            ConnectedClientItems.Add(new ConnectedClientItemViewModel(info, DisconnectClientRequested,
+                OnClientMusicEnabledChanged, OnClientSoundEnabledChanged));
         OnPropertyChanged(nameof(HasNoConnectedClients));
     }
 
     private void DisconnectClientRequested(ConnectedClientItemViewModel item)
     {
         _playerServer.DisconnectClient(item.RemoteEndpoint);
+    }
+
+    private void OnClientMusicEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
+    {
+        _playerServer.SetClientMusicEnabled(item.RemoteEndpoint, enabled);
+    }
+
+    private void OnClientSoundEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
+    {
+        _playerServer.SetClientSoundEnabled(item.RemoteEndpoint, enabled);
     }
 
     private void ResolvePendingVideo(string mediaId)

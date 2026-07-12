@@ -78,6 +78,14 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     [ObservableProperty] private string _host = "127.0.0.1";
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _isDiscovering;
+
+    /// <summary>Whether the GM has turned Music/Sound routing off for this window (see
+    ///     RpcMethods.AudioRoutingChanged) - purely informational, shown as a small indicator so
+    ///     the player understands why they hear nothing instead of assuming something is broken.</summary>
+    [ObservableProperty] private bool _isMusicMuted;
+
+    [ObservableProperty] private bool _isSoundMuted;
+
     private bool _isShowingEventMedia;
     [ObservableProperty] private string? _mediaErrorMessage;
     [ObservableProperty] private bool _mediaFullscreen;
@@ -149,6 +157,11 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MusicTrackReceived += (header, path) => Dispatcher.UIThread.Post(() => PlayMusicTrack(path, header));
         _client.MusicStopRequested += () => Dispatcher.UIThread.Post(StopMusic);
         _client.MusicVolumeChangeRequested += volume => Dispatcher.UIThread.Post(() => ApplyMusicVolume(volume));
+        _client.AudioRoutingChanged += (musicEnabled, soundEnabled) => Dispatcher.UIThread.Post(() =>
+        {
+            IsMusicMuted = !musicEnabled;
+            IsSoundMuted = !soundEnabled;
+        });
         _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
         _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
@@ -166,6 +179,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
                 // client device should not keep playing uncontrolled (e.g. a looping ambience).
                 StopAllSounds();
                 StopMusic();
+                IsMusicMuted = false;
+                IsSoundMuted = false;
                 ClearGallery();
                 _calendarEntries.Clear();
                 PlayerCalendarDays.Clear();
@@ -940,6 +955,23 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             VlcMediaService.ApplySoundTrim(media, header.TrimStartMs, header.TrimEndMs);
             player.Play(media);
             player.Volume = Math.Clamp(header.Volume, 0, 100);
+
+            // Estimated mid-playback catch-up (see MediaHeaderDto.SeekToMs) - only sent for
+            // sounds longer than the GM's configured threshold when resending to a client whose
+            // Sound routing was just re-enabled (see MainWindowViewModel.ResendActiveSoundsToClient).
+            // Same one-shot-after-first-TimeChanged approach as PlayMusicTrack: VLC needs the
+            // media to actually start playing before a seek sticks.
+            if (header.SeekToMs > 0)
+            {
+                var seekToMs = header.SeekToMs;
+                EventHandler<MediaPlayerTimeChangedEventArgs>? onFirstTimeChanged = null;
+                onFirstTimeChanged = (_, _) =>
+                {
+                    player.TimeChanged -= onFirstTimeChanged;
+                    Dispatcher.UIThread.Post(() => player.Time = seekToMs);
+                };
+                player.TimeChanged += onFirstTimeChanged;
+            }
         }
         catch (Exception ex)
         {
@@ -1043,7 +1075,26 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             using var media = new Media(libVlc, tempPath);
             player.Play(media);
             player.Volume = Math.Clamp(header.Volume, 0, 100);
-            Log.Information("Music track playing: {FileName} ({MediaId})", header.FileName, mediaId);
+
+            // Estimated mid-track catch-up (see MediaHeaderDto.SeekToMs) - joining/reconnecting
+            // mid-playlist starts at roughly the right spot instead of from 0. Not frame-accurate
+            // (based on the Host's wall-clock elapsed-since-start estimate), and VLC needs the
+            // media to actually start playing before a seek sticks, hence the one-shot handler
+            // instead of setting player.Time immediately after Play().
+            if (header.SeekToMs > 0)
+            {
+                var seekToMs = header.SeekToMs;
+                EventHandler<MediaPlayerTimeChangedEventArgs>? onFirstTimeChanged = null;
+                onFirstTimeChanged = (_, _) =>
+                {
+                    player.TimeChanged -= onFirstTimeChanged;
+                    Dispatcher.UIThread.Post(() => player.Time = seekToMs);
+                };
+                player.TimeChanged += onFirstTimeChanged;
+            }
+
+            Log.Information("Music track playing: {FileName} ({MediaId}), seek {SeekToMs}ms", header.FileName,
+                mediaId, header.SeekToMs);
         }
         catch (Exception ex)
         {

@@ -32,6 +32,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   current playlist/track with Previous/Next/Stop and a live volume slider.
   Per-window (Host/Client) routing toggles for which windows play Music
   vs. Sound are a follow-up milestone.
+- Per-window Music/Sound routing: a "Connected Clients" panel in Settings
+  lets the GM independently turn Music and Sound on/off for each connected
+  player window and for the Host's own local preview ("Host (this window)").
+  Turning Sound off for a window, for example, stops it from receiving sound
+  effects while it keeps getting Music (and vice versa) - useful for a
+  spectator/stream window that should only hear ambience, or a player window
+  that should stay silent while everyone else hears a jump-scare sting. Each
+  player window now gets a stable identifier on first launch (stored locally)
+  so the GM's choice for that window is remembered across reconnects instead
+  of resetting to "on" every time; the muted window itself shows a small
+  "muted by GM" indicator instead of silently receiving nothing.
+- Resent sounds also get an estimated mid-playback seek: when re-enabling
+  Sound for a client, a sound longer than a configurable threshold (default
+  10 seconds, "Seek threshold for resent sounds" in Settings) is resumed at
+  roughly the position it's already at, wrapped into its own loop/repeat
+  cycle if applicable - matching the estimated seek playlist music already
+  got. Shorter sounds always restart from the beginning, since seeking into
+  a brief one-off effect isn't meaningful.
 - Full session export/import: a "📦 Export session…"/"📦 Import session…"
   pair in Settings > Save & load bundles the game state and the Media,
   Sound, and Map libraries into a single `.rtt-session` file - for a full
@@ -98,6 +116,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A currently playing sound that finished purely on a remote client (Host
+  window closed, or Sound turned off locally) never left the GM's "Active
+  Sounds" panel - the natural-end report only ever checked whether it
+  matched the currently-tracked video, so a sound's end was silently
+  ignored and the entry lingered indefinitely.
+- Turning Music or Sound off for a connected client only affected future
+  broadcasts - a track/sound already playing on that window kept running
+  until it happened to end on its own instead of stopping immediately.
+- Muting the Host's own local preview ("Host (this window)") had the same
+  gap: it only gated whether a *new* track/sound would start locally, so
+  anything already playing kept running until it ended naturally.
+- Turning Music back on for a client after muting it left the window
+  silent until the Host's playlist sequencer happened to advance to the
+  next track - re-enabling now resends the currently playing track right
+  away (with the same estimated mid-track seek used for a fresh catch-up).
+- Same gap for Sound: re-enabling it for a client didn't resend anything
+  currently playing, so the window stayed silent until the next brand-new
+  sound happened to fire. Re-enabling now resends every currently active
+  sound to that client, with the same estimated mid-playback seek as music
+  for sounds longer than the configurable threshold.
+- The Host's own local preview had the same gap as connected clients: on
+  re-enabling PlayMusicLocally mid-track, it stayed silent until the next
+  track instead of resuming - it now resumes the current track locally
+  with an estimated seek, matching the network path.
+- A player connecting (or reconnecting) while a playlist was already
+  playing never received the current track - music was deliberately left
+  out of the general "catch a new client up" cache, since a Host-driven
+  sequencer was assumed to make that unnecessary, but nothing actually
+  caught the new client up on the track already in progress. The Host now
+  remembers the currently playing track and sends it to any client that
+  connects mid-playback (respecting that client's Music routing),
+  estimating how far in the track already is (elapsed wall-clock time
+  since it started) and seeking the new client there instead of always
+  restarting the track from 0 - not frame-accurate, but close enough that
+  a late joiner isn't noticeably out of sync with everyone else.
 - Fog-of-war maps: the fog mask only affected a small corner of the
   floor image instead of the whole thing - the mask brush needed an
   explicit source/destination rect to stretch across the image; Stretch

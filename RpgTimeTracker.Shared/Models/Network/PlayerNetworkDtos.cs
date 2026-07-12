@@ -16,15 +16,25 @@ public sealed class MediaHeaderDto
     public const string MediaKindMapFloor = "MapFloor";
 
     /// <summary>
-    ///     A music track (see RpcMethods.MusicStop/MusicSetVolume/MusicTrackEnded) - deliberately
-    ///     a distinct Kind from MediaKindAudio: music plays on its own independent channel/
-    ///     transport (a Host-driven playlist sequencer), routed via its own client-side event
-    ///     (MusicTrackReceived, not MediaBeginReceived) so it never touches the sound-effect
-    ///     ActiveSoundViewModel tracking or the image/video "current medium" gallery slot.
+    ///     A playing music track (see RpcMethods.MusicStop/MusicSetVolume/MusicTrackEnded) - see
+    ///     Layer. Kind stays MediaKindAudio for music too (both flow through the same media.begin
+    ///     + chunk transfer/routing); Layer is what the client-side transport (PlayerTcpClientService)
+    ///     and the Host's routing filter (TcpPlayerServerService.PublishMediaAsync) key off to
+    ///     decide Music-only-one-at-a-time-buffered-fully-first vs Sound-many-concurrent-streamed-
+    ///     while-downloading-may-loop behavior, instead of a second, largely-duplicate Kind value.
     /// </summary>
-    public const string MediaKindMusic = "Music";
+    public const string LayerMusic = "Music";
+
+    /// <summary>A sound effect - see Layer. Also the default (empty Layer is treated the same as
+    ///     LayerSound) for back-compat with any header that predates the Layer field.</summary>
+    public const string LayerSound = "Sound";
+
     public string MediaId { get; set; } = string.Empty;
     public string Kind { get; set; } = MediaKindImage;
+
+    /// <summary>Only meaningful when Kind == MediaKindAudio - see LayerMusic/LayerSound.</summary>
+    public string Layer { get; set; } = string.Empty;
+
     public string FileName { get; set; } = string.Empty;
     public string MimeType { get; set; } = string.Empty;
 
@@ -65,4 +75,39 @@ public sealed class MediaHeaderDto
     ///     themselves part of it). When false, the client deletes the file after display as before.
     /// </summary>
     public bool AddToGallery { get; set; }
+
+    /// <summary>
+    ///     An estimate, in milliseconds, of how far into playback a client should seek right after
+    ///     starting this medium, instead of starting from 0 - used for music catch-up (a client
+    ///     connecting/reconnecting/re-enabling Music routing mid-track, see
+    ///     TcpPlayerServerService._currentMusicTrack) and for sound resend (re-enabling Sound
+    ///     routing for a client while a long-running sound/ambience is already active, see
+    ///     MainWindowViewModel.ResendActiveSoundsToClient - only applied above a configurable
+    ///     duration threshold, since seeking a short one-off effect isn't meaningful). Based on
+    ///     wall-clock elapsed time since playback started, not a frame-accurate sync. 0 = no seek.
+    /// </summary>
+    public long SeekToMs { get; set; }
+
+    /// <summary>Shallow copy with a different SeekToMs - used when resending an in-progress
+    ///     track/sound to one specific client (music catch-up/re-enable, sound re-enable) without
+    ///     mutating the shared cached original, so each resend gets its own accurate estimate.</summary>
+    public MediaHeaderDto CloneWithSeek(long seekToMs)
+    {
+        return new MediaHeaderDto
+        {
+            MediaId = MediaId,
+            Kind = Kind,
+            Layer = Layer,
+            FileName = FileName,
+            MimeType = MimeType,
+            TotalLength = TotalLength,
+            Loop = Loop,
+            Volume = Volume,
+            RepeatCount = RepeatCount,
+            TrimStartMs = TrimStartMs,
+            TrimEndMs = TrimEndMs,
+            AddToGallery = AddToGallery,
+            SeekToMs = seekToMs
+        };
+    }
 }

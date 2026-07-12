@@ -143,4 +143,13 @@ public static class RpcMethods
     ///     decide when to advance to the next track.
     /// </summary>
     public const string MusicTrackEnded = "music.trackEnded";
+
+    /// <summary>
+    ///     Server-to-client: tells this specific client window whether the GM currently has
+    ///     Music/Sound routing enabled for it (see TcpPlayerServerService.SetClientMusicEnabled/
+    ///     SetClientSoundEnabled) - sent right after a successful handshake (reflecting any
+    ///     restored per-ClientId preference) and again whenever the GM changes it live, so the
+    ///     client can show a "muted by GM" indicator instead of silently receiving nothing.
+    /// </summary>
+    public const string AudioRoutingChanged = "audio.routingChanged";
 }

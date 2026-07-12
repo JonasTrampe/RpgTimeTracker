@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using RpgTimeTracker.PlayerClient.Services;
 using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Models.Rpc;
 using RpgTimeTracker.Shared.Services.Localization;
@@ -118,7 +119,7 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action<MapRenderStyleChangedParams>? MapRenderStyleChanged;
 
     /// <summary>
-    ///     A music track finished transferring (see MediaHeaderDto.MediaKindMusic) - kept as its
+    ///     A music track finished transferring (see MediaHeaderDto.LayerMusic) - kept as its
     ///     own event/temp file rather than routed through MediaCompleted, since music plays on
     ///     its own independent channel (a Host-driven playlist sequencer), never touching the
     ///     image/video gallery slot or the sound-effect ActiveSoundViewModel tracking.
@@ -130,6 +131,10 @@ public sealed class PlayerTcpClientService : IDisposable
 
     /// <summary>GM adjusts the volume of the currently playing music track live (0-100).</summary>
     public event Action<int>? MusicVolumeChangeRequested;
+
+    /// <summary>This window's current Music/Sound routing state, sent right after handshake and
+    ///     again whenever the GM changes it live (see RpcMethods.AudioRoutingChanged).</summary>
+    public event Action<bool, bool>? AudioRoutingChanged;
 
     public event Action<string>? StatusChanged;
 
@@ -197,7 +202,12 @@ public sealed class PlayerTcpClientService : IDisposable
         // wrong PIN/incompatible version) the host rejects the connection via
         // session.helloRejected and disconnects it again.
         await SendRpcAsync(RpcMethods.SessionHello,
-            new SessionHelloParams { ProtocolVersion = ProtocolInfo.Version, Pin = pin }).ConfigureAwait(false);
+            new SessionHelloParams
+            {
+                ProtocolVersion = ProtocolInfo.Version,
+                Pin = pin,
+                ClientId = ClientSettingsService.GetOrCreateClientId()
+            }).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -566,6 +576,10 @@ public sealed class PlayerTcpClientService : IDisposable
                     var musicVolume = raw.GetParams<MusicSetVolumeParams>();
                     if (musicVolume is not null) MusicVolumeChangeRequested?.Invoke(musicVolume.Volume);
                     break;
+                case RpcMethods.AudioRoutingChanged:
+                    var routing = raw.GetParams<AudioRoutingChangedParams>();
+                    if (routing is not null) AudioRoutingChanged?.Invoke(routing.MusicEnabled, routing.SoundEnabled);
+                    break;
                 default:
                     Log.Debug("Unknown incoming RPC method {Method} ignored", raw.Method);
                     break;
@@ -597,7 +611,6 @@ public sealed class PlayerTcpClientService : IDisposable
                 {
                     MediaHeaderDto.MediaKindVideo => ".mp4",
                     MediaHeaderDto.MediaKindAudio => ".mp3",
-                    MediaHeaderDto.MediaKindMusic => ".mp3",
                     _ => ".img"
                 };
 
@@ -612,8 +625,9 @@ public sealed class PlayerTcpClientService : IDisposable
             // Map floor images and music tracks are separate concerns from the gallery/
             // current-medium slot (see MapFloorImageReceived/MusicTrackReceived) - never raise
             // MediaBeginReceived for them, so gallery/event-media handling never has to
-            // special-case either Kind.
-            if (header.Kind != MediaHeaderDto.MediaKindMapFloor && header.Kind != MediaHeaderDto.MediaKindMusic)
+            // special-case either. Music is Kind=MediaKindAudio like Sound (see
+            // MediaHeaderDto.Layer), so this checks Layer rather than Kind for that one.
+            if (header.Kind != MediaHeaderDto.MediaKindMapFloor && header.Layer != MediaHeaderDto.LayerMusic)
                 // For videos, playback can start immediately (VLC tolerates a growing file);
                 // for images, the caller waits for MediaCompleted since a partial image
                 // cannot be decoded.
@@ -650,7 +664,7 @@ public sealed class PlayerTcpClientService : IDisposable
                     if (Guid.TryParse(header.MediaId, out var floorId))
                         MapFloorImageReceived?.Invoke(floorId, path);
                 }
-                else if (header.Kind == MediaHeaderDto.MediaKindMusic)
+                else if (header.Layer == MediaHeaderDto.LayerMusic)
                 {
                     MusicTrackReceived?.Invoke(header, path);
                 }

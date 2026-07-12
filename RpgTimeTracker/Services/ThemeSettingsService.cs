@@ -111,6 +111,39 @@ public static class ThemeSettingsService
         SaveSettings(settings);
     }
 
+    /// <summary>Looks up a remembered Music/Sound routing preference by ClientId - returns null
+    ///     if this client has never been seen before (caller should then default to enabled).</summary>
+    public static ClientAudioPreferenceDto? LoadClientAudioPreference(string clientId)
+    {
+        if (string.IsNullOrEmpty(clientId)) return null;
+        return LoadSettings().ClientAudioPreferences.Find(p => p.ClientId == clientId);
+    }
+
+    /// <summary>Upserts this client's Music/Sound routing preference (see
+    ///     TcpPlayerServerService.SetClientMusicEnabled/SetClientSoundEnabled) - a no-op if
+    ///     clientId is empty (an older client build that doesn't send one yet).</summary>
+    public static void SaveClientAudioPreference(string clientId, bool musicEnabled, bool soundEnabled)
+    {
+        if (string.IsNullOrEmpty(clientId)) return;
+
+        var settings = LoadSettings();
+        var existing = settings.ClientAudioPreferences.Find(p => p.ClientId == clientId);
+        if (existing is not null)
+        {
+            existing.MusicEnabled = musicEnabled;
+            existing.SoundEnabled = soundEnabled;
+        }
+        else
+        {
+            settings.ClientAudioPreferences.Add(new ClientAudioPreferenceDto
+            {
+                ClientId = clientId, MusicEnabled = musicEnabled, SoundEnabled = soundEnabled
+            });
+        }
+
+        SaveSettings(settings);
+    }
+
     /// <summary>
     ///     Legacy: a single sound added via the old settings page. Only read
     ///     once on startup and migrated to SoundLibrary (see SoundService.MigrateLegacyCustomSounds) -
@@ -199,6 +232,17 @@ public static class ThemeSettingsService
         public List<MapFloorEntryDto> Floors { get; set; } = [];
     }
 
+    /// <summary>Remembered Music/Sound routing preference for one player window, keyed by its
+    ///     stable ClientId (see SessionHelloParams.ClientId) rather than its ephemeral
+    ///     RemoteEndpoint - so a reconnecting window gets its previous routing back instead of
+    ///     resetting to enabled every time (see TcpPlayerServerService.PerformHandshakeAsync).</summary>
+    public sealed class ClientAudioPreferenceDto
+    {
+        public string ClientId { get; set; } = string.Empty;
+        public bool MusicEnabled { get; set; } = true;
+        public bool SoundEnabled { get; set; } = true;
+    }
+
     public sealed class ThemeSettingsDto
     {
         public string? LastTheme { get; set; }
@@ -207,6 +251,14 @@ public static class ThemeSettingsService
         public bool HeadsUpWarningEnabled { get; set; }
         public double HeadsUpLeadMinutes { get; set; } = 2;
         public bool AmbienceAutomationEnabled { get; set; }
+
+        /// <summary>
+        ///     Minimum sound duration (milliseconds) worth estimating a mid-playback seek for when
+        ///     resending it to a client whose Sound routing was just re-enabled (see
+        ///     MainWindowViewModel.ResendActiveSoundsToClient) - a short one-off effect isn't worth
+        ///     seeking into, so it's just resent from the start below this threshold.
+        /// </summary>
+        public int SoundSeekThresholdMs { get; set; } = 10_000;
 
         /// <summary>
         ///     Display name transmitted in the LAN/mDNS announcement, so that multiple servers on the same
@@ -248,6 +300,7 @@ public static class ThemeSettingsService
         public List<MusicLibraryEntryDto> MusicLibrary { get; set; } = [];
         public List<PlaylistEntryDto> Playlists { get; set; } = [];
         public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
+        public List<ClientAudioPreferenceDto> ClientAudioPreferences { get; set; } = [];
 
         /// <summary>
         ///     Player-side fog-of-war render style (see MapDisplayViewModel/FogOverlayRenderer) -
