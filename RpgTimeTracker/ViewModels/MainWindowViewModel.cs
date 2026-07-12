@@ -222,6 +222,23 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     [ObservableProperty] private bool _playSoundLocally = true;
 
+    partial void OnPlayMusicLocallyChanged(bool value)
+    {
+        // Mirrors SetClientMusicEnabled(false)'s targeted stop, just for the Host's own preview:
+        // turning this off must stop whatever is already playing locally, not just gate future
+        // tracks - remote clients/other windows are unaffected.
+        if (value) return;
+
+        _localMusicPlayer?.Stop();
+        _localMusicPlayer?.Dispose();
+        _localMusicPlayer = null;
+    }
+
+    partial void OnPlaySoundLocallyChanged(bool value)
+    {
+        if (!value) StopLocalSoundPreviewOnly();
+    }
+
     // Free-form time jump, e.g. "08:00:00" forward or "-1.00:00:00" back one day.
     [ObservableProperty] private string _jumpAmountText = "08:00:00";
 
@@ -4521,6 +4538,22 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         foreach (var sound in ActivePlayingSounds)
             _ = _playerServer.PublishStopSoundToClientAsync(sound.MediaId, remoteEndpoint);
+    }
+
+    /// <summary>Stops the Host's own local sound preview players only (see OnPlaySoundLocallyChanged) -
+    ///     unlike StopSound, this must NOT touch remote clients or the ActivePlayingSounds panel,
+    ///     since the sound keeps playing for every connected player regardless.</summary>
+    private void StopLocalSoundPreviewOnly()
+    {
+        foreach (var (mediaId, player) in _activeLocalSoundPlayers.ToList())
+        {
+            player.Stop();
+            player.Dispose();
+            _localSoundRepeatsRemaining.Remove(mediaId);
+            if (_localSoundCleanupPaths.Remove(mediaId, out var path)) DeleteFileQuietly(path);
+        }
+
+        _activeLocalSoundPlayers.Clear();
     }
 
     private void PlayLocalSoundIfNeeded(MediaHeaderDto header, string localPath, bool deleteAfterPlayback)

@@ -117,6 +117,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Turning Music or Sound off for a connected client only affected future
   broadcasts - a track/sound already playing on that window kept running
   until it happened to end on its own instead of stopping immediately.
+- Muting the Host's own local preview ("Host (this window)") had the same
+  gap: it only gated whether a *new* track/sound would start locally, so
+  anything already playing kept running until it ended naturally.
 - Fog-of-war maps: the fog mask only affected a small corner of the
   floor image instead of the whole thing - the mask brush needed an
   explicit source/destination rect to stretch across the image; Stretch
