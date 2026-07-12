@@ -1577,6 +1577,49 @@
                                                                 ToolTip.Tip="{DynamicResource MainWindow.Music.VolumeTooltip}" />
                                                     </Grid>
                                                 </Border>
+
+                                                <Border DockPanel.Dock="Top" Classes="settingsGroup"
+                                                        Margin="4,14,13,4">
+                                                    <StackPanel Spacing="8">
+                                                        <TextBlock Classes="settingsGroupTitle"
+                                                                   Text="{DynamicResource MainWindow.Music.RoutingTitle}" />
+                                                        <TextBlock Classes="muted"
+                                                                   Text="{DynamicResource MainWindow.Music.RoutingDescription}"
+                                                                   TextWrapping="Wrap" />
+                                                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="16">
+                                                            <TextBlock Grid.Column="0"
+                                                                       Text="{DynamicResource MainWindow.Music.RoutingHostLabel}"
+                                                                       VerticalAlignment="Center" />
+                                                            <CheckBox Grid.Column="1"
+                                                                      Content="{DynamicResource MainWindow.Music.RoutingMusicCheckbox}"
+                                                                      IsChecked="{Binding PlayMusicLocally}" />
+                                                            <CheckBox Grid.Column="2"
+                                                                      Content="{DynamicResource MainWindow.Music.RoutingSoundCheckbox}"
+                                                                      IsChecked="{Binding PlaySoundLocally}" />
+                                                        </Grid>
+                                                        <ItemsControl ItemsSource="{Binding ConnectedClientItems}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:ConnectedClientItemViewModel">
+                                                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                                                          ColumnSpacing="16" Margin="0,2">
+                                                                        <TextBlock Grid.Column="0"
+                                                                                   Text="{Binding RemoteEndpoint}"
+                                                                                   Classes="muted"
+                                                                                   VerticalAlignment="Center"
+                                                                                   TextTrimming="CharacterEllipsis" />
+                                                                        <CheckBox Grid.Column="1"
+                                                                                  Content="{DynamicResource MainWindow.Music.RoutingMusicCheckbox}"
+                                                                                  IsChecked="{Binding MusicEnabled}" />
+                                                                        <CheckBox Grid.Column="2"
+                                                                                  Content="{DynamicResource MainWindow.Music.RoutingSoundCheckbox}"
+                                                                                  IsChecked="{Binding SoundEnabled}" />
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </Border>
+
                                                 <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
                                                 <Border Grid.Column="0" Classes="settingsGroup" Margin="0 0 4 0">
                                                     <controls:LibraryPanelView x:Name="MusicLibraryPanel"

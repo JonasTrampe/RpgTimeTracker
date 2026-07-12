@@ -215,6 +215,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     [ObservableProperty] private bool _isPlayerWindowOpen;
 
+    /// <summary>Whether the Host's own local preview plays Music/Sound - the "Host (local)" row
+    ///     in the Music tab's routing list, parallel to the per-client MusicEnabled/SoundEnabled
+    ///     flags on TcpPlayerServerService. Session-scoped (not persisted), default true.</summary>
+    [ObservableProperty] private bool _playMusicLocally = true;
+
+    [ObservableProperty] private bool _playSoundLocally = true;
+
     // Free-form time jump, e.g. "08:00:00" forward or "-1.00:00:00" back one day.
     [ObservableProperty] private string _jumpAmountText = "08:00:00";
 
@@ -3147,7 +3154,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// </summary>
     private void PlayLocalMusicIfNeeded(MediaHeaderDto header, string localPath)
     {
-        if (!IsPlayerWindowOpen) return;
+        if (!IsPlayerWindowOpen || !PlayMusicLocally) return;
         if (!VlcMediaService.TryGetLibVlc(out var libVlc) || libVlc is null) return;
 
         try
@@ -4496,8 +4503,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private void PlayLocalSoundIfNeeded(MediaHeaderDto header, string localPath, bool deleteAfterPlayback)
     {
         // Plays locally whenever the player window is open, same as local media/map preview -
-        // regardless of connected clients, so the GM hears what players hear.
-        if (!IsPlayerWindowOpen)
+        // regardless of connected clients, so the GM hears what players hear - unless the GM
+        // has turned off Sound for their own "Host (local)" window (see PlaySoundLocally).
+        if (!IsPlayerWindowOpen || !PlaySoundLocally)
         {
             if (deleteAfterPlayback) DeleteFileQuietly(localPath);
             return;
@@ -4661,13 +4669,24 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         ConnectedClientItems.Clear();
         foreach (var info in clients)
-            ConnectedClientItems.Add(new ConnectedClientItemViewModel(info, DisconnectClientRequested));
+            ConnectedClientItems.Add(new ConnectedClientItemViewModel(info, DisconnectClientRequested,
+                OnClientMusicEnabledChanged, OnClientSoundEnabledChanged));
         OnPropertyChanged(nameof(HasNoConnectedClients));
     }
 
     private void DisconnectClientRequested(ConnectedClientItemViewModel item)
     {
         _playerServer.DisconnectClient(item.RemoteEndpoint);
+    }
+
+    private void OnClientMusicEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
+    {
+        _playerServer.SetClientMusicEnabled(item.RemoteEndpoint, enabled);
+    }
+
+    private void OnClientSoundEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
+    {
+        _playerServer.SetClientSoundEnabled(item.RemoteEndpoint, enabled);
     }
 
     private void ResolvePendingVideo(string mediaId)

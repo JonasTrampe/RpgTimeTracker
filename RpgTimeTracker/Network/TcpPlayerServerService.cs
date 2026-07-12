@@ -20,7 +20,11 @@ namespace RpgTimeTracker.Network;
 ///     Display info for a connected client - for the GM-side "connected clients" list including manual
 ///     disconnect.
 /// </summary>
-public sealed record ConnectedClientInfo(string RemoteEndpoint, DateTime ConnectedAtUtc);
+public sealed record ConnectedClientInfo(
+    string RemoteEndpoint,
+    DateTime ConnectedAtUtc,
+    bool MusicEnabled,
+    bool SoundEnabled);
 
 /// <summary>
 ///     Read-only TCP publisher for the player client. Sends only JSON-RPC
@@ -259,10 +263,19 @@ public sealed class TcpPlayerServerService : IDisposable
                 _lastMedia = (header, fileBytes);
             }
 
+        // Image/video/map-floor always go to every window; Sound/Music respect the GM's
+        // per-window routing toggles (see SetClientMusicEnabled/SetClientSoundEnabled).
+        Func<ClientConnection, bool>? routingFilter = header.Kind switch
+        {
+            MediaHeaderDto.MediaKindAudio => c => c.SoundEnabled,
+            MediaHeaderDto.MediaKindMusic => c => c.MusicEnabled,
+            _ => null
+        };
+
         ClientConnection[] clients;
         lock (_gate)
         {
-            clients = _clients.ToArray();
+            clients = routingFilter is null ? _clients.ToArray() : _clients.Where(routingFilter).ToArray();
         }
 
         Log.Information("Sending medium {FileName} ({Kind}, {SizeKb} KB, Loop={Loop}) to {ClientCount} client(s)",
@@ -293,27 +306,27 @@ public sealed class TcpPlayerServerService : IDisposable
     }
 
     /// <summary>
-    ///     Stops a single, currently playing sound on all clients (by MediaId) -
+    ///     Stops a single, currently playing sound (by MediaId) on Sound-enabled client windows -
     ///     independent of the image/video "current medium" slot, see MediaKindAudio.
     /// </summary>
     public Task PublishStopSoundAsync(string mediaId)
     {
-        return BroadcastRpcAsync(RpcMethods.MediaStopSound, new MediaStopSoundParams { MediaId = mediaId });
+        return BroadcastRpcAsync(RpcMethods.MediaStopSound, new MediaStopSoundParams { MediaId = mediaId },
+            c => c.SoundEnabled);
     }
 
-    /// <summary>Adjusts the volume of a currently playing sound live on all clients (0-100).</summary>
+    /// <summary>Adjusts the volume of a currently playing sound live on Sound-enabled client windows (0-100).</summary>
     public Task PublishSetSoundVolumeAsync(string mediaId, int volume)
     {
         return BroadcastRpcAsync(RpcMethods.MediaSetVolume,
-            new MediaSetVolumeParams { MediaId = mediaId, Volume = volume });
+            new MediaSetVolumeParams { MediaId = mediaId, Volume = volume }, c => c.SoundEnabled);
     }
 
     /// <summary>
-    ///     Distributes a music track (media.begin + chunks, Kind=MediaKindMusic) - thin wrapper
-    ///     around PublishMediaAsync kept as its own named method for symmetry with
-    ///     PublishMusicStopAsync/PublishMusicSetVolumeAsync, and so a future per-client routing
-    ///     filter (see the Music/Playlists plan's per-window milestone) has one obvious place to
-    ///     change instead of touching the shared image/video/sound send path.
+    ///     Distributes a music track (media.begin + chunks, Kind=MediaKindMusic) to Music-enabled
+    ///     client windows - thin wrapper around PublishMediaAsync (which applies the routing
+    ///     filter) kept as its own named method for symmetry with
+    ///     PublishMusicStopAsync/PublishMusicSetVolumeAsync.
     /// </summary>
     public Task PublishMusicTrackAsync(MediaHeaderDto header, byte[] fileBytes)
     {
@@ -321,16 +334,17 @@ public sealed class TcpPlayerServerService : IDisposable
         return PublishMediaAsync(header, fileBytes);
     }
 
-    /// <summary>Stops the currently playing music track/playlist on all clients.</summary>
+    /// <summary>Stops the currently playing music track/playlist on Music-enabled client windows.</summary>
     public Task PublishMusicStopAsync()
     {
-        return BroadcastRpcAsync(RpcMethods.MusicStop, RpcEmptyParams.Instance);
+        return BroadcastRpcAsync(RpcMethods.MusicStop, RpcEmptyParams.Instance, c => c.MusicEnabled);
     }
 
-    /// <summary>Adjusts the volume of the currently playing music track live on all clients (0-100).</summary>
+    /// <summary>Adjusts the volume of the currently playing music track live on Music-enabled client windows (0-100).</summary>
     public Task PublishMusicSetVolumeAsync(int volume)
     {
-        return BroadcastRpcAsync(RpcMethods.MusicSetVolume, new MusicSetVolumeParams { Volume = volume });
+        return BroadcastRpcAsync(RpcMethods.MusicSetVolume, new MusicSetVolumeParams { Volume = volume },
+            c => c.MusicEnabled);
     }
 
     /// <summary>Removes an image/video from the gallery on all clients specifically (by MediaId).</summary>
@@ -537,7 +551,8 @@ public sealed class TcpPlayerServerService : IDisposable
         Log.Debug("Medium {FileName} fully sent to {Client}", header.FileName, client);
     }
 
-    private async Task BroadcastRpcAsync<TParams>(string method, TParams @params)
+    private async Task BroadcastRpcAsync<TParams>(string method, TParams @params,
+        Func<ClientConnection, bool>? filter = null)
     {
         if (!IsRunning) return;
 
@@ -555,7 +570,7 @@ public sealed class TcpPlayerServerService : IDisposable
         ClientConnection[] clients;
         lock (_gate)
         {
-            clients = _clients.ToArray();
+            clients = filter is null ? _clients.ToArray() : _clients.Where(filter).ToArray();
         }
 
         foreach (var client in clients)
@@ -855,12 +870,42 @@ public sealed class TcpPlayerServerService : IDisposable
         RemoveClient(target);
     }
 
+    /// <summary>Toggles whether this client window receives Music broadcasts (GM per-window
+    ///     routing control) - session-scoped, resets to enabled on reconnect.</summary>
+    public void SetClientMusicEnabled(string remoteEndpoint, bool enabled)
+    {
+        lock (_gate)
+        {
+            var target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
+            if (target is null) return;
+            target.MusicEnabled = enabled;
+        }
+
+        NotifyClientsChanged();
+    }
+
+    /// <summary>Toggles whether this client window receives Sound broadcasts (GM per-window
+    ///     routing control) - session-scoped, resets to enabled on reconnect.</summary>
+    public void SetClientSoundEnabled(string remoteEndpoint, bool enabled)
+    {
+        lock (_gate)
+        {
+            var target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
+            if (target is null) return;
+            target.SoundEnabled = enabled;
+        }
+
+        NotifyClientsChanged();
+    }
+
     private void NotifyClientsChanged()
     {
         List<ConnectedClientInfo> snapshot;
         lock (_gate)
         {
-            snapshot = _clients.Select(c => new ConnectedClientInfo(c.RemoteEndpoint, c.ConnectedAtUtc)).ToList();
+            snapshot = _clients
+                .Select(c => new ConnectedClientInfo(c.RemoteEndpoint, c.ConnectedAtUtc, c.MusicEnabled, c.SoundEnabled))
+                .ToList();
         }
 
         ClientCountChanged?.Invoke(snapshot.Count);
@@ -951,6 +996,13 @@ public sealed class TcpPlayerServerService : IDisposable
 
         /// <summary>Set once the handshake succeeded (see PerformHandshakeAsync) - "unauthenticated" before that.</summary>
         public bool IsAccepted { get; set; }
+
+        /// <summary>Whether this window (session-scoped, resets to true on reconnect - no
+        ///     persistent client identity today) receives Music/Sound broadcasts, set by the GM
+        ///     via SetClientMusicEnabled/SetClientSoundEnabled.</summary>
+        public bool MusicEnabled { get; set; } = true;
+
+        public bool SoundEnabled { get; set; } = true;
 
         /// <summary>Resolved by HandleClientRpcFrame upon receiving session.hello; PerformHandshakeAsync waits for it.</summary>
         public TaskCompletionSource<SessionHelloParams> HelloTcs { get; } =

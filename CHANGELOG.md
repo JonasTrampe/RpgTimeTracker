@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   current playlist/track with Previous/Next/Stop and a live volume slider.
   Per-window (Host/Client) routing toggles for which windows play Music
   vs. Sound are a follow-up milestone.
+- Per-window Music/Sound routing: a new "Routing" panel in the Music tab
+  lets the GM independently turn Music and Sound on/off for each connected
+  player window and for the Host's own local preview ("Host (this window)").
+  Turning Sound off for a window, for example, stops it from receiving sound
+  effects while it keeps getting Music (and vice versa) - useful for a
+  spectator/stream window that should only hear ambience, or a player window
+  that should stay silent while everyone else hears a jump-scare sting.
+  Session-scoped: every toggle resets back to "on" the next time that
+  window (re)connects, since there is no persistent per-device identity yet.
 - Full session export/import: a "📦 Export session…"/"📦 Import session…"
   pair in Settings > Save & load bundles the game state and the Media,
   Sound, and Map libraries into a single `.rtt-session` file - for a full
