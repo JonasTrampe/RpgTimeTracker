@@ -86,6 +86,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (leaving just the flat tint) without losing the configured strength.
   Brush size in the map editor also got finer-grained (smaller default
   grid cells, wider brush range).
+- Maps tab redesigned for usability and to properly separate preparing a
+  map from showing it: the Maps tab now uses a wrapping layout instead of a
+  rigid two-column split, so it no longer squishes on narrow windows. The
+  old single "Edit…" map editor is now two separate windows - a per-floor
+  "Edit…" window that only ever touches an offline prepare/starting mask
+  (never seen by players, no matter what), and a per-map "Show…" window
+  that paints the live, players-visible fog directly (unchanged from
+  before) plus a renamed "Reset to Prepared" button that pulls in whatever
+  was last painted in the Edit window, and the Open/Close-to-players
+  toggle. Both editors now show a live brush-outline cursor so it's clear
+  exactly what a stroke will affect. Default new-floor cell size is halved
+  (finer grid) with brush radius doubled to match the old visual size.
+  Fog render style (color/opacity/blur) can now be overridden per map from
+  the Edit window, falling back to the existing global Settings-tab values
+  when left unset. Cell size is now GM-editable per floor (with a warning
+  for very small values) from the Edit window; changing it rescales the
+  existing mask instead of corrupting it, and new floors inherit a
+  per-map default cell size rather than a single global constant. Editing
+  (the "Edit" window) and showing (the "Show" window) a map are now
+  mutually exclusive: the Show button is disabled while a floor is being
+  edited, and the Edit button is disabled while that map is shown to
+  players, so a cell-size rescale can never happen while the mask is
+  actively being streamed.
+- Per-client Image/Video/Map routing: the Connected Clients list gets three
+  separate toggles - "Images", "Videos", and "Maps" - next to Music/Sound,
+  so a multi-monitor GM setup can dedicate one window to maps while
+  another only shows images, or exclude a window (e.g. a tablet) from a
+  specific kind entirely. Each mirrors the existing Music/Sound routing
+  pattern independently, including persistence per window and resending/
+  clearing currently shown content of that kind on toggle.
+- Both map editors (Edit/Prepare and Show/Live) now have a live preview
+  panel showing the map exactly as players actually see it - the same
+  blurred/tinted fog render used by the real PlayerClient and the Host's
+  own PlayerWindow, not the flat editor tint used for painting precision.
+  The floor selector, brush toolbar, and paintable canvas (previously
+  near-duplicated between the two editor windows) are now a single shared
+  `MapEditCanvasControl`, so the two windows differ only in what they do
+  with a stroke afterward (broadcast vs. debounced file save) and what
+  extra controls they show (Reset/Open-to-players vs. fog style/cell size).
+- Both map editors can now zoom in/out (25%-400%, "−"/"+"/"Fit" buttons or
+  Ctrl+scroll wheel over the canvas), useful for precise brush placement on
+  large maps - previously the map always scaled to fit the window with no
+  way to work at a larger effective resolution. A newly opened floor starts
+  fit-to-window as before; zooming keeps whatever point was centered in
+  view centered afterward instead of jumping to a corner.
+- Maps tab layout: the map-library panel is narrower and stays a fixed
+  width (sized for its entries), while the floor-gallery panel now resizes
+  with the window instead of a fixed width, so wider windows actually use
+  the extra space. Floors show as a name list with a small thumbnail
+  (instead of a thumbnail-card grid) and can be reordered with per-row
+  up/down buttons - a map's floors are stacked layers, so their order is
+  meaningful, unlike the map library list itself. The Add floor/Edit/Show
+  buttons moved to the bottom of the floor panel in a wrapping row, so they
+  drop to a second line instead of overflowing when the panel is narrow.
+  The Maps tab's description text is now as short as the other tabs'.
+  The button row is now docked to the bottom of the panel itself (instead
+  of just following the floor list), so it stays pinned there regardless
+  of how many floors a map has, rather than drifting down as the list grows.
+- A map's floor/layer order is now saved explicitly (not just implied by
+  list position), so reordering floors with the up/down buttons survives a
+  save/load round-trip through settings, a single-map (`.rtt-map`) export,
+  or a full-session (`.rtt-session`) export.
+- Maps now carry an explicit format version, saved alongside the map data
+  and exports. Every existing/new map is version 1 today with no behavior
+  change - this just gives a future format change something to check
+  against so it can detect and upgrade an older map on load instead of
+  guessing.
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/
@@ -176,6 +243,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   day names or a comma decimal separator, and vice versa.
 - Two remaining hardcoded German UI strings (connected-since label,
   player-header speed label) moved to the localization files.
+- Maps tab's left-hand map list was cramped and hard to read (name field
+  squished to a few characters) once German button labels were factored
+  in - Export and Delete are now collapsed into a single "⋮" overflow menu
+  per map (matching the existing Media/Sound library pattern), leaving the
+  name field enough room to actually show a name. The per-floor Edit/Delete
+  buttons in the floor gallery had the same problem - their full German
+  text button labels overflowed the 140px floor tile - now small icon
+  buttons matching the same tile-card pattern used elsewhere.
+- The brush size in both map editors was expressed as a raw cell count, so
+  the same brush setting painted a wildly different physical area depending
+  on a floor's CellSizePx - switching to a coarser grid (or rescaling one)
+  made the brush look "comically large" without the GM changing anything.
+  Brush size is now a physical-pixel radius under the hood, so it stays the
+  same visual/effective size regardless of a floor's CellSizePx.
+- Moving the brush cursor toward the right/bottom edge of a map editor made
+  the scrollable viewport jump around erratically - the cursor was
+  positioned via Margin, which (unlike a render transform) participates in
+  the canvas's own layout measurement, so a large left/top margin kept
+  growing the canvas itself and fed back into the scroll position.
+  Positioning now uses a RenderTransform, which is purely visual and can't
+  affect layout.
+- Rescaling a fog mask on a CellSizePx change sampled from each new cell's
+  top-left corner instead of its center, introducing a systematic
+  directional bias that visibly drifted the revealed/hidden boundary after
+  repeated size changes. Rescaling now samples from cell centers, and
+  CellSizePx is restricted to even multiples of 2 so repeated rescales use
+  clean ratios instead of compounding rounding error.
 
 ## [1.0.0] - 2026-07-10
 

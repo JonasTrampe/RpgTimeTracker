@@ -250,19 +250,66 @@ public partial class MainWindow : Window
             await vmForFloor.AddFloorToMapAsync(map, localPath);
     }
 
-    private void OnEditMapClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not MainWindowViewModel vm ||
-            sender is not Button { DataContext: MapItemViewModel map }) return;
+    private MapLiveWindow? _openMapLiveWindow;
 
-        var editor = new MapEditorWindow(vm, map);
+    private void OnEditSelectedFloorClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map || map.Floors.Count == 0) return;
+
+        // Extracted from the per-floor tile to a single top-level button, so it needs an explicit
+        // floor to act on - default to the first floor if none is selected in the list yet.
+        if (vm.EditingFloor is null || !map.Floors.Contains(vm.EditingFloor)) vm.EditingFloor = map.Floors[0];
+
+        // A map currently shown to players must not also be edited (Prepare) - see
+        // MainWindowViewModel.NotifyMapPrepareWindowOpened/IsSelectedMapOpenToPlayers. The Edit
+        // button is already disabled for this case; this is defense-in-depth.
+        if (vm.IsMapOpenToPlayers && ReferenceEquals(vm.OpenMap, map)) return;
+
+        var editor = new MapPrepareWindow(vm, map);
+        editor.Show(this);
+    }
+
+    private void OnMoveFloorUpClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map ||
+            sender is not Control { DataContext: MapFloorItemViewModel floor }) return;
+
+        map.MoveFloorUp(floor);
+    }
+
+    private void OnMoveFloorDownClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map ||
+            sender is not Control { DataContext: MapFloorItemViewModel floor }) return;
+
+        map.MoveFloorDown(floor);
+    }
+
+    private void OnShowMapClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map) return;
+
+        // A map currently being prepared must not also be streamed - see
+        // MainWindowViewModel.IsSelectedMapBeingPrepared. The Show button is already disabled for
+        // this case; this is defense-in-depth.
+        if (vm.IsSelectedMapBeingPrepared) return;
+
+        if (_openMapLiveWindow is not null)
+        {
+            _openMapLiveWindow.Activate();
+            return;
+        }
+
+        var editor = new MapLiveWindow(vm, map);
+        editor.Closed += (_, _) => _openMapLiveWindow = null;
+        _openMapLiveWindow = editor;
         editor.Show(this);
     }
 
     private async void OnExportMapClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm ||
-            sender is not Button { DataContext: MapItemViewModel map }) return;
+            sender is not Control { DataContext: MapItemViewModel map }) return;
 
         var topLevel = GetTopLevel(this);
         if (topLevel is null) return;

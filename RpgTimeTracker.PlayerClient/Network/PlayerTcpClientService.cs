@@ -132,9 +132,11 @@ public sealed class PlayerTcpClientService : IDisposable
     /// <summary>GM adjusts the volume of the currently playing music track live (0-100).</summary>
     public event Action<int>? MusicVolumeChangeRequested;
 
-    /// <summary>This window's current Music/Sound routing state, sent right after handshake and
-    ///     again whenever the GM changes it live (see RpcMethods.AudioRoutingChanged).</summary>
-    public event Action<bool, bool>? AudioRoutingChanged;
+    /// <summary>This window's current Music/Sound/Image/Video/Map routing state, sent right after
+    ///     handshake and again whenever the GM changes it live (see
+    ///     RpcMethods.AudioRoutingChanged). Args: musicEnabled, soundEnabled, imageEnabled,
+    ///     videoEnabled, mapEnabled.</summary>
+    public event Action<bool, bool, bool, bool, bool>? AudioRoutingChanged;
 
     public event Action<string>? StatusChanged;
 
@@ -577,8 +579,10 @@ public sealed class PlayerTcpClientService : IDisposable
                     if (musicVolume is not null) MusicVolumeChangeRequested?.Invoke(musicVolume.Volume);
                     break;
                 case RpcMethods.AudioRoutingChanged:
-                    var routing = raw.GetParams<AudioRoutingChangedParams>();
-                    if (routing is not null) AudioRoutingChanged?.Invoke(routing.MusicEnabled, routing.SoundEnabled);
+                    var routing = raw.GetParams<DataRoutingChangedParams>();
+                    if (routing is not null)
+                        AudioRoutingChanged?.Invoke(routing.MusicEnabled, routing.SoundEnabled,
+                            routing.ImageEnabled, routing.VideoEnabled, routing.MapEnabled);
                     break;
                 default:
                     Log.Debug("Unknown incoming RPC method {Method} ignored", raw.Method);

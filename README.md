@@ -62,6 +62,21 @@ method list, media streaming) can be found in [`docs/protocol.md`](docs/protocol
   Media, Sound, and Map libraries into a single `.rtt-session` file - for a
   full backup or moving everything to a new machine in one step, instead of
   exporting the save file and each library separately.
+- **Maps / fog-of-war (its own "Maps" tab)**: build a library of maps, each
+  made of one or more floors (image + grid cell size). Preparing a floor's
+  fog (brush reveal/hide, zoom, resizable floor-cell size) happens entirely
+  offline in a dedicated "Prepare" window — nothing painted there is ever
+  visible to players — and is completely separate from the "Show" window,
+  which paints and broadcasts the *live*, currently-players-visible fog and
+  can pull in whatever was prepared with a "Reset to Prepared" button. Both
+  windows include a live, player-accurate preview and can be open side by
+  side. A map can override the fog color/opacity/blur individually,
+  falling back to the global default (Settings tab) for whatever it leaves
+  unset. Floors are reorderable layers (their order is saved explicitly, so
+  it survives export/import) with a small thumbnail per floor. Only one map
+  can be shown to players at a time, and a map currently open in its
+  Prepare window can't be shown until that's closed. Maps can be exported/
+  imported individually (`.rtt-map`) or as part of a full session bundle.
 - **Networked player display**: the GM starts a TCP server in the
   control app on a freely selectable port with a freely selectable
   server name (this is included in the mDNS/LAN announcement and thus appears
@@ -84,6 +99,13 @@ method list, media streaming) can be found in [`docs/protocol.md`](docs/protocol
   Client and host also exchange their
   protocol version when the connection is established; if they don't match, the
   host rejects the connection with a clear error message instead of undefined behavior.
+  For each connected client (and the Host's own local preview), the GM can
+  independently turn Music/Sound/Image/Video/Map routing on or off — e.g. a
+  second-monitor client dedicated to maps/images while a tablet client only
+  gets Music. The preference persists per client across reconnects; turning
+  a kind back on immediately catches that client up (resends the current
+  image/video/open map) instead of requiring a reconnect, and turning it off
+  clears whatever that client was showing.
 - **Send image/video to players**: select an image or
   video (up to about 1900 MB) in the media library — this immediately opens a
   dedicated media window on all connected player clients (images inline,

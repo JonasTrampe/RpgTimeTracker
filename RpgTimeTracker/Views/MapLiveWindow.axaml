@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:RpgTimeTracker.Views.Controls"
+        xmlns:sharedViews="using:RpgTimeTracker.Shared.Views"
+        x:Class="RpgTimeTracker.Views.MapLiveWindow"
+        Title="Map"
+        Width="1220" Height="700"
+        MinWidth="700" MinHeight="400"
+        Background="{DynamicResource WindowBackgroundBrush}">
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+    </Window.Styles>
+
+    <DockPanel Margin="10">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10"
+                    VerticalAlignment="Center">
+            <Button Content="{DynamicResource MapLiveWindow.ResetToPreparedButton}" Click="OnResetClick" />
+
+            <ToggleButton Name="OpenToPlayersToggle"
+                          Content="{DynamicResource MapEditor.OpenToPlayersButton}"
+                          Click="OnToggleOpenClick" />
+        </StackPanel>
+
+        <Grid ColumnDefinitions="*,320">
+            <controls:MapEditCanvasControl x:Name="EditCanvas" Grid.Column="0" />
+
+            <Border Grid.Column="1" Classes="settingsGroup" Margin="10,0,0,0">
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="settingsGroupTitle" Text="{DynamicResource MapEditor.PreviewTitle}" />
+                    <sharedViews:MapDisplayView x:Name="PreviewDisplay" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

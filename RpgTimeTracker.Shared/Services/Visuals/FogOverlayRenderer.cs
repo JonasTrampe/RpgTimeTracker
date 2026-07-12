@@ -23,6 +23,10 @@ public static class FogOverlayRenderer
     /// <summary>Used by the PlayerClient/Host local preview as the v1 default tint.</summary>
     public static readonly Color PlayerHiddenColor = Color.FromArgb(255, 12, 12, 12);
 
+    /// <summary>Used by MapPrepareWindow so its overlay is visually distinct from
+    ///     MapLiveWindow's at a glance, even if both are open at once.</summary>
+    public static readonly Color PrepareHiddenColor = Color.FromArgb(140, 40, 60, 140);
+
     /// <summary>Combines a GM-configured color hex + opacity percent (see issue #22) into the
     ///     alpha-baked Color the tint layer expects - shared by the Host (Settings tab) and
     ///     the PlayerClient (session.snapshot/map.renderStyleChanged).</summary>

@@ -25,7 +25,10 @@ public sealed record ConnectedClientInfo(
     string RemoteEndpoint,
     DateTime ConnectedAtUtc,
     bool MusicEnabled,
-    bool SoundEnabled);
+    bool SoundEnabled,
+    bool ImageEnabled,
+    bool VideoEnabled,
+    bool MapEnabled);
 
 /// <summary>
 ///     Read-only TCP publisher for the player client. Sends only JSON-RPC
@@ -287,20 +290,26 @@ public sealed class TcpPlayerServerService : IDisposable
                 _lastMedia = (header, fileBytes);
             }
 
-        // Image/video/map-floor always go to every window; Sound/Music (both Kind=MediaKindAudio,
-        // distinguished by Layer - see MediaHeaderDto.LayerMusic/LayerSound) respect the GM's
-        // per-window routing toggles (see SetClientMusicEnabled/SetClientSoundEnabled). An empty
-        // Layer defaults to Sound routing, for back-compat with any header that predates Layer.
-        Func<ClientConnection, bool>? routingFilter = header.Kind != MediaHeaderDto.MediaKindAudio
-            ? null
-            : header.Layer == MediaHeaderDto.LayerMusic
+        // Image/Video/MapFloor each respect their own GM per-window routing toggle
+        // (SetClientImageEnabled/SetClientVideoEnabled/SetClientMapEnabled); Sound/Music (both
+        // Kind=MediaKindAudio, distinguished by Layer - see MediaHeaderDto.LayerMusic/LayerSound)
+        // respect the separate Music/Sound toggles (see
+        // SetClientMusicEnabled/SetClientSoundEnabled). An empty Layer defaults to Sound routing,
+        // for back-compat with any header that predates Layer.
+        Func<ClientConnection, bool> routingFilter = header.Kind switch
+        {
+            MediaHeaderDto.MediaKindAudio => header.Layer == MediaHeaderDto.LayerMusic
                 ? c => c.MusicEnabled
-                : c => c.SoundEnabled;
+                : c => c.SoundEnabled,
+            MediaHeaderDto.MediaKindVideo => c => c.VideoEnabled,
+            MediaHeaderDto.MediaKindMapFloor => c => c.MapEnabled,
+            _ => c => c.ImageEnabled
+        };
 
         ClientConnection[] clients;
         lock (_gate)
         {
-            clients = routingFilter is null ? _clients.ToArray() : _clients.Where(routingFilter).ToArray();
+            clients = _clients.Where(routingFilter).ToArray();
         }
 
         Log.Information("Sending medium {FileName} ({Kind}, {SizeKb} KB, Loop={Loop}) to {ClientCount} client(s)",
@@ -321,13 +330,34 @@ public sealed class TcpPlayerServerService : IDisposable
 
     public Task PublishMediaClearAsync()
     {
+        string? lastKind;
         lock (_mediaGate)
         {
+            lastKind = _lastMedia?.Header.Kind;
             _lastMedia = null;
         }
 
         Log.Debug("Medium cleared (media.cleared to all clients)");
-        return BroadcastRpcAsync(RpcMethods.MediaCleared, RpcEmptyParams.Instance);
+        return BroadcastRpcAsync(RpcMethods.MediaCleared, RpcEmptyParams.Instance, MediaVisualFilter(lastKind));
+    }
+
+    /// <summary>Clears the currently displayed medium on exactly one client window, regardless of
+    ///     its current Image/Video routing flag - used when the GM turns that routing off for that
+    ///     window, so it doesn't keep showing stale content indefinitely (see
+    ///     SetClientImageEnabled/SetClientVideoEnabled).</summary>
+    public Task PublishMediaClearToClientAsync(string remoteEndpoint)
+    {
+        return BroadcastRpcAsync(RpcMethods.MediaCleared, RpcEmptyParams.Instance,
+            c => c.RemoteEndpoint == remoteEndpoint);
+    }
+
+    /// <summary>Picks the Image or Video per-client routing flag matching a cached medium's Kind -
+    ///     used for RPCs (media.cleared, gallery retract/highlight/slideshow) that apply to
+    ///     "whatever image/video is currently shown/in the gallery" without themselves carrying a
+    ///     Kind. Defaults to ImageEnabled when the kind is unknown/null (the common case).</summary>
+    private static Func<ClientConnection, bool> MediaVisualFilter(string? kind)
+    {
+        return kind == MediaHeaderDto.MediaKindVideo ? c => c.VideoEnabled : c => c.ImageEnabled;
     }
 
     /// <summary>
@@ -418,33 +448,43 @@ public sealed class TcpPlayerServerService : IDisposable
             c => c.RemoteEndpoint == remoteEndpoint);
     }
 
-    /// <summary>Tells exactly one client window its current Music/Sound routing state (see
-    ///     RpcMethods.AudioRoutingChanged) - sent right after handshake and again on every live
-    ///     toggle, so the client can show a "muted by GM" indicator.</summary>
-    public Task PublishAudioRoutingChangedAsync(string remoteEndpoint, bool musicEnabled, bool soundEnabled)
+    /// <summary>Tells exactly one client window its current Music/Sound/Image/Video/Map routing
+    ///     state (see RpcMethods.AudioRoutingChanged - kept its name despite now carrying more
+    ///     flags, to avoid unnecessary wire-protocol churn) - sent right after handshake and again
+    ///     on every live toggle, so the client can show a "muted by GM" indicator.</summary>
+    public Task PublishAudioRoutingChangedAsync(string remoteEndpoint, bool musicEnabled, bool soundEnabled,
+        bool imageEnabled, bool videoEnabled, bool mapEnabled)
     {
         return BroadcastRpcAsync(RpcMethods.AudioRoutingChanged,
-            new AudioRoutingChangedParams { MusicEnabled = musicEnabled, SoundEnabled = soundEnabled },
+            new DataRoutingChangedParams
+            {
+                MusicEnabled = musicEnabled, SoundEnabled = soundEnabled, ImageEnabled = imageEnabled,
+                VideoEnabled = videoEnabled, MapEnabled = mapEnabled
+            },
             c => c.RemoteEndpoint == remoteEndpoint);
     }
 
-    /// <summary>Removes an image/video from the gallery on all clients specifically (by MediaId).</summary>
+    /// <summary>Removes an image/video from the gallery on all clients specifically (by MediaId) -
+    ///     the gallery can mix Images and Videos, so this reaches clients with either enabled
+    ///     rather than a single Kind-specific flag.</summary>
     public Task PublishRetractAsync(string mediaId)
     {
-        return BroadcastRpcAsync(RpcMethods.MediaRetract, new MediaRetractParams { MediaId = mediaId });
+        return BroadcastRpcAsync(RpcMethods.MediaRetract, new MediaRetractParams { MediaId = mediaId },
+            c => c.ImageEnabled || c.VideoEnabled);
     }
 
     /// <summary>GM "highlights": all clients jump (locally, non-blocking) to this gallery item.</summary>
     public Task PublishHighlightAsync(string mediaId)
     {
-        return BroadcastRpcAsync(RpcMethods.MediaHighlight, new MediaHighlightParams { MediaId = mediaId });
+        return BroadcastRpcAsync(RpcMethods.MediaHighlight, new MediaHighlightParams { MediaId = mediaId },
+            c => c.ImageEnabled || c.VideoEnabled);
     }
 
     /// <summary>Sets the automatic advance time per image on all clients (seconds, 0 = manual).</summary>
     public Task PublishSlideshowIntervalAsync(double seconds)
     {
         return BroadcastRpcAsync(RpcMethods.MediaSlideshowInterval,
-            new MediaSlideshowIntervalParams { Seconds = seconds });
+            new MediaSlideshowIntervalParams { Seconds = seconds }, c => c.ImageEnabled || c.VideoEnabled);
     }
 
     /// <summary>
@@ -464,7 +504,7 @@ public sealed class TcpPlayerServerService : IDisposable
         ClientConnection[] clients;
         lock (_gate)
         {
-            clients = _clients.ToArray();
+            clients = _clients.Where(c => c.MapEnabled).ToArray();
         }
 
         Log.Information("Map opened: {MapName} ({FloorCount} floors) to {ClientCount} client(s)",
@@ -497,7 +537,8 @@ public sealed class TcpPlayerServerService : IDisposable
                     floor.CurrentFog.SetRevealed(cell.X, cell.Y, cell.Revealed);
         }
 
-        return BroadcastRpcAsync(RpcMethods.MapFogUpdate, new MapFogUpdateParams { FloorId = floorId, Cells = cells });
+        return BroadcastRpcAsync(RpcMethods.MapFogUpdate, new MapFogUpdateParams { FloorId = floorId, Cells = cells },
+            c => c.MapEnabled);
     }
 
     /// <summary>Resets one floor's live fog back to its starting template on all clients.</summary>
@@ -509,7 +550,8 @@ public sealed class TcpPlayerServerService : IDisposable
             if (floor is not null) floor.CurrentFog = floor.StartingFog.Clone();
         }
 
-        return BroadcastRpcAsync(RpcMethods.MapFogReset, new MapFogResetParams { FloorId = floorId });
+        return BroadcastRpcAsync(RpcMethods.MapFogReset, new MapFogResetParams { FloorId = floorId },
+            c => c.MapEnabled);
     }
 
     /// <summary>Closes the currently open map on all clients; they return to the previous gallery display.</summary>
@@ -521,7 +563,16 @@ public sealed class TcpPlayerServerService : IDisposable
         }
 
         Log.Debug("Map closed (map.hide to all clients)");
-        return BroadcastRpcAsync(RpcMethods.MapHide, RpcEmptyParams.Instance);
+        return BroadcastRpcAsync(RpcMethods.MapHide, RpcEmptyParams.Instance, c => c.MapEnabled);
+    }
+
+    /// <summary>Closes the currently open map on exactly one client window, regardless of its
+    ///     current MapEnabled flag - used when the GM turns Map routing off for that window
+    ///     (see SetClientMapEnabled), so it doesn't keep showing a stale map indefinitely.</summary>
+    public Task PublishMapHideToClientAsync(string remoteEndpoint)
+    {
+        return BroadcastRpcAsync(RpcMethods.MapHide, RpcEmptyParams.Instance,
+            c => c.RemoteEndpoint == remoteEndpoint);
     }
 
     /// <summary>
@@ -537,7 +588,7 @@ public sealed class TcpPlayerServerService : IDisposable
             OpacityPercent = opacityPercent,
             BlurRadius = blurRadius,
             BlurEnabled = blurEnabled
-        });
+        }, c => c.MapEnabled);
     }
 
     private async Task SendMapShowToClientAsync(ClientConnection client, Guid mapId, string mapName,
@@ -744,11 +795,14 @@ public sealed class TcpPlayerServerService : IDisposable
         }
 
         connection.ClientId = hello.ClientId;
-        var audioPreference = ThemeSettingsService.LoadClientAudioPreference(hello.ClientId);
-        if (audioPreference is not null)
+        var routingPreference = ThemeSettingsService.LoadClientRoutingPreference(hello.ClientId);
+        if (routingPreference is not null)
         {
-            connection.MusicEnabled = audioPreference.MusicEnabled;
-            connection.SoundEnabled = audioPreference.SoundEnabled;
+            connection.MusicEnabled = routingPreference.MusicEnabled;
+            connection.SoundEnabled = routingPreference.SoundEnabled;
+            connection.ImageEnabled = routingPreference.ImageEnabled;
+            connection.VideoEnabled = routingPreference.VideoEnabled;
+            connection.MapEnabled = routingPreference.MapEnabled;
         }
 
         connection.IsAccepted = true;
@@ -764,7 +818,7 @@ public sealed class TcpPlayerServerService : IDisposable
         // "muted by GM" indicator is correct from the start rather than only updating on the
         // next live toggle.
         _ = PublishAudioRoutingChangedAsync(connection.RemoteEndpoint, connection.MusicEnabled,
-            connection.SoundEnabled);
+            connection.SoundEnabled, connection.ImageEnabled, connection.VideoEnabled, connection.MapEnabled);
 
         // _snapshotProvider()/sending the medium afterward reads UI-bound data,
         // so post to the UI thread instead of doing it directly from this background loop.
@@ -822,27 +876,33 @@ public sealed class TcpPlayerServerService : IDisposable
 
         Log.Debug("session.snapshot sent to {Client} ({ItemCount} items)", connection, snapshot.Items.Count);
 
+        // Image/video/map catch-up is each gated on its own routing flag (mirroring how
+        // SendCurrentMusicTrackToClientAsync below self-gates on MusicEnabled) - a client whose
+        // persisted routing preference for that kind is off shouldn't receive it here either.
         (MediaHeaderDto Header, byte[] FileBytes)? cachedMedia;
         lock (_mediaGate)
         {
             cachedMedia = _lastMedia;
         }
 
-        if (cachedMedia is not null)
-            await SendMediaToClientAsync(connection, cachedMedia.Value.Header, cachedMedia.Value.FileBytes)
-                .ConfigureAwait(false);
+        if (cachedMedia is { } media &&
+            (media.Header.Kind == MediaHeaderDto.MediaKindVideo ? connection.VideoEnabled : connection.ImageEnabled))
+            await SendMediaToClientAsync(connection, media.Header, media.FileBytes).ConfigureAwait(false);
 
-        OpenMapState? openMap;
-        lock (_mediaGate)
+        if (connection.MapEnabled)
         {
-            openMap = _openMap;
-        }
+            OpenMapState? openMap;
+            lock (_mediaGate)
+            {
+                openMap = _openMap;
+            }
 
-        // Full resync (all floor images + current fog), never an incremental replay - a
-        // reconnecting client must never end up with a fog state that's partially stale.
-        if (openMap is not null)
-            await SendMapShowToClientAsync(connection, openMap.MapId, openMap.MapName, openMap.Floors)
-                .ConfigureAwait(false);
+            // Full resync (all floor images + current fog), never an incremental replay - a
+            // reconnecting client must never end up with a fog state that's partially stale.
+            if (openMap is not null)
+                await SendMapShowToClientAsync(connection, openMap.MapId, openMap.MapName, openMap.Floors)
+                    .ConfigureAwait(false);
+        }
 
         await SendCurrentMusicTrackToClientAsync(connection).ConfigureAwait(false);
     }
@@ -992,7 +1052,7 @@ public sealed class TcpPlayerServerService : IDisposable
     }
 
     /// <summary>Toggles whether this client window receives Music broadcasts (GM per-window
-    ///     routing control) - persisted by ClientId (see ThemeSettingsService.SaveClientAudioPreference)
+    ///     routing control) - persisted by ClientId (see ThemeSettingsService.SaveClientRoutingPreference)
     ///     so it survives a reconnect. Also tells the client live (audio.routingChanged); disabling
     ///     stops whatever it's currently playing (a toggle-off shouldn't wait for the Host's own
     ///     playlist sequencer to naturally advance/end), and re-enabling resumes the currently
@@ -1009,8 +1069,8 @@ public sealed class TcpPlayerServerService : IDisposable
         }
 
         NotifyClientsChanged();
-        ThemeSettingsService.SaveClientAudioPreference(target.ClientId, target.MusicEnabled, target.SoundEnabled);
-        _ = PublishAudioRoutingChangedAsync(remoteEndpoint, target.MusicEnabled, target.SoundEnabled);
+        SaveRoutingPreference(target);
+        _ = PublishRoutingChanged(target);
         if (enabled) _ = SendCurrentMusicTrackToClientAsync(target);
         else _ = PublishMusicStopToClientAsync(remoteEndpoint);
     }
@@ -1033,10 +1093,121 @@ public sealed class TcpPlayerServerService : IDisposable
         }
 
         NotifyClientsChanged();
-        ThemeSettingsService.SaveClientAudioPreference(target.ClientId, target.MusicEnabled, target.SoundEnabled);
-        _ = PublishAudioRoutingChangedAsync(remoteEndpoint, target.MusicEnabled, target.SoundEnabled);
+        SaveRoutingPreference(target);
+        _ = PublishRoutingChanged(target);
         if (enabled) ClientSoundRoutingEnabled?.Invoke(remoteEndpoint);
         else ClientSoundRoutingDisabled?.Invoke(remoteEndpoint);
+    }
+
+    /// <summary>Toggles whether this client window receives Image broadcasts (GM per-window
+    ///     routing control, e.g. for a multi-monitor setup where only one window shows images) -
+    ///     persisted by ClientId so it survives a reconnect. Enabling resends the currently
+    ///     displayed medium to just this client if it's an image; disabling clears it on just this
+    ///     client so it doesn't keep showing stale content.</summary>
+    public void SetClientImageEnabled(string remoteEndpoint, bool enabled)
+    {
+        ClientConnection? target;
+        lock (_gate)
+        {
+            target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
+            if (target is null) return;
+            target.ImageEnabled = enabled;
+        }
+
+        NotifyClientsChanged();
+        SaveRoutingPreference(target);
+        _ = PublishRoutingChanged(target);
+        ResendOrClearCachedMedia(target, remoteEndpoint, enabled, MediaHeaderDto.MediaKindImage);
+    }
+
+    /// <summary>Toggles whether this client window receives Video broadcasts (GM per-window
+    ///     routing control) - persisted by ClientId so it survives a reconnect. Enabling resends
+    ///     the currently displayed medium to just this client if it's a video; disabling clears it
+    ///     on just this client so it doesn't keep showing stale content.</summary>
+    public void SetClientVideoEnabled(string remoteEndpoint, bool enabled)
+    {
+        ClientConnection? target;
+        lock (_gate)
+        {
+            target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
+            if (target is null) return;
+            target.VideoEnabled = enabled;
+        }
+
+        NotifyClientsChanged();
+        SaveRoutingPreference(target);
+        _ = PublishRoutingChanged(target);
+        ResendOrClearCachedMedia(target, remoteEndpoint, enabled, MediaHeaderDto.MediaKindVideo);
+    }
+
+    /// <summary>Toggles whether this client window receives Map broadcasts (GM per-window routing
+    ///     control) - persisted by ClientId so it survives a reconnect. Enabling resends the
+    ///     currently open map to just this client, disabling hides it on just this client so it
+    ///     doesn't keep showing a stale map.</summary>
+    public void SetClientMapEnabled(string remoteEndpoint, bool enabled)
+    {
+        ClientConnection? target;
+        lock (_gate)
+        {
+            target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
+            if (target is null) return;
+            target.MapEnabled = enabled;
+        }
+
+        NotifyClientsChanged();
+        SaveRoutingPreference(target);
+        _ = PublishRoutingChanged(target);
+
+        if (enabled)
+        {
+            OpenMapState? openMap;
+            lock (_mediaGate)
+            {
+                openMap = _openMap;
+            }
+
+            if (openMap is not null)
+                _ = SendMapShowToClientAsync(target, openMap.MapId, openMap.MapName, openMap.Floors);
+        }
+        else
+        {
+            _ = PublishMapHideToClientAsync(remoteEndpoint);
+        }
+    }
+
+    /// <summary>Shared tail of SetClientImageEnabled/SetClientVideoEnabled: resends the cached
+    ///     current medium to this one client if enabling and it matches the given kind, or clears
+    ///     it on this one client if disabling (harmless if nothing of that kind is currently
+    ///     shown).</summary>
+    private void ResendOrClearCachedMedia(ClientConnection target, string remoteEndpoint, bool enabled, string kind)
+    {
+        if (enabled)
+        {
+            (MediaHeaderDto Header, byte[] FileBytes)? cachedMedia;
+            lock (_mediaGate)
+            {
+                cachedMedia = _lastMedia;
+            }
+
+            if (cachedMedia is { } media && media.Header.Kind == kind)
+                _ = PublishMediaToClientAsync(media.Header, media.FileBytes, remoteEndpoint);
+        }
+        else
+        {
+            _ = PublishMediaClearToClientAsync(remoteEndpoint);
+        }
+    }
+
+    private static void SaveRoutingPreference(ClientConnection target)
+    {
+        ThemeSettingsService.SaveClientRoutingPreference(target.ClientId, target.MusicEnabled, target.SoundEnabled,
+            target.ImageEnabled, target.VideoEnabled, target.MapEnabled);
+    }
+
+    private Task PublishRoutingChanged(ClientConnection target)
+    {
+        return PublishAudioRoutingChangedAsync(target.RemoteEndpoint, target.MusicEnabled, target.SoundEnabled,
+            target.ImageEnabled, target.VideoEnabled, target.MapEnabled);
     }
 
     /// <summary>
@@ -1062,7 +1233,8 @@ public sealed class TcpPlayerServerService : IDisposable
         lock (_gate)
         {
             snapshot = _clients
-                .Select(c => new ConnectedClientInfo(c.RemoteEndpoint, c.ConnectedAtUtc, c.MusicEnabled, c.SoundEnabled))
+                .Select(c => new ConnectedClientInfo(c.RemoteEndpoint, c.ConnectedAtUtc, c.MusicEnabled,
+                    c.SoundEnabled, c.ImageEnabled, c.VideoEnabled, c.MapEnabled))
                 .ToList();
         }
 
@@ -1163,6 +1335,16 @@ public sealed class TcpPlayerServerService : IDisposable
         public bool MusicEnabled { get; set; } = true;
 
         public bool SoundEnabled { get; set; } = true;
+
+        /// <summary>Whether this window receives Image/Video/Map broadcasts respectively, set by
+        ///     the GM via SetClientImageEnabled/SetClientVideoEnabled/SetClientMapEnabled -
+        ///     defaults to true for a never-seen ClientId, otherwise restored from
+        ///     ThemeSettingsService.LoadClientRoutingPreference in PerformHandshakeAsync so a
+        ///     reconnecting window keeps its previous routing.</summary>
+        public bool ImageEnabled { get; set; } = true;
+
+        public bool VideoEnabled { get; set; } = true;
+        public bool MapEnabled { get; set; } = true;
 
         /// <summary>Stable per-installation id sent in session.hello (see
         ///     SessionHelloParams.ClientId) - empty until the handshake completes. Used to key

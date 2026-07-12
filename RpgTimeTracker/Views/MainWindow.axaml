@@ -1324,7 +1324,7 @@
                                                                         Margin="0,0,10,10"
                                                                         PointerPressed="OnSoundLibraryItemPointerPressed"
                                                                         ToolTip.Tip="{DynamicResource MainWindow.Sounds.ItemTooltip}">
-                                                                    <StackPanel Spacing="6">
+                                                                    <StackPanel Spacing="10">
                                                                         <Grid ColumnDefinitions="*,Auto,Auto">
                                                                             <PathIcon Grid.Column="0"
                                                                                     Data="{Binding IconGeometry}"
@@ -1593,7 +1593,7 @@
                                                                         Margin="0,0,10,10"
                                                                         PointerPressed="OnMusicLibraryItemPointerPressed"
                                                                         ToolTip.Tip="{DynamicResource MainWindow.Music.ItemTooltip}">
-                                                                    <StackPanel Spacing="6">
+                                                                    <StackPanel Spacing="10">
                                                                         <Grid ColumnDefinitions="*,Auto,Auto">
                                                                             <PathIcon Grid.Column="0"
                                                                                     Data="{Binding IconGeometry}"
@@ -1772,8 +1772,8 @@
                                     <TabItem Header="{DynamicResource MainWindow.Tabs.Maps}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">
-                                            <Grid ColumnDefinitions="*,*" Margin="4,14,13,16">
-                                                <Border Grid.Column="0" Classes="settingsGroup" Margin="0 0 4 0">
+                                            <Grid ColumnDefinitions="350,*" Margin="4,14,13,16">
+                                                <Border Grid.Column="0" Classes="settingsGroup" Margin="0,0,14,14">
                                                     <StackPanel Spacing="10">
                                                         <TextBlock Classes="settingsGroupTitle"
                                                                    Text="{DynamicResource MainWindow.Maps.MapsTitle}" />
@@ -1795,7 +1795,7 @@
                                                                  IsVisible="{Binding !HasNoMaps}">
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:MapItemViewModel">
-                                                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                                                                    <Grid ColumnDefinitions="*,Auto,Auto"
                                                                           Margin="0,2">
                                                                         <TextBox Grid.Column="0"
                                                                                  Text="{Binding Name, Mode=TwoWay}" />
@@ -1803,16 +1803,18 @@
                                                                                    Text="{Binding Floors.Count}"
                                                                                    VerticalAlignment="Center"
                                                                                    Margin="8,0" />
-                                                                        <Button Grid.Column="2"
-                                                                                Content="{DynamicResource MainWindow.Maps.EditButton}"
-                                                                                Click="OnEditMapClick"
-                                                                                IsEnabled="{Binding !HasNoFloors}" />
-                                                                        <Button Grid.Column="3"
-                                                                                Content="{DynamicResource MainWindow.Maps.ExportButton}"
-                                                                                Click="OnExportMapClick" />
-                                                                        <Button Grid.Column="4"
-                                                                                Content="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
-                                                                                Command="{Binding DeleteCommand}" />
+                                                                        <Button Grid.Column="2" Classes="iconsquare"
+                                                                                Content="&#8942;" Width="36" Height="36"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Maps.MoreActionsTooltip}">
+                                                                            <Button.Flyout>
+                                                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                                                    <MenuItem Header="{DynamicResource MainWindow.Maps.ExportButton}"
+                                                                                              Click="OnExportMapClick" />
+                                                                                    <MenuItem Header="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
+                                                                                              Command="{Binding DeleteCommand}" />
+                                                                                </MenuFlyout>
+                                                                            </Button.Flyout>
+                                                                        </Button>
                                                                     </Grid>
                                                                 </DataTemplate>
                                                             </ListBox.ItemTemplate>
@@ -1820,52 +1822,83 @@
                                                     </StackPanel>
                                                 </Border>
 
-                                                <Border Grid.Column="1" Classes="settingsGroup" Margin="4 0 0 0"
+                                                <Border Grid.Column="1" Classes="settingsGroup" Margin="0,0,14,14"
                                                         IsVisible="{Binding SelectedMap, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                    <StackPanel Spacing="10">
-                                                        <TextBlock Classes="settingsGroupTitle"
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Top" Classes="settingsGroupTitle"
+                                                                   Margin="0,0,0,10"
                                                                    Text="{Binding SelectedMap.Name}" />
-                                                        <Button Content="{DynamicResource MainWindow.Maps.AddFloorButton}"
-                                                                Click="OnAddMapFloorClick"
-                                                                HorizontalAlignment="Left" />
-                                                        <TextBlock Classes="muted"
+                                                        <TextBlock DockPanel.Dock="Top" Classes="muted"
+                                                                   Margin="0,0,0,10"
                                                                    Text="{DynamicResource MainWindow.Maps.NoFloorsState}"
                                                                    IsVisible="{Binding SelectedMap.HasNoFloors}"
                                                                    FontStyle="Italic" />
-                                                        <ItemsControl ItemsSource="{Binding SelectedMap.Floors}">
-                                                            <ItemsControl.ItemsPanel>
-                                                                <ItemsPanelTemplate>
-                                                                    <WrapPanel />
-                                                                </ItemsPanelTemplate>
-                                                            </ItemsControl.ItemsPanel>
-                                                            <ItemsControl.ItemTemplate>
+                                                        <!-- Docked to the bottom so the action buttons stay pinned
+                                                             there regardless of how long the floor list grows,
+                                                             instead of just flowing after it. -->
+                                                        <!-- WrapPanel (not a horizontal StackPanel) so these wrap
+                                                             onto more than one line instead of overflowing/squishing
+                                                             the panel when it's resized narrower. -->
+                                                        <WrapPanel DockPanel.Dock="Bottom" Margin="0,10,0,0"
+                                                                   Orientation="Horizontal">
+                                                            <Button Margin="0,0,6,6"
+                                                                    Content="{DynamicResource MainWindow.Maps.AddFloorButton}"
+                                                                    Click="OnAddMapFloorClick" />
+                                                            <Button Margin="0,0,6,6"
+                                                                    Content="{DynamicResource MainWindow.Maps.EditButton}"
+                                                                    Click="OnEditSelectedFloorClick"
+                                                                    IsEnabled="{Binding !IsSelectedMapOpenToPlayers}"
+                                                                    ToolTip.Tip="{DynamicResource MainWindow.Maps.EditDisabledWhileShownTooltip}" />
+                                                            <Button Margin="0,0,6,6"
+                                                                    Content="{DynamicResource MainWindow.Maps.ShowButton}"
+                                                                    Click="OnShowMapClick"
+                                                                    IsEnabled="{Binding CanShowSelectedMap}"
+                                                                    ToolTip.Tip="{DynamicResource MainWindow.Maps.ShowDisabledWhilePreparingTooltip}" />
+                                                            <TextBlock Margin="0,0,6,6"
+                                                                       Text="{DynamicResource MainWindow.Maps.ShownToPlayersLabel}"
+                                                                       VerticalAlignment="Center"
+                                                                       Classes="muted"
+                                                                       IsVisible="{Binding IsSelectedMapOpenToPlayers}" />
+                                                        </WrapPanel>
+                                                        <!-- Floors are layers of the same map, so their order is
+                                                             meaningful - sortable via the up/down buttons below,
+                                                             unlike the map library list itself. -->
+                                                        <ListBox ItemsSource="{Binding SelectedMap.Floors}"
+                                                                 SelectedItem="{Binding EditingFloor, Mode=TwoWay}">
+                                                            <ListBox.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:MapFloorItemViewModel">
-                                                                    <Border Classes="item" Width="140"
-                                                                            Margin="0,0,10,10">
-                                                                        <StackPanel Spacing="4">
-                                                                            <Panel Height="80">
-                                                                                <Image Source="{Binding Thumbnail}"
-                                                                                       Stretch="UniformToFill" />
-                                                                                <!-- Solid placeholder for the fully-hidden
-                                                                                     starting fog - real per-cell fog editing
-                                                                                     comes in a later milestone. -->
-                                                                                <Border Background="#B0000000" />
-                                                                                <TextBlock Text="🌫"
-                                                                                        HorizontalAlignment="Center"
-                                                                                        VerticalAlignment="Center"
-                                                                                        FontSize="22" />
-                                                                            </Panel>
-                                                                            <TextBox Text="{Binding Name, Mode=TwoWay}" />
-                                                                            <Button Content="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
-                                                                                    Command="{Binding DeleteCommand}"
-                                                                                    HorizontalAlignment="Stretch"
-                                                                                    HorizontalContentAlignment="Center" />
-                                                                        </StackPanel>
-                                                                    </Border>
+                                                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                                                                          ColumnSpacing="4" Margin="0,2">
+                                                                        <Image Grid.Column="0"
+                                                                               Source="{Binding Thumbnail}"
+                                                                               Width="32" Height="32"
+                                                                               Stretch="UniformToFill" />
+                                                                        <TextBox Grid.Column="1"
+                                                                                 Text="{Binding Name, Mode=TwoWay}"
+                                                                                 VerticalAlignment="Center" />
+                                                                        <Button Grid.Column="2" Classes="iconsquare"
+                                                                                Content="&#9650;"
+                                                                                Width="22" Height="22"
+                                                                                FontSize="9"
+                                                                                Click="OnMoveFloorUpClick"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Maps.MoveUpTooltip}" />
+                                                                        <Button Grid.Column="3" Classes="iconsquare"
+                                                                                Content="&#9660;"
+                                                                                Width="22" Height="22"
+                                                                                FontSize="9"
+                                                                                Click="OnMoveFloorDownClick"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Maps.MoveDownTooltip}" />
+                                                                        <Button Grid.Column="4" Classes="iconsquare"
+                                                                                Content="&#10005;"
+                                                                                Width="22" Height="22"
+                                                                                FontSize="10"
+                                                                                Command="{Binding DeleteCommand}"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
+                                                                    </Grid>
                                                                 </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </StackPanel>
+                                                            </ListBox.ItemTemplate>
+                                                        </ListBox>
+                                                    </DockPanel>
                                                 </Border>
                                             </Grid>
                                         </ScrollViewer>
@@ -2342,16 +2375,29 @@
                                                                                                 Command="{Binding DisconnectCommand}"
                                                                                                 ToolTip.Tip="{DynamicResource MainWindow.Settings.DisconnectTooltip}" />
                                                                                         </Grid>
-                                                                                        <StackPanel
-                                                                                            Orientation="Horizontal"
-                                                                                            Spacing="10">
+                                                                                        <WrapPanel
+                                                                                            Orientation="Horizontal">
                                                                                             <CheckBox
+                                                                                                Margin="0,0,10,4"
                                                                                                 Content="{DynamicResource MainWindow.Music.RoutingMusicCheckbox}"
                                                                                                 IsChecked="{Binding MusicEnabled}" />
                                                                                             <CheckBox
+                                                                                                Margin="0,0,10,4"
                                                                                                 Content="{DynamicResource MainWindow.Music.RoutingSoundCheckbox}"
                                                                                                 IsChecked="{Binding SoundEnabled}" />
-                                                                                        </StackPanel>
+                                                                                            <CheckBox
+                                                                                                Margin="0,0,10,4"
+                                                                                                Content="{DynamicResource MainWindow.Music.RoutingImageCheckbox}"
+                                                                                                IsChecked="{Binding ImageEnabled}" />
+                                                                                            <CheckBox
+                                                                                                Margin="0,0,10,4"
+                                                                                                Content="{DynamicResource MainWindow.Music.RoutingVideoCheckbox}"
+                                                                                                IsChecked="{Binding VideoEnabled}" />
+                                                                                            <CheckBox
+                                                                                                Margin="0,0,10,4"
+                                                                                                Content="{DynamicResource MainWindow.Music.RoutingMapCheckbox}"
+                                                                                                IsChecked="{Binding MapEnabled}" />
+                                                                                        </WrapPanel>
                                                                                     </StackPanel>
                                                                                 </Border>
                                                                             </DataTemplate>

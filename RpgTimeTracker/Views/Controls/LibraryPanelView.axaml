@@ -5,7 +5,7 @@
 
     <Grid RowSpacing="8" RowDefinitions="auto,*,auto">
 
-        <StackPanel>
+        <StackPanel Grid.Row="0" Spacing="10" >
             <TextBlock Classes="h2" Text="{Binding $parent[controls:LibraryPanelView].Title}" />
             <TextBlock Classes="muted"
                        Text="{Binding $parent[controls:LibraryPanelView].Description}"
