@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using RpgTimeTracker.Shared.Models.Rpc;
@@ -123,7 +124,11 @@ public partial class MapLiveWindow : Window
 
     /// <summary>Sizes/positions the brush-outline Ellipse using the same image-space ↔
     ///     control-space scale math as PaintAt, so the visible ring matches exactly what a stroke
-    ///     there would affect.</summary>
+    ///     there would affect. Positioned via RenderTransform (not Margin): Margin participates in
+    ///     EditorCanvas's own layout measurement, so a large left/top margin near the canvas edges
+    ///     kept growing the Panel itself and made the ScrollViewer's viewport jump around as the
+    ///     cursor approached the right/bottom edge. RenderTransform is a purely visual offset
+    ///     applied after layout, so it can't feed back into the panel's measured size.</summary>
     private void UpdateBrushCursor(Point position)
     {
         if (_floor is null || FloorImageControl.Source is not Bitmap bitmap)
@@ -146,7 +151,7 @@ public partial class MapLiveWindow : Window
         var diameterPx = (2 * radiusCells + 1) * _floor.CellSizePx * scale;
         BrushCursor.Width = diameterPx;
         BrushCursor.Height = diameterPx;
-        BrushCursor.Margin = new Thickness(position.X - diameterPx / 2, position.Y - diameterPx / 2, 0, 0);
+        BrushCursor.RenderTransform = new TranslateTransform(position.X - diameterPx / 2, position.Y - diameterPx / 2);
         BrushCursor.IsVisible = true;
     }
 

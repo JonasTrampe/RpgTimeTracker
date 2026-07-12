@@ -220,6 +220,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   made the brush look "comically large" without the GM changing anything.
   Brush size is now a physical-pixel radius under the hood, so it stays the
   same visual/effective size regardless of a floor's CellSizePx.
+- Moving the brush cursor toward the right/bottom edge of a map editor made
+  the scrollable viewport jump around erratically - the cursor was
+  positioned via Margin, which (unlike a render transform) participates in
+  the canvas's own layout measurement, so a large left/top margin kept
+  growing the canvas itself and fed back into the scroll position.
+  Positioning now uses a RenderTransform, which is purely visual and can't
+  affect layout.
 - Rescaling a fog mask on a CellSizePx change sampled from each new cell's
   top-left corner instead of its center, introducing a systematic
   directional bias that visibly drifted the revealed/hidden boundary after
