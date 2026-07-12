@@ -2260,10 +2260,13 @@
                                                                            Text="{DynamicResource MainWindow.Settings.NetworkDescription}"
                                                                            TextWrapping="Wrap" />
                                                             </StackPanel>
-                                                            <Separator Background="{DynamicResource BorderBrush}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="settingsGroup" Width="520" Margin="0,0,14,14">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="{DynamicResource MainWindow.Settings.ConnectedClientsLabel}" />
                                                             <StackPanel Spacing="4">
-                                                                <TextBlock Classes="muted"
-                                                                           Text="{DynamicResource MainWindow.Settings.ConnectedClientsLabel}" />
                                                                 <TextBlock Classes="muted"
                                                                            Text="{DynamicResource MainWindow.Music.RoutingDescription}"
                                                                            TextWrapping="Wrap" />
