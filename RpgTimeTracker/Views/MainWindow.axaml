@@ -1772,8 +1772,8 @@
                                     <TabItem Header="{DynamicResource MainWindow.Tabs.Maps}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">
-                                            <Grid ColumnDefinitions="300,*" Margin="4,14,13,16">
-                                                <Border Grid.Column="0" Classes="settingsGroup" Width="300" Margin="0,0,14,14">
+                                            <Grid ColumnDefinitions="350,*" Margin="4,14,13,16">
+                                                <Border Grid.Column="0" Classes="settingsGroup" Margin="0,0,14,14">
                                                     <StackPanel Spacing="10">
                                                         <TextBlock Classes="settingsGroupTitle"
                                                                    Text="{DynamicResource MainWindow.Maps.MapsTitle}" />
