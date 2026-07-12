@@ -120,6 +120,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Muting the Host's own local preview ("Host (this window)") had the same
   gap: it only gated whether a *new* track/sound would start locally, so
   anything already playing kept running until it ended naturally.
+- Turning Music back on for a client after muting it left the window
+  silent until the Host's playlist sequencer happened to advance to the
+  next track - re-enabling now resends the currently playing track right
+  away (with the same estimated mid-track seek used for a fresh catch-up).
 - A player connecting (or reconnecting) while a playlist was already
   playing never received the current track - music was deliberately left
   out of the general "catch a new client up" cache, since a Host-driven

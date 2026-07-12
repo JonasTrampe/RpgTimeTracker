@@ -835,24 +835,31 @@ public sealed class TcpPlayerServerService : IDisposable
             await SendMapShowToClientAsync(connection, openMap.MapId, openMap.MapName, openMap.Floors)
                 .ConfigureAwait(false);
 
+        await SendCurrentMusicTrackToClientAsync(connection).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Sends the currently playing music track (if any) to exactly one client, estimating how
+    ///     far into the track playback already is (wall-clock elapsed since it started) so the
+    ///     client can seek there instead of restarting from 0. Used both to catch up a newly
+    ///     connecting client (SendCatchUpAsync) and to resume music for a client whose Music
+    ///     routing was just turned back on (SetClientMusicEnabled) - re-enabling shouldn't require
+    ///     waiting for the Host's sequencer to happen to advance to the next track. Respects the
+    ///     connection's current MusicEnabled flag, so a caller can always call this unconditionally.
+    /// </summary>
+    private async Task SendCurrentMusicTrackToClientAsync(ClientConnection connection)
+    {
         (MediaHeaderDto Header, byte[] FileBytes, DateTime StartedAtUtc)? currentMusicTrack;
         lock (_mediaGate)
         {
             currentMusicTrack = _currentMusicTrack;
         }
 
-        // Catches this client up on a playlist already in progress, estimating how far into the
-        // track playback already is (wall-clock elapsed since it started) so the client can seek
-        // there instead of restarting from 0 - respects its Music routing like any other music
-        // send, so a client with Music turned off stays silent as expected. A shallow copy (not
-        // the shared cached header) carries the seek estimate, so it doesn't leak into the next
-        // catch-up or any already-connected client's state.
-        if (currentMusicTrack is { } music && connection.MusicEnabled)
-        {
-            var elapsedMs = Math.Max(0, (long)(DateTime.UtcNow - music.StartedAtUtc).TotalMilliseconds);
-            var catchUpHeader = CloneMusicHeaderForCatchUp(music.Header, elapsedMs);
-            await SendMediaToClientAsync(connection, catchUpHeader, music.FileBytes).ConfigureAwait(false);
-        }
+        if (currentMusicTrack is not { } music || !connection.MusicEnabled) return;
+
+        var elapsedMs = Math.Max(0, (long)(DateTime.UtcNow - music.StartedAtUtc).TotalMilliseconds);
+        var catchUpHeader = CloneMusicHeaderForCatchUp(music.Header, elapsedMs);
+        await SendMediaToClientAsync(connection, catchUpHeader, music.FileBytes).ConfigureAwait(false);
     }
 
     private static MediaHeaderDto CloneMusicHeaderForCatchUp(MediaHeaderDto header, long seekToMs)
@@ -996,9 +1003,11 @@ public sealed class TcpPlayerServerService : IDisposable
 
     /// <summary>Toggles whether this client window receives Music broadcasts (GM per-window
     ///     routing control) - persisted by ClientId (see ThemeSettingsService.SaveClientAudioPreference)
-    ///     so it survives a reconnect. Also tells the client live (audio.routingChanged) and, when
-    ///     disabling, stops whatever it's currently playing - a toggle-off shouldn't wait for the
-    ///     Host's own playlist sequencer to naturally advance/end.</summary>
+    ///     so it survives a reconnect. Also tells the client live (audio.routingChanged); disabling
+    ///     stops whatever it's currently playing (a toggle-off shouldn't wait for the Host's own
+    ///     playlist sequencer to naturally advance/end), and re-enabling resumes the currently
+    ///     playing track for it (with an estimated seek) rather than leaving it silent until the
+    ///     sequencer happens to advance to the next track.</summary>
     public void SetClientMusicEnabled(string remoteEndpoint, bool enabled)
     {
         ClientConnection? target;
@@ -1012,7 +1021,8 @@ public sealed class TcpPlayerServerService : IDisposable
         NotifyClientsChanged();
         ThemeSettingsService.SaveClientAudioPreference(target.ClientId, target.MusicEnabled, target.SoundEnabled);
         _ = PublishAudioRoutingChangedAsync(remoteEndpoint, target.MusicEnabled, target.SoundEnabled);
-        if (!enabled) _ = PublishMusicStopToClientAsync(remoteEndpoint);
+        if (enabled) _ = SendCurrentMusicTrackToClientAsync(target);
+        else _ = PublishMusicStopToClientAsync(remoteEndpoint);
     }
 
     /// <summary>Toggles whether this client window receives Sound broadcasts (GM per-window
