@@ -1867,17 +1867,21 @@
                                                                                         FontSize="22" />
                                                                             </Panel>
                                                                             <TextBox Text="{Binding Name, Mode=TwoWay}" />
-                                                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                                <Button Content="{DynamicResource MainWindow.Maps.EditButton}"
+                                                                            <StackPanel Orientation="Horizontal" Spacing="4"
+                                                                                        HorizontalAlignment="Center">
+                                                                                <Button Classes="iconsquare"
+                                                                                        Content="&#9998;"
+                                                                                        Width="22" Height="22"
+                                                                                        FontSize="11"
                                                                                         Click="OnEditMapFloorClick"
                                                                                         IsEnabled="{Binding !$parent[TabItem].DataContext.IsSelectedMapOpenToPlayers}"
-                                                                                        ToolTip.Tip="{DynamicResource MainWindow.Maps.EditDisabledWhileShownTooltip}"
-                                                                                        HorizontalAlignment="Stretch"
-                                                                                        HorizontalContentAlignment="Center" />
-                                                                                <Button Content="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
+                                                                                        ToolTip.Tip="{DynamicResource MainWindow.Maps.EditButton}" />
+                                                                                <Button Classes="iconsquare"
+                                                                                        Content="&#10005;"
+                                                                                        Width="22" Height="22"
+                                                                                        FontSize="10"
                                                                                         Command="{Binding DeleteCommand}"
-                                                                                        HorizontalAlignment="Stretch"
-                                                                                        HorizontalContentAlignment="Center" />
+                                                                                        ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
                                                                             </StackPanel>
                                                                         </StackPanel>
                                                                     </Border>

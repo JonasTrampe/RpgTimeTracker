@@ -210,7 +210,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   squished to a few characters) once German button labels were factored
   in - Export and Delete are now collapsed into a single "⋮" overflow menu
   per map (matching the existing Media/Sound library pattern), leaving the
-  name field enough room to actually show a name.
+  name field enough room to actually show a name. The per-floor Edit/Delete
+  buttons in the floor gallery had the same problem - their full German
+  text button labels overflowed the 140px floor tile - now small icon
+  buttons matching the same tile-card pattern used elsewhere.
 - The brush size in both map editors was expressed as a raw cell count, so
   the same brush setting painted a wildly different physical area depending
   on a floor's CellSizePx - switching to a coarser grid (or rescaling one)
