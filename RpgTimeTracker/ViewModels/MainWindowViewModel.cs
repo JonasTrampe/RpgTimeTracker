@@ -1170,8 +1170,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     /// <summary>Resolves a map's effective fog render style: its own per-map override where set,
     ///     falling back to the global Settings-tab values otherwise (see
-    ///     ThemeSettingsService.MapLibraryEntryDto's fog-style fields).</summary>
-    private (string ColorHex, int OpacityPercent, double BlurRadius, bool BlurEnabled) GetEffectiveFogStyle(MapItemViewModel map)
+    ///     ThemeSettingsService.MapLibraryEntryDto's fog-style fields). Public so MapPrepareWindow/
+    ///     MapLiveWindow can render their own local preview with the same effective style used for
+    ///     the real broadcast.</summary>
+    public (string ColorHex, int OpacityPercent, double BlurRadius, bool BlurEnabled) GetEffectiveFogStyle(MapItemViewModel map)
     {
         return (map.FogColorHex ?? FogColorHex,
             map.FogOpacityPercent ?? FogOpacityPercent,

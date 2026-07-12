@@ -184,6 +184,7 @@
 
   "MapEditor.RevealToolButton": "👁 Aufdecken",
   "MapEditor.BrushSizeLabel": "Pinselgröße",
+  "MapEditor.PreviewTitle": "Vorschau (Spieleransicht)",
   "MapEditor.OpenToPlayersButton": "Spielern zeigen",
 
   "MapPrepareWindow.Title": "Vorbereiten - {0}",

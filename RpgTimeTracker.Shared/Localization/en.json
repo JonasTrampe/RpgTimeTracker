@@ -184,6 +184,7 @@
 
   "MapEditor.RevealToolButton": "👁 Reveal",
   "MapEditor.BrushSizeLabel": "Brush size",
+  "MapEditor.PreviewTitle": "Preview (as players see it)",
   "MapEditor.OpenToPlayersButton": "Show to players",
 
   "MapPrepareWindow.Title": "Prepare - {0}",

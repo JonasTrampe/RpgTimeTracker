@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RpgTimeTracker.ViewModels"
+             x:Class="RpgTimeTracker.Views.Controls.MapEditCanvasControl">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10"
+                    VerticalAlignment="Center">
+            <ComboBox Name="FloorSelector" MinWidth="140" SelectionChanged="OnFloorSelectionChanged">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:MapFloorItemViewModel">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <ToggleButton Name="RevealModeToggle"
+                          Content="{DynamicResource MapEditor.RevealToolButton}"
+                          IsChecked="True" />
+
+            <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" VerticalAlignment="Center" />
+            <Slider Name="BrushSizeSlider" Minimum="0" Maximum="40" Value="4" Width="140"
+                    TickFrequency="1" IsSnapToTickEnabled="True" />
+        </StackPanel>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Panel Name="EditorCanvas"
+                   Background="Transparent"
+                   PointerPressed="OnCanvasPointerPressed"
+                   PointerMoved="OnCanvasPointerMoved"
+                   PointerReleased="OnCanvasPointerReleased"
+                   PointerExited="OnCanvasPointerExited">
+                <Image Name="FloorImageControl" Stretch="Uniform" />
+                <Image Name="FogOverlayControl" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
+                <Ellipse Name="BrushCursor"
+                         IsHitTestVisible="False"
+                         IsVisible="False"
+                         Stroke="{DynamicResource AccentBrush}"
+                         StrokeThickness="2"
+                         Fill="Transparent"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Top" />
+            </Panel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

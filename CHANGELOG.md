@@ -116,6 +116,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   specific kind entirely. Each mirrors the existing Music/Sound routing
   pattern independently, including persistence per window and resending/
   clearing currently shown content of that kind on toggle.
+- Both map editors (Edit/Prepare and Show/Live) now have a live preview
+  panel showing the map exactly as players actually see it - the same
+  blurred/tinted fog render used by the real PlayerClient and the Host's
+  own PlayerWindow, not the flat editor tint used for painting precision.
+  The floor selector, brush toolbar, and paintable canvas (previously
+  near-duplicated between the two editor windows) are now a single shared
+  `MapEditCanvasControl`, so the two windows differ only in what they do
+  with a stroke afterward (broadcast vs. debounced file save) and what
+  extra controls they show (Reset/Open-to-players vs. fog style/cell size).
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/
