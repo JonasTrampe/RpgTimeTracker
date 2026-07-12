@@ -236,14 +236,22 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     partial void OnPlayMusicLocallyChanged(bool value)
     {
-        // Mirrors SetClientMusicEnabled(false)'s targeted stop, just for the Host's own preview:
-        // turning this off must stop whatever is already playing locally, not just gate future
-        // tracks - remote clients/other windows are unaffected.
-        if (value) return;
+        // Mirrors SetClientMusicEnabled's targeted stop/resume, just for the Host's own preview:
+        // turning this off must stop whatever is already playing locally (not just gate future
+        // tracks), and turning it back on must resume the current track with an estimated seek
+        // instead of staying silent until the next one - remote clients/other windows unaffected.
+        if (!value)
+        {
+            _localMusicPlayer?.Stop();
+            _localMusicPlayer?.Dispose();
+            _localMusicPlayer = null;
+            return;
+        }
 
-        _localMusicPlayer?.Stop();
-        _localMusicPlayer?.Dispose();
-        _localMusicPlayer = null;
+        if (_currentMusicPlayback is not { } playback) return;
+
+        var elapsedMs = Math.Max(0, (long)(DateTime.UtcNow - playback.StartedAtUtc).TotalMilliseconds);
+        PlayLocalMusicIfNeeded(playback.Header, playback.LocalPath, elapsedMs);
     }
 
     partial void OnPlaySoundLocallyChanged(bool value)
@@ -425,6 +433,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     ///     players hear, gated on IsPlayerWindowOpen (see PlayLocalMusicIfNeeded).
     /// </summary>
     private MediaPlayer? _localMusicPlayer;
+
+    /// <summary>The currently playing track's header/localPath/start time - kept only while a
+    ///     playlist is playing (set in PlayCurrentPlaylistTrackAsync, cleared in
+    ///     StopPlaylistPlayback), so re-enabling PlayMusicLocally can resume the local preview
+    ///     with an estimated seek instead of staying silent until the next track (see
+    ///     OnPlayMusicLocallyChanged) - mirrors TcpPlayerServerService._currentMusicTrack, which
+    ///     does the same thing for remote clients.</summary>
+    private (MediaHeaderDto Header, string LocalPath, DateTime StartedAtUtc)? _currentMusicPlayback;
 
     /// <summary>Ordered playback sequence for CurrentPlaylist - indices into its Tracks list,
     ///     shuffled once per PlayPlaylist call when CurrentPlaylist.Shuffle is set (see
@@ -3159,6 +3175,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         Log.Information("Playlist {PlaylistName} playing track {TrackName} ({Position}/{Count})",
             CurrentPlaylist.Name, track.Name, _playbackPosition + 1, _playbackOrder.Count);
+        _currentMusicPlayback = (header, track.LocalPath, DateTime.UtcNow);
         await _playerServer.PublishMusicTrackAsync(header, bytes);
         PlayLocalMusicIfNeeded(header, track.LocalPath);
         BeginMusicTracking(header, track.LocalPath);
@@ -3195,6 +3212,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _localMusicPlayer?.Stop();
         _localMusicPlayer?.Dispose();
         _localMusicPlayer = null;
+        _currentMusicPlayback = null;
 
         if (IsPlaylistPlaying) _ = _playerServer.PublishMusicStopAsync();
 
@@ -3208,9 +3226,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// <summary>
     ///     Plays the current playlist track locally too, whenever the player window is open -
     ///     same rule as PlayLocalSoundIfNeeded/ShouldShowMediaLocally, so the GM hears exactly
-    ///     what players hear regardless of connected client count.
+    ///     what players hear regardless of connected client count. seekToMs is only non-zero when
+    ///     resuming after PlayMusicLocally was re-enabled mid-track (see OnPlayMusicLocallyChanged) -
+    ///     a fresh track start never needs one.
     /// </summary>
-    private void PlayLocalMusicIfNeeded(MediaHeaderDto header, string localPath)
+    private void PlayLocalMusicIfNeeded(MediaHeaderDto header, string localPath, long seekToMs = 0)
     {
         if (!IsPlayerWindowOpen || !PlayMusicLocally) return;
         if (!VlcMediaService.TryGetLibVlc(out var libVlc) || libVlc is null) return;
@@ -3226,6 +3246,21 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             using var media = new Media(libVlc, localPath);
             player.Play(media);
             player.Volume = Math.Clamp(header.Volume, 0, 100);
+
+            // Estimated resume position (see PlayMusicLocally re-enable) - VLC needs the media to
+            // actually start playing before a seek sticks, hence the one-shot handler instead of
+            // setting player.Time immediately after Play() (same approach as the client's
+            // ClientMainWindowViewModel.PlayMusicTrack/PlaySound for the analogous network case).
+            if (seekToMs > 0)
+            {
+                EventHandler<MediaPlayerTimeChangedEventArgs>? onFirstTimeChanged = null;
+                onFirstTimeChanged = (_, _) =>
+                {
+                    player.TimeChanged -= onFirstTimeChanged;
+                    Dispatcher.UIThread.Post(() => player.Time = seekToMs);
+                };
+                player.TimeChanged += onFirstTimeChanged;
+            }
         }
         catch (Exception ex)
         {

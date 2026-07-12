@@ -134,8 +134,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Same gap for Sound: re-enabling it for a client didn't resend anything
   currently playing, so the window stayed silent until the next brand-new
   sound happened to fire. Re-enabling now resends every currently active
-  sound to that client (each restarting from the beginning, unlike music
-  there's no mid-sound seek estimate).
+  sound to that client, with the same estimated mid-playback seek as music
+  for sounds longer than the configurable threshold.
+- The Host's own local preview had the same gap as connected clients: on
+  re-enabling PlayMusicLocally mid-track, it stayed silent until the next
+  track instead of resuming - it now resumes the current track locally
+  with an estimated seek, matching the network path.
 - A player connecting (or reconnecting) while a playlist was already
   playing never received the current track - music was deliberately left
   out of the general "catch a new client up" cache, since a Host-driven
