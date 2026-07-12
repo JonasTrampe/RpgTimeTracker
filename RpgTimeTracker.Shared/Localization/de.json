@@ -171,6 +171,7 @@
   "MainWindow.Maps.MapsDescription": "Mehrstöckige Karten mit Nebel des Krieges. Karte hier vorbereiten; der Radierer/Stift-Editor und die Live-Aufdeckung für Spieler kommen in einem späteren Update.",
   "MainWindow.Maps.AddMapButton": "+ Karte hinzufügen",
   "MainWindow.Maps.ExportButton": "Exportieren…",
+  "MainWindow.Maps.MoreActionsTooltip": "Weitere Aktionen (Exportieren/Entfernen)",
   "MainWindow.Maps.ImportButton": "Importieren…",
   "MainWindow.Maps.EmptyState": "Noch keine Karten.",
   "MainWindow.Maps.AddFloorButton": "+ Ebene hinzufügen",

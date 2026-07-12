@@ -171,6 +171,7 @@
   "MainWindow.Maps.MapsDescription": "Multi-floor maps with fog of war. Prepare a map here; the eraser/pen editor and live reveal to players come in a later update.",
   "MainWindow.Maps.AddMapButton": "+ Add map",
   "MainWindow.Maps.ExportButton": "Export…",
+  "MainWindow.Maps.MoreActionsTooltip": "More actions (Export/Remove)",
   "MainWindow.Maps.ImportButton": "Import…",
   "MainWindow.Maps.EmptyState": "No maps yet.",
   "MainWindow.Maps.AddFloorButton": "+ Add floor",

@@ -206,6 +206,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   day names or a comma decimal separator, and vice versa.
 - Two remaining hardcoded German UI strings (connected-since label,
   player-header speed label) moved to the localization files.
+- Maps tab's left-hand map list was cramped and hard to read (name field
+  squished to a few characters) once German button labels were factored
+  in - Export and Delete are now collapsed into a single "⋮" overflow menu
+  per map (matching the existing Media/Sound library pattern), leaving the
+  name field enough room to actually show a name.
+- The brush size in both map editors was expressed as a raw cell count, so
+  the same brush setting painted a wildly different physical area depending
+  on a floor's CellSizePx - switching to a coarser grid (or rescaling one)
+  made the brush look "comically large" without the GM changing anything.
+  Brush size is now a physical-pixel radius under the hood, so it stays the
+  same visual/effective size regardless of a floor's CellSizePx.
+- Rescaling a fog mask on a CellSizePx change sampled from each new cell's
+  top-left corner instead of its center, introducing a systematic
+  directional bias that visibly drifted the revealed/hidden boundary after
+  repeated size changes. Rescaling now samples from cell centers, and
+  CellSizePx is restricted to even multiples of 2 so repeated rescales use
+  clean ratios instead of compounding rounding error.
 
 ## [1.0.0] - 2026-07-10
 

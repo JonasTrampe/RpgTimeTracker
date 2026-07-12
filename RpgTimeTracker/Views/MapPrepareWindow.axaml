@@ -65,8 +65,8 @@
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                     <TextBlock Grid.Column="0" Text="{DynamicResource MapPrepareWindow.CellSizeLabel}"
                                VerticalAlignment="Center" />
-                    <NumericUpDown Name="CellSizeUpDown" Grid.Column="1" Minimum="1" Maximum="256"
-                                    Increment="1" HorizontalAlignment="Left" Width="120" />
+                    <NumericUpDown Name="CellSizeUpDown" Grid.Column="1" Minimum="2" Maximum="256"
+                                    Increment="2" HorizontalAlignment="Left" Width="120" />
                     <TextBlock Name="CellSizeWarningLabel" Grid.Column="2" Classes="muted"
                                Text="{DynamicResource MapPrepareWindow.CellSizeWarning}"
                                IsVisible="False"

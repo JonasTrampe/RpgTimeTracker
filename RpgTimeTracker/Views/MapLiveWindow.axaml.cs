@@ -142,12 +142,25 @@ public partial class MapLiveWindow : Window
         var imageSize = bitmap.PixelSize;
         var scale = Math.Min(controlSize.Width / imageSize.Width, controlSize.Height / imageSize.Height);
 
-        var radiusCells = (int)BrushSizeSlider.Value;
+        var radiusCells = GetBrushRadiusCells(_floor);
         var diameterPx = (2 * radiusCells + 1) * _floor.CellSizePx * scale;
         BrushCursor.Width = diameterPx;
         BrushCursor.Height = diameterPx;
         BrushCursor.Margin = new Thickness(position.X - diameterPx / 2, position.Y - diameterPx / 2, 0, 0);
         BrushCursor.IsVisible = true;
+    }
+
+    /// <summary>BrushSizeSlider.Value is a physical brush radius expressed in reference cells at
+    ///     BrushReferenceCellSizePx (the app's default cell size), not a raw cell count - so the
+    ///     brush's on-screen/on-image footprint stays constant when a floor's own CellSizePx is
+    ///     smaller or larger (GM-editable per floor, see MainWindowViewModel.RescaleFloorCellSizeAsync).
+    ///     Without this, the same slider value would paint a much larger or smaller physical area
+    ///     depending on which floor/cell size is currently active.</summary>
+    private const int BrushReferenceCellSizePx = 8;
+
+    private int GetBrushRadiusCells(MapFloorItemViewModel floor)
+    {
+        return Math.Max(0, (int)Math.Round(BrushSizeSlider.Value * BrushReferenceCellSizePx / floor.CellSizePx));
     }
 
     private void PaintAt(Point position)
@@ -170,7 +183,7 @@ public partial class MapLiveWindow : Window
 
         var centerX = (int)(imageX / _floor.CellSizePx);
         var centerY = (int)(imageY / _floor.CellSizePx);
-        var radius = (int)BrushSizeSlider.Value;
+        var radius = GetBrushRadiusCells(_floor);
         var revealed = RevealModeToggle.IsChecked == true;
 
         var fog = _vm.GetLiveFog(_floor);

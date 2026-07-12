@@ -291,7 +291,7 @@ public partial class MainWindow : Window
     private async void OnExportMapClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm ||
-            sender is not Button { DataContext: MapItemViewModel map }) return;
+            sender is not Control { DataContext: MapItemViewModel map }) return;
 
         var topLevel = GetTopLevel(this);
         if (topLevel is null) return;

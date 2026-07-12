@@ -1795,7 +1795,7 @@
                                                                  IsVisible="{Binding !HasNoMaps}">
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:MapItemViewModel">
-                                                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+                                                                    <Grid ColumnDefinitions="*,Auto,Auto"
                                                                           Margin="0,2">
                                                                         <TextBox Grid.Column="0"
                                                                                  Text="{Binding Name, Mode=TwoWay}" />
@@ -1803,12 +1803,18 @@
                                                                                    Text="{Binding Floors.Count}"
                                                                                    VerticalAlignment="Center"
                                                                                    Margin="8,0" />
-                                                                        <Button Grid.Column="2"
-                                                                                Content="{DynamicResource MainWindow.Maps.ExportButton}"
-                                                                                Click="OnExportMapClick" />
-                                                                        <Button Grid.Column="3"
-                                                                                Content="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
-                                                                                Command="{Binding DeleteCommand}" />
+                                                                        <Button Grid.Column="2" Classes="iconsquare"
+                                                                                Content="&#8942;" Width="36" Height="36"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Maps.MoreActionsTooltip}">
+                                                                            <Button.Flyout>
+                                                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                                                    <MenuItem Header="{DynamicResource MainWindow.Maps.ExportButton}"
+                                                                                              Click="OnExportMapClick" />
+                                                                                    <MenuItem Header="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
+                                                                                              Command="{Binding DeleteCommand}" />
+                                                                                </MenuFlyout>
+                                                                            </Button.Flyout>
+                                                                        </Button>
                                                                     </Grid>
                                                                 </DataTemplate>
                                                             </ListBox.ItemTemplate>
