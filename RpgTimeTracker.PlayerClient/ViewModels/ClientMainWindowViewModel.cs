@@ -1058,7 +1058,26 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             using var media = new Media(libVlc, tempPath);
             player.Play(media);
             player.Volume = Math.Clamp(header.Volume, 0, 100);
-            Log.Information("Music track playing: {FileName} ({MediaId})", header.FileName, mediaId);
+
+            // Estimated mid-track catch-up (see MediaHeaderDto.SeekToMs) - joining/reconnecting
+            // mid-playlist starts at roughly the right spot instead of from 0. Not frame-accurate
+            // (based on the Host's wall-clock elapsed-since-start estimate), and VLC needs the
+            // media to actually start playing before a seek sticks, hence the one-shot handler
+            // instead of setting player.Time immediately after Play().
+            if (header.SeekToMs > 0)
+            {
+                var seekToMs = header.SeekToMs;
+                EventHandler<MediaPlayerTimeChangedEventArgs>? onFirstTimeChanged = null;
+                onFirstTimeChanged = (_, _) =>
+                {
+                    player.TimeChanged -= onFirstTimeChanged;
+                    Dispatcher.UIThread.Post(() => player.Time = seekToMs);
+                };
+                player.TimeChanged += onFirstTimeChanged;
+            }
+
+            Log.Information("Music track playing: {FileName} ({MediaId}), seek {SeekToMs}ms", header.FileName,
+                mediaId, header.SeekToMs);
         }
         catch (Exception ex)
         {

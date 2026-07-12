@@ -65,4 +65,13 @@ public sealed class MediaHeaderDto
     ///     themselves part of it). When false, the client deletes the file after display as before.
     /// </summary>
     public bool AddToGallery { get; set; }
+
+    /// <summary>
+    ///     Only relevant for music catch-up (see TcpPlayerServerService._currentMusicTrack): an
+    ///     estimate, in milliseconds, of how far into the track playback already is when a client
+    ///     connects mid-song, so it can seek there instead of restarting the track from 0. Based
+    ///     on wall-clock elapsed time since the track started, not a frame-accurate sync. 0 for a
+    ///     track that's just starting (no seek needed).
+    /// </summary>
+    public long SeekToMs { get; set; }
 }

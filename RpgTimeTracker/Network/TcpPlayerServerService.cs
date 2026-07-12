@@ -105,8 +105,10 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     reconnecting one) gets the currently playing track instead of silence until the Host's
     ///     playlist sequencer happens to advance - unlike _lastMedia (which deliberately excludes
     ///     music), this exists specifically so music DOES catch up new clients, mirroring _openMap.
+    ///     StartedAtUtc is when THIS track began (reset in PublishMusicTrackAsync, not touched by
+    ///     a live volume change) - used to estimate SeekToMs for a client joining mid-track.
     /// </summary>
-    private (MediaHeaderDto Header, byte[] FileBytes)? _currentMusicTrack;
+    private (MediaHeaderDto Header, byte[] FileBytes, DateTime StartedAtUtc)? _currentMusicTrack;
 
     private TcpListener? _listener;
 
@@ -362,7 +364,7 @@ public sealed class TcpPlayerServerService : IDisposable
         header.Kind = MediaHeaderDto.MediaKindMusic;
         lock (_mediaGate)
         {
-            _currentMusicTrack = (header, fileBytes);
+            _currentMusicTrack = (header, fileBytes, DateTime.UtcNow);
         }
 
         return PublishMediaAsync(header, fileBytes);
@@ -833,18 +835,43 @@ public sealed class TcpPlayerServerService : IDisposable
             await SendMapShowToClientAsync(connection, openMap.MapId, openMap.MapName, openMap.Floors)
                 .ConfigureAwait(false);
 
-        (MediaHeaderDto Header, byte[] FileBytes)? currentMusicTrack;
+        (MediaHeaderDto Header, byte[] FileBytes, DateTime StartedAtUtc)? currentMusicTrack;
         lock (_mediaGate)
         {
             currentMusicTrack = _currentMusicTrack;
         }
 
-        // Catches this client up on a playlist already in progress (from the beginning of the
-        // current track, not mid-playback - no seek sync) - respects its Music routing like any
-        // other music send, so a client with Music turned off stays silent as expected.
-        if (currentMusicTrack is not null && connection.MusicEnabled)
-            await SendMediaToClientAsync(connection, currentMusicTrack.Value.Header, currentMusicTrack.Value.FileBytes)
-                .ConfigureAwait(false);
+        // Catches this client up on a playlist already in progress, estimating how far into the
+        // track playback already is (wall-clock elapsed since it started) so the client can seek
+        // there instead of restarting from 0 - respects its Music routing like any other music
+        // send, so a client with Music turned off stays silent as expected. A shallow copy (not
+        // the shared cached header) carries the seek estimate, so it doesn't leak into the next
+        // catch-up or any already-connected client's state.
+        if (currentMusicTrack is { } music && connection.MusicEnabled)
+        {
+            var elapsedMs = Math.Max(0, (long)(DateTime.UtcNow - music.StartedAtUtc).TotalMilliseconds);
+            var catchUpHeader = CloneMusicHeaderForCatchUp(music.Header, elapsedMs);
+            await SendMediaToClientAsync(connection, catchUpHeader, music.FileBytes).ConfigureAwait(false);
+        }
+    }
+
+    private static MediaHeaderDto CloneMusicHeaderForCatchUp(MediaHeaderDto header, long seekToMs)
+    {
+        return new MediaHeaderDto
+        {
+            MediaId = header.MediaId,
+            Kind = header.Kind,
+            FileName = header.FileName,
+            MimeType = header.MimeType,
+            TotalLength = header.TotalLength,
+            Loop = header.Loop,
+            Volume = header.Volume,
+            RepeatCount = header.RepeatCount,
+            TrimStartMs = header.TrimStartMs,
+            TrimEndMs = header.TrimEndMs,
+            AddToGallery = header.AddToGallery,
+            SeekToMs = seekToMs
+        };
     }
 
     private async Task HeartbeatLoopAsync(CancellationToken token)
