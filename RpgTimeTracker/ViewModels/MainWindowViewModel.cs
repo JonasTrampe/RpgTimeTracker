@@ -57,12 +57,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private readonly Dictionary<string, MediaPlayer> _activeLocalSoundPlayers = new();
 
-    /// <summary>Header+bytes of every currently active sound, keyed by MediaId - kept only for as
-    ///     long as the sound is active (added in AddActiveSound, removed in RemoveActiveSound),
-    ///     so a client whose Sound routing is re-enabled can be resent everything currently
-    ///     playing (see ClientSoundRoutingEnabled) instead of staying silent until the next
-    ///     brand-new sound happens to play.</summary>
-    private readonly Dictionary<string, (MediaHeaderDto Header, byte[] FileBytes)> _activeSoundData = new();
+    /// <summary>Header+bytes (+ start time/duration once known) of every currently active sound,
+    ///     keyed by MediaId - kept only for as long as the sound is active (added in
+    ///     AddActiveSound, removed in RemoveActiveSound), so a client whose Sound routing is
+    ///     re-enabled can be resent everything currently playing (see ClientSoundRoutingEnabled)
+    ///     instead of staying silent until the next brand-new sound happens to play. StartedAtUtc/
+    ///     DurationMs feed the estimated mid-playback seek for sounds longer than
+    ///     SoundSeekThresholdMs (see ResendActiveSoundsToClient) - DurationMs is null until the
+    ///     async parse in UpdateActiveSoundDurationAsync resolves.</summary>
+    private readonly Dictionary<string, (MediaHeaderDto Header, byte[] FileBytes, DateTime StartedAtUtc, long?
+        DurationMs)> _activeSoundData = new();
 
     private readonly DispatcherTimer _blinkTimer;
 
@@ -246,6 +250,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         if (!value) StopLocalSoundPreviewOnly();
     }
+
+    /// <summary>Minimum sound duration (ms) worth estimating a mid-playback seek for when
+    ///     resending it to a client whose Sound routing was just re-enabled - see
+    ///     ResendActiveSoundsToClient. Persisted, GM-configurable (Settings tab).</summary>
+    [ObservableProperty] private int _soundSeekThresholdMs = 10_000;
+
+    partial void OnSoundSeekThresholdMsChanged(int value) => SaveUiSettings();
 
     // Free-form time jump, e.g. "08:00:00" forward or "-1.00:00:00" back one day.
     [ObservableProperty] private string _jumpAmountText = "08:00:00";
@@ -483,6 +494,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             : settings.PlayerHeaderSubtitle;
         _headsUpWarningEnabled = settings.HeadsUpWarningEnabled;
         _headsUpLeadMinutes = (decimal)settings.HeadsUpLeadMinutes;
+        _soundSeekThresholdMs = settings.SoundSeekThresholdMs;
         _serverName = string.IsNullOrWhiteSpace(settings.ServerName) ? "RpgTimeTracker" : settings.ServerName;
         _connectionPin = settings.ConnectionPin;
         _autoSaveOnCloseEnabled = settings.AutoSaveOnCloseEnabled;
@@ -2281,6 +2293,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         settings.PlayerHeaderSubtitle = PlayerHeaderSubtitle;
         settings.HeadsUpWarningEnabled = HeadsUpWarningEnabled;
         settings.HeadsUpLeadMinutes = (double)HeadsUpLeadMinutes;
+        settings.SoundSeekThresholdMs = SoundSeekThresholdMs;
         settings.AmbienceAutomationEnabled = AmbienceAutomationEnabled;
         settings.ServerName = string.IsNullOrWhiteSpace(ServerName) ? "RpgTimeTracker" : ServerName;
         settings.ConnectionPin = ConnectionPin;
@@ -2422,6 +2435,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             MediaId = Guid.NewGuid().ToString("N"),
             Kind = kind.ToString(),
+            Layer = MediaHeaderDto.LayerSound,
             FileName = fileName,
             MimeType = mimeType,
             Loop = SendSoundLoop,
@@ -2687,6 +2701,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             MediaId = Guid.NewGuid().ToString("N"),
             Kind = nameof(MediaKind.Audio),
+            Layer = MediaHeaderDto.LayerSound,
             FileName = item.Name,
             MimeType = item.MimeType,
             Loop = item.Loop,
@@ -3135,7 +3150,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         var header = new MediaHeaderDto
         {
             MediaId = Guid.NewGuid().ToString("N"),
-            Kind = MediaHeaderDto.MediaKindMusic,
+            Kind = MediaHeaderDto.MediaKindAudio,
+            Layer = MediaHeaderDto.LayerMusic,
             FileName = track.Name,
             MimeType = track.MimeType,
             Volume = track.Volume
@@ -4238,6 +4254,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             MediaId = Guid.NewGuid().ToString("N"),
             Kind = MediaKind.Audio.ToString(),
+            Layer = MediaHeaderDto.LayerSound,
             FileName = name,
             MimeType = soundItem?.MimeType ?? "audio/*",
             Loop = loop,
@@ -4433,6 +4450,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             // replace a currently shown image/video or cut off its end tracking. Instead
             // bound to this event via _triggerSoundMediaIds, so StopMediaIfTriggeredBy also ends it
             // when the triggering timer/alarm/interval is reset.
+            header.Layer = MediaHeaderDto.LayerSound;
             _triggerSoundMediaIds[config] = header.MediaId;
             await SendSoundAsync(header, bytes, path, false);
         }
@@ -4481,8 +4499,24 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             sourceItem);
 
         ActivePlayingSounds.Add(entry);
-        _activeSoundData[header.MediaId] = (header, bytes);
+        _activeSoundData[header.MediaId] = (header, bytes, DateTime.UtcNow, null);
         OnPropertyChanged(nameof(HasNoActivePlayingSounds));
+
+        _ = UpdateActiveSoundDurationAsync(header.MediaId, localPath);
+    }
+
+    /// <summary>Resolves this sound's duration (async VLC parse, same helper used for the video
+    ///     fallback-timeout estimate) and records it in _activeSoundData - needed to decide
+    ///     whether a resend (re-enabling Sound routing for a client) is worth an estimated seek
+    ///     (see ResendActiveSoundsToClient/SoundSeekThresholdMs). A no-op if the sound already
+    ///     ended (and was removed) before the parse resolves.</summary>
+    private async Task UpdateActiveSoundDurationAsync(string mediaId, string localPath)
+    {
+        var duration = await TryGetMediaDurationAsync(localPath);
+        if (duration is null) return;
+        if (!_activeSoundData.TryGetValue(mediaId, out var data)) return;
+
+        _activeSoundData[mediaId] = (data.Header, data.FileBytes, data.StartedAtUtc, (long)duration.Value.TotalMilliseconds);
     }
 
     /// <summary>
@@ -4558,11 +4592,31 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// <summary>Resends every currently-active sound to exactly one client window (its Sound
     ///     routing was just turned back on) - the mirror image of StopAllSoundsForClient, using
     ///     the header+bytes cached in _activeSoundData since this service doesn't keep the file
-    ///     bytes around after the original send.</summary>
+    ///     bytes around after the original send. Sounds longer than SoundSeekThresholdMs get an
+    ///     estimated mid-playback seek (elapsed wall-clock time since the sound started, wrapped
+    ///     into its own trimmed duration so a looping/repeating sound seeks within its current
+    ///     cycle rather than some multiple of it) - short one-off effects just restart from 0,
+    ///     since seeking into them isn't meaningful and the duration may not even be known yet
+    ///     (see UpdateActiveSoundDurationAsync).</summary>
     private void ResendActiveSoundsToClient(string remoteEndpoint)
     {
-        foreach (var (header, bytes) in _activeSoundData.Values)
-            _ = _playerServer.PublishMediaToClientAsync(header, bytes, remoteEndpoint);
+        var thresholdMs = SoundSeekThresholdMs;
+        foreach (var (header, bytes, startedAtUtc, durationMs) in _activeSoundData.Values)
+        {
+            var toSend = header;
+            if (durationMs is { } duration && duration > thresholdMs)
+            {
+                var effectiveDurationMs = (header.TrimEndMs > 0 ? header.TrimEndMs : duration) - header.TrimStartMs;
+                if (effectiveDurationMs > 0)
+                {
+                    var elapsedMs = Math.Max(0, (long)(DateTime.UtcNow - startedAtUtc).TotalMilliseconds);
+                    var positionMs = header.TrimStartMs + elapsedMs % effectiveDurationMs;
+                    toSend = header.CloneWithSeek(positionMs);
+                }
+            }
+
+            _ = _playerServer.PublishMediaToClientAsync(toSend, bytes, remoteEndpoint);
+        }
     }
 
     /// <summary>Stops the Host's own local sound preview players only (see OnPlaySoundLocallyChanged) -

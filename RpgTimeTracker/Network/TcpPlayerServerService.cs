@@ -281,20 +281,21 @@ public sealed class TcpPlayerServerService : IDisposable
 
         header.TotalLength = fileBytes.Length;
 
-        if (header.Kind != MediaHeaderDto.MediaKindAudio && header.Kind != MediaHeaderDto.MediaKindMusic)
+        if (header.Kind != MediaHeaderDto.MediaKindAudio)
             lock (_mediaGate)
             {
                 _lastMedia = (header, fileBytes);
             }
 
-        // Image/video/map-floor always go to every window; Sound/Music respect the GM's
-        // per-window routing toggles (see SetClientMusicEnabled/SetClientSoundEnabled).
-        Func<ClientConnection, bool>? routingFilter = header.Kind switch
-        {
-            MediaHeaderDto.MediaKindAudio => c => c.SoundEnabled,
-            MediaHeaderDto.MediaKindMusic => c => c.MusicEnabled,
-            _ => null
-        };
+        // Image/video/map-floor always go to every window; Sound/Music (both Kind=MediaKindAudio,
+        // distinguished by Layer - see MediaHeaderDto.LayerMusic/LayerSound) respect the GM's
+        // per-window routing toggles (see SetClientMusicEnabled/SetClientSoundEnabled). An empty
+        // Layer defaults to Sound routing, for back-compat with any header that predates Layer.
+        Func<ClientConnection, bool>? routingFilter = header.Kind != MediaHeaderDto.MediaKindAudio
+            ? null
+            : header.Layer == MediaHeaderDto.LayerMusic
+                ? c => c.MusicEnabled
+                : c => c.SoundEnabled;
 
         ClientConnection[] clients;
         lock (_gate)
@@ -359,16 +360,17 @@ public sealed class TcpPlayerServerService : IDisposable
     }
 
     /// <summary>
-    ///     Distributes a music track (media.begin + chunks, Kind=MediaKindMusic) to Music-enabled
-    ///     client windows - thin wrapper around PublishMediaAsync (which applies the routing
-    ///     filter) kept as its own named method for symmetry with
+    ///     Distributes a music track (media.begin + chunks, Kind=MediaKindAudio, Layer=LayerMusic)
+    ///     to Music-enabled client windows - thin wrapper around PublishMediaAsync (which applies
+    ///     the routing filter) kept as its own named method for symmetry with
     ///     PublishMusicStopAsync/PublishMusicSetVolumeAsync. Also caches the track (see
     ///     _currentMusicTrack) so a client that connects mid-track gets caught up on it too,
     ///     instead of hearing nothing until the Host's sequencer happens to advance.
     /// </summary>
     public Task PublishMusicTrackAsync(MediaHeaderDto header, byte[] fileBytes)
     {
-        header.Kind = MediaHeaderDto.MediaKindMusic;
+        header.Kind = MediaHeaderDto.MediaKindAudio;
+        header.Layer = MediaHeaderDto.LayerMusic;
         lock (_mediaGate)
         {
             _currentMusicTrack = (header, fileBytes, DateTime.UtcNow);
@@ -865,27 +867,8 @@ public sealed class TcpPlayerServerService : IDisposable
         if (currentMusicTrack is not { } music || !connection.MusicEnabled) return;
 
         var elapsedMs = Math.Max(0, (long)(DateTime.UtcNow - music.StartedAtUtc).TotalMilliseconds);
-        var catchUpHeader = CloneMusicHeaderForCatchUp(music.Header, elapsedMs);
+        var catchUpHeader = music.Header.CloneWithSeek(elapsedMs);
         await SendMediaToClientAsync(connection, catchUpHeader, music.FileBytes).ConfigureAwait(false);
-    }
-
-    private static MediaHeaderDto CloneMusicHeaderForCatchUp(MediaHeaderDto header, long seekToMs)
-    {
-        return new MediaHeaderDto
-        {
-            MediaId = header.MediaId,
-            Kind = header.Kind,
-            FileName = header.FileName,
-            MimeType = header.MimeType,
-            TotalLength = header.TotalLength,
-            Loop = header.Loop,
-            Volume = header.Volume,
-            RepeatCount = header.RepeatCount,
-            TrimStartMs = header.TrimStartMs,
-            TrimEndMs = header.TrimEndMs,
-            AddToGallery = header.AddToGallery,
-            SeekToMs = seekToMs
-        };
     }
 
     private async Task HeartbeatLoopAsync(CancellationToken token)

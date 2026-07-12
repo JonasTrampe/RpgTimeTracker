@@ -119,7 +119,7 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action<MapRenderStyleChangedParams>? MapRenderStyleChanged;
 
     /// <summary>
-    ///     A music track finished transferring (see MediaHeaderDto.MediaKindMusic) - kept as its
+    ///     A music track finished transferring (see MediaHeaderDto.LayerMusic) - kept as its
     ///     own event/temp file rather than routed through MediaCompleted, since music plays on
     ///     its own independent channel (a Host-driven playlist sequencer), never touching the
     ///     image/video gallery slot or the sound-effect ActiveSoundViewModel tracking.
@@ -611,7 +611,6 @@ public sealed class PlayerTcpClientService : IDisposable
                 {
                     MediaHeaderDto.MediaKindVideo => ".mp4",
                     MediaHeaderDto.MediaKindAudio => ".mp3",
-                    MediaHeaderDto.MediaKindMusic => ".mp3",
                     _ => ".img"
                 };
 
@@ -626,8 +625,9 @@ public sealed class PlayerTcpClientService : IDisposable
             // Map floor images and music tracks are separate concerns from the gallery/
             // current-medium slot (see MapFloorImageReceived/MusicTrackReceived) - never raise
             // MediaBeginReceived for them, so gallery/event-media handling never has to
-            // special-case either Kind.
-            if (header.Kind != MediaHeaderDto.MediaKindMapFloor && header.Kind != MediaHeaderDto.MediaKindMusic)
+            // special-case either. Music is Kind=MediaKindAudio like Sound (see
+            // MediaHeaderDto.Layer), so this checks Layer rather than Kind for that one.
+            if (header.Kind != MediaHeaderDto.MediaKindMapFloor && header.Layer != MediaHeaderDto.LayerMusic)
                 // For videos, playback can start immediately (VLC tolerates a growing file);
                 // for images, the caller waits for MediaCompleted since a partial image
                 // cannot be decoded.
@@ -664,7 +664,7 @@ public sealed class PlayerTcpClientService : IDisposable
                     if (Guid.TryParse(header.MediaId, out var floorId))
                         MapFloorImageReceived?.Invoke(floorId, path);
                 }
-                else if (header.Kind == MediaHeaderDto.MediaKindMusic)
+                else if (header.Layer == MediaHeaderDto.LayerMusic)
                 {
                     MusicTrackReceived?.Invoke(header, path);
                 }

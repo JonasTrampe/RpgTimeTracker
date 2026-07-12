@@ -43,6 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   so the GM's choice for that window is remembered across reconnects instead
   of resetting to "on" every time; the muted window itself shows a small
   "muted by GM" indicator instead of silently receiving nothing.
+- Resent sounds also get an estimated mid-playback seek: when re-enabling
+  Sound for a client, a sound longer than a configurable threshold (default
+  10 seconds, "Seek threshold for resent sounds" in Settings) is resumed at
+  roughly the position it's already at, wrapped into its own loop/repeat
+  cycle if applicable - matching the estimated seek playlist music already
+  got. Shorter sounds always restart from the beginning, since seeking into
+  a brief one-off effect isn't meaningful.
 - Full session export/import: a "📦 Export session…"/"📦 Import session…"
   pair in Settings > Save & load bundles the game state and the Media,
   Sound, and Map libraries into a single `.rtt-session` file - for a full

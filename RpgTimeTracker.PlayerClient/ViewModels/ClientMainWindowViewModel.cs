@@ -955,6 +955,23 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             VlcMediaService.ApplySoundTrim(media, header.TrimStartMs, header.TrimEndMs);
             player.Play(media);
             player.Volume = Math.Clamp(header.Volume, 0, 100);
+
+            // Estimated mid-playback catch-up (see MediaHeaderDto.SeekToMs) - only sent for
+            // sounds longer than the GM's configured threshold when resending to a client whose
+            // Sound routing was just re-enabled (see MainWindowViewModel.ResendActiveSoundsToClient).
+            // Same one-shot-after-first-TimeChanged approach as PlayMusicTrack: VLC needs the
+            // media to actually start playing before a seek sticks.
+            if (header.SeekToMs > 0)
+            {
+                var seekToMs = header.SeekToMs;
+                EventHandler<MediaPlayerTimeChangedEventArgs>? onFirstTimeChanged = null;
+                onFirstTimeChanged = (_, _) =>
+                {
+                    player.TimeChanged -= onFirstTimeChanged;
+                    Dispatcher.UIThread.Post(() => player.Time = seekToMs);
+                };
+                player.TimeChanged += onFirstTimeChanged;
+            }
         }
         catch (Exception ex)
         {

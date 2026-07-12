@@ -253,6 +253,14 @@ public static class ThemeSettingsService
         public bool AmbienceAutomationEnabled { get; set; }
 
         /// <summary>
+        ///     Minimum sound duration (milliseconds) worth estimating a mid-playback seek for when
+        ///     resending it to a client whose Sound routing was just re-enabled (see
+        ///     MainWindowViewModel.ResendActiveSoundsToClient) - a short one-off effect isn't worth
+        ///     seeking into, so it's just resent from the start below this threshold.
+        /// </summary>
+        public int SoundSeekThresholdMs { get; set; } = 10_000;
+
+        /// <summary>
         ///     Display name transmitted in the LAN/mDNS announcement, so that multiple servers on the same
         ///     network are distinguishable in the client's server list (see
         ///     PlayerMdnsAnnouncer/LanDiscoveryResponder).

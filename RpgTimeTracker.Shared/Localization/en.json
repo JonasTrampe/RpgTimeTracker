@@ -226,6 +226,8 @@
   "MainWindow.Settings.NetworkDescription": "Starts TCP + mDNS/LAN discovery only when needed. Server name takes effect on the next server start.",
   "MainWindow.Settings.ConnectedClientsLabel": "Connected clients",
   "MainWindow.Settings.NoConnectedClients": "No clients connected.",
+  "MainWindow.Settings.SoundSeekThresholdLabel": "Seek threshold for resent sounds (ms)",
+  "MainWindow.Settings.SoundSeekThresholdTooltip": "When re-enabling Sound for a client, a sound longer than this is resent seeked to roughly where it already is instead of restarting from the beginning. Shorter sounds always restart from 0.",
   "MainWindow.Settings.DisconnectButton": "Disconnect",
   "MainWindow.Settings.DisconnectTooltip": "Disconnect this client from the server",
   "MainWindow.Settings.ConnectedSince": "since {0}",
