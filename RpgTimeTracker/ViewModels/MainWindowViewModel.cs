@@ -444,6 +444,23 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 musicEntry.Path, musicEntry.MimeType, musicEntry.Volume));
         }
 
+        foreach (var playlistEntry in settings.Playlists)
+        {
+            var playlist = new PlaylistViewModel(playlistEntry.Id, playlistEntry.Name,
+                playlistEntry.LoopPlaylist, playlistEntry.Shuffle, RemovePlaylist, _ => SavePlaylistsSettings());
+            foreach (var trackId in playlistEntry.TrackIds)
+            {
+                // A track deleted from the Music Library after being added to this playlist is
+                // silently dropped here rather than kept as a dangling reference - the next save
+                // then persists the playlist without it (see RemoveMusicLibraryItem, which does
+                // the same cleanup immediately for playlists already loaded in this session).
+                var track = MusicLibrary.FirstOrDefault(m => m.Id == trackId);
+                if (track is not null) playlist.LoadTrack(track);
+            }
+
+            Playlists.Add(playlist);
+        }
+
         foreach (var mapEntry in settings.MapLibrary)
         {
             var map = new MapItemViewModel(mapEntry.Id, mapEntry.Name, RemoveMap, _ => SaveMapLibrarySettings());
@@ -701,6 +718,61 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     public ObservableCollection<MusicLibraryItemViewModel> MusicLibrary { get; } = [];
 
     public bool HasNoMusicLibraryItems => MusicLibrary.Count == 0;
+
+    // ==================== Playlists (ordered references into the Music Library) ====================
+
+    public ObservableCollection<PlaylistViewModel> Playlists { get; } = [];
+
+    public bool HasNoPlaylists => Playlists.Count == 0;
+
+    [ObservableProperty] private PlaylistViewModel? _selectedPlaylist;
+
+    /// <summary>Library track chosen in the Music tab's "add to playlist" picker, not yet added.</summary>
+    [ObservableProperty] private MusicLibraryItemViewModel? _playlistTrackToAdd;
+
+    [RelayCommand]
+    private void AddPlaylist()
+    {
+        var playlist = new PlaylistViewModel(Guid.NewGuid(),
+            LocalizationService.Get("MainWindowViewModel.Defaults.NewPlaylistName"), true, false,
+            RemovePlaylist, _ => SavePlaylistsSettings());
+        Playlists.Add(playlist);
+        OnPropertyChanged(nameof(HasNoPlaylists));
+        SelectedPlaylist = playlist;
+        SavePlaylistsSettings();
+    }
+
+    private void RemovePlaylist(PlaylistViewModel playlist)
+    {
+        Playlists.Remove(playlist);
+        OnPropertyChanged(nameof(HasNoPlaylists));
+        if (SelectedPlaylist == playlist) SelectedPlaylist = null;
+        SavePlaylistsSettings();
+    }
+
+    /// <summary>Adds PlaylistTrackToAdd to SelectedPlaylist - the Music tab's "Add" button calls this.</summary>
+    [RelayCommand]
+    private void AddSelectedTrackToSelectedPlaylist()
+    {
+        if (SelectedPlaylist is null || PlaylistTrackToAdd is null) return;
+
+        SelectedPlaylist.AddTrack(PlaylistTrackToAdd);
+        PlaylistTrackToAdd = null;
+    }
+
+    private void SavePlaylistsSettings()
+    {
+        var settings = ThemeSettingsService.LoadSettings();
+        settings.Playlists = Playlists.Select(p => new ThemeSettingsService.PlaylistEntryDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            TrackIds = p.Tracks.Select(t => t.Track.Id).ToList(),
+            LoopPlaylist = p.LoopPlaylist,
+            Shuffle = p.Shuffle
+        }).ToList();
+        ThemeSettingsService.SaveSettings(settings);
+    }
 
     // ==================== Map library (fog-of-war maps, multiple floors each) ====================
 
@@ -2800,6 +2872,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         MusicLibrary.Remove(item);
         OnPropertyChanged(nameof(HasNoMusicLibraryItems));
         DeleteFileQuietly(item.LocalPath);
+        foreach (var playlist in Playlists) playlist.RemoveTracksReferencing(item);
         SaveMusicLibrarySettings();
         Log.Information("Music track removed from library: {Name}", item.Name);
     }

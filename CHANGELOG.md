@@ -15,9 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   referenced by a planned Scenes feature, so it needs to stay independent
   of one-off sound effects rather than sharing their list. This first pass
   covers the library itself (add/rename/set icon+volume/delete/export/
-  import, single-click local preview); playlists, network playback to
-  players, and per-window (Host/Client) routing controls are follow-up
-  milestones.
+  import, single-click local preview); network playback to players and
+  per-window (Host/Client) routing controls are follow-up milestones.
+- Playlists: create/rename/delete named playlists, add tracks from the
+  Music Library, reorder or remove them, and toggle "loop playlist" /
+  "shuffle" per playlist. Purely local editing for now - actually playing
+  a playlist to connected players is a follow-up milestone.
 - Full session export/import: a "📦 Export session…"/"📦 Import session…"
   pair in Settings > Save & load bundles the game state and the Media,
   Sound, and Map libraries into a single `.rtt-session` file - for a full
