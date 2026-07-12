@@ -252,17 +252,19 @@ public partial class MainWindow : Window
 
     private MapLiveWindow? _openMapLiveWindow;
 
-    private void OnEditMapFloorClick(object? sender, RoutedEventArgs e)
+    private void OnEditSelectedFloorClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map ||
-            sender is not Button { DataContext: MapFloorItemViewModel floor }) return;
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map || map.Floors.Count == 0) return;
+
+        // Extracted from the per-floor tile to a single top-level button, so it needs an explicit
+        // floor to act on - default to the first floor if none is selected in the list yet.
+        if (vm.EditingFloor is null || !map.Floors.Contains(vm.EditingFloor)) vm.EditingFloor = map.Floors[0];
 
         // A map currently shown to players must not also be edited (Prepare) - see
         // MainWindowViewModel.NotifyMapPrepareWindowOpened/IsSelectedMapOpenToPlayers. The Edit
         // button is already disabled for this case; this is defense-in-depth.
         if (vm.IsMapOpenToPlayers && ReferenceEquals(vm.OpenMap, map)) return;
 
-        vm.EditingFloor = floor;
         var editor = new MapPrepareWindow(vm, map);
         editor.Show(this);
     }
