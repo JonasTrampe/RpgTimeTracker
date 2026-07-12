@@ -103,13 +103,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   when left unset. Cell size is now GM-editable per floor (with a warning
   for very small values) from the Edit window; changing it rescales the
   existing mask instead of corrupting it, and new floors inherit a
-  per-map default cell size rather than a single global constant.
-- Per-client Image/Video/Map routing: the Connected Clients list gets a
-  third "Visuals" toggle next to Music/Sound, so a multi-monitor GM setup
-  can dedicate one window to maps/images while excluding another (e.g. a
-  tablet) entirely - mirroring the existing Music/Sound routing exactly,
-  including persistence per window and resending/clearing currently shown
-  content on toggle.
+  per-map default cell size rather than a single global constant. Editing
+  (the "Edit" window) and showing (the "Show" window) a map are now
+  mutually exclusive: the Show button is disabled while a floor is being
+  edited, and the Edit button is disabled while that map is shown to
+  players, so a cell-size rescale can never happen while the mask is
+  actively being streamed.
+- Per-client Image/Video/Map routing: the Connected Clients list gets three
+  separate toggles - "Images", "Videos", and "Maps" - next to Music/Sound,
+  so a multi-monitor GM setup can dedicate one window to maps while
+  another only shows images, or exclude a window (e.g. a tablet) from a
+  specific kind entirely. Each mirrors the existing Music/Sound routing
+  pattern independently, including persistence per window and resending/
+  clearing currently shown content of that kind on toggle.
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/

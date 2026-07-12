@@ -1826,7 +1826,8 @@
                                                                     Click="OnAddMapFloorClick" />
                                                             <Button Content="{DynamicResource MainWindow.Maps.ShowButton}"
                                                                     Click="OnShowMapClick"
-                                                                    IsEnabled="{Binding !SelectedMap.HasNoFloors}" />
+                                                                    IsEnabled="{Binding CanShowSelectedMap}"
+                                                                    ToolTip.Tip="{DynamicResource MainWindow.Maps.ShowDisabledWhilePreparingTooltip}" />
                                                             <TextBlock Text="{DynamicResource MainWindow.Maps.ShownToPlayersLabel}"
                                                                        VerticalAlignment="Center"
                                                                        Classes="muted"
@@ -1863,6 +1864,8 @@
                                                                             <StackPanel Orientation="Horizontal" Spacing="4">
                                                                                 <Button Content="{DynamicResource MainWindow.Maps.EditButton}"
                                                                                         Click="OnEditMapFloorClick"
+                                                                                        IsEnabled="{Binding !$parent[TabItem].DataContext.IsSelectedMapOpenToPlayers}"
+                                                                                        ToolTip.Tip="{DynamicResource MainWindow.Maps.EditDisabledWhileShownTooltip}"
                                                                                         HorizontalAlignment="Stretch"
                                                                                         HorizontalContentAlignment="Center" />
                                                                                 <Button Content="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
@@ -2352,19 +2355,29 @@
                                                                                                 Command="{Binding DisconnectCommand}"
                                                                                                 ToolTip.Tip="{DynamicResource MainWindow.Settings.DisconnectTooltip}" />
                                                                                         </Grid>
-                                                                                        <StackPanel
-                                                                                            Orientation="Horizontal"
-                                                                                            Spacing="10">
+                                                                                        <WrapPanel
+                                                                                            Orientation="Horizontal">
                                                                                             <CheckBox
+                                                                                                Margin="0,0,10,4"
                                                                                                 Content="{DynamicResource MainWindow.Music.RoutingMusicCheckbox}"
                                                                                                 IsChecked="{Binding MusicEnabled}" />
                                                                                             <CheckBox
+                                                                                                Margin="0,0,10,4"
                                                                                                 Content="{DynamicResource MainWindow.Music.RoutingSoundCheckbox}"
                                                                                                 IsChecked="{Binding SoundEnabled}" />
                                                                                             <CheckBox
-                                                                                                Content="{DynamicResource MainWindow.Music.RoutingVisualCheckbox}"
-                                                                                                IsChecked="{Binding VisualEnabled}" />
-                                                                                        </StackPanel>
+                                                                                                Margin="0,0,10,4"
+                                                                                                Content="{DynamicResource MainWindow.Music.RoutingImageCheckbox}"
+                                                                                                IsChecked="{Binding ImageEnabled}" />
+                                                                                            <CheckBox
+                                                                                                Margin="0,0,10,4"
+                                                                                                Content="{DynamicResource MainWindow.Music.RoutingVideoCheckbox}"
+                                                                                                IsChecked="{Binding VideoEnabled}" />
+                                                                                            <CheckBox
+                                                                                                Margin="0,0,10,4"
+                                                                                                Content="{DynamicResource MainWindow.Music.RoutingMapCheckbox}"
+                                                                                                IsChecked="{Binding MapEnabled}" />
+                                                                                        </WrapPanel>
                                                                                     </StackPanel>
                                                                                 </Border>
                                                                             </DataTemplate>

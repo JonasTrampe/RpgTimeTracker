@@ -79,14 +79,16 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _isDiscovering;
 
-    /// <summary>Whether the GM has turned Music/Sound/Visual routing off for this window (see
-    ///     RpcMethods.AudioRoutingChanged) - purely informational, shown as a small indicator so
-    ///     the player understands why they hear/see nothing instead of assuming something is
+    /// <summary>Whether the GM has turned Music/Sound/Image/Video/Map routing off for this window
+    ///     (see RpcMethods.AudioRoutingChanged) - purely informational, shown as a small indicator
+    ///     so the player understands why they hear/see nothing instead of assuming something is
     ///     broken.</summary>
     [ObservableProperty] private bool _isMusicMuted;
 
     [ObservableProperty] private bool _isSoundMuted;
-    [ObservableProperty] private bool _isVisualMuted;
+    [ObservableProperty] private bool _isImageMuted;
+    [ObservableProperty] private bool _isVideoMuted;
+    [ObservableProperty] private bool _isMapMuted;
 
     private bool _isShowingEventMedia;
     [ObservableProperty] private string? _mediaErrorMessage;
@@ -159,12 +161,15 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MusicTrackReceived += (header, path) => Dispatcher.UIThread.Post(() => PlayMusicTrack(path, header));
         _client.MusicStopRequested += () => Dispatcher.UIThread.Post(StopMusic);
         _client.MusicVolumeChangeRequested += volume => Dispatcher.UIThread.Post(() => ApplyMusicVolume(volume));
-        _client.AudioRoutingChanged += (musicEnabled, soundEnabled, visualEnabled) => Dispatcher.UIThread.Post(() =>
-        {
-            IsMusicMuted = !musicEnabled;
-            IsSoundMuted = !soundEnabled;
-            IsVisualMuted = !visualEnabled;
-        });
+        _client.AudioRoutingChanged += (musicEnabled, soundEnabled, imageEnabled, videoEnabled, mapEnabled) =>
+            Dispatcher.UIThread.Post(() =>
+            {
+                IsMusicMuted = !musicEnabled;
+                IsSoundMuted = !soundEnabled;
+                IsImageMuted = !imageEnabled;
+                IsVideoMuted = !videoEnabled;
+                IsMapMuted = !mapEnabled;
+            });
         _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
         _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
@@ -184,7 +189,9 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
                 StopMusic();
                 IsMusicMuted = false;
                 IsSoundMuted = false;
-                IsVisualMuted = false;
+                IsImageMuted = false;
+                IsVideoMuted = false;
+                IsMapMuted = false;
                 ClearGallery();
                 _calendarEntries.Clear();
                 PlayerCalendarDays.Clear();

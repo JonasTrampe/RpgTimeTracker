@@ -257,6 +257,11 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map ||
             sender is not Button { DataContext: MapFloorItemViewModel floor }) return;
 
+        // A map currently shown to players must not also be edited (Prepare) - see
+        // MainWindowViewModel.NotifyMapPrepareWindowOpened/IsSelectedMapOpenToPlayers. The Edit
+        // button is already disabled for this case; this is defense-in-depth.
+        if (vm.IsMapOpenToPlayers && ReferenceEquals(vm.OpenMap, map)) return;
+
         vm.EditingFloor = floor;
         var editor = new MapPrepareWindow(vm, map);
         editor.Show(this);
@@ -265,6 +270,11 @@ public partial class MainWindow : Window
     private void OnShowMapClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map) return;
+
+        // A map currently being prepared must not also be streamed - see
+        // MainWindowViewModel.IsSelectedMapBeingPrepared. The Show button is already disabled for
+        // this case; this is defense-in-depth.
+        if (vm.IsSelectedMapBeingPrepared) return;
 
         if (_openMapLiveWindow is not null)
         {

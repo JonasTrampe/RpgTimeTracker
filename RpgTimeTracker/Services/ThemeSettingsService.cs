@@ -111,8 +111,8 @@ public static class ThemeSettingsService
         SaveSettings(settings);
     }
 
-    /// <summary>Looks up a remembered Music/Sound/Visual routing preference by ClientId - returns
-    ///     null if this client has never been seen before (caller should then default to
+    /// <summary>Looks up a remembered Music/Sound/Image/Video/Map routing preference by ClientId -
+    ///     returns null if this client has never been seen before (caller should then default to
     ///     enabled).</summary>
     public static ClientRoutingPreferenceDto? LoadClientRoutingPreference(string clientId)
     {
@@ -120,11 +120,12 @@ public static class ThemeSettingsService
         return LoadSettings().ClientAudioPreferences.Find(p => p.ClientId == clientId);
     }
 
-    /// <summary>Upserts this client's Music/Sound/Visual routing preference (see
-    ///     TcpPlayerServerService.SetClientMusicEnabled/SetClientSoundEnabled/SetClientVisualEnabled) -
-    ///     a no-op if clientId is empty (an older client build that doesn't send one yet).</summary>
+    /// <summary>Upserts this client's Music/Sound/Image/Video/Map routing preference (see
+    ///     TcpPlayerServerService.SetClientMusicEnabled/SetClientSoundEnabled/SetClientImageEnabled/
+    ///     SetClientVideoEnabled/SetClientMapEnabled) - a no-op if clientId is empty (an older
+    ///     client build that doesn't send one yet).</summary>
     public static void SaveClientRoutingPreference(string clientId, bool musicEnabled, bool soundEnabled,
-        bool visualEnabled)
+        bool imageEnabled, bool videoEnabled, bool mapEnabled)
     {
         if (string.IsNullOrEmpty(clientId)) return;
 
@@ -134,14 +135,16 @@ public static class ThemeSettingsService
         {
             existing.MusicEnabled = musicEnabled;
             existing.SoundEnabled = soundEnabled;
-            existing.VisualEnabled = visualEnabled;
+            existing.ImageEnabled = imageEnabled;
+            existing.VideoEnabled = videoEnabled;
+            existing.MapEnabled = mapEnabled;
         }
         else
         {
             settings.ClientAudioPreferences.Add(new ClientRoutingPreferenceDto
             {
                 ClientId = clientId, MusicEnabled = musicEnabled, SoundEnabled = soundEnabled,
-                VisualEnabled = visualEnabled
+                ImageEnabled = imageEnabled, VideoEnabled = videoEnabled, MapEnabled = mapEnabled
             });
         }
 
@@ -251,8 +254,8 @@ public static class ThemeSettingsService
         public int DefaultCellSizePx { get; set; } = 8;
     }
 
-    /// <summary>Remembered Music/Sound/Visual routing preference for one player window, keyed by
-    ///     its stable ClientId (see SessionHelloParams.ClientId) rather than its ephemeral
+    /// <summary>Remembered Music/Sound/Image/Video/Map routing preference for one player window,
+    ///     keyed by its stable ClientId (see SessionHelloParams.ClientId) rather than its ephemeral
     ///     RemoteEndpoint - so a reconnecting window gets its previous routing back instead of
     ///     resetting to enabled every time (see TcpPlayerServerService.PerformHandshakeAsync).</summary>
     public sealed class ClientRoutingPreferenceDto
@@ -260,7 +263,9 @@ public static class ThemeSettingsService
         public string ClientId { get; set; } = string.Empty;
         public bool MusicEnabled { get; set; } = true;
         public bool SoundEnabled { get; set; } = true;
-        public bool VisualEnabled { get; set; } = true;
+        public bool ImageEnabled { get; set; } = true;
+        public bool VideoEnabled { get; set; } = true;
+        public bool MapEnabled { get; set; } = true;
     }
 
     public sealed class ThemeSettingsDto

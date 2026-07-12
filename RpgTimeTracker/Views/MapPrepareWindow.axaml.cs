@@ -52,6 +52,7 @@ public partial class MapPrepareWindow : Window
         LoadFloor(FloorSelector.SelectedItem as MapFloorItemViewModel);
         UpdateOpenStatusLabel();
         _vm.PropertyChanged += OnVmPropertyChanged;
+        _vm.NotifyMapPrepareWindowOpened(map.Id);
 
         BrushSizeSlider.PropertyChanged += (_, e) =>
         {
@@ -288,6 +289,7 @@ public partial class MapPrepareWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _vm.PropertyChanged -= OnVmPropertyChanged;
+        _vm.NotifyMapPrepareWindowClosed(_map.Id);
         _flushTimer.Stop();
         _ = FlushPendingAsync();
         base.OnClosed(e);

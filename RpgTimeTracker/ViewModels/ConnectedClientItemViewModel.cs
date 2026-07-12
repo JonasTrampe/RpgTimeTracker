@@ -7,31 +7,40 @@ using RpgTimeTracker.Shared.Services.Localization;
 namespace RpgTimeTracker.ViewModels;
 
 /// <summary>A connected player client in the GM-side list, with the ability to manually
-///     disconnect it and to route whether this window's Music/Sound broadcasts are on
-///     (see TcpPlayerServerService.SetClientMusicEnabled/SetClientSoundEnabled).</summary>
+///     disconnect it and to route whether this window's Music/Sound/Image/Video/Map broadcasts
+///     are on (see TcpPlayerServerService.SetClientMusicEnabled/SetClientSoundEnabled/
+///     SetClientImageEnabled/SetClientVideoEnabled/SetClientMapEnabled).</summary>
 public partial class ConnectedClientItemViewModel : ObservableObject
 {
     private readonly Action<ConnectedClientItemViewModel> _onDisconnectRequested;
     private readonly Action<ConnectedClientItemViewModel, bool> _onMusicEnabledChanged;
     private readonly Action<ConnectedClientItemViewModel, bool> _onSoundEnabledChanged;
-    private readonly Action<ConnectedClientItemViewModel, bool> _onVisualEnabledChanged;
+    private readonly Action<ConnectedClientItemViewModel, bool> _onImageEnabledChanged;
+    private readonly Action<ConnectedClientItemViewModel, bool> _onVideoEnabledChanged;
+    private readonly Action<ConnectedClientItemViewModel, bool> _onMapEnabledChanged;
     private readonly string _connectedSinceTime;
 
     public ConnectedClientItemViewModel(ConnectedClientInfo info,
         Action<ConnectedClientItemViewModel> onDisconnectRequested,
         Action<ConnectedClientItemViewModel, bool> onMusicEnabledChanged,
         Action<ConnectedClientItemViewModel, bool> onSoundEnabledChanged,
-        Action<ConnectedClientItemViewModel, bool> onVisualEnabledChanged)
+        Action<ConnectedClientItemViewModel, bool> onImageEnabledChanged,
+        Action<ConnectedClientItemViewModel, bool> onVideoEnabledChanged,
+        Action<ConnectedClientItemViewModel, bool> onMapEnabledChanged)
     {
         RemoteEndpoint = info.RemoteEndpoint;
         _connectedSinceTime = info.ConnectedAtUtc.ToLocalTime().ToString("HH:mm:ss");
         _onDisconnectRequested = onDisconnectRequested;
         _onMusicEnabledChanged = onMusicEnabledChanged;
         _onSoundEnabledChanged = onSoundEnabledChanged;
-        _onVisualEnabledChanged = onVisualEnabledChanged;
+        _onImageEnabledChanged = onImageEnabledChanged;
+        _onVideoEnabledChanged = onVideoEnabledChanged;
+        _onMapEnabledChanged = onMapEnabledChanged;
         _musicEnabled = info.MusicEnabled;
         _soundEnabled = info.SoundEnabled;
-        _visualEnabled = info.VisualEnabled;
+        _imageEnabled = info.ImageEnabled;
+        _videoEnabled = info.VideoEnabled;
+        _mapEnabled = info.MapEnabled;
     }
 
     public string RemoteEndpoint { get; }
@@ -40,13 +49,21 @@ public partial class ConnectedClientItemViewModel : ObservableObject
 
     [ObservableProperty] private bool _soundEnabled;
 
-    [ObservableProperty] private bool _visualEnabled;
+    [ObservableProperty] private bool _imageEnabled;
+
+    [ObservableProperty] private bool _videoEnabled;
+
+    [ObservableProperty] private bool _mapEnabled;
 
     partial void OnMusicEnabledChanged(bool value) => _onMusicEnabledChanged(this, value);
 
     partial void OnSoundEnabledChanged(bool value) => _onSoundEnabledChanged(this, value);
 
-    partial void OnVisualEnabledChanged(bool value) => _onVisualEnabledChanged(this, value);
+    partial void OnImageEnabledChanged(bool value) => _onImageEnabledChanged(this, value);
+
+    partial void OnVideoEnabledChanged(bool value) => _onVideoEnabledChanged(this, value);
+
+    partial void OnMapEnabledChanged(bool value) => _onMapEnabledChanged(this, value);
 
     public string ConnectedSinceDisplay =>
         string.Format(LocalizationService.Get("MainWindow.Settings.ConnectedSince"), _connectedSinceTime);

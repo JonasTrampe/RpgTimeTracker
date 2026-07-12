@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -1083,6 +1084,33 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     ///     drives the "Shown to players" indicator next to the Maps tab's "Show" button.</summary>
     public bool IsSelectedMapOpenToPlayers => IsMapOpenToPlayers && ReferenceEquals(OpenMap, SelectedMap);
 
+    /// <summary>Maps that currently have at least one MapPrepareWindow open (see
+    ///     NotifyMapPrepareWindowOpened/Closed) - while a map is being prepared, it must not be
+    ///     streamable (see IsSelectedMapBeingPrepared/OpenMapToPlayersAsync), so editing the
+    ///     prepare mask (including a CellSizePx rescale) can never coincide with an active
+    ///     broadcast of that same mask.</summary>
+    private readonly HashSet<Guid> _mapsBeingPrepared = [];
+
+    public bool IsSelectedMapBeingPrepared => SelectedMap is not null && _mapsBeingPrepared.Contains(SelectedMap.Id);
+
+    /// <summary>Whether the Maps tab's "Show" button should be enabled for SelectedMap - has
+    ///     floors, and isn't currently being prepared (see IsSelectedMapBeingPrepared).</summary>
+    public bool CanShowSelectedMap => SelectedMap is { HasNoFloors: false } && !IsSelectedMapBeingPrepared;
+
+    public void NotifyMapPrepareWindowOpened(Guid mapId)
+    {
+        _mapsBeingPrepared.Add(mapId);
+        OnPropertyChanged(nameof(IsSelectedMapBeingPrepared));
+        OnPropertyChanged(nameof(CanShowSelectedMap));
+    }
+
+    public void NotifyMapPrepareWindowClosed(Guid mapId)
+    {
+        _mapsBeingPrepared.Remove(mapId);
+        OnPropertyChanged(nameof(IsSelectedMapBeingPrepared));
+        OnPropertyChanged(nameof(CanShowSelectedMap));
+    }
+
     partial void OnOpenMapChanged(MapItemViewModel? value)
     {
         OnPropertyChanged(nameof(IsSelectedMapOpenToPlayers));
@@ -1093,9 +1121,24 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         OnPropertyChanged(nameof(IsSelectedMapOpenToPlayers));
     }
 
+    private MapItemViewModel? _selectedMapForFloorsWatch;
+
     partial void OnSelectedMapChanged(MapItemViewModel? value)
     {
         OnPropertyChanged(nameof(IsSelectedMapOpenToPlayers));
+        OnPropertyChanged(nameof(IsSelectedMapBeingPrepared));
+        OnPropertyChanged(nameof(CanShowSelectedMap));
+
+        if (_selectedMapForFloorsWatch is not null)
+            _selectedMapForFloorsWatch.PropertyChanged -= OnSelectedMapPropertyChangedForCanShow;
+        _selectedMapForFloorsWatch = value;
+        if (_selectedMapForFloorsWatch is not null)
+            _selectedMapForFloorsWatch.PropertyChanged += OnSelectedMapPropertyChangedForCanShow;
+    }
+
+    private void OnSelectedMapPropertyChangedForCanShow(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MapItemViewModel.HasNoFloors)) OnPropertyChanged(nameof(CanShowSelectedMap));
     }
 
     private readonly Dictionary<Guid, FogMask> _liveFog = new();
@@ -1267,6 +1310,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [RelayCommand]
     private async Task OpenMapToPlayersAsync(MapItemViewModel map)
     {
+        // A map currently being prepared (MapPrepareWindow open) must never also be streamed -
+        // editing (including a CellSizePx rescale) and an active broadcast of the same mask must
+        // never coincide. The Maps tab's "Show" button is already disabled for this case; this is
+        // defense-in-depth against the command being invoked another way.
+        if (_mapsBeingPrepared.Contains(map.Id)) return;
+
         var floors = new List<TcpPlayerServerService.OpenMapFloor>();
         var displayFloors = new List<MapDisplayFloor>();
         foreach (var floor in map.Floors)
@@ -4989,7 +5038,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         ConnectedClientItems.Clear();
         foreach (var info in clients)
             ConnectedClientItems.Add(new ConnectedClientItemViewModel(info, DisconnectClientRequested,
-                OnClientMusicEnabledChanged, OnClientSoundEnabledChanged, OnClientVisualEnabledChanged));
+                OnClientMusicEnabledChanged, OnClientSoundEnabledChanged, OnClientImageEnabledChanged,
+                OnClientVideoEnabledChanged, OnClientMapEnabledChanged));
         OnPropertyChanged(nameof(HasNoConnectedClients));
     }
 
@@ -5008,9 +5058,19 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _playerServer.SetClientSoundEnabled(item.RemoteEndpoint, enabled);
     }
 
-    private void OnClientVisualEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
+    private void OnClientImageEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
     {
-        _playerServer.SetClientVisualEnabled(item.RemoteEndpoint, enabled);
+        _playerServer.SetClientImageEnabled(item.RemoteEndpoint, enabled);
+    }
+
+    private void OnClientVideoEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
+    {
+        _playerServer.SetClientVideoEnabled(item.RemoteEndpoint, enabled);
+    }
+
+    private void OnClientMapEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
+    {
+        _playerServer.SetClientMapEnabled(item.RemoteEndpoint, enabled);
     }
 
     private void ResolvePendingVideo(string mediaId)
