@@ -5,6 +5,7 @@ obj/
 .vscode/
 .idea/
 publish/
+.build-scratch/
 
 # Lokale Claude-Code-Einstellungen (Maschinen-/Nutzer-spezifisch, kein Projektzustand).
 .claude/settings.local.json
