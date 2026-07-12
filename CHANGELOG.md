@@ -120,6 +120,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Muting the Host's own local preview ("Host (this window)") had the same
   gap: it only gated whether a *new* track/sound would start locally, so
   anything already playing kept running until it ended naturally.
+- A player connecting (or reconnecting) while a playlist was already
+  playing never received the current track - music was deliberately left
+  out of the general "catch a new client up" cache, since a Host-driven
+  sequencer was assumed to make that unnecessary, but nothing actually
+  caught the new client up on the track already in progress. The Host now
+  remembers the currently playing track and sends it to any client that
+  connects mid-playback (respecting that client's Music routing).
 - Fog-of-war maps: the fog mask only affected a small corner of the
   floor image instead of the whole thing - the mask brush needed an
   explicit source/destination rect to stretch across the image; Stretch

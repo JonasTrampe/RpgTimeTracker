@@ -100,6 +100,14 @@ public sealed class TcpPlayerServerService : IDisposable
     /// </summary>
     private OpenMapState? _openMap;
 
+    /// <summary>
+    ///     The music track currently playing (if any), cached so a newly-connecting client (or a
+    ///     reconnecting one) gets the currently playing track instead of silence until the Host's
+    ///     playlist sequencer happens to advance - unlike _lastMedia (which deliberately excludes
+    ///     music), this exists specifically so music DOES catch up new clients, mirroring _openMap.
+    /// </summary>
+    private (MediaHeaderDto Header, byte[] FileBytes)? _currentMusicTrack;
+
     private TcpListener? _listener;
 
     public TcpPlayerServerService(Func<SessionSnapshotParams> snapshotProvider,
@@ -345,23 +353,43 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     Distributes a music track (media.begin + chunks, Kind=MediaKindMusic) to Music-enabled
     ///     client windows - thin wrapper around PublishMediaAsync (which applies the routing
     ///     filter) kept as its own named method for symmetry with
-    ///     PublishMusicStopAsync/PublishMusicSetVolumeAsync.
+    ///     PublishMusicStopAsync/PublishMusicSetVolumeAsync. Also caches the track (see
+    ///     _currentMusicTrack) so a client that connects mid-track gets caught up on it too,
+    ///     instead of hearing nothing until the Host's sequencer happens to advance.
     /// </summary>
     public Task PublishMusicTrackAsync(MediaHeaderDto header, byte[] fileBytes)
     {
         header.Kind = MediaHeaderDto.MediaKindMusic;
+        lock (_mediaGate)
+        {
+            _currentMusicTrack = (header, fileBytes);
+        }
+
         return PublishMediaAsync(header, fileBytes);
     }
 
     /// <summary>Stops the currently playing music track/playlist on Music-enabled client windows.</summary>
     public Task PublishMusicStopAsync()
     {
+        lock (_mediaGate)
+        {
+            _currentMusicTrack = null;
+        }
+
         return BroadcastRpcAsync(RpcMethods.MusicStop, RpcEmptyParams.Instance, c => c.MusicEnabled);
     }
 
-    /// <summary>Adjusts the volume of the currently playing music track live on Music-enabled client windows (0-100).</summary>
+    /// <summary>Adjusts the volume of the currently playing music track live on Music-enabled client windows (0-100).
+    ///     Also updates the cached _currentMusicTrack header (a reference type, mutated in place)
+    ///     so a client that connects afterward gets caught up at the current volume, not the
+    ///     track's original one.</summary>
     public Task PublishMusicSetVolumeAsync(int volume)
     {
+        lock (_mediaGate)
+        {
+            if (_currentMusicTrack is { } current) current.Header.Volume = volume;
+        }
+
         return BroadcastRpcAsync(RpcMethods.MusicSetVolume, new MusicSetVolumeParams { Volume = volume },
             c => c.MusicEnabled);
     }
@@ -804,6 +832,19 @@ public sealed class TcpPlayerServerService : IDisposable
         if (openMap is not null)
             await SendMapShowToClientAsync(connection, openMap.MapId, openMap.MapName, openMap.Floors)
                 .ConfigureAwait(false);
+
+        (MediaHeaderDto Header, byte[] FileBytes)? currentMusicTrack;
+        lock (_mediaGate)
+        {
+            currentMusicTrack = _currentMusicTrack;
+        }
+
+        // Catches this client up on a playlist already in progress (from the beginning of the
+        // current track, not mid-playback - no seek sync) - respects its Music routing like any
+        // other music send, so a client with Music turned off stays silent as expected.
+        if (currentMusicTrack is not null && connection.MusicEnabled)
+            await SendMediaToClientAsync(connection, currentMusicTrack.Value.Header, currentMusicTrack.Value.FileBytes)
+                .ConfigureAwait(false);
     }
 
     private async Task HeartbeatLoopAsync(CancellationToken token)
@@ -1036,6 +1077,7 @@ public sealed class TcpPlayerServerService : IDisposable
         lock (_mediaGate)
         {
             _lastMedia = null;
+            _currentMusicTrack = null;
         }
 
         _cts?.Dispose();
