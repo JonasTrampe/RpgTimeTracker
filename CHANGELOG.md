@@ -125,6 +125,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `MapEditCanvasControl`, so the two windows differ only in what they do
   with a stroke afterward (broadcast vs. debounced file save) and what
   extra controls they show (Reset/Open-to-players vs. fog style/cell size).
+- Both map editors can now zoom in/out (25%-400%, "−"/"+"/"Fit" buttons or
+  Ctrl+scroll wheel over the canvas), useful for precise brush placement on
+  large maps - previously the map always scaled to fit the window with no
+  way to work at a larger effective resolution. A newly opened floor starts
+  fit-to-window as before; zooming keeps whatever point was centered in
+  view centered afterward instead of jumping to a corner.
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/

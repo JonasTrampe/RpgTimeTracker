@@ -456,7 +456,7 @@ public sealed class TcpPlayerServerService : IDisposable
         bool imageEnabled, bool videoEnabled, bool mapEnabled)
     {
         return BroadcastRpcAsync(RpcMethods.AudioRoutingChanged,
-            new AudioRoutingChangedParams
+            new DataRoutingChangedParams
             {
                 MusicEnabled = musicEnabled, SoundEnabled = soundEnabled, ImageEnabled = imageEnabled,
                 VideoEnabled = videoEnabled, MapEnabled = mapEnabled

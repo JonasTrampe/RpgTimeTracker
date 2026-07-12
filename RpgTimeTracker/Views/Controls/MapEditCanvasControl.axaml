@@ -20,15 +20,23 @@
             <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" VerticalAlignment="Center" />
             <Slider Name="BrushSizeSlider" Minimum="0" Maximum="40" Value="4" Width="140"
                     TickFrequency="1" IsSnapToTickEnabled="True" />
+
+            <Button Classes="iconsquare" Content="&#8722;" Width="24" Height="24" FontSize="14"
+                    Click="OnZoomOutClick" ToolTip.Tip="{DynamicResource MapEditor.ZoomOutTooltip}" />
+            <TextBlock Name="ZoomLabel" VerticalAlignment="Center" Width="42" TextAlignment="Center" />
+            <Button Classes="iconsquare" Content="&#43;" Width="24" Height="24" FontSize="14"
+                    Click="OnZoomInClick" ToolTip.Tip="{DynamicResource MapEditor.ZoomInTooltip}" />
+            <Button Content="{DynamicResource MapEditor.ZoomFitButton}" Click="OnZoomFitClick" />
         </StackPanel>
 
-        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Name="ScrollHost" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <Panel Name="EditorCanvas"
                    Background="Transparent"
                    PointerPressed="OnCanvasPointerPressed"
                    PointerMoved="OnCanvasPointerMoved"
                    PointerReleased="OnCanvasPointerReleased"
-                   PointerExited="OnCanvasPointerExited">
+                   PointerExited="OnCanvasPointerExited"
+                   PointerWheelChanged="OnCanvasPointerWheelChanged">
                 <Image Name="FloorImageControl" Stretch="Uniform" />
                 <Image Name="FogOverlayControl" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
                 <Ellipse Name="BrushCursor"

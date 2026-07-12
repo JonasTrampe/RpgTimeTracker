@@ -579,7 +579,7 @@ public sealed class PlayerTcpClientService : IDisposable
                     if (musicVolume is not null) MusicVolumeChangeRequested?.Invoke(musicVolume.Volume);
                     break;
                 case RpcMethods.AudioRoutingChanged:
-                    var routing = raw.GetParams<AudioRoutingChangedParams>();
+                    var routing = raw.GetParams<DataRoutingChangedParams>();
                     if (routing is not null)
                         AudioRoutingChanged?.Invoke(routing.MusicEnabled, routing.SoundEnabled,
                             routing.ImageEnabled, routing.VideoEnabled, routing.MapEnabled);

@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using RpgTimeTracker.Shared.Models;
@@ -15,12 +16,12 @@ using RpgTimeTracker.ViewModels;
 namespace RpgTimeTracker.Views.Controls;
 
 /// <summary>
-///     Shared floor-selector + reveal/brush toolbar + paintable canvas, extracted from
+///     Shared floor-selector + reveal/brush/zoom toolbar + paintable canvas, extracted from
 ///     MapLiveWindow/MapPrepareWindow (which were otherwise near-identical): both windows differ
 ///     only in which FogMask a stroke writes into (live vs. prepare), the overlay tint, and what
 ///     happens with painted cells afterward (broadcast+dirty-flag vs. debounced-save) - all of
 ///     which stay in the owning window. This control owns floor selection, brush sizing/cursor,
-///     and the pointer-to-image-space paint math only.
+///     zoom, and the pointer-to-image-space paint math only.
 /// </summary>
 public partial class MapEditCanvasControl : UserControl
 {
@@ -31,11 +32,26 @@ public partial class MapEditCanvasControl : UserControl
     ///     larger or smaller physical area depending on which floor/cell size is currently active.</summary>
     private const int BrushReferenceCellSizePx = 8;
 
+    private const double ZoomMin = 0.25;
+    private const double ZoomMax = 4.0;
+    private const double ZoomStep = 0.25;
+
     private Func<MapFloorItemViewModel, FogMask>? _getFog;
     private Color _hiddenColor = FogOverlayRenderer.EditorHiddenColor;
     private MapFloorItemViewModel? _floor;
     private bool _isPainting;
     private Point? _lastPointerPosition;
+
+    /// <summary>Image-pixels-to-screen-pixels scale currently in effect - EditorCanvas is given
+    ///     this exact explicit size (imageSize * _zoom), so unlike before there's no separate
+    ///     "letterboxing" offset to account for in the paint/cursor math: the Panel's bounds
+    ///     always match the image exactly.</summary>
+    private double _zoom = 1.0;
+
+    /// <summary>Whether zoom should keep auto-fitting the viewport (the original Stretch="Uniform"
+    ///     behavior) - true until the GM manually zooms in/out, at which point it stays fixed even
+    ///     if the window is resized, matching how a real image editor's explicit zoom behaves.</summary>
+    private bool _zoomIsFit = true;
 
     public MapEditCanvasControl()
     {
@@ -45,6 +61,11 @@ public partial class MapEditCanvasControl : UserControl
         {
             if (e.Property == RangeBase.ValueProperty && _lastPointerPosition is { } position)
                 UpdateBrushCursor(position);
+        };
+
+        ScrollHost.SizeChanged += (_, _) =>
+        {
+            if (_zoomIsFit) ApplyZoom(ComputeFitZoom(), keepFit: true);
         };
     }
 
@@ -107,7 +128,81 @@ public partial class MapEditCanvasControl : UserControl
         using (var stream = File.OpenRead(floor.ImagePath))
             FloorImageControl.Source = new Bitmap(stream);
         RefreshOverlay();
+        // A newly loaded floor always starts fit-to-window, same as the old Stretch="Uniform"
+        // default - the GM can then zoom in explicitly if they want to.
+        _zoomIsFit = true;
+        ApplyZoom(ComputeFitZoom(), keepFit: true);
         FloorChanged?.Invoke(floor);
+    }
+
+    private double ComputeFitZoom()
+    {
+        if (FloorImageControl.Source is not Bitmap bitmap) return 1.0;
+
+        var viewport = ScrollHost.Viewport;
+        if (viewport.Width <= 0 || viewport.Height <= 0) return _zoom;
+
+        var imageSize = bitmap.PixelSize;
+        return Math.Min(viewport.Width / imageSize.Width, viewport.Height / imageSize.Height);
+    }
+
+    /// <summary>Applies a new zoom factor, resizing EditorCanvas to imageSize * zoom and keeping
+    ///     the point currently centered in the viewport centered afterward too, so zooming in/out
+    ///     doesn't visually jump to the top-left corner.</summary>
+    private void ApplyZoom(double zoom, bool keepFit)
+    {
+        if (FloorImageControl.Source is not Bitmap bitmap) return;
+
+        zoom = Math.Clamp(zoom, ZoomMin, ZoomMax);
+        _zoomIsFit = keepFit;
+
+        var viewport = ScrollHost.Viewport;
+        var oldOffset = ScrollHost.Offset;
+        var imageCenterX = (oldOffset.X + viewport.Width / 2) / _zoom;
+        var imageCenterY = (oldOffset.Y + viewport.Height / 2) / _zoom;
+
+        _zoom = zoom;
+        var imageSize = bitmap.PixelSize;
+        EditorCanvas.Width = imageSize.Width * _zoom;
+        EditorCanvas.Height = imageSize.Height * _zoom;
+
+        ScrollHost.Offset = new Vector(
+            imageCenterX * _zoom - viewport.Width / 2,
+            imageCenterY * _zoom - viewport.Height / 2);
+
+        UpdateZoomLabel();
+        if (_lastPointerPosition is { } position) UpdateBrushCursor(position);
+    }
+
+    private void UpdateZoomLabel()
+    {
+        ZoomLabel.Text = $"{_zoom * 100:0}%";
+    }
+
+    private void OnZoomInClick(object? sender, RoutedEventArgs e)
+    {
+        ApplyZoom(_zoom + ZoomStep, keepFit: false);
+    }
+
+    private void OnZoomOutClick(object? sender, RoutedEventArgs e)
+    {
+        ApplyZoom(_zoom - ZoomStep, keepFit: false);
+    }
+
+    private void OnZoomFitClick(object? sender, RoutedEventArgs e)
+    {
+        ApplyZoom(ComputeFitZoom(), keepFit: true);
+    }
+
+    /// <summary>Ctrl+wheel zooms (in ZoomStep increments); a plain wheel is left unhandled so the
+    ///     ScrollViewer keeps scrolling normally, matching the Ctrl+scroll-to-zoom convention used
+    ///     by most image/map editors.</summary>
+    private void OnCanvasPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Control)) return;
+
+        ApplyZoom(_zoom + (e.Delta.Y > 0 ? ZoomStep : -ZoomStep), keepFit: false);
+        e.Handled = true;
     }
 
     private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -141,32 +236,23 @@ public partial class MapEditCanvasControl : UserControl
     }
 
     /// <summary>Sizes/positions the brush-outline Ellipse using the same image-space ↔
-    ///     control-space scale math as PaintAt, so the visible ring matches exactly what a stroke
-    ///     there would affect. Positioned via RenderTransform (not Margin): Margin participates in
-    ///     EditorCanvas's own layout measurement, so a large left/top margin near the canvas edges
-    ///     kept growing the Panel itself and made the ScrollViewer's viewport jump around as the
-    ///     cursor approached the right/bottom edge. RenderTransform is a purely visual offset
-    ///     applied after layout, so it can't feed back into the panel's measured size.</summary>
+    ///     control-space scale (_zoom) as PaintAt, so the visible ring matches exactly what a
+    ///     stroke there would affect. Positioned via RenderTransform (not Margin): Margin
+    ///     participates in EditorCanvas's own layout measurement, so a large left/top margin near
+    ///     the canvas edges kept growing the Panel itself and made the ScrollViewer's viewport jump
+    ///     around as the cursor approached the right/bottom edge. RenderTransform is a purely
+    ///     visual offset applied after layout, so it can't feed back into the panel's measured
+    ///     size.</summary>
     private void UpdateBrushCursor(Point position)
     {
-        if (_floor is null || FloorImageControl.Source is not Bitmap bitmap)
+        if (_floor is null || FloorImageControl.Source is null)
         {
             BrushCursor.IsVisible = false;
             return;
         }
-
-        var controlSize = EditorCanvas.Bounds.Size;
-        if (controlSize.Width <= 0 || controlSize.Height <= 0)
-        {
-            BrushCursor.IsVisible = false;
-            return;
-        }
-
-        var imageSize = bitmap.PixelSize;
-        var scale = Math.Min(controlSize.Width / imageSize.Width, controlSize.Height / imageSize.Height);
 
         var radiusCells = GetBrushRadiusCells(_floor);
-        var diameterPx = (2 * radiusCells + 1) * _floor.CellSizePx * scale;
+        var diameterPx = (2 * radiusCells + 1) * _floor.CellSizePx * _zoom;
         BrushCursor.Width = diameterPx;
         BrushCursor.Height = diameterPx;
         BrushCursor.RenderTransform = new TranslateTransform(position.X - diameterPx / 2, position.Y - diameterPx / 2);
@@ -182,18 +268,9 @@ public partial class MapEditCanvasControl : UserControl
     {
         if (_floor is null || _getFog is null || FloorImageControl.Source is not Bitmap bitmap) return;
 
-        var controlSize = EditorCanvas.Bounds.Size;
-        if (controlSize.Width <= 0 || controlSize.Height <= 0) return;
-
         var imageSize = bitmap.PixelSize;
-        var scale = Math.Min(controlSize.Width / imageSize.Width, controlSize.Height / imageSize.Height);
-        var displayedWidth = imageSize.Width * scale;
-        var displayedHeight = imageSize.Height * scale;
-        var offsetX = (controlSize.Width - displayedWidth) / 2;
-        var offsetY = (controlSize.Height - displayedHeight) / 2;
-
-        var imageX = (position.X - offsetX) / scale;
-        var imageY = (position.Y - offsetY) / scale;
+        var imageX = position.X / _zoom;
+        var imageY = position.Y / _zoom;
         if (imageX < 0 || imageY < 0 || imageX >= imageSize.Width || imageY >= imageSize.Height) return;
 
         var centerX = (int)(imageX / _floor.CellSizePx);
