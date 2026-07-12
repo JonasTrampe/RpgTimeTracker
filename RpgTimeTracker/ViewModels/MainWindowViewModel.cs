@@ -56,6 +56,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     // but only on the GM side in the "currently playing sounds" panel (ActivePlayingSounds).
 
     private readonly Dictionary<string, MediaPlayer> _activeLocalSoundPlayers = new();
+
+    /// <summary>Header+bytes of every currently active sound, keyed by MediaId - kept only for as
+    ///     long as the sound is active (added in AddActiveSound, removed in RemoveActiveSound),
+    ///     so a client whose Sound routing is re-enabled can be resent everything currently
+    ///     playing (see ClientSoundRoutingEnabled) instead of staying silent until the next
+    ///     brand-new sound happens to play.</summary>
+    private readonly Dictionary<string, (MediaHeaderDto Header, byte[] FileBytes)> _activeSoundData = new();
+
     private readonly DispatcherTimer _blinkTimer;
 
     private readonly GameClockService _clock;
@@ -447,6 +455,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         // sound on that one client" rather than leaving them running until they end on their own.
         _playerServer.ClientSoundRoutingDisabled +=
             remoteEndpoint => Dispatcher.UIThread.Post(() => StopAllSoundsForClient(remoteEndpoint));
+        // Mirror image: re-enabling shouldn't leave the client silent until the next brand-new
+        // sound happens to play - resend everything currently active to just that client.
+        _playerServer.ClientSoundRoutingEnabled +=
+            remoteEndpoint => Dispatcher.UIThread.Post(() => ResendActiveSoundsToClient(remoteEndpoint));
 
         _blinkTimer = new DispatcherTimer
         {
@@ -4447,10 +4459,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         await _playerServer.PublishMediaAsync(header, bytes);
         PlayLocalSoundIfNeeded(header, localPath, deleteLocalAfterPlayback);
-        AddActiveSound(header, localPath);
+        AddActiveSound(header, bytes, localPath);
     }
 
-    private void AddActiveSound(MediaHeaderDto header, string localPath)
+    private void AddActiveSound(MediaHeaderDto header, byte[] bytes, string localPath)
     {
         var sourceItem = FindSoundLibraryItemByPath(localPath);
         var entry = new ActiveSoundViewModel(
@@ -4469,6 +4481,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             sourceItem);
 
         ActivePlayingSounds.Add(entry);
+        _activeSoundData[header.MediaId] = (header, bytes);
         OnPropertyChanged(nameof(HasNoActivePlayingSounds));
     }
 
@@ -4484,6 +4497,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 ActivePlayingSounds[i].Dispose();
                 ActivePlayingSounds.RemoveAt(i);
             }
+
+        _activeSoundData.Remove(mediaId);
 
         OnPropertyChanged(nameof(HasNoActivePlayingSounds));
 
@@ -4538,6 +4553,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         foreach (var sound in ActivePlayingSounds)
             _ = _playerServer.PublishStopSoundToClientAsync(sound.MediaId, remoteEndpoint);
+    }
+
+    /// <summary>Resends every currently-active sound to exactly one client window (its Sound
+    ///     routing was just turned back on) - the mirror image of StopAllSoundsForClient, using
+    ///     the header+bytes cached in _activeSoundData since this service doesn't keep the file
+    ///     bytes around after the original send.</summary>
+    private void ResendActiveSoundsToClient(string remoteEndpoint)
+    {
+        foreach (var (header, bytes) in _activeSoundData.Values)
+            _ = _playerServer.PublishMediaToClientAsync(header, bytes, remoteEndpoint);
     }
 
     /// <summary>Stops the Host's own local sound preview players only (see OnPlaySoundLocallyChanged) -

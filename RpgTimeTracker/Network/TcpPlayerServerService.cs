@@ -158,6 +158,13 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     leaves "send a targeted stop per active sound" to the subscriber.</summary>
     public event Action<string>? ClientSoundRoutingDisabled;
 
+    /// <summary>Fires (with the RemoteEndpoint) when the GM turns Sound routing back on for a
+    ///     connected client - mirrors ClientSoundRoutingDisabled: this service doesn't track
+    ///     which sounds are currently playing, so it leaves "resend each active sound to this
+    ///     client" to the subscriber (via PublishMediaToClientAsync), so a re-enabled window
+    ///     doesn't stay silent until the next brand-new sound is triggered.</summary>
+    public event Action<string>? ClientSoundRoutingEnabled;
+
     /// <summary>
     ///     Starts the TCP listener, and by default the mDNS + LAN-broadcast discovery responders
     ///     alongside it. <paramref name="enableDiscovery"/> lets a caller skip those - the real
@@ -1027,9 +1034,11 @@ public sealed class TcpPlayerServerService : IDisposable
 
     /// <summary>Toggles whether this client window receives Sound broadcasts (GM per-window
     ///     routing control) - persisted by ClientId so it survives a reconnect. Also tells the
-    ///     client live (audio.routingChanged); when disabling, raises ClientSoundRoutingDisabled
-    ///     so whoever tracks currently-active sounds (MainWindowViewModel) can stop them on this
-    ///     one client specifically, rather than leaving them running until they end on their own.</summary>
+    ///     client live (audio.routingChanged); disabling raises ClientSoundRoutingDisabled so
+    ///     whoever tracks currently-active sounds (MainWindowViewModel) can stop them on this one
+    ///     client specifically, and re-enabling raises ClientSoundRoutingEnabled so it can resend
+    ///     them instead - either way the client isn't left in a stale state until the next brand-
+    ///     new sound happens to play.</summary>
     public void SetClientSoundEnabled(string remoteEndpoint, bool enabled)
     {
         ClientConnection? target;
@@ -1043,7 +1052,25 @@ public sealed class TcpPlayerServerService : IDisposable
         NotifyClientsChanged();
         ThemeSettingsService.SaveClientAudioPreference(target.ClientId, target.MusicEnabled, target.SoundEnabled);
         _ = PublishAudioRoutingChangedAsync(remoteEndpoint, target.MusicEnabled, target.SoundEnabled);
-        if (!enabled) ClientSoundRoutingDisabled?.Invoke(remoteEndpoint);
+        if (enabled) ClientSoundRoutingEnabled?.Invoke(remoteEndpoint);
+        else ClientSoundRoutingDisabled?.Invoke(remoteEndpoint);
+    }
+
+    /// <summary>
+    ///     Sends an already-known medium to exactly one client by RemoteEndpoint - used to resend
+    ///     currently active sounds to a client whose Sound routing was just turned back on (see
+    ///     MainWindowViewModel's ClientSoundRoutingEnabled subscription), since this service
+    ///     itself doesn't track which sounds are currently playing.
+    /// </summary>
+    public async Task PublishMediaToClientAsync(MediaHeaderDto header, byte[] fileBytes, string remoteEndpoint)
+    {
+        ClientConnection? target;
+        lock (_gate)
+        {
+            target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
+        }
+
+        if (target is not null) await SendMediaToClientAsync(target, header, fileBytes).ConfigureAwait(false);
     }
 
     private void NotifyClientsChanged()

@@ -124,6 +124,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   silent until the Host's playlist sequencer happened to advance to the
   next track - re-enabling now resends the currently playing track right
   away (with the same estimated mid-track seek used for a fresh catch-up).
+- Same gap for Sound: re-enabling it for a client didn't resend anything
+  currently playing, so the window stayed silent until the next brand-new
+  sound happened to fire. Re-enabling now resends every currently active
+  sound to that client (each restarting from the beginning, unlike music
+  there's no mid-sound seek estimate).
 - A player connecting (or reconnecting) while a playlist was already
   playing never received the current track - music was deliberately left
   out of the general "catch a new client up" cache, since a Host-driven
