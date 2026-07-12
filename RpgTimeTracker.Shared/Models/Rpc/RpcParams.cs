@@ -200,11 +200,14 @@ public sealed class MusicTrackEndedParams
     public string MediaId { get; set; } = string.Empty;
 }
 
-/// <summary>Server-to-client: this window's current Music/Sound routing state (see RpcMethods.AudioRoutingChanged).</summary>
+/// <summary>Server-to-client: this window's current Music/Sound/Visual routing state (see
+///     RpcMethods.AudioRoutingChanged - kept its name despite now carrying a third flag, to avoid
+///     unnecessary wire-protocol churn).</summary>
 public sealed class AudioRoutingChangedParams
 {
     public bool MusicEnabled { get; set; } = true;
     public bool SoundEnabled { get; set; } = true;
+    public bool VisualEnabled { get; set; } = true;
 }
 
 /// <summary>

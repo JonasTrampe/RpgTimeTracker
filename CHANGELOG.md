@@ -86,6 +86,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (leaving just the flat tint) without losing the configured strength.
   Brush size in the map editor also got finer-grained (smaller default
   grid cells, wider brush range).
+- Maps tab redesigned for usability and to properly separate preparing a
+  map from showing it: the Maps tab now uses a wrapping layout instead of a
+  rigid two-column split, so it no longer squishes on narrow windows. The
+  old single "Edit…" map editor is now two separate windows - a per-floor
+  "Edit…" window that only ever touches an offline prepare/starting mask
+  (never seen by players, no matter what), and a per-map "Show…" window
+  that paints the live, players-visible fog directly (unchanged from
+  before) plus a renamed "Reset to Prepared" button that pulls in whatever
+  was last painted in the Edit window, and the Open/Close-to-players
+  toggle. Both editors now show a live brush-outline cursor so it's clear
+  exactly what a stroke will affect. Default new-floor cell size is halved
+  (finer grid) with brush radius doubled to match the old visual size.
+  Fog render style (color/opacity/blur) can now be overridden per map from
+  the Edit window, falling back to the existing global Settings-tab values
+  when left unset. Cell size is now GM-editable per floor (with a warning
+  for very small values) from the Edit window; changing it rescales the
+  existing mask instead of corrupting it, and new floors inherit a
+  per-map default cell size rather than a single global constant.
+- Per-client Image/Video/Map routing: the Connected Clients list gets a
+  third "Visuals" toggle next to Music/Sound, so a multi-monitor GM setup
+  can dedicate one window to maps/images while excluding another (e.g. a
+  tablet) entirely - mirroring the existing Music/Sound routing exactly,
+  including persistence per window and resending/clearing currently shown
+  content on toggle.
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/
