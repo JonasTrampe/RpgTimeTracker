@@ -2265,86 +2265,83 @@
                                                                 <TextBlock Classes="muted"
                                                                            Text="{DynamicResource MainWindow.Settings.ConnectedClientsLabel}" />
                                                                 <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Music.RoutingDescription}"
+                                                                           TextWrapping="Wrap" />
+                                                                <TextBlock Classes="muted"
                                                                            Text="{DynamicResource MainWindow.Settings.NoConnectedClients}"
                                                                            IsVisible="{Binding HasNoConnectedClients}"
                                                                            FontStyle="Italic" />
-                                                                <ItemsControl
-                                                                    ItemsSource="{Binding ConnectedClientItems}">
-                                                                    <ItemsControl.ItemTemplate>
-                                                                        <DataTemplate
-                                                                            x:DataType="vm:ConnectedClientItemViewModel">
-                                                                            <Grid ColumnDefinitions="*,Auto"
-                                                                                    Margin="0,2">
-                                                                                <StackPanel Grid.Column="0"
-                                                                                    Orientation="Horizontal"
-                                                                                    Spacing="8"
-                                                                                    VerticalAlignment="Center">
-                                                                                    <TextBlock
-                                                                                        Text="{Binding RemoteEndpoint}" />
-                                                                                    <TextBlock Classes="muted"
-                                                                                        Text="{Binding ConnectedSinceDisplay}" />
-                                                                                </StackPanel>
-                                                                                <Button Grid.Column="1"
-                                                                                    Content="{DynamicResource MainWindow.Settings.DisconnectButton}"
-                                                                                    Command="{Binding DisconnectCommand}"
-                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Settings.DisconnectTooltip}" />
-                                                                            </Grid>
-                                                                        </DataTemplate>
-                                                                    </ItemsControl.ItemTemplate>
-                                                                </ItemsControl>
-                                                            </StackPanel>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <Border Classes="settingsGroup" Width="520" Margin="0,0,14,14">
-                                                        <StackPanel Spacing="10">
-                                                            <TextBlock Classes="settingsGroupTitle"
-                                                                       Text="{DynamicResource MainWindow.Music.RoutingTitle}" />
-                                                            <TextBlock Classes="muted"
-                                                                       Text="{DynamicResource MainWindow.Music.RoutingDescription}"
-                                                                       TextWrapping="Wrap" />
-                                                            <Border Classes="item" Width="240"
-                                                                    HorizontalAlignment="Left">
-                                                                <Grid ColumnDefinitions="*,Auto,Auto"
-                                                                      ColumnSpacing="10">
-                                                                    <TextBlock Grid.Column="0"
-                                                                        Text="{DynamicResource MainWindow.Music.RoutingHostLabel}"
-                                                                        VerticalAlignment="Center"
-                                                                        TextTrimming="CharacterEllipsis" />
-                                                                    <CheckBox Grid.Column="1"
-                                                                        Content="{DynamicResource MainWindow.Music.RoutingMusicCheckbox}"
-                                                                        IsChecked="{Binding PlayMusicLocally}" />
-                                                                    <CheckBox Grid.Column="2"
-                                                                        Content="{DynamicResource MainWindow.Music.RoutingSoundCheckbox}"
-                                                                        IsChecked="{Binding PlaySoundLocally}" />
-                                                                </Grid>
-                                                            </Border>
-                                                            <ItemsControl ItemsSource="{Binding ConnectedClientItems}">
-                                                                <ItemsControl.ItemsPanel>
-                                                                    <ItemsPanelTemplate>
-                                                                        <WrapPanel Orientation="Horizontal" />
-                                                                    </ItemsPanelTemplate>
-                                                                </ItemsControl.ItemsPanel>
-                                                                <ItemsControl.ItemTemplate>
-                                                                    <DataTemplate x:DataType="vm:ConnectedClientItemViewModel">
-                                                                        <Border Classes="item" Width="240">
-                                                                            <Grid ColumnDefinitions="*,Auto,Auto"
-                                                                                  ColumnSpacing="10">
-                                                                                <TextBlock Grid.Column="0"
-                                                                                    Text="{Binding RemoteEndpoint}"
-                                                                                    Classes="muted"
-                                                                                    VerticalAlignment="Center"
-                                                                                    TextTrimming="CharacterEllipsis" />
-                                                                                <CheckBox Grid.Column="1"
+                                                                <WrapPanel Orientation="Horizontal">
+                                                                    <Border Classes="item" Width="280"
+                                                                            HorizontalAlignment="Left">
+                                                                        <StackPanel Spacing="6">
+                                                                            <TextBlock
+                                                                                Text="{DynamicResource MainWindow.Music.RoutingHostLabel}"
+                                                                                FontWeight="Bold"
+                                                                                TextTrimming="CharacterEllipsis" />
+                                                                            <StackPanel Orientation="Horizontal"
+                                                                                Spacing="10">
+                                                                                <CheckBox
                                                                                     Content="{DynamicResource MainWindow.Music.RoutingMusicCheckbox}"
-                                                                                    IsChecked="{Binding MusicEnabled}" />
-                                                                                <CheckBox Grid.Column="2"
+                                                                                    IsChecked="{Binding PlayMusicLocally}" />
+                                                                                <CheckBox
                                                                                     Content="{DynamicResource MainWindow.Music.RoutingSoundCheckbox}"
-                                                                                    IsChecked="{Binding SoundEnabled}" />
-                                                                            </Grid>
-                                                                        </Border>
-                                                                    </DataTemplate>
-                                                                </ItemsControl.ItemTemplate>
-                                                            </ItemsControl>
+                                                                                    IsChecked="{Binding PlaySoundLocally}" />
+                                                                            </StackPanel>
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                    <ItemsControl
+                                                                        ItemsSource="{Binding ConnectedClientItems}">
+                                                                        <ItemsControl.ItemsPanel>
+                                                                            <ItemsPanelTemplate>
+                                                                                <WrapPanel Orientation="Horizontal" />
+                                                                            </ItemsPanelTemplate>
+                                                                        </ItemsControl.ItemsPanel>
+                                                                        <ItemsControl.ItemTemplate>
+                                                                            <DataTemplate
+                                                                                x:DataType="vm:ConnectedClientItemViewModel">
+                                                                                <Border Classes="item" Width="280">
+                                                                                    <StackPanel Spacing="6">
+                                                                                        <Grid
+                                                                                            ColumnDefinitions="*,Auto">
+                                                                                            <StackPanel
+                                                                                                Grid.Column="0"
+                                                                                                TextBlock.TextTrimming="CharacterEllipsis">
+                                                                                                <TextBlock
+                                                                                                    Text="{Binding RemoteEndpoint}"
+                                                                                                    FontWeight="Bold"
+                                                                                                    TextTrimming="CharacterEllipsis" />
+                                                                                                <TextBlock
+                                                                                                    Classes="muted"
+                                                                                                    Text="{Binding ConnectedSinceDisplay}" />
+                                                                                            </StackPanel>
+                                                                                            <Button
+                                                                                                Grid.Column="1"
+                                                                                                Classes="iconsquare"
+                                                                                                Content="&#10005;"
+                                                                                                Width="22"
+                                                                                                Height="22"
+                                                                                                FontSize="10"
+                                                                                                Command="{Binding DisconnectCommand}"
+                                                                                                ToolTip.Tip="{DynamicResource MainWindow.Settings.DisconnectTooltip}" />
+                                                                                        </Grid>
+                                                                                        <StackPanel
+                                                                                            Orientation="Horizontal"
+                                                                                            Spacing="10">
+                                                                                            <CheckBox
+                                                                                                Content="{DynamicResource MainWindow.Music.RoutingMusicCheckbox}"
+                                                                                                IsChecked="{Binding MusicEnabled}" />
+                                                                                            <CheckBox
+                                                                                                Content="{DynamicResource MainWindow.Music.RoutingSoundCheckbox}"
+                                                                                                IsChecked="{Binding SoundEnabled}" />
+                                                                                        </StackPanel>
+                                                                                    </StackPanel>
+                                                                                </Border>
+                                                                            </DataTemplate>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                    </ItemsControl>
+                                                                </WrapPanel>
+                                                            </StackPanel>
                                                         </StackPanel>
                                                     </Border>
                                                     <Border Classes="settingsGroup" Width="520" Margin="0,0,14,14">
