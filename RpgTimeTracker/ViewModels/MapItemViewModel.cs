@@ -15,6 +15,12 @@ namespace RpgTimeTracker.ViewModels;
 /// </summary>
 public sealed partial class MapItemViewModel : ObservableObject
 {
+    /// <summary>Persisted format version for this map's data (settings entry + exported
+    ///     .rtt-map/.rtt-session manifest) - not used for any migration yet (there's only ever
+    ///     been version 1), but every map now carries it explicitly so a future format change can
+    ///     detect an older map on load and apply an upgrade step instead of guessing or breaking.</summary>
+    public const int CurrentFormatVersion = 1;
+
     private readonly Action<MapItemViewModel> _onDeleteRequested;
     private readonly Action<MapItemViewModel>? _onChanged;
 
@@ -41,7 +47,8 @@ public sealed partial class MapItemViewModel : ObservableObject
         string? fogColorHex = null,
         int? fogOpacityPercent = null,
         double? fogBlurRadius = null,
-        bool? fogBlurEnabled = null)
+        bool? fogBlurEnabled = null,
+        int formatVersion = CurrentFormatVersion)
     {
         Id = id;
         _name = name;
@@ -50,12 +57,18 @@ public sealed partial class MapItemViewModel : ObservableObject
         _fogOpacityPercent = fogOpacityPercent;
         _fogBlurRadius = fogBlurRadius;
         _fogBlurEnabled = fogBlurEnabled;
+        FormatVersion = formatVersion;
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
         Floors.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoFloors));
     }
 
     public Guid Id { get; }
+
+    /// <summary>The format version this map was loaded/imported at - not user-editable, and
+    ///     always saved back as CurrentFormatVersion (see MainWindowViewModel.SaveMapLibrarySettings)
+    ///     once any future migration step has brought it up to date in memory.</summary>
+    public int FormatVersion { get; }
 
     public ObservableCollection<MapFloorItemViewModel> Floors { get; } = [];
 

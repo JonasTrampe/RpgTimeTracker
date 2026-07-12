@@ -141,6 +141,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   buttons moved to the bottom of the floor panel in a wrapping row, so they
   drop to a second line instead of overflowing when the panel is narrow.
   The Maps tab's description text is now as short as the other tabs'.
+  The button row is now docked to the bottom of the panel itself (instead
+  of just following the floor list), so it stays pinned there regardless
+  of how many floors a map has, rather than drifting down as the list grows.
+- A map's floor/layer order is now saved explicitly (not just implied by
+  list position), so reordering floors with the up/down buttons survives a
+  save/load round-trip through settings, a single-map (`.rtt-map`) export,
+  or a full-session (`.rtt-session`) export.
+- Maps now carry an explicit format version, saved alongside the map data
+  and exports. Every existing/new map is version 1 today with no behavior
+  change - this just gives a future format change something to check
+  against so it can detect and upgrade an older map on load instead of
+  guessing.
 
 - Unit test project (`RpgTimeTracker.Tests`, xUnit) covering `GameClockService`
   (time jumps, speed multiplier) and the `TimerItem`/`AlarmItem`/

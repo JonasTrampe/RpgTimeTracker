@@ -230,6 +230,11 @@ public static class ThemeSettingsService
         public int CellSizePx { get; set; } = 32;
         public int GridWidth { get; set; }
         public int GridHeight { get; set; }
+
+        /// <summary>Explicit floor/layer order (0-based), saved on every write so the GM's
+        ///     up/down-reordered floor sequence survives a save/load round-trip rather than
+        ///     relying on implicit list order - see MapItemViewModel.MoveFloorUp/MoveFloorDown.</summary>
+        public int Order { get; set; }
     }
 
     public sealed class MapLibraryEntryDto
@@ -237,6 +242,10 @@ public static class ThemeSettingsService
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
         public List<MapFloorEntryDto> Floors { get; set; } = [];
+
+        /// <summary>See MapItemViewModel.CurrentFormatVersion/FormatVersion - lets a future
+        ///     format change detect an older map on load and apply an upgrade step.</summary>
+        public int FormatVersion { get; set; } = 1;
 
         /// <summary>Per-map fog render style override, falling back to the global
         ///     ThemeSettingsDto.FogColorHex/etc. when null (see

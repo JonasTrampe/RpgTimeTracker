@@ -568,8 +568,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             var map = new MapItemViewModel(mapEntry.Id, mapEntry.Name, mapEntry.DefaultCellSizePx, RemoveMap,
                 OnMapLibraryItemChanged, mapEntry.FogColorHex, mapEntry.FogOpacityPercent,
-                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled);
-            foreach (var floorEntry in mapEntry.Floors)
+                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled, mapEntry.FormatVersion);
+            foreach (var floorEntry in mapEntry.Floors.OrderBy(f => f.Order))
             {
                 if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
 
@@ -1057,7 +1057,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             FogBlurRadius = map.FogBlurRadius,
             FogBlurEnabled = map.FogBlurEnabled,
             DefaultCellSizePx = map.DefaultCellSizePx,
-            Floors = map.Floors.Select(floor => new ThemeSettingsService.MapFloorEntryDto
+            FormatVersion = map.FormatVersion,
+            Floors = map.Floors.Select((floor, index) => new ThemeSettingsService.MapFloorEntryDto
             {
                 Id = floor.Id,
                 Name = floor.Name,
@@ -1065,7 +1066,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 FogPath = floor.FogPath,
                 CellSizePx = floor.CellSizePx,
                 GridWidth = floor.GridWidth,
-                GridHeight = floor.GridHeight
+                GridHeight = floor.GridHeight,
+                Order = index
             }).ToList()
         }).ToList();
         ThemeSettingsService.SaveSettings(settings);
@@ -1415,7 +1417,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         using var stream = new MemoryStream();
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
-            var manifest = new MapManifestDto { Name = map.Name };
+            var manifest = new MapManifestDto { Name = map.Name, FormatVersion = map.FormatVersion };
+            var order = 0;
             foreach (var floor in map.Floors)
             {
                 if (!File.Exists(floor.ImagePath) || !File.Exists(floor.FogPath)) continue;
@@ -1431,7 +1434,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                     FogFileName = fogFileName,
                     CellSizePx = floor.CellSizePx,
                     GridWidth = floor.GridWidth,
-                    GridHeight = floor.GridHeight
+                    GridHeight = floor.GridHeight,
+                    Order = order++
                 });
             }
 
@@ -1472,11 +1476,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
             var mapId = Guid.NewGuid();
             var map = new MapItemViewModel(mapId, manifest.Name, DefaultMapCellSizePx, RemoveMap,
-                OnMapLibraryItemChanged);
+                OnMapLibraryItemChanged, formatVersion: manifest.FormatVersion);
             var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, mapId.ToString("N"));
             Directory.CreateDirectory(mapDirectory);
 
-            foreach (var floorEntry in manifest.Floors)
+            foreach (var floorEntry in manifest.Floors.OrderBy(f => f.Order))
             {
                 var imageEntry = zip.GetEntry(floorEntry.ImageFileName);
                 var fogEntry = zip.GetEntry(floorEntry.FogFileName);
@@ -1568,7 +1572,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var mapManifest = new MapLibraryManifestDto();
             foreach (var map in MapLibrary)
             {
-                var mapEntry = new MapLibraryManifestEntryDto { Name = map.Name };
+                var mapEntry = new MapLibraryManifestEntryDto { Name = map.Name, FormatVersion = map.FormatVersion };
+                var order = 0;
                 foreach (var floor in map.Floors)
                 {
                     if (!File.Exists(floor.ImagePath) || !File.Exists(floor.FogPath)) continue;
@@ -1580,7 +1585,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                     mapEntry.Floors.Add(new MapFloorManifestEntryDto
                     {
                         Name = floor.Name, ImageFileName = imageFileName, FogFileName = fogFileName,
-                        CellSizePx = floor.CellSizePx, GridWidth = floor.GridWidth, GridHeight = floor.GridHeight
+                        CellSizePx = floor.CellSizePx, GridWidth = floor.GridWidth, GridHeight = floor.GridHeight,
+                        Order = order++
                     });
                 }
 
@@ -1724,11 +1730,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             var mapId = Guid.NewGuid();
             var map = new MapItemViewModel(mapId, mapEntry.Name, DefaultMapCellSizePx, RemoveMap,
-                OnMapLibraryItemChanged);
+                OnMapLibraryItemChanged, formatVersion: mapEntry.FormatVersion);
             var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, mapId.ToString("N"));
             Directory.CreateDirectory(mapDirectory);
 
-            foreach (var floorEntry in mapEntry.Floors)
+            foreach (var floorEntry in mapEntry.Floors.OrderBy(f => f.Order))
             {
                 var imageEntry = zip.GetEntry($"maps/{floorEntry.ImageFileName}");
                 var fogEntry = zip.GetEntry($"maps/{floorEntry.FogFileName}");
@@ -5437,12 +5443,18 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         public int CellSizePx { get; init; }
         public int GridWidth { get; init; }
         public int GridHeight { get; init; }
+
+        /// <summary>See ThemeSettingsService.MapFloorEntryDto.Order.</summary>
+        public int Order { get; init; }
     }
 
     private sealed class MapManifestDto
     {
         public string Name { get; init; } = string.Empty;
         public List<MapFloorManifestEntryDto> Floors { get; init; } = [];
+
+        /// <summary>See MapItemViewModel.CurrentFormatVersion/FormatVersion.</summary>
+        public int FormatVersion { get; init; } = MapItemViewModel.CurrentFormatVersion;
     }
 
     /// <summary>
@@ -5453,6 +5465,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         public string Name { get; init; } = string.Empty;
         public List<MapFloorManifestEntryDto> Floors { get; init; } = [];
+
+        /// <summary>See MapItemViewModel.CurrentFormatVersion/FormatVersion.</summary>
+        public int FormatVersion { get; init; } = MapItemViewModel.CurrentFormatVersion;
     }
 
     private sealed class MapLibraryManifestDto
