@@ -9,6 +9,11 @@ public sealed class SessionHelloParams
 {
     public int ProtocolVersion { get; set; }
     public string Pin { get; set; } = string.Empty;
+
+    /// <summary>Stable per-installation identifier (see ClientSettingsService.GetOrCreateClientId),
+    ///     generated once and persisted locally - lets the Host remember this window's Music/Sound
+    ///     routing preference across reconnects instead of resetting it to enabled every time.</summary>
+    public string ClientId { get; set; } = string.Empty;
 }
 
 /// <summary>Server-to-client: connection rejected (see RpcMethods.SessionHelloRejected).</summary>
@@ -193,6 +198,13 @@ public sealed class MusicSetVolumeParams
 public sealed class MusicTrackEndedParams
 {
     public string MediaId { get; set; } = string.Empty;
+}
+
+/// <summary>Server-to-client: this window's current Music/Sound routing state (see RpcMethods.AudioRoutingChanged).</summary>
+public sealed class AudioRoutingChangedParams
+{
+    public bool MusicEnabled { get; set; } = true;
+    public bool SoundEnabled { get; set; } = true;
 }
 
 /// <summary>

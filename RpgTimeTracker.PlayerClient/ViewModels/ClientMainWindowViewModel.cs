@@ -78,6 +78,14 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     [ObservableProperty] private string _host = "127.0.0.1";
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _isDiscovering;
+
+    /// <summary>Whether the GM has turned Music/Sound routing off for this window (see
+    ///     RpcMethods.AudioRoutingChanged) - purely informational, shown as a small indicator so
+    ///     the player understands why they hear nothing instead of assuming something is broken.</summary>
+    [ObservableProperty] private bool _isMusicMuted;
+
+    [ObservableProperty] private bool _isSoundMuted;
+
     private bool _isShowingEventMedia;
     [ObservableProperty] private string? _mediaErrorMessage;
     [ObservableProperty] private bool _mediaFullscreen;
@@ -149,6 +157,11 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MusicTrackReceived += (header, path) => Dispatcher.UIThread.Post(() => PlayMusicTrack(path, header));
         _client.MusicStopRequested += () => Dispatcher.UIThread.Post(StopMusic);
         _client.MusicVolumeChangeRequested += volume => Dispatcher.UIThread.Post(() => ApplyMusicVolume(volume));
+        _client.AudioRoutingChanged += (musicEnabled, soundEnabled) => Dispatcher.UIThread.Post(() =>
+        {
+            IsMusicMuted = !musicEnabled;
+            IsSoundMuted = !soundEnabled;
+        });
         _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
         _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
@@ -166,6 +179,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
                 // client device should not keep playing uncontrolled (e.g. a looping ambience).
                 StopAllSounds();
                 StopMusic();
+                IsMusicMuted = false;
+                IsSoundMuted = false;
                 ClearGallery();
                 _calendarEntries.Clear();
                 PlayerCalendarDays.Clear();

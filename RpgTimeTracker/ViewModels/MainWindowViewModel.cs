@@ -410,13 +410,26 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _clock.Jumped += newTime => _ = _playerServer.PublishClockTimeJumpedAsync(newTime);
         _playerServer.ClientCountChanged += count => Dispatcher.UIThread.Post(() => ConnectedClientCount = count);
         _playerServer.ClientsChanged += clients => Dispatcher.UIThread.Post(() => UpdateConnectedClients(clients));
-        // Decisive for video-end tracking (loop/close, optional clock pause) - see BeginVideoTracking.
-        _playerServer.ClientReportedPlaybackEnded +=
-            mediaId => Dispatcher.UIThread.Post(() => ResolvePendingVideo(mediaId));
+        // Shared by video AND sound (the client reuses media.playbackEnded for both, see
+        // ClientMainWindowViewModel.OnSoundEndReached) - ResolvePendingVideo only acts if this is
+        // the currently-tracked video, but a sound that finished purely on remote clients (no
+        // local Host preview to fire OnLocalSoundEnded, e.g. player window closed or Sound-locally
+        // disabled) would otherwise never leave ActivePlayingSounds - RemoveActiveSound is a no-op
+        // if mediaId isn't an active sound, so calling it unconditionally here is safe.
+        _playerServer.ClientReportedPlaybackEnded += mediaId => Dispatcher.UIThread.Post(() =>
+        {
+            ResolvePendingVideo(mediaId);
+            RemoveActiveSound(mediaId);
+        });
         // Decisive for the playlist sequencer's "when does the current track end" tracking - see
         // BeginMusicTracking.
         _playerServer.ClientReportedMusicTrackEnded +=
             mediaId => Dispatcher.UIThread.Post(() => ResolvePendingMusicTrack(mediaId));
+        // The server only knows a client's Sound routing was turned off, not what's currently
+        // playing - only this ViewModel's ActivePlayingSounds does, so it owns "stop each active
+        // sound on that one client" rather than leaving them running until they end on their own.
+        _playerServer.ClientSoundRoutingDisabled +=
+            remoteEndpoint => Dispatcher.UIThread.Post(() => StopAllSoundsForClient(remoteEndpoint));
 
         _blinkTimer = new DispatcherTimer
         {
@@ -4498,6 +4511,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private void StopAllSounds()
     {
         foreach (var sound in ActivePlayingSounds.ToList()) StopSound(sound.MediaId);
+    }
+
+    /// <summary>Stops every currently-active sound on exactly one client window (its Sound
+    ///     routing was just turned off) - unlike StopSound, this must NOT touch the Host's own
+    ///     local preview or the ActivePlayingSounds panel, since the sound keeps playing for
+    ///     every other still-enabled window.</summary>
+    private void StopAllSoundsForClient(string remoteEndpoint)
+    {
+        foreach (var sound in ActivePlayingSounds)
+            _ = _playerServer.PublishStopSoundToClientAsync(sound.MediaId, remoteEndpoint);
     }
 
     private void PlayLocalSoundIfNeeded(MediaHeaderDto header, string localPath, bool deleteAfterPlayback)

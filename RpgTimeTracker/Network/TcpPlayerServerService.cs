@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Models.Rpc;
@@ -140,6 +141,12 @@ public sealed class TcpPlayerServerService : IDisposable
     /// <summary>A client reports that the currently playing music track has finished (background
     ///     thread) - see RpcMethods.MusicTrackEnded.</summary>
     public event Action<string>? ClientReportedMusicTrackEnded;
+
+    /// <summary>Fires (with the RemoteEndpoint) when the GM turns Sound routing off for a
+    ///     connected client - this service has no knowledge of which sounds are currently
+    ///     playing (MainWindowViewModel.ActivePlayingSounds does), so it just raises this and
+    ///     leaves "send a targeted stop per active sound" to the subscriber.</summary>
+    public event Action<string>? ClientSoundRoutingDisabled;
 
     /// <summary>
     ///     Starts the TCP listener, and by default the mDNS + LAN-broadcast discovery responders
@@ -323,6 +330,18 @@ public sealed class TcpPlayerServerService : IDisposable
     }
 
     /// <summary>
+    ///     Stops a single sound (by MediaId) on exactly one client window, regardless of its
+    ///     current SoundEnabled flag - used when the GM turns Sound routing off for that window,
+    ///     so an already-playing sound doesn't keep running there until it happens to end on its
+    ///     own (see MainWindowViewModel's ClientSoundRoutingDisabled subscription).
+    /// </summary>
+    public Task PublishStopSoundToClientAsync(string mediaId, string remoteEndpoint)
+    {
+        return BroadcastRpcAsync(RpcMethods.MediaStopSound, new MediaStopSoundParams { MediaId = mediaId },
+            c => c.RemoteEndpoint == remoteEndpoint);
+    }
+
+    /// <summary>
     ///     Distributes a music track (media.begin + chunks, Kind=MediaKindMusic) to Music-enabled
     ///     client windows - thin wrapper around PublishMediaAsync (which applies the routing
     ///     filter) kept as its own named method for symmetry with
@@ -345,6 +364,29 @@ public sealed class TcpPlayerServerService : IDisposable
     {
         return BroadcastRpcAsync(RpcMethods.MusicSetVolume, new MusicSetVolumeParams { Volume = volume },
             c => c.MusicEnabled);
+    }
+
+    /// <summary>
+    ///     Stops music on exactly one client window, regardless of its current MusicEnabled flag -
+    ///     used when the GM turns Music routing off for that window, so an already-playing track
+    ///     doesn't keep running there. No MediaId is needed (unlike sounds): the client only ever
+    ///     plays one music track at a time and stops whatever that is (see
+    ///     ClientMainWindowViewModel.StopMusic) - harmless to send even if nothing is playing.
+    /// </summary>
+    public Task PublishMusicStopToClientAsync(string remoteEndpoint)
+    {
+        return BroadcastRpcAsync(RpcMethods.MusicStop, RpcEmptyParams.Instance,
+            c => c.RemoteEndpoint == remoteEndpoint);
+    }
+
+    /// <summary>Tells exactly one client window its current Music/Sound routing state (see
+    ///     RpcMethods.AudioRoutingChanged) - sent right after handshake and again on every live
+    ///     toggle, so the client can show a "muted by GM" indicator.</summary>
+    public Task PublishAudioRoutingChangedAsync(string remoteEndpoint, bool musicEnabled, bool soundEnabled)
+    {
+        return BroadcastRpcAsync(RpcMethods.AudioRoutingChanged,
+            new AudioRoutingChangedParams { MusicEnabled = musicEnabled, SoundEnabled = soundEnabled },
+            c => c.RemoteEndpoint == remoteEndpoint);
     }
 
     /// <summary>Removes an image/video from the gallery on all clients specifically (by MediaId).</summary>
@@ -662,6 +704,14 @@ public sealed class TcpPlayerServerService : IDisposable
             return;
         }
 
+        connection.ClientId = hello.ClientId;
+        var audioPreference = ThemeSettingsService.LoadClientAudioPreference(hello.ClientId);
+        if (audioPreference is not null)
+        {
+            connection.MusicEnabled = audioPreference.MusicEnabled;
+            connection.SoundEnabled = audioPreference.SoundEnabled;
+        }
+
         connection.IsAccepted = true;
         lock (_gate)
         {
@@ -670,6 +720,12 @@ public sealed class TcpPlayerServerService : IDisposable
 
         NotifyClientsChanged();
         Log.Information("Client connected: {Client}", connection);
+
+        // Reflects any restored (non-default) routing preference right away, so the client's
+        // "muted by GM" indicator is correct from the start rather than only updating on the
+        // next live toggle.
+        _ = PublishAudioRoutingChangedAsync(connection.RemoteEndpoint, connection.MusicEnabled,
+            connection.SoundEnabled);
 
         // _snapshotProvider()/sending the medium afterward reads UI-bound data,
         // so post to the UI thread instead of doing it directly from this background loop.
@@ -871,31 +927,45 @@ public sealed class TcpPlayerServerService : IDisposable
     }
 
     /// <summary>Toggles whether this client window receives Music broadcasts (GM per-window
-    ///     routing control) - session-scoped, resets to enabled on reconnect.</summary>
+    ///     routing control) - persisted by ClientId (see ThemeSettingsService.SaveClientAudioPreference)
+    ///     so it survives a reconnect. Also tells the client live (audio.routingChanged) and, when
+    ///     disabling, stops whatever it's currently playing - a toggle-off shouldn't wait for the
+    ///     Host's own playlist sequencer to naturally advance/end.</summary>
     public void SetClientMusicEnabled(string remoteEndpoint, bool enabled)
     {
+        ClientConnection? target;
         lock (_gate)
         {
-            var target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
+            target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
             if (target is null) return;
             target.MusicEnabled = enabled;
         }
 
         NotifyClientsChanged();
+        ThemeSettingsService.SaveClientAudioPreference(target.ClientId, target.MusicEnabled, target.SoundEnabled);
+        _ = PublishAudioRoutingChangedAsync(remoteEndpoint, target.MusicEnabled, target.SoundEnabled);
+        if (!enabled) _ = PublishMusicStopToClientAsync(remoteEndpoint);
     }
 
     /// <summary>Toggles whether this client window receives Sound broadcasts (GM per-window
-    ///     routing control) - session-scoped, resets to enabled on reconnect.</summary>
+    ///     routing control) - persisted by ClientId so it survives a reconnect. Also tells the
+    ///     client live (audio.routingChanged); when disabling, raises ClientSoundRoutingDisabled
+    ///     so whoever tracks currently-active sounds (MainWindowViewModel) can stop them on this
+    ///     one client specifically, rather than leaving them running until they end on their own.</summary>
     public void SetClientSoundEnabled(string remoteEndpoint, bool enabled)
     {
+        ClientConnection? target;
         lock (_gate)
         {
-            var target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
+            target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
             if (target is null) return;
             target.SoundEnabled = enabled;
         }
 
         NotifyClientsChanged();
+        ThemeSettingsService.SaveClientAudioPreference(target.ClientId, target.MusicEnabled, target.SoundEnabled);
+        _ = PublishAudioRoutingChangedAsync(remoteEndpoint, target.MusicEnabled, target.SoundEnabled);
+        if (!enabled) ClientSoundRoutingDisabled?.Invoke(remoteEndpoint);
     }
 
     private void NotifyClientsChanged()
@@ -997,12 +1067,19 @@ public sealed class TcpPlayerServerService : IDisposable
         /// <summary>Set once the handshake succeeded (see PerformHandshakeAsync) - "unauthenticated" before that.</summary>
         public bool IsAccepted { get; set; }
 
-        /// <summary>Whether this window (session-scoped, resets to true on reconnect - no
-        ///     persistent client identity today) receives Music/Sound broadcasts, set by the GM
-        ///     via SetClientMusicEnabled/SetClientSoundEnabled.</summary>
+        /// <summary>Whether this window receives Music/Sound broadcasts, set by the GM via
+        ///     SetClientMusicEnabled/SetClientSoundEnabled - defaults to true for a never-seen
+        ///     ClientId, otherwise restored from ThemeSettingsService.LoadClientAudioPreference
+        ///     in PerformHandshakeAsync so a reconnecting window keeps its previous routing.</summary>
         public bool MusicEnabled { get; set; } = true;
 
         public bool SoundEnabled { get; set; } = true;
+
+        /// <summary>Stable per-installation id sent in session.hello (see
+        ///     SessionHelloParams.ClientId) - empty until the handshake completes. Used to key
+        ///     persisted Music/Sound routing preferences, since RemoteEndpoint changes every
+        ///     reconnect (ephemeral TCP port).</summary>
+        public string ClientId { get; set; } = string.Empty;
 
         /// <summary>Resolved by HandleClientRpcFrame upon receiving session.hello; PerformHandshakeAsync waits for it.</summary>
         public TaskCompletionSource<SessionHelloParams> HelloTcs { get; } =

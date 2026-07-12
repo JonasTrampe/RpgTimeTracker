@@ -32,15 +32,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   current playlist/track with Previous/Next/Stop and a live volume slider.
   Per-window (Host/Client) routing toggles for which windows play Music
   vs. Sound are a follow-up milestone.
-- Per-window Music/Sound routing: a new "Routing" panel in the Music tab
+- Per-window Music/Sound routing: a "Connected Clients" panel in Settings
   lets the GM independently turn Music and Sound on/off for each connected
   player window and for the Host's own local preview ("Host (this window)").
   Turning Sound off for a window, for example, stops it from receiving sound
   effects while it keeps getting Music (and vice versa) - useful for a
   spectator/stream window that should only hear ambience, or a player window
-  that should stay silent while everyone else hears a jump-scare sting.
-  Session-scoped: every toggle resets back to "on" the next time that
-  window (re)connects, since there is no persistent per-device identity yet.
+  that should stay silent while everyone else hears a jump-scare sting. Each
+  player window now gets a stable identifier on first launch (stored locally)
+  so the GM's choice for that window is remembered across reconnects instead
+  of resetting to "on" every time; the muted window itself shows a small
+  "muted by GM" indicator instead of silently receiving nothing.
 - Full session export/import: a "📦 Export session…"/"📦 Import session…"
   pair in Settings > Save & load bundles the game state and the Media,
   Sound, and Map libraries into a single `.rtt-session` file - for a full
@@ -107,6 +109,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A currently playing sound that finished purely on a remote client (Host
+  window closed, or Sound turned off locally) never left the GM's "Active
+  Sounds" panel - the natural-end report only ever checked whether it
+  matched the currently-tracked video, so a sound's end was silently
+  ignored and the entry lingered indefinitely.
+- Turning Music or Sound off for a connected client only affected future
+  broadcasts - a track/sound already playing on that window kept running
+  until it happened to end on its own instead of stopping immediately.
 - Fog-of-war maps: the fog mask only affected a small corner of the
   floor image instead of the whole thing - the mask brush needed an
   explicit source/destination rect to stretch across the image; Stretch

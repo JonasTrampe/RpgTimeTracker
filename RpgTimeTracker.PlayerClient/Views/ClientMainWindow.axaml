@@ -116,6 +116,26 @@
                             <Run Text="{DynamicResource ClientMainWindow.Status.ThemeLabel}" />
                             <Run Text="{Binding CurrentTheme, Mode=OneWay, StringFormat=' {0}'}" />
                         </TextBlock>
+                        <TextBlock Text="{DynamicResource ClientMainWindow.Status.MusicMuted}"
+                                   Foreground="{DynamicResource WarnBrush}" FontSize="11"
+                                   ToolTip.Tip="{DynamicResource ClientMainWindow.Status.MusicMutedTooltip}">
+                            <TextBlock.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="IsConnected" />
+                                    <Binding Path="IsMusicMuted" />
+                                </MultiBinding>
+                            </TextBlock.IsVisible>
+                        </TextBlock>
+                        <TextBlock Text="{DynamicResource ClientMainWindow.Status.SoundMuted}"
+                                   Foreground="{DynamicResource WarnBrush}" FontSize="11"
+                                   ToolTip.Tip="{DynamicResource ClientMainWindow.Status.SoundMutedTooltip}">
+                            <TextBlock.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="IsConnected" />
+                                    <Binding Path="IsSoundMuted" />
+                                </MultiBinding>
+                            </TextBlock.IsVisible>
+                        </TextBlock>
                     </StackPanel>
                     <Button Grid.Column="1" Content="{Binding MediaFullscreenLabel}"
                             Command="{Binding ToggleMediaFullscreenCommand}" VerticalAlignment="Center"

@@ -427,6 +427,10 @@
   "ClientMainWindow.Discovery.SourceTooltip": "Erkannt über",
   "ClientMainWindow.Discovery.UseLabel": "verwenden",
   "ClientMainWindow.Status.ThemeLabel": "Design:",
+  "ClientMainWindow.Status.MusicMuted": "🔇 Musik vom Spielleiter stummgeschaltet",
+  "ClientMainWindow.Status.MusicMutedTooltip": "Der Spielleiter hat Musik für dieses Fenster deaktiviert",
+  "ClientMainWindow.Status.SoundMuted": "🔇 Sound vom Spielleiter stummgeschaltet",
+  "ClientMainWindow.Status.SoundMutedTooltip": "Der Spielleiter hat Sound für dieses Fenster deaktiviert",
 
   "ClientMainWindowViewModel.Connection.NoServerFound": "Kein Server gefunden. Prüfe: Server gestartet, gleiche LAN/VPN, Firewall für TCP 48550 und UDP 48551/5353.",
   "ClientMainWindowViewModel.Connection.ServersFound": "{0} Server gefunden",

@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using RpgTimeTracker.PlayerClient.Services;
 using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Models.Rpc;
 using RpgTimeTracker.Shared.Services.Localization;
@@ -131,6 +132,10 @@ public sealed class PlayerTcpClientService : IDisposable
     /// <summary>GM adjusts the volume of the currently playing music track live (0-100).</summary>
     public event Action<int>? MusicVolumeChangeRequested;
 
+    /// <summary>This window's current Music/Sound routing state, sent right after handshake and
+    ///     again whenever the GM changes it live (see RpcMethods.AudioRoutingChanged).</summary>
+    public event Action<bool, bool>? AudioRoutingChanged;
+
     public event Action<string>? StatusChanged;
 
     /// <summary>
@@ -197,7 +202,12 @@ public sealed class PlayerTcpClientService : IDisposable
         // wrong PIN/incompatible version) the host rejects the connection via
         // session.helloRejected and disconnects it again.
         await SendRpcAsync(RpcMethods.SessionHello,
-            new SessionHelloParams { ProtocolVersion = ProtocolInfo.Version, Pin = pin }).ConfigureAwait(false);
+            new SessionHelloParams
+            {
+                ProtocolVersion = ProtocolInfo.Version,
+                Pin = pin,
+                ClientId = ClientSettingsService.GetOrCreateClientId()
+            }).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -565,6 +575,10 @@ public sealed class PlayerTcpClientService : IDisposable
                 case RpcMethods.MusicSetVolume:
                     var musicVolume = raw.GetParams<MusicSetVolumeParams>();
                     if (musicVolume is not null) MusicVolumeChangeRequested?.Invoke(musicVolume.Volume);
+                    break;
+                case RpcMethods.AudioRoutingChanged:
+                    var routing = raw.GetParams<AudioRoutingChangedParams>();
+                    if (routing is not null) AudioRoutingChanged?.Invoke(routing.MusicEnabled, routing.SoundEnabled);
                     break;
                 default:
                     Log.Debug("Unknown incoming RPC method {Method} ignored", raw.Method);

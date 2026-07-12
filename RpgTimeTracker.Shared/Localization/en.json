@@ -427,6 +427,10 @@
   "ClientMainWindow.Discovery.SourceTooltip": "Detected via",
   "ClientMainWindow.Discovery.UseLabel": "use",
   "ClientMainWindow.Status.ThemeLabel": "Theme:",
+  "ClientMainWindow.Status.MusicMuted": "🔇 Music muted by GM",
+  "ClientMainWindow.Status.MusicMutedTooltip": "The GM has turned Music off for this window",
+  "ClientMainWindow.Status.SoundMuted": "🔇 Sound muted by GM",
+  "ClientMainWindow.Status.SoundMutedTooltip": "The GM has turned Sound off for this window",
 
   "ClientMainWindowViewModel.Connection.NoServerFound": "No server found. Check: server started, same LAN/VPN, firewall for TCP 48550 and UDP 48551/5353.",
   "ClientMainWindowViewModel.Connection.ServersFound": "{0} server(s) found",
