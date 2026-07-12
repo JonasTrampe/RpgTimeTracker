@@ -250,12 +250,31 @@ public partial class MainWindow : Window
             await vmForFloor.AddFloorToMapAsync(map, localPath);
     }
 
-    private void OnEditMapClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not MainWindowViewModel vm ||
-            sender is not Button { DataContext: MapItemViewModel map }) return;
+    private MapLiveWindow? _openMapLiveWindow;
 
-        var editor = new MapEditorWindow(vm, map);
+    private void OnEditMapFloorClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map ||
+            sender is not Button { DataContext: MapFloorItemViewModel floor }) return;
+
+        vm.EditingFloor = floor;
+        var editor = new MapPrepareWindow(vm, map);
+        editor.Show(this);
+    }
+
+    private void OnShowMapClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map) return;
+
+        if (_openMapLiveWindow is not null)
+        {
+            _openMapLiveWindow.Activate();
+            return;
+        }
+
+        var editor = new MapLiveWindow(vm, map);
+        editor.Closed += (_, _) => _openMapLiveWindow = null;
+        _openMapLiveWindow = editor;
         editor.Show(this);
     }
 

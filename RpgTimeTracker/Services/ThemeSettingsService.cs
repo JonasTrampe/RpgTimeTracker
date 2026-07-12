@@ -111,18 +111,20 @@ public static class ThemeSettingsService
         SaveSettings(settings);
     }
 
-    /// <summary>Looks up a remembered Music/Sound routing preference by ClientId - returns null
-    ///     if this client has never been seen before (caller should then default to enabled).</summary>
-    public static ClientAudioPreferenceDto? LoadClientAudioPreference(string clientId)
+    /// <summary>Looks up a remembered Music/Sound/Visual routing preference by ClientId - returns
+    ///     null if this client has never been seen before (caller should then default to
+    ///     enabled).</summary>
+    public static ClientRoutingPreferenceDto? LoadClientRoutingPreference(string clientId)
     {
         if (string.IsNullOrEmpty(clientId)) return null;
         return LoadSettings().ClientAudioPreferences.Find(p => p.ClientId == clientId);
     }
 
-    /// <summary>Upserts this client's Music/Sound routing preference (see
-    ///     TcpPlayerServerService.SetClientMusicEnabled/SetClientSoundEnabled) - a no-op if
-    ///     clientId is empty (an older client build that doesn't send one yet).</summary>
-    public static void SaveClientAudioPreference(string clientId, bool musicEnabled, bool soundEnabled)
+    /// <summary>Upserts this client's Music/Sound/Visual routing preference (see
+    ///     TcpPlayerServerService.SetClientMusicEnabled/SetClientSoundEnabled/SetClientVisualEnabled) -
+    ///     a no-op if clientId is empty (an older client build that doesn't send one yet).</summary>
+    public static void SaveClientRoutingPreference(string clientId, bool musicEnabled, bool soundEnabled,
+        bool visualEnabled)
     {
         if (string.IsNullOrEmpty(clientId)) return;
 
@@ -132,12 +134,14 @@ public static class ThemeSettingsService
         {
             existing.MusicEnabled = musicEnabled;
             existing.SoundEnabled = soundEnabled;
+            existing.VisualEnabled = visualEnabled;
         }
         else
         {
-            settings.ClientAudioPreferences.Add(new ClientAudioPreferenceDto
+            settings.ClientAudioPreferences.Add(new ClientRoutingPreferenceDto
             {
-                ClientId = clientId, MusicEnabled = musicEnabled, SoundEnabled = soundEnabled
+                ClientId = clientId, MusicEnabled = musicEnabled, SoundEnabled = soundEnabled,
+                VisualEnabled = visualEnabled
             });
         }
 
@@ -230,17 +234,33 @@ public static class ThemeSettingsService
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
         public List<MapFloorEntryDto> Floors { get; set; } = [];
+
+        /// <summary>Per-map fog render style override, falling back to the global
+        ///     ThemeSettingsDto.FogColorHex/etc. when null (see
+        ///     MainWindowViewModel.GetEffectiveFogStyle) - unset by default so existing maps keep
+        ///     using the global style until the GM explicitly overrides one from MapPrepareWindow.</summary>
+        public string? FogColorHex { get; set; }
+        public int? FogOpacityPercent { get; set; }
+        public double? FogBlurRadius { get; set; }
+        public bool? FogBlurEnabled { get; set; }
+
+        /// <summary>Per-map default CellSizePx for newly added floors, seeded from the current
+        ///     global DefaultMapCellSizePx constant at map-creation time (not a live reference to
+        ///     it), so a later change to that constant never retroactively affects this map's
+        ///     future floors.</summary>
+        public int DefaultCellSizePx { get; set; } = 8;
     }
 
-    /// <summary>Remembered Music/Sound routing preference for one player window, keyed by its
-    ///     stable ClientId (see SessionHelloParams.ClientId) rather than its ephemeral
+    /// <summary>Remembered Music/Sound/Visual routing preference for one player window, keyed by
+    ///     its stable ClientId (see SessionHelloParams.ClientId) rather than its ephemeral
     ///     RemoteEndpoint - so a reconnecting window gets its previous routing back instead of
     ///     resetting to enabled every time (see TcpPlayerServerService.PerformHandshakeAsync).</summary>
-    public sealed class ClientAudioPreferenceDto
+    public sealed class ClientRoutingPreferenceDto
     {
         public string ClientId { get; set; } = string.Empty;
         public bool MusicEnabled { get; set; } = true;
         public bool SoundEnabled { get; set; } = true;
+        public bool VisualEnabled { get; set; } = true;
     }
 
     public sealed class ThemeSettingsDto
@@ -300,7 +320,11 @@ public static class ThemeSettingsService
         public List<MusicLibraryEntryDto> MusicLibrary { get; set; } = [];
         public List<PlaylistEntryDto> Playlists { get; set; } = [];
         public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
-        public List<ClientAudioPreferenceDto> ClientAudioPreferences { get; set; } = [];
+        // Property name kept as "ClientAudioPreferences" (not renamed to match the DTO type)
+        // purely for JSON backward-compat - System.Text.Json round-trips by property name, so
+        // renaming this would silently drop every existing user's saved Music/Sound routing
+        // preferences on upgrade.
+        public List<ClientRoutingPreferenceDto> ClientAudioPreferences { get; set; } = [];
 
         /// <summary>
         ///     Player-side fog-of-war render style (see MapDisplayViewModel/FogOverlayRenderer) -

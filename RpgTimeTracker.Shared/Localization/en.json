@@ -145,6 +145,7 @@
   "MainWindow.Music.RoutingHostLabel": "Host (this window)",
   "MainWindow.Music.RoutingMusicCheckbox": "Music",
   "MainWindow.Music.RoutingSoundCheckbox": "Sound",
+  "MainWindow.Music.RoutingVisualCheckbox": "Visuals",
   "MainWindow.Sounds.SettingsTooltip": "Sound settings",
   "MainWindow.Sounds.LoopCheckbox": "🔁 Endless loop",
   "MainWindow.Sounds.RepeatCountLabel": "Repeat count",
@@ -173,11 +174,23 @@
   "MainWindow.Maps.AddFloorButton": "+ Add floor",
   "MainWindow.Maps.NoFloorsState": "No floors yet.",
   "MainWindow.Maps.EditButton": "Edit…",
+  "MainWindow.Maps.ShowButton": "Show…",
+  "MainWindow.Maps.ShownToPlayersLabel": "Shown to players",
 
   "MapEditor.RevealToolButton": "👁 Reveal",
   "MapEditor.BrushSizeLabel": "Brush size",
-  "MapEditor.ResetButton": "Reset to starting",
   "MapEditor.OpenToPlayersButton": "Show to players",
+
+  "MapPrepareWindow.Title": "Prepare - {0}",
+  "MapPrepareWindow.OpenStatusShown": "Currently shown to players",
+  "MapPrepareWindow.OpenStatusHidden": "Not currently shown to players",
+  "MapPrepareWindow.FogStyleGroupLabel": "Fog style (this map)",
+  "MapPrepareWindow.UseGlobalDefaultButton": "Use global default",
+  "MapPrepareWindow.CellSizeLabel": "Cell size (px)",
+  "MapPrepareWindow.CellSizeWarning": "Very small values increase network and rendering cost.",
+
+  "MapLiveWindow.Title": "Show - {0}",
+  "MapLiveWindow.ResetToPreparedButton": "Reset to prepared",
 
   "MainWindow.Calendar.Title": "Calendar",
   "MainWindow.Calendar.Description": "Month view with a day list. In the player window, the toggle only appears if player-visible entries exist.",

@@ -20,14 +20,36 @@ public sealed partial class MapItemViewModel : ObservableObject
 
     [ObservableProperty] private string _name;
 
+    /// <summary>Per-map fog render style override, falling back to the global setting when null -
+    ///     see MainWindowViewModel.GetEffectiveFogStyle/ThemeSettingsService.MapLibraryEntryDto.</summary>
+    [ObservableProperty] private string? _fogColorHex;
+
+    [ObservableProperty] private int? _fogOpacityPercent;
+    [ObservableProperty] private double? _fogBlurRadius;
+    [ObservableProperty] private bool? _fogBlurEnabled;
+
+    /// <summary>Default CellSizePx for new floors added to this map - see
+    ///     ThemeSettingsService.MapLibraryEntryDto.DefaultCellSizePx.</summary>
+    [ObservableProperty] private int _defaultCellSizePx;
+
     public MapItemViewModel(
         Guid id,
         string name,
+        int defaultCellSizePx,
         Action<MapItemViewModel> onDeleteRequested,
-        Action<MapItemViewModel>? onChanged)
+        Action<MapItemViewModel>? onChanged,
+        string? fogColorHex = null,
+        int? fogOpacityPercent = null,
+        double? fogBlurRadius = null,
+        bool? fogBlurEnabled = null)
     {
         Id = id;
         _name = name;
+        _defaultCellSizePx = defaultCellSizePx;
+        _fogColorHex = fogColorHex;
+        _fogOpacityPercent = fogOpacityPercent;
+        _fogBlurRadius = fogBlurRadius;
+        _fogBlurEnabled = fogBlurEnabled;
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
         Floors.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoFloors));
@@ -40,6 +62,26 @@ public sealed partial class MapItemViewModel : ObservableObject
     public bool HasNoFloors => Floors.Count == 0;
 
     partial void OnNameChanged(string value)
+    {
+        _onChanged?.Invoke(this);
+    }
+
+    partial void OnFogColorHexChanged(string? value)
+    {
+        _onChanged?.Invoke(this);
+    }
+
+    partial void OnFogOpacityPercentChanged(int? value)
+    {
+        _onChanged?.Invoke(this);
+    }
+
+    partial void OnFogBlurRadiusChanged(double? value)
+    {
+        _onChanged?.Invoke(this);
+    }
+
+    partial void OnFogBlurEnabledChanged(bool? value)
     {
         _onChanged?.Invoke(this);
     }

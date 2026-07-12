@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:RpgTimeTracker.ViewModels"
-        x:Class="RpgTimeTracker.Views.MapEditorWindow"
+        x:Class="RpgTimeTracker.Views.MapLiveWindow"
         Title="Map"
         Width="900" Height="700"
         MinWidth="500" MinHeight="400"
@@ -26,10 +26,10 @@
                           IsChecked="True" />
 
             <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" VerticalAlignment="Center" />
-            <Slider Name="BrushSizeSlider" Minimum="0" Maximum="20" Value="2" Width="140"
+            <Slider Name="BrushSizeSlider" Minimum="0" Maximum="40" Value="4" Width="140"
                     TickFrequency="1" IsSnapToTickEnabled="True" />
 
-            <Button Content="{DynamicResource MapEditor.ResetButton}" Click="OnResetClick" />
+            <Button Content="{DynamicResource MapLiveWindow.ResetToPreparedButton}" Click="OnResetClick" />
 
             <ToggleButton Name="OpenToPlayersToggle"
                           Content="{DynamicResource MapEditor.OpenToPlayersButton}"
@@ -41,9 +41,18 @@
                    Background="Transparent"
                    PointerPressed="OnCanvasPointerPressed"
                    PointerMoved="OnCanvasPointerMoved"
-                   PointerReleased="OnCanvasPointerReleased">
+                   PointerReleased="OnCanvasPointerReleased"
+                   PointerExited="OnCanvasPointerExited">
                 <Image Name="FloorImageControl" Stretch="Uniform" />
                 <Image Name="FogOverlayControl" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
+                <Ellipse Name="BrushCursor"
+                         IsHitTestVisible="False"
+                         IsVisible="False"
+                         Stroke="{DynamicResource AccentBrush}"
+                         StrokeThickness="2"
+                         Fill="Transparent"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Top" />
             </Panel>
         </ScrollViewer>
     </DockPanel>

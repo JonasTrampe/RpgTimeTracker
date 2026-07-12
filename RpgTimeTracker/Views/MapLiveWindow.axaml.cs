@@ -4,24 +4,27 @@ using System.IO;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using RpgTimeTracker.Shared.Models.Rpc;
+using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.ViewModels;
 
 namespace RpgTimeTracker.Views;
 
 /// <summary>
-///     SL-only fog editor for one map: brush reveal/hide per floor (live fog, see
-///     MainWindowViewModel.GetLiveFog), "Reset to starting", and open/close to players. Not
-///     bound via DataContext to MainWindowViewModel like the main tabs - constructed directly
-///     with the map/viewmodel it edits, matching the IconPickerWindow/MediaLibraryPickerWindow
-///     pattern for focused child windows.
+///     SL-only fog editor for one map, opened by its "Show" button: brush reveal/hide directly
+///     into the live/broadcast fog (see MainWindowViewModel.GetLiveFog), "Reset to Prepared"
+///     (pulls MapPrepareWindow's saved template into live), and open/close to players. Not bound
+///     via DataContext to MainWindowViewModel like the main tabs - constructed directly with the
+///     map/viewmodel it edits, matching the IconPickerWindow/MediaLibraryPickerWindow pattern for
+///     focused child windows.
 /// </summary>
-public partial class MapEditorWindow : Window
+public partial class MapLiveWindow : Window
 {
     private readonly MainWindowViewModel _vm;
     private readonly MapItemViewModel _map;
@@ -29,14 +32,15 @@ public partial class MapEditorWindow : Window
     private readonly DispatcherTimer _flushTimer;
     private MapFloorItemViewModel? _floor;
     private bool _isPainting;
+    private Point? _lastPointerPosition;
 
-    public MapEditorWindow(MainWindowViewModel vm, MapItemViewModel map)
+    public MapLiveWindow(MainWindowViewModel vm, MapItemViewModel map)
     {
         InitializeComponent();
 
         _vm = vm;
         _map = map;
-        Title = map.Name;
+        Title = string.Format(LocalizationService.Get("MapLiveWindow.Title"), map.Name);
 
         FloorSelector.ItemsSource = map.Floors;
         FloorSelector.SelectedItem = _vm.EditingFloor is not null && map.Floors.Contains(_vm.EditingFloor)
@@ -45,6 +49,12 @@ public partial class MapEditorWindow : Window
         OpenToPlayersToggle.IsChecked = _vm.IsMapOpenToPlayers && _vm.OpenMap == map;
 
         LoadFloor(FloorSelector.SelectedItem as MapFloorItemViewModel);
+
+        BrushSizeSlider.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == RangeBase.ValueProperty && _lastPointerPosition is { } position)
+                UpdateBrushCursor(position);
+        };
 
         _flushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
         _flushTimer.Tick += (_, _) => _ = FlushPendingAsync();
@@ -90,15 +100,54 @@ public partial class MapEditorWindow : Window
 
     private void OnCanvasPointerMoved(object? sender, PointerEventArgs e)
     {
+        var position = e.GetPosition(EditorCanvas);
+        _lastPointerPosition = position;
+        UpdateBrushCursor(position);
+
         if (!_isPainting) return;
 
-        PaintAt(e.GetPosition(EditorCanvas));
+        PaintAt(position);
     }
 
     private void OnCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         _isPainting = false;
         _ = FlushPendingAsync();
+    }
+
+    private void OnCanvasPointerExited(object? sender, PointerEventArgs e)
+    {
+        _lastPointerPosition = null;
+        BrushCursor.IsVisible = false;
+    }
+
+    /// <summary>Sizes/positions the brush-outline Ellipse using the same image-space ↔
+    ///     control-space scale math as PaintAt, so the visible ring matches exactly what a stroke
+    ///     there would affect.</summary>
+    private void UpdateBrushCursor(Point position)
+    {
+        if (_floor is null || FloorImageControl.Source is not Bitmap bitmap)
+        {
+            BrushCursor.IsVisible = false;
+            return;
+        }
+
+        var controlSize = EditorCanvas.Bounds.Size;
+        if (controlSize.Width <= 0 || controlSize.Height <= 0)
+        {
+            BrushCursor.IsVisible = false;
+            return;
+        }
+
+        var imageSize = bitmap.PixelSize;
+        var scale = Math.Min(controlSize.Width / imageSize.Width, controlSize.Height / imageSize.Height);
+
+        var radiusCells = (int)BrushSizeSlider.Value;
+        var diameterPx = (2 * radiusCells + 1) * _floor.CellSizePx * scale;
+        BrushCursor.Width = diameterPx;
+        BrushCursor.Height = diameterPx;
+        BrushCursor.Margin = new Thickness(position.X - diameterPx / 2, position.Y - diameterPx / 2, 0, 0);
+        BrushCursor.IsVisible = true;
     }
 
     private void PaintAt(Point position)

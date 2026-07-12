@@ -565,7 +565,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         foreach (var mapEntry in settings.MapLibrary)
         {
-            var map = new MapItemViewModel(mapEntry.Id, mapEntry.Name, RemoveMap, _ => SaveMapLibrarySettings());
+            var map = new MapItemViewModel(mapEntry.Id, mapEntry.Name, mapEntry.DefaultCellSizePx, RemoveMap,
+                OnMapLibraryItemChanged, mapEntry.FogColorHex, mapEntry.FogOpacityPercent,
+                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled);
             foreach (var floorEntry in mapEntry.Floors)
             {
                 if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
@@ -914,14 +916,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     /// <summary>Default grid cell size for a newly added floor - configurable per floor later
     ///     (e.g. via the SL Map Editor Window in a later milestone), not yet exposed in this UI.</summary>
-    private const int DefaultMapCellSizePx = 16;
+    private const int DefaultMapCellSizePx = 8;
 
     [RelayCommand]
     private void AddMap()
     {
         var map = new MapItemViewModel(Guid.NewGuid(),
-            LocalizationService.Get("MainWindowViewModel.Defaults.NewMapName"), RemoveMap,
-            _ => SaveMapLibrarySettings());
+            LocalizationService.Get("MainWindowViewModel.Defaults.NewMapName"), DefaultMapCellSizePx, RemoveMap,
+            OnMapLibraryItemChanged);
         MapLibrary.Add(map);
         SelectedMap = map;
         SaveMapLibrarySettings();
@@ -972,21 +974,22 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 await source.CopyToAsync(target);
             }
 
+            var cellSizePx = map.DefaultCellSizePx;
             int gridWidth, gridHeight;
             await using (var dimensionStream = File.OpenRead(imagePath))
             {
                 var bitmap = new Bitmap(dimensionStream);
-                gridWidth = Math.Max(1, (bitmap.PixelSize.Width + DefaultMapCellSizePx - 1) / DefaultMapCellSizePx);
-                gridHeight = Math.Max(1, (bitmap.PixelSize.Height + DefaultMapCellSizePx - 1) / DefaultMapCellSizePx);
+                gridWidth = Math.Max(1, (bitmap.PixelSize.Width + cellSizePx - 1) / cellSizePx);
+                gridHeight = Math.Max(1, (bitmap.PixelSize.Height + cellSizePx - 1) / cellSizePx);
             }
 
             var fogPath = Path.Combine(mapDirectory, $"{floorId:N}.fog");
-            var startingFog = FogMask.CreateFullyHidden(gridWidth, gridHeight, DefaultMapCellSizePx);
+            var startingFog = FogMask.CreateFullyHidden(gridWidth, gridHeight, cellSizePx);
             await File.WriteAllBytesAsync(fogPath, FogMaskSerializer.Serialize(startingFog));
 
             var floor = new MapFloorItemViewModel(
                 floorId, Path.GetFileNameWithoutExtension(sourcePath), imagePath, fogPath,
-                DefaultMapCellSizePx, gridWidth, gridHeight, LoadMapFloorThumbnail(imagePath),
+                cellSizePx, gridWidth, gridHeight, LoadMapFloorThumbnail(imagePath),
                 f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings());
             map.Floors.Add(floor);
             SaveMapLibrarySettings();
@@ -1032,6 +1035,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
+    /// <summary>Shared onChanged callback for MapItemViewModel (name rename, fog-style override
+    ///     change) - persists the library and, if this map is currently open to players, also
+    ///     re-applies/re-broadcasts its (possibly just-changed) effective fog style live.</summary>
+    private void OnMapLibraryItemChanged(MapItemViewModel map)
+    {
+        SaveMapLibrarySettings();
+        if (ReferenceEquals(map, OpenMap)) ApplyAndBroadcastEffectiveFogStyleForOpenMap();
+    }
+
     private void SaveMapLibrarySettings()
     {
         var settings = ThemeSettingsService.LoadSettings();
@@ -1039,6 +1051,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             Id = map.Id,
             Name = map.Name,
+            FogColorHex = map.FogColorHex,
+            FogOpacityPercent = map.FogOpacityPercent,
+            FogBlurRadius = map.FogBlurRadius,
+            FogBlurEnabled = map.FogBlurEnabled,
+            DefaultCellSizePx = map.DefaultCellSizePx,
             Floors = map.Floors.Select(floor => new ThemeSettingsService.MapFloorEntryDto
             {
                 Id = floor.Id,
@@ -1062,7 +1079,35 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [ObservableProperty] private MapFloorItemViewModel? _editingFloor;
     [ObservableProperty] private bool _isMapOpenToPlayers;
 
+    /// <summary>Whether SelectedMap specifically (not just any map) is currently open to players -
+    ///     drives the "Shown to players" indicator next to the Maps tab's "Show" button.</summary>
+    public bool IsSelectedMapOpenToPlayers => IsMapOpenToPlayers && ReferenceEquals(OpenMap, SelectedMap);
+
+    partial void OnOpenMapChanged(MapItemViewModel? value)
+    {
+        OnPropertyChanged(nameof(IsSelectedMapOpenToPlayers));
+    }
+
+    partial void OnIsMapOpenToPlayersChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsSelectedMapOpenToPlayers));
+    }
+
+    partial void OnSelectedMapChanged(MapItemViewModel? value)
+    {
+        OnPropertyChanged(nameof(IsSelectedMapOpenToPlayers));
+    }
+
     private readonly Dictionary<Guid, FogMask> _liveFog = new();
+
+    /// <summary>In-memory cache for MapPrepareWindow, mirroring _liveFog exactly but seeded and
+    ///     saved independently - both lazily read the same on-disk floor.FogPath the first time a
+    ///     floor is touched, but afterward diverge: this one is only ever written back to
+    ///     floor.FogPath (see SavePrepareFogAsync), never broadcast or shown locally, while
+    ///     _liveFog is only ever changed via MapLiveWindow's direct edits or an explicit
+    ///     Reset-to-Prepared (see ResetFloorFogToStartingAsync). Editing/saving Prepare does NOT
+    ///     auto-update an already-cached Live instance - that's intentional, not a bug to "fix".</summary>
+    private readonly Dictionary<Guid, FogMask> _prepareFog = new();
 
     /// <summary>
     ///     Shared "what a player currently sees" display, reused for the local player-window
@@ -1080,11 +1125,34 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     public bool HasNoFloorsInEditor => EditingFloor is null;
 
+    /// <summary>Resolves a map's effective fog render style: its own per-map override where set,
+    ///     falling back to the global Settings-tab values otherwise (see
+    ///     ThemeSettingsService.MapLibraryEntryDto's fog-style fields).</summary>
+    private (string ColorHex, int OpacityPercent, double BlurRadius, bool BlurEnabled) GetEffectiveFogStyle(MapItemViewModel map)
+    {
+        return (map.FogColorHex ?? FogColorHex,
+            map.FogOpacityPercent ?? FogOpacityPercent,
+            map.FogBlurRadius ?? FogBlurRadius,
+            map.FogBlurEnabled ?? FogBlurEnabled);
+    }
+
+    /// <summary>Re-applies/re-broadcasts the currently open map's effective fog style - called
+    ///     both when the global fallback changes (ApplyAndBroadcastFogStyle) and when a map's own
+    ///     override changes (MapItemViewModel.OnFog*Changed via OnMapLibraryItemChanged).</summary>
+    private void ApplyAndBroadcastEffectiveFogStyleForOpenMap()
+    {
+        if (OpenMap is not { } map) return;
+
+        var style = GetEffectiveFogStyle(map);
+        MapDisplay.ApplyRenderStyle(FogOverlayRenderer.BuildHiddenColor(style.ColorHex, style.OpacityPercent),
+            style.BlurRadius, style.BlurEnabled);
+        _ = _playerServer.PublishMapRenderStyleAsync(style.ColorHex, style.OpacityPercent, style.BlurRadius,
+            style.BlurEnabled);
+    }
+
     private void ApplyAndBroadcastFogStyle()
     {
-        MapDisplay.ApplyRenderStyle(FogOverlayRenderer.BuildHiddenColor(FogColorHex, FogOpacityPercent), FogBlurRadius,
-            FogBlurEnabled);
-        _ = _playerServer.PublishMapRenderStyleAsync(FogColorHex, FogOpacityPercent, FogBlurRadius, FogBlurEnabled);
+        ApplyAndBroadcastEffectiveFogStyleForOpenMap();
 
         var settings = ThemeSettingsService.LoadSettings();
         settings.FogColorHex = FogColorHex;
@@ -1125,6 +1193,75 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             : FogMask.CreateFullyHidden(floor.GridWidth, floor.GridHeight, floor.CellSizePx);
         _liveFog[floor.Id] = fog;
         return fog;
+    }
+
+    /// <summary>The in-memory prepare-mode fog for a floor, edited by MapPrepareWindow - loaded
+    ///     from the same on-disk starting template as GetLiveFog, but cached and saved
+    ///     independently (see _prepareFog).</summary>
+    public FogMask GetPrepareFog(MapFloorItemViewModel floor)
+    {
+        if (_prepareFog.TryGetValue(floor.Id, out var fog)) return fog;
+
+        fog = File.Exists(floor.FogPath)
+            ? FogMaskSerializer.Deserialize(File.ReadAllBytes(floor.FogPath))
+            : FogMask.CreateFullyHidden(floor.GridWidth, floor.GridHeight, floor.CellSizePx);
+        _prepareFog[floor.Id] = fog;
+        return fog;
+    }
+
+    /// <summary>Persists the current in-memory prepare-mode fog back to the floor's starting
+    ///     template file - called debounced from MapPrepareWindow as the GM paints, so a crash or
+    ///     forced close doesn't silently lose prep work.</summary>
+    public async Task SavePrepareFogAsync(MapFloorItemViewModel floor)
+    {
+        await File.WriteAllBytesAsync(floor.FogPath, FogMaskSerializer.Serialize(GetPrepareFog(floor)));
+    }
+
+    /// <summary>
+    ///     Changes a floor's CellSizePx (GM-editable from MapPrepareWindow), rescaling every copy
+    ///     of its fog mask (the on-disk starting template, the in-memory _prepareFog cache, and the
+    ///     in-memory _liveFog cache) to the new grid dimensions so existing revealed/hidden cells
+    ///     stay aligned - see FogMaskRescaler. Recomputes GridWidth/GridHeight from the floor's
+    ///     actual image dimensions the same way AddFloorToMapAsync does. If this floor's map is
+    ///     currently open to players, re-broadcasts the full (now differently-sized) live mask
+    ///     rather than an incremental cell update, since every coordinate has shifted.
+    /// </summary>
+    public async Task RescaleFloorCellSizeAsync(MapItemViewModel map, MapFloorItemViewModel floor, int newCellSizePx)
+    {
+        if (newCellSizePx == floor.CellSizePx) return;
+
+        int newGridWidth, newGridHeight;
+        await using (var dimensionStream = File.OpenRead(floor.ImagePath))
+        {
+            var bitmap = new Bitmap(dimensionStream);
+            newGridWidth = Math.Max(1, (bitmap.PixelSize.Width + newCellSizePx - 1) / newCellSizePx);
+            newGridHeight = Math.Max(1, (bitmap.PixelSize.Height + newCellSizePx - 1) / newCellSizePx);
+        }
+
+        var onDisk = File.Exists(floor.FogPath)
+            ? FogMaskSerializer.Deserialize(await File.ReadAllBytesAsync(floor.FogPath))
+            : FogMask.CreateFullyHidden(floor.GridWidth, floor.GridHeight, floor.CellSizePx);
+        var rescaledOnDisk = FogMaskRescaler.Rescale(onDisk, newCellSizePx, newGridWidth, newGridHeight);
+        await File.WriteAllBytesAsync(floor.FogPath, FogMaskSerializer.Serialize(rescaledOnDisk));
+
+        if (_prepareFog.TryGetValue(floor.Id, out var prepareFog))
+            _prepareFog[floor.Id] = FogMaskRescaler.Rescale(prepareFog, newCellSizePx, newGridWidth, newGridHeight);
+
+        var liveWasOpen = ReferenceEquals(OpenMap, map);
+        if (_liveFog.TryGetValue(floor.Id, out var liveFog))
+            _liveFog[floor.Id] = FogMaskRescaler.Rescale(liveFog, newCellSizePx, newGridWidth, newGridHeight);
+
+        floor.CellSizePx = newCellSizePx;
+        floor.GridWidth = newGridWidth;
+        floor.GridHeight = newGridHeight;
+        SaveMapLibrarySettings();
+
+        if (liveWasOpen)
+        {
+            // Coordinates shifted for every cell - a full resync, not an incremental
+            // BroadcastFogCellsAsync, is the only way to keep clients correct.
+            await OpenMapToPlayersAsync(map);
+        }
     }
 
     [RelayCommand]
@@ -1168,6 +1305,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         IsMapOpenToPlayers = true;
         await _playerServer.PublishMapShowAsync(map.Id, map.Name, floors);
         MapDisplay.ShowMap(map.Name, displayFloors);
+        ApplyAndBroadcastEffectiveFogStyleForOpenMap();
         OnPropertyChanged(nameof(ShouldShowMapLocally));
         Log.Information("Map opened to players: {MapName} ({FloorCount} floors)", map.Name, floors.Count);
     }
@@ -1194,6 +1332,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         return cells.Count == 0 ? Task.CompletedTask : _playerServer.PublishMapFogUpdateAsync(floorId, cells);
     }
 
+    /// <summary>
+    ///     "Reset to Prepared" (MapLiveWindow): pushes floor.FogPath - which is exactly what
+    ///     MapPrepareWindow's edits save to (see SavePrepareFogAsync) - into the live fog. Three
+    ///     fog states exist per floor: the on-disk file (the prepare/starting template), _liveFog
+    ///     (the broadcast/player-visible mask), and _prepareFog (MapPrepareWindow's in-memory
+    ///     cache, lazily backed by the same file). _liveFog and _prepareFog seed independently from
+    ///     disk and do not auto-sync with each other - Live only ever changes via a direct edit in
+    ///     MapLiveWindow or this explicit reset.
+    /// </summary>
     public async Task ResetFloorFogToStartingAsync(MapFloorItemViewModel floor)
     {
         var startingFog = File.Exists(floor.FogPath)
@@ -1273,7 +1420,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             }
 
             var mapId = Guid.NewGuid();
-            var map = new MapItemViewModel(mapId, manifest.Name, RemoveMap, _ => SaveMapLibrarySettings());
+            var map = new MapItemViewModel(mapId, manifest.Name, DefaultMapCellSizePx, RemoveMap,
+                OnMapLibraryItemChanged);
             var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, mapId.ToString("N"));
             Directory.CreateDirectory(mapDirectory);
 
@@ -1524,7 +1672,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var mapEntry in manifest.Maps)
         {
             var mapId = Guid.NewGuid();
-            var map = new MapItemViewModel(mapId, mapEntry.Name, RemoveMap, _ => SaveMapLibrarySettings());
+            var map = new MapItemViewModel(mapId, mapEntry.Name, DefaultMapCellSizePx, RemoveMap,
+                OnMapLibraryItemChanged);
             var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, mapId.ToString("N"));
             Directory.CreateDirectory(mapDirectory);
 
@@ -4840,7 +4989,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         ConnectedClientItems.Clear();
         foreach (var info in clients)
             ConnectedClientItems.Add(new ConnectedClientItemViewModel(info, DisconnectClientRequested,
-                OnClientMusicEnabledChanged, OnClientSoundEnabledChanged));
+                OnClientMusicEnabledChanged, OnClientSoundEnabledChanged, OnClientVisualEnabledChanged));
         OnPropertyChanged(nameof(HasNoConnectedClients));
     }
 
@@ -4857,6 +5006,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private void OnClientSoundEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
     {
         _playerServer.SetClientSoundEnabled(item.RemoteEndpoint, enabled);
+    }
+
+    private void OnClientVisualEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
+    {
+        _playerServer.SetClientVisualEnabled(item.RemoteEndpoint, enabled);
     }
 
     private void ResolvePendingVideo(string mediaId)

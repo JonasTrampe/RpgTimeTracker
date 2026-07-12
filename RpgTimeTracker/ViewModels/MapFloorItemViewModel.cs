@@ -19,6 +19,13 @@ public sealed partial class MapFloorItemViewModel : ObservableObject
 
     [ObservableProperty] private string _name;
 
+    /// <summary>GM-editable per floor (see MainWindowViewModel.RescaleFloorCellSizeAsync) - a
+    ///     change rescales the on-disk/cached fog masks and GridWidth/GridHeight to match.</summary>
+    [ObservableProperty] private int _cellSizePx;
+
+    [ObservableProperty] private int _gridWidth;
+    [ObservableProperty] private int _gridHeight;
+
     public MapFloorItemViewModel(
         Guid id,
         string name,
@@ -35,9 +42,9 @@ public sealed partial class MapFloorItemViewModel : ObservableObject
         _name = name;
         ImagePath = imagePath;
         FogPath = fogPath;
-        CellSizePx = cellSizePx;
-        GridWidth = gridWidth;
-        GridHeight = gridHeight;
+        _cellSizePx = cellSizePx;
+        _gridWidth = gridWidth;
+        _gridHeight = gridHeight;
         Thumbnail = thumbnail;
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
@@ -46,9 +53,6 @@ public sealed partial class MapFloorItemViewModel : ObservableObject
     public Guid Id { get; }
     public string ImagePath { get; }
     public string FogPath { get; }
-    public int CellSizePx { get; }
-    public int GridWidth { get; }
-    public int GridHeight { get; }
     public Bitmap? Thumbnail { get; }
 
     partial void OnNameChanged(string value)

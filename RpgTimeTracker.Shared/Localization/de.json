@@ -145,6 +145,7 @@
   "MainWindow.Music.RoutingHostLabel": "Host (dieses Fenster)",
   "MainWindow.Music.RoutingMusicCheckbox": "Musik",
   "MainWindow.Music.RoutingSoundCheckbox": "Sound",
+  "MainWindow.Music.RoutingVisualCheckbox": "Bilder/Videos",
   "MainWindow.Sounds.SettingsTooltip": "Sound-Einstellungen",
   "MainWindow.Sounds.LoopCheckbox": "🔁 Endlosschleife",
   "MainWindow.Sounds.RepeatCountLabel": "Wiederholungen",
@@ -173,11 +174,23 @@
   "MainWindow.Maps.AddFloorButton": "+ Ebene hinzufügen",
   "MainWindow.Maps.NoFloorsState": "Noch keine Ebenen.",
   "MainWindow.Maps.EditButton": "Bearbeiten…",
+  "MainWindow.Maps.ShowButton": "Anzeigen…",
+  "MainWindow.Maps.ShownToPlayersLabel": "Wird Spielern gezeigt",
 
   "MapEditor.RevealToolButton": "👁 Aufdecken",
   "MapEditor.BrushSizeLabel": "Pinselgröße",
-  "MapEditor.ResetButton": "Auf Ausgangszustand zurücksetzen",
   "MapEditor.OpenToPlayersButton": "Spielern zeigen",
+
+  "MapPrepareWindow.Title": "Vorbereiten - {0}",
+  "MapPrepareWindow.OpenStatusShown": "Wird gerade Spielern gezeigt",
+  "MapPrepareWindow.OpenStatusHidden": "Wird gerade nicht Spielern gezeigt",
+  "MapPrepareWindow.FogStyleGroupLabel": "Nebel-Stil (diese Karte)",
+  "MapPrepareWindow.UseGlobalDefaultButton": "Globalen Standard verwenden",
+  "MapPrepareWindow.CellSizeLabel": "Zellgröße (px)",
+  "MapPrepareWindow.CellSizeWarning": "Sehr kleine Werte erhöhen Netzwerk- und Rendering-Kosten.",
+
+  "MapLiveWindow.Title": "Anzeigen - {0}",
+  "MapLiveWindow.ResetToPreparedButton": "Auf Vorbereitung zurücksetzen",
 
   "MainWindow.Calendar.Title": "Kalender",
   "MainWindow.Calendar.Description": "Monatsansicht mit Tagesliste. Im Spielerfenster erscheint die Umschaltung nur, wenn spielersichtbare Einträge existieren.",

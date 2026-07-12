@@ -1,0 +1,98 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RpgTimeTracker.ViewModels"
+        x:Class="RpgTimeTracker.Views.MapPrepareWindow"
+        Title="Prepare"
+        Width="900" Height="700"
+        MinWidth="500" MinHeight="400"
+        Background="{DynamicResource WindowBackgroundBrush}">
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+    </Window.Styles>
+
+    <DockPanel Margin="10">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10"
+                    VerticalAlignment="Center">
+            <ComboBox Name="FloorSelector" MinWidth="140" SelectionChanged="OnFloorSelectionChanged">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:MapFloorItemViewModel">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <ToggleButton Name="RevealModeToggle"
+                          Content="{DynamicResource MapEditor.RevealToolButton}"
+                          IsChecked="True" />
+
+            <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" VerticalAlignment="Center" />
+            <Slider Name="BrushSizeSlider" Minimum="0" Maximum="40" Value="4" Width="140"
+                    TickFrequency="1" IsSnapToTickEnabled="True" />
+
+            <TextBlock Name="OpenStatusLabel" VerticalAlignment="Center" Classes="muted" />
+        </StackPanel>
+
+        <Border DockPanel.Dock="Bottom" Classes="settingsGroup" Margin="0,10,0,0">
+            <StackPanel Spacing="10">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Classes="settingsGroupTitle"
+                               Text="{DynamicResource MapPrepareWindow.FogStyleGroupLabel}" />
+                    <Button Grid.Column="1"
+                            Content="{DynamicResource MapPrepareWindow.UseGlobalDefaultButton}"
+                            Click="OnUseGlobalFogDefaultClick" />
+                </Grid>
+                <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+                    <ColorPicker Name="FogColorPickerControl" Grid.Row="0" Grid.Column="0"
+                                 HorizontalAlignment="Left" />
+                    <CheckBox Name="FogBlurEnabledCheckBox" Grid.Row="0" Grid.Column="1"
+                              Content="{DynamicResource MainWindow.Settings.FogBlurEnabledLabel}" />
+                    <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Text="{DynamicResource MainWindow.Settings.FogOpacityLabel}"
+                                   VerticalAlignment="Center" />
+                        <Slider Name="FogOpacitySlider" Grid.Column="1" Minimum="0" Maximum="100" />
+                        <TextBlock Grid.Column="2" Text="{Binding #FogOpacitySlider.Value, StringFormat='{}{0:0}%'}"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                    <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Text="{DynamicResource MainWindow.Settings.FogBlurLabel}"
+                                   VerticalAlignment="Center" />
+                        <Slider Name="FogBlurRadiusSlider" Grid.Column="1" Minimum="0" Maximum="60"
+                                TickFrequency="1" IsSnapToTickEnabled="True" />
+                        <TextBlock Grid.Column="2" Text="{Binding #FogBlurRadiusSlider.Value, StringFormat='{}{0:0}px'}"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Grid>
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" Text="{DynamicResource MapPrepareWindow.CellSizeLabel}"
+                               VerticalAlignment="Center" />
+                    <NumericUpDown Name="CellSizeUpDown" Grid.Column="1" Minimum="1" Maximum="256"
+                                    Increment="1" HorizontalAlignment="Left" Width="120" />
+                    <TextBlock Name="CellSizeWarningLabel" Grid.Column="2" Classes="muted"
+                               Text="{DynamicResource MapPrepareWindow.CellSizeWarning}"
+                               IsVisible="False"
+                               TextWrapping="Wrap" MaxWidth="260" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Panel Name="EditorCanvas"
+                   Background="Transparent"
+                   PointerPressed="OnCanvasPointerPressed"
+                   PointerMoved="OnCanvasPointerMoved"
+                   PointerReleased="OnCanvasPointerReleased"
+                   PointerExited="OnCanvasPointerExited">
+                <Image Name="FloorImageControl" Stretch="Uniform" />
+                <Image Name="FogOverlayControl" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
+                <Ellipse Name="BrushCursor"
+                         IsHitTestVisible="False"
+                         IsVisible="False"
+                         Stroke="{DynamicResource AccentBrush}"
+                         StrokeThickness="2"
+                         Fill="Transparent"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Top" />
+            </Panel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>
