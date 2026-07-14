@@ -93,6 +93,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Creating a new Alarm could fail with an "invalid alarm date" error and
+  refuse to add it, even with no obviously invalid input. `AddAlarm` now
+  falls back to "1 hour from now" if the target-time field can't be parsed,
+  the same "always succeeds via a sensible default" behavior Timer/
+  IntervalEvent already had for their duration fields, instead of blocking
+  the add.
+- Alarm creation/editing could also fail with an "invalid repeat interval"
+  error even though the Repeat field visually looked empty - the underlying
+  `AllowEmpty` `TimeSpanInput` control could end up bound to `"00:00:00"`
+  instead of a true empty string. Rather than chase every way that could
+  happen, `AddAlarm`/`ApplyEdits` now treat a zero-valued repeat interval
+  the same as an empty one (a one-time alarm) - only a string that fails to
+  parse at all is a genuine error. Also fixed `TimeSpanInput`'s `AllowEmpty`
+  handling to clear its Days box along with Hours/Minutes/Seconds (it was
+  the one box left out), and to re-render from the authoritative `Text`
+  value on a limit-property change instead of recomputing `Text` from the
+  boxes.
 - Characters were silently losing data on every app launch: loading a
   saved character (rebuilding it from `settings.json`) triggered the same
   save-on-change path used for interactive edits, before that character

@@ -333,30 +333,30 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [RelayCommand]
     private void AddAlarm()
     {
+        // Unlike Timer/IntervalEvent's duration fields, an unset/unparseable target time has no
+        // single obvious numeric default - falls back to "1 hour from now" rather than blocking
+        // the add, matching Timer/IntervalEvent's "always succeeds via a sensible default" behavior.
         if (!DateTime.TryParse(NewAlarmDateTime, out var triggerAt))
         {
-            if (NewAlarmDate.HasValue)
-            {
-                triggerAt = NewAlarmDate.Value.Date.Add(NewAlarmTime ?? TimeSpan.Zero);
-                NewAlarmDateTime = triggerAt.ToString("yyyy-MM-dd HH:mm:ss");
-            }
-            else
-            {
-                ClockErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.InvalidAlarmDate");
-                return;
-            }
+            triggerAt = _clock.CurrentTime.AddHours(1);
+            NewAlarmDateTime = triggerAt.ToString("yyyy-MM-dd HH:mm:ss");
         }
 
+        // A zero/blank repeat interval is never a genuine user error - it just means "one-time
+        // alarm", the same as leaving the field empty (the UI's AllowEmpty TimeSpanInput can end
+        // up showing "00:00:00" instead of a true empty string depending on how it was
+        // interacted with - see TimeSpanInput's doc comments). Only a string that fails to parse
+        // at all (a real typo) should block the add.
         TimeSpan? repeat = null;
         if (!string.IsNullOrWhiteSpace(NewAlarmRepeatInterval))
         {
-            if (!TimeSpan.TryParse(NewAlarmRepeatInterval, out var parsedRepeat) || parsedRepeat <= TimeSpan.Zero)
+            if (!TimeSpan.TryParse(NewAlarmRepeatInterval, out var parsedRepeat))
             {
                 ClockErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.InvalidRepeatInterval");
                 return;
             }
 
-            repeat = parsedRepeat;
+            if (parsedRepeat > TimeSpan.Zero) repeat = parsedRepeat;
         }
         else
         {
@@ -395,8 +395,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AlarmCreated"), vm.Name));
 
         var nextAlarm = _clock.CurrentTime.AddHours(8);
-        NewAlarmDate = new DateTimeOffset(nextAlarm.Date);
-        NewAlarmTime = nextAlarm.TimeOfDay;
         NewAlarmDateTime = nextAlarm.ToString("yyyy-MM-dd HH:mm:ss");
         NewAlarmRepeatHours = 0;
         NewAlarmRepeatMinutes = 0;

@@ -89,12 +89,18 @@ public partial class TimeSpanInput : UserControl
         if (change.Property == TextProperty && !_updating)
             UpdateBoxesFromText(change.GetNewValue<string>() ?? string.Empty);
 
+        // Re-render the boxes from the authoritative Text value rather than recomputing Text from
+        // the boxes: if AllowEmpty/Limit* attributes apply in XAML *after* Text (as they do for
+        // the Alarm repeat-interval field), the initial Text="" push would otherwise have already
+        // filled the boxes with clamped zeros (AllowEmpty was still false at that point), and
+        // recomputing Text from those stale non-blank boxes here would permanently overwrite an
+        // intentionally-empty bound value with "00:00:00".
         if ((change.Property == LimitDaysProperty ||
                 change.Property == LimitHoursProperty ||
              change.Property == LimitMinutesProperty ||
              change.Property == LimitSecondsProperty) &&
             !_updating)
-            UpdateTextFromBoxes();
+            UpdateBoxesFromText(Text);
     }
 
     private void UpdateBoxesFromText(string text)
@@ -104,6 +110,7 @@ public partial class TimeSpanInput : UserControl
         {
             if (AllowEmpty && string.IsNullOrWhiteSpace(text))
             {
+                DaysBox.Text = string.Empty;
                 HoursBox.Text = string.Empty;
                 MinutesBox.Text = string.Empty;
                 SecondsBox.Text = string.Empty;

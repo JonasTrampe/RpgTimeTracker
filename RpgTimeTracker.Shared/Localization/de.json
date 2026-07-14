@@ -419,7 +419,6 @@
   "MainWindowViewModel.Errors.InvalidActiveDuration": "Ungültige Aktiv-Dauer. Bitte hh:mm:ss verwenden, z.B. 00:01:00.",
   "MainWindowViewModel.Errors.ActiveDurationExceedsInterval": "Die Aktiv-Dauer sollte nicht größer als das Intervall sein.",
   "MainWindowViewModel.Errors.InvalidMaxRepeats": "Ungültige maximale Wiederholungszahl (0 oder leer = unbegrenzt)",
-  "MainWindowViewModel.Errors.InvalidAlarmDate": "Ungültiges Wecker-Datum. Bitte JJJJ-MM-TT HH:mm:ss verwenden.",
   "MainWindowViewModel.Errors.InvalidRepeatInterval": "Ungültiges Wiederhol-Intervall. Bitte hh:mm:ss verwenden oder leer lassen.",
   "MainWindowViewModel.Errors.EventMediumCouldNotBeSent": "Event-Medium konnte nicht gesendet werden: {0}",
   "MainWindowViewModel.Errors.NoValidGameState": "Datei enthält keinen gültigen Spielstand.",
