@@ -93,13 +93,17 @@ public partial class DateTimeInput : UserControl
         if (change.Property == TextProperty && !_updating)
             UpdateBoxesFromText(change.GetNewValue<string>() ?? string.Empty);
 
+        // Re-render the boxes from the authoritative Text value rather than recomputing Text from
+        // the boxes - see TimeSpanInput's identical fix for why recomputing from boxes here can
+        // permanently overwrite a bound value with one derived from stale box content (order of
+        // XAML attribute application relative to the Text binding).
         if ((change.Property == MinYearProperty ||
              change.Property == MaxYearProperty ||
              change.Property == LimitHoursProperty ||
              change.Property == LimitMinutesProperty ||
              change.Property == LimitSecondsProperty) &&
             !_updating)
-            UpdateTextFromBoxes();
+            UpdateBoxesFromText(Text);
     }
 
     private void UpdateBoxesFromText(string text)
