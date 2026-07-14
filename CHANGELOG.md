@@ -100,16 +100,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   IntervalEvent already had for their duration fields, instead of blocking
   the add.
 - Alarm creation/editing could also fail with an "invalid repeat interval"
-  error while the Repeat field visually looked empty. `TimeSpanInput`/
-  `DateTimeInput`'s `AllowEmpty`/limit properties are set in XAML *after*
-  `Text`, so the first `Text=""` push happened while `AllowEmpty` was still
-  false, filling the boxes with clamped zeros instead of leaving them
-  blank; a later limit property then re-derived `Text` from those stale
-  non-blank boxes, permanently overwriting the empty value with
-  `"00:00:00"`. Both controls now always re-render their boxes from the
-  authoritative `Text` value on a limit-property change instead of
-  recomputing `Text` from the boxes, so a limit changing can never
-  overwrite the bound value.
+  error even though the Repeat field visually looked empty - the underlying
+  `AllowEmpty` `TimeSpanInput` control could end up bound to `"00:00:00"`
+  instead of a true empty string. Rather than chase every way that could
+  happen, `AddAlarm`/`ApplyEdits` now treat a zero-valued repeat interval
+  the same as an empty one (a one-time alarm) - only a string that fails to
+  parse at all is a genuine error. Also fixed `TimeSpanInput`'s `AllowEmpty`
+  handling to clear its Days box along with Hours/Minutes/Seconds (it was
+  the one box left out), and to re-render from the authoritative `Text`
+  value on a limit-property change instead of recomputing `Text` from the
+  boxes.
 - Characters were silently losing data on every app launch: loading a
   saved character (rebuilding it from `settings.json`) triggered the same
   save-on-change path used for interactive edits, before that character

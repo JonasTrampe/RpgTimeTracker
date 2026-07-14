@@ -110,6 +110,7 @@ public partial class TimeSpanInput : UserControl
         {
             if (AllowEmpty && string.IsNullOrWhiteSpace(text))
             {
+                DaysBox.Text = string.Empty;
                 HoursBox.Text = string.Empty;
                 MinutesBox.Text = string.Empty;
                 SecondsBox.Text = string.Empty;

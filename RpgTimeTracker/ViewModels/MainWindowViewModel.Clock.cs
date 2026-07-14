@@ -342,16 +342,21 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             NewAlarmDateTime = triggerAt.ToString("yyyy-MM-dd HH:mm:ss");
         }
 
+        // A zero/blank repeat interval is never a genuine user error - it just means "one-time
+        // alarm", the same as leaving the field empty (the UI's AllowEmpty TimeSpanInput can end
+        // up showing "00:00:00" instead of a true empty string depending on how it was
+        // interacted with - see TimeSpanInput's doc comments). Only a string that fails to parse
+        // at all (a real typo) should block the add.
         TimeSpan? repeat = null;
         if (!string.IsNullOrWhiteSpace(NewAlarmRepeatInterval))
         {
-            if (!TimeSpan.TryParse(NewAlarmRepeatInterval, out var parsedRepeat) || parsedRepeat <= TimeSpan.Zero)
+            if (!TimeSpan.TryParse(NewAlarmRepeatInterval, out var parsedRepeat))
             {
                 ClockErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.InvalidRepeatInterval");
                 return;
             }
 
-            repeat = parsedRepeat;
+            if (parsedRepeat > TimeSpan.Zero) repeat = parsedRepeat;
         }
         else
         {

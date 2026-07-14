@@ -168,16 +168,19 @@ public partial class AlarmItemViewModel : ObservableObject
             return;
         }
 
+        // A zero/blank repeat interval means "one-time alarm", not an error - see AddAlarm's
+        // matching fix for why (the AllowEmpty TimeSpanInput can show "00:00:00" instead of a
+        // true empty string). Only a string that fails to parse at all should block the edit.
         TimeSpan? repeat = null;
         if (!string.IsNullOrWhiteSpace(RepeatIntervalTextEdit))
         {
-            if (!TimeSpan.TryParse(RepeatIntervalTextEdit, out var parsedRepeat) || parsedRepeat <= TimeSpan.Zero)
+            if (!TimeSpan.TryParse(RepeatIntervalTextEdit, out var parsedRepeat))
             {
                 ErrorMessage = LocalizationService.Get("AlarmItem.ErrorInvalidRepeatInterval");
                 return;
             }
 
-            repeat = parsedRepeat;
+            if (parsedRepeat > TimeSpan.Zero) repeat = parsedRepeat;
         }
 
         _model.TriggerAt = triggerAt;
