@@ -287,8 +287,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     [ObservableProperty] private string _networkServerStatus = LocalizationService.Get("MainWindowViewModel.Network.ServerOff");
 
-    [ObservableProperty] private DateTimeOffset? _newAlarmDate;
-
     [ObservableProperty] private string _newAlarmDateTime;
 
     [ObservableProperty] private decimal _newAlarmRepeatHours;
@@ -298,8 +296,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [ObservableProperty] private decimal _newAlarmRepeatMinutes;
 
     [ObservableProperty] private decimal _newAlarmRepeatSeconds;
-
-    [ObservableProperty] private TimeSpan? _newAlarmTime;
 
     [ObservableProperty] private string _newIntervalActiveDuration = "00:01:00";
 
@@ -702,8 +698,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _manualDateTimeText = start.ToString("yyyy-MM-dd HH:mm:ss");
         var defaultAlarm = start.AddHours(8);
         _newAlarmDateTime = defaultAlarm.ToString("yyyy-MM-dd HH:mm:ss");
-        _newAlarmDate = new DateTimeOffset(defaultAlarm.Date);
-        _newAlarmTime = defaultAlarm.TimeOfDay;
         CurrentGameTimeText = FormatGameTime(start);
 
         var settings = ThemeSettingsService.LoadSettings();

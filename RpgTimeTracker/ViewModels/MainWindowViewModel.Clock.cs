@@ -333,18 +333,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [RelayCommand]
     private void AddAlarm()
     {
+        // Unlike Timer/IntervalEvent's duration fields, an unset/unparseable target time has no
+        // single obvious numeric default - falls back to "1 hour from now" rather than blocking
+        // the add, matching Timer/IntervalEvent's "always succeeds via a sensible default" behavior.
         if (!DateTime.TryParse(NewAlarmDateTime, out var triggerAt))
         {
-            if (NewAlarmDate.HasValue)
-            {
-                triggerAt = NewAlarmDate.Value.Date.Add(NewAlarmTime ?? TimeSpan.Zero);
-                NewAlarmDateTime = triggerAt.ToString("yyyy-MM-dd HH:mm:ss");
-            }
-            else
-            {
-                ClockErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.InvalidAlarmDate");
-                return;
-            }
+            triggerAt = _clock.CurrentTime.AddHours(1);
+            NewAlarmDateTime = triggerAt.ToString("yyyy-MM-dd HH:mm:ss");
         }
 
         TimeSpan? repeat = null;
@@ -395,8 +390,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AlarmCreated"), vm.Name));
 
         var nextAlarm = _clock.CurrentTime.AddHours(8);
-        NewAlarmDate = new DateTimeOffset(nextAlarm.Date);
-        NewAlarmTime = nextAlarm.TimeOfDay;
         NewAlarmDateTime = nextAlarm.ToString("yyyy-MM-dd HH:mm:ss");
         NewAlarmRepeatHours = 0;
         NewAlarmRepeatMinutes = 0;

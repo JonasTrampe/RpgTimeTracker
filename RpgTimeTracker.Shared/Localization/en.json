@@ -419,7 +419,6 @@
   "MainWindowViewModel.Errors.InvalidActiveDuration": "Invalid active duration. Please use hh:mm:ss, e.g. 00:01:00.",
   "MainWindowViewModel.Errors.ActiveDurationExceedsInterval": "The active duration should not be greater than the interval.",
   "MainWindowViewModel.Errors.InvalidMaxRepeats": "Invalid maximum repeat count (0 or empty = unlimited)",
-  "MainWindowViewModel.Errors.InvalidAlarmDate": "Invalid alarm date. Please use YYYY-MM-DD HH:mm:ss.",
   "MainWindowViewModel.Errors.InvalidRepeatInterval": "Invalid repeat interval. Please use hh:mm:ss or leave empty.",
   "MainWindowViewModel.Errors.EventMediumCouldNotBeSent": "Event medium could not be sent: {0}",
   "MainWindowViewModel.Errors.NoValidGameState": "File does not contain a valid game state.",

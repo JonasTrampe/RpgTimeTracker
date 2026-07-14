@@ -93,6 +93,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Creating a new Alarm could fail with an "invalid alarm date" error and
+  refuse to add it, even with no obviously invalid input. `AddAlarm` now
+  falls back to "1 hour from now" if the target-time field can't be parsed,
+  the same "always succeeds via a sensible default" behavior Timer/
+  IntervalEvent already had for their duration fields, instead of blocking
+  the add.
 - Characters were silently losing data on every app launch: loading a
   saved character (rebuilding it from `settings.json`) triggered the same
   save-on-change path used for interactive edits, before that character
