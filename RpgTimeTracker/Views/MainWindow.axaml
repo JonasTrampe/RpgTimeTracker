@@ -1322,21 +1322,12 @@
                                                                                         </Flyout>
                                                                                     </Button.Flyout>
                                                                                 </Button>
-                                                                                <Button Classes="iconsquare"
-                                                                                    Content="🏠" Width="22"
-                                                                                    Height="22" FontSize="11"
-                                                                                    IsVisible="{Binding IsSessionLocal}"
-                                                                                    Command="{Binding $parent[TabItem].DataContext.MoveMediaLibraryItemToSharedCommand}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.MoveToSharedTooltip}" />
-                                                                                <Button Classes="iconsquare"
-                                                                                    Content="📦" Width="22"
-                                                                                    Height="22" FontSize="11"
-                                                                                    IsVisible="{Binding !IsSessionLocal}"
-                                                                                    IsEnabled="{Binding $parent[TabItem].DataContext.IsSessionOpen}"
-                                                                                    Command="{Binding $parent[TabItem].DataContext.MoveMediaLibraryItemToSessionCommand}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.MoveToSessionTooltip}" />
+                                                                                <controls:MoveToScopeButtons
+                                                                                    IsSessionLocal="{Binding IsSessionLocal}"
+                                                                                    IsSessionOpen="{Binding $parent[TabItem].DataContext.IsSessionOpen}"
+                                                                                    MoveToSharedCommand="{Binding $parent[TabItem].DataContext.MoveMediaLibraryItemToSharedCommand}"
+                                                                                    MoveToSessionCommand="{Binding $parent[TabItem].DataContext.MoveMediaLibraryItemToSessionCommand}"
+                                                                                    Item="{Binding}" />
                                                                                 <Button Classes="iconsquare"
                                                                                     Content="&#10005;"
                                                                                     Command="{Binding DeleteCommand}"
@@ -1579,23 +1570,12 @@
                                                                                     </Flyout>
                                                                                 </Button.Flyout>
                                                                             </Button>
-                                                                            <Button Grid.Column="2"
-                                                                                    Classes="iconsquare"
-                                                                                    Content="🏠" Width="22"
-                                                                                    Height="22" FontSize="11"
-                                                                                    IsVisible="{Binding IsSessionLocal}"
-                                                                                    Command="{Binding $parent[TabItem].DataContext.MoveSoundLibraryItemToSharedCommand}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.MoveToSharedTooltip}" />
-                                                                            <Button Grid.Column="3"
-                                                                                    Classes="iconsquare"
-                                                                                    Content="📦" Width="22"
-                                                                                    Height="22" FontSize="11"
-                                                                                    IsVisible="{Binding !IsSessionLocal}"
-                                                                                    IsEnabled="{Binding $parent[TabItem].DataContext.IsSessionOpen}"
-                                                                                    Command="{Binding $parent[TabItem].DataContext.MoveSoundLibraryItemToSessionCommand}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.MoveToSessionTooltip}" />
+                                                                            <controls:MoveToScopeButtons Grid.Column="2" Grid.ColumnSpan="2"
+                                                                                    IsSessionLocal="{Binding IsSessionLocal}"
+                                                                                    IsSessionOpen="{Binding $parent[TabItem].DataContext.IsSessionOpen}"
+                                                                                    MoveToSharedCommand="{Binding $parent[TabItem].DataContext.MoveSoundLibraryItemToSharedCommand}"
+                                                                                    MoveToSessionCommand="{Binding $parent[TabItem].DataContext.MoveSoundLibraryItemToSessionCommand}"
+                                                                                    Item="{Binding}" />
                                                                             <Button Grid.Column="4"
                                                                                     Classes="iconsquare"
                                                                                     Content="&#10005;"
@@ -1806,23 +1786,12 @@
                                                                                     </Flyout>
                                                                                 </Button.Flyout>
                                                                             </Button>
-                                                                            <Button Grid.Column="2"
-                                                                                    Classes="iconsquare"
-                                                                                    Content="🏠" Width="22"
-                                                                                    Height="22" FontSize="11"
-                                                                                    IsVisible="{Binding IsSessionLocal}"
-                                                                                    Command="{Binding $parent[TabItem].DataContext.MoveMusicLibraryItemToSharedCommand}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.MoveToSharedTooltip}" />
-                                                                            <Button Grid.Column="3"
-                                                                                    Classes="iconsquare"
-                                                                                    Content="📦" Width="22"
-                                                                                    Height="22" FontSize="11"
-                                                                                    IsVisible="{Binding !IsSessionLocal}"
-                                                                                    IsEnabled="{Binding $parent[TabItem].DataContext.IsSessionOpen}"
-                                                                                    Command="{Binding $parent[TabItem].DataContext.MoveMusicLibraryItemToSessionCommand}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.MoveToSessionTooltip}" />
+                                                                            <controls:MoveToScopeButtons Grid.Column="2" Grid.ColumnSpan="2"
+                                                                                    IsSessionLocal="{Binding IsSessionLocal}"
+                                                                                    IsSessionOpen="{Binding $parent[TabItem].DataContext.IsSessionOpen}"
+                                                                                    MoveToSharedCommand="{Binding $parent[TabItem].DataContext.MoveMusicLibraryItemToSharedCommand}"
+                                                                                    MoveToSessionCommand="{Binding $parent[TabItem].DataContext.MoveMusicLibraryItemToSessionCommand}"
+                                                                                    Item="{Binding}" />
                                                                             <Button Grid.Column="4"
                                                                                     Classes="iconsquare"
                                                                                     Content="&#10005;"

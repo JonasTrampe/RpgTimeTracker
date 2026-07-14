@@ -59,6 +59,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   blocks), and Portrait/Token replaced their Choose/Clear text buttons
   with a single edit (✎) button opening a small menu, so the image itself
   gets more room instead of competing with button rows.
+- Internal cleanup pass, no user-visible behavior change: unified the
+  per-library `Move*ItemToScope` and `Save*LibrarySettings` methods (Media/
+  Sound/Music/Map/Character) behind two shared helpers instead of five
+  near-identical copies each, removed two now-pointless single-line copy
+  wrappers left over from the content-hash dedup work, extracted the
+  repeated "move to Shared Library"/"move to this Session" icon-button
+  pair (Media/Sound/Music tiles) into a reusable `MoveToScopeButtons`
+  control, and split the ~6,300-line `MainWindowViewModel.cs` into
+  per-library partial-class files for readability.
 
 ### Fixed
 
