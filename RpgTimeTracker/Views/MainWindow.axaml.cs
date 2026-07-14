@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -623,6 +624,86 @@ public partial class MainWindow : Window
     {
         if (sender is Control control && control.DataContext is MediaLibraryItemViewModel item)
             item.ShowCommand.Execute(null);
+    }
+
+    // ==================== Characters (NPC) tab handlers ====================
+
+    private void OnAddNpcGmInfoBlockClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc: { } npc }) return;
+        npc.AddGmInfoBlock(LocalizationService.Get("MainWindowViewModel.Defaults.NewGmBlockTitle"));
+    }
+
+    private void OnMoveNpcGmInfoBlockUpClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc: { } npc }) return;
+        if (sender is Control { DataContext: NpcGmInfoBlockViewModel block }) npc.MoveGmInfoBlockUp(block);
+    }
+
+    private void OnMoveNpcGmInfoBlockDownClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc: { } npc }) return;
+        if (sender is Control { DataContext: NpcGmInfoBlockViewModel block }) npc.MoveGmInfoBlockDown(block);
+    }
+
+    private void OnAddNpcStateClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc: { } npc }) return;
+        var state = npc.AddState(LocalizationService.Get("MainWindowViewModel.Defaults.NewStateName"));
+        npc.ActiveState = state;
+    }
+
+    private void OnChooseNpcStateImageClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state } vm) return;
+
+        var picker = new MediaLibraryPickerWindow(vm.MediaLibrary.Where(m => m.Kind == MediaKind.Image),
+            item => state.Image = item);
+        picker.Show(this);
+    }
+
+    private void OnClearNpcStateImageClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state }) return;
+        state.Image = null;
+    }
+
+    private void OnChooseNpcStateTokenImageClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state } vm) return;
+
+        var picker = new MediaLibraryPickerWindow(vm.MediaLibrary.Where(m => m.Kind == MediaKind.Image),
+            item => state.TokenImage = item);
+        picker.Show(this);
+    }
+
+    private void OnChooseNpcStateTokenIconClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state }) return;
+
+        var picker = new IconPickerWindow(icon => state.TokenIcon = icon);
+        picker.Show(this);
+    }
+
+    private void OnClearNpcStateTokenClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state }) return;
+        state.TokenImage = null;
+        state.TokenIcon = null;
+    }
+
+    private void OnAddNpcStateSoundClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state } vm) return;
+
+        var picker = new SoundLibraryPickerWindow(vm.SoundLibrary, sound => state.AddSound(sound));
+        picker.Show(this);
+    }
+
+    private void OnRemoveNpcStateSoundClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state }) return;
+        if (sender is Control { DataContext: SoundLibraryItemViewModel sound }) state.RemoveSound(sound);
     }
 
     /// <summary>

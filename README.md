@@ -57,11 +57,30 @@ method list, media streaming) can be found in [`docs/protocol.md`](docs/protocol
   the 💾/📂 buttons in the top left, or imported again. Older plain-JSON save
   files from before this format still load fine and are upgraded automatically
   the next time you save.
+- **Sessions (optional, folder-scoped campaigns)**: "New Session…"/"Open
+  Session…"/"Close Session" in the status bar create or open a folder that
+  holds one campaign's own copy of the Media, Sound, Map, and Character
+  libraries, alongside the always-present Shared Library. With no session
+  open, everything behaves exactly as before - Sessions are purely opt-in.
+  Adding a new item while a session is open asks whether it belongs to the
+  Shared Library (reused across campaigns) or just this session; either can
+  be changed later per item via a "Move to Shared Library"/"Move to this
+  Session" action. Closing a session hides its session-local items from
+  every library list (the files stay on disk); opening it again brings them
+  back.
 - **Full session export/import**: the Settings tab has a "📦 Export
-  session…"/"📦 Import session…" pair that bundles the game state *and* the
-  Media, Sound, and Map libraries into a single `.rtt-session` file - for a
-  full backup or moving everything to a new machine in one step, instead of
-  exporting the save file and each library separately.
+  session…"/"📦 Import session…" pair. With a Session open, it bundles that
+  session's state and session-local Media/Sound/Map/Character entries,
+  including copies of any Shared-sourced assets a Character actually
+  references, so the result is self-contained on another machine; import
+  always creates a brand-new session folder with fresh IDs, never merging
+  into the target's Shared Library. With no session open, it keeps its
+  original meaning: the game state plus the entire Media, Sound, Map, and
+  Character Shared Library in one `.rtt-session` file - a full backup or a
+  one-step move to a new machine, instead of exporting the save file and
+  each library separately. (The Music library and playlists aren't part of
+  this bundle yet - back them up via their own Export/Import in the Music
+  tab.)
 - **Maps / fog-of-war (its own "Maps" tab)**: build a library of maps, each
   made of one or more floors (image + grid cell size). Preparing a floor's
   fog (brush reveal/hide, zoom, resizable floor-cell size) happens entirely
@@ -77,6 +96,22 @@ method list, media streaming) can be found in [`docs/protocol.md`](docs/protocol
   can be shown to players at a time, and a map currently open in its
   Prepare window can't be shown until that's closed. Maps can be exported/
   imported individually (`.rtt-map`) or as part of a full session bundle.
+- **Characters library (its own "Characters" tab)**: NPCs/PCs with a
+  portrait, a map token (an image, a Bootstrap icon, or initials derived
+  from the name - whichever is set, in that order), any number of named,
+  ordered GM-only reference note blocks (e.g. "Motivation"/"Secrets",
+  rendered as Markdown), and any number of named states/moods (e.g.
+  "Neutral"/"Angry") that can each override the portrait, token, player
+  info, and connected sounds - a state left unset falls back to the
+  character's Default state, so only what actually changes needs
+  overriding. A character's portrait and sounds reference the Media/Sound
+  Libraries by ID instead of owning copies; deleting a referenced item
+  warns if a character still uses it, the same 3-way confirm-delete already
+  used for trigger media and playlists. Included in the Sessions'
+  Shared-vs-session-local split and in both full-session and open-session
+  export/import (see Sessions above). Player info is GM-facing only in this
+  pass - not yet transmitted to connected players, and there's no map
+  token placement/dragging or fog-linked token visibility yet.
 - **Networked player display**: the GM starts a TCP server in the
   control app on a freely selectable port with a freely selectable
   server name (this is included in the mDNS/LAN announcement and thus appears
@@ -321,6 +356,12 @@ More detailed technical documentation lives in [`docs/`](docs/):
 - Sound/popup notification when a timer expires or an alarm triggers
 - Custom fantasy calendar (different month lengths, weekdays, holidays)
   instead of the standard `DateTime`
-- Multiple parallel "sessions"/campaigns with their own game time
 - Auto-save on closing the app / remember the last-used file
 - Video chunking with progressive playback already during transfer
+- Characters: drag a token onto a map (with fog-linked visibility), send
+  player info to connected clients, automatic/triggered state-switching
+  (currently only manual GM switching of a character's Active state), and a
+  live side-by-side Markdown preview for GM info blocks/player info
+  (currently a toggleable preview, not split-view)
+- Standalone Character export/import (folder-based, like Media/Sound/Music)
+  and a `.rtt-map`-style single-character export

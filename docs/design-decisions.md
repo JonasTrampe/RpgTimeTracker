@@ -1674,6 +1674,147 @@ ordering guarantee explicit and self-documenting in the data itself
 instead of an implicit property of "whatever order this list happens to
 be in right now."
 
+## Sessions: an optional folder-scoped Shared/session-local split, not a database of campaigns
+
+The Characters (NPC) design conversation surfaced a problem the app never
+had to solve before: a GM wants some library assets (a house theme's stock
+sounds, a recurring shopkeeper NPC) reused across every campaign, and
+others (this campaign's antagonist, this dungeon's maps) to belong to just
+one campaign - and wants moving to a new machine to bundle "this
+campaign's stuff" self-contained, without assuming the receiving machine
+already has a matching Shared Library.
+
+The chosen model is deliberately the lightest one that solves this: a
+Session is **a folder the GM picks or creates via a folder dialog**
+(`SessionService.CreateSession`/`OpenSession`/`CloseSession`), the same
+mental model as the existing Save/Load file pickers - not a hidden fixed
+directory, not a database of "known sessions" the app tracks internally.
+Every library item gets a `LibraryScope` (`Shared` or `SessionLocal`); with
+no session open, only `Shared` items exist and the app behaves exactly as
+it always did (`OpenSession` appends `SessionLocal` items into the same
+`ObservableCollection`s the UI already binds to; `CloseSession` removes
+them again - the files themselves are untouched either way, since closing
+isn't deleting). This makes Sessions strictly additive/opt-in rather than
+a parallel mode the rest of the app has to know about.
+
+**Why per-item scope instead of "the whole library becomes session-scoped
+once a session is open"**: a shared "generic tavern ambience" sound and a
+campaign-specific "final boss theme" sound legitimately belong in the same
+Sound Library tab at the same time. Add-time asks Shared-vs-session-only
+(skipped entirely with no session open - zero prompt added to the common
+case), and a later "Move to Shared Library"/"Move to this Session" action
+lets the GM correct a wrong call without re-adding the file.
+
+**Why deletion safeguards had to be generalized (`LibraryUsageRegistry`)
+as part of this, not left for later**: NPCs are the first feature where one
+library item *references* another by Id (a character's portrait/token
+points at a Media Library entry) instead of owning a copy - and Sound/Music
+library deletion previously had no confirmation at all (only Media did,
+via a hand-written path-matching check). Once a Character can be silently
+broken by deleting a Sound item out from under it, "only Media warns before
+deleting" stopped being an acceptable gap. `LibraryUsageRegistry` replaces
+that one hand-written check with `Register`/`RegisterClearAction` finder
+pairs that Timers/Alarms/Intervals/Calendar, Playlists, and now Characters
+all register into, reusing the existing 3-way confirm-delete dialog
+(`TriggerMediaDeleteChoice`) rather than inventing a stricter block-only
+policy.
+
+**Why content-hash dedup (`ContentAddressedStorage`) landed in the same
+pass**: once assets could legitimately exist in two places (Shared and a
+session's own folder) it became easy to accidentally store the same file
+twice within *one* of those pools (e.g. re-adding the same portrait to two
+different Characters). Ingest now names the stored file by its SHA-256
+hash and reuses an existing file with the same hash in the same directory
+- deliberately *not* deduped across Shared vs. session-local, since a
+session bundle needs to stay self-contained without depending on what
+happens to also exist in the Shared pool.
+
+## Promote/demote was designed but never actually shipped - fixed after the fact
+
+The Sessions plan (above) called for an add-time Shared-vs-session-local
+choice *plus* a later "move to Shared Library"/"move to this Session"
+action so a wrong call at add-time isn't permanent. Both pieces looked
+"done" in tracking, but a later audit (grepping the codebase for any UI
+that could invoke a move) found only half of it had actually landed:
+`MainWindowViewModel.MoveMediaLibraryItemToScope`/
+`MoveSoundLibraryItemToScope`/`MoveMusicLibraryItemToScope` already existed
+(move the file, flip `Scope`, re-save), but **nothing in `MainWindow.axaml`
+ever called them** - no button, no menu item, on any of the three. Maps and
+Characters didn't even have the backend method. The feature had been built
+from the data layer up and the last, most visible step - wiring an actual
+button to it - was skipped without anyone noticing, since the app still
+worked correctly either way (an item just stayed wherever it was first
+added).
+
+Fixed by finishing the job: `LibraryItemViewModelBase.IsSessionLocal` (and
+matching properties on `MapItemViewModel`/`NpcLibraryItemViewModel`, which
+don't derive from that base) expose which pool an item is in for the tile
+to bind against; each tile gained a "move to Shared"/"move to this Session"
+action (small icon buttons for Media/Sound/Music tiles, folded into the
+existing "⋮" menu for Maps and added fresh for Characters, which had no
+such menu yet). `MoveMapLibraryItemToScope` was added following the same
+pattern as Media/Sound/Music, except it moves the map's whole per-map
+directory (`MapFloorItemViewModel.UpdatePaths` then repoints each floor's
+image/fog paths at the new location) rather than a single file, since a
+map's Id-named folder was already the natural on-disk unit (see
+`GetMapLibraryBaseDirectory`). `MoveNpcLibraryItemToScope` is the simplest
+of the five: a Character owns no files (see its own doc comment below), so
+moving scope is just a `Scope` flip and a re-save, no file to relocate.
+
+**Takeaway for future multi-layer features**: "the button is a small
+detail, the data layer is the hard part" is true right up until the button
+is the only thing standing between a designed feature and a real one - a
+backend method with zero callers isn't partial progress toward done, it's
+invisible to the person the feature was for.
+
+## Characters (NPC) library: references Media/Sound by Id, owns no files of its own
+
+`NpcLibraryItemViewModel` deliberately does not derive from
+`LibraryItemViewModelBase<TSelf>`, the base every other library item
+(Media/Sound/Music) uses - for the opposite reason `MapItemViewModel`
+already opted out of it. That base assumes a single owned `LocalPath`/
+`MimeType` per item; a Map has *many* owned files (one image + one fog
+layer per floor), while a Character has *zero* owned files at all. Its
+portrait, map token, and connected sounds are foreign keys into the Media/
+Sound Libraries (`ImageId`/`TokenImageId`/`SoundIds` on
+`NpcStateEntryDto`), not copies - the first cross-library reference
+relationship in this codebase, which is why `LibraryUsageRegistry` (above)
+had to exist before Characters could ship safely.
+
+**Per-state overrides fall back to the Default state, not to a blank
+value**: a state's `Image`/`TokenImage`/`TokenIcon`/`PlayerInfo` are all
+nullable, and `Sounds` carries a separate `HasSoundsOverride` flag (since
+"no sounds" is itself a meaningful override, distinct from "inherit the
+Default state's sounds"). `NpcLibraryItemViewModel.GetEffectiveImage` etc.
+resolve the fallback, mirroring `MainWindowViewModel.GetEffectiveFogStyle`'s
+existing per-map-falls-back-to-global pattern - just with the "global"
+here being local to one Character (its Default state) instead of an
+app-wide setting.
+
+**NPCs were initially missing from both session export paths entirely** -
+not a rounding-error gap, an outright omission caught by re-reading
+`ExportFullSessionToZipBytes`/`ExportSessionToZipBytes` after Characters
+shipped. Fixed by adding an `npcs/manifest.json` section to both, and by
+having `ImportMediaSectionFromZip`/`ImportSoundSectionFromZip` return an
+old-Id→new-Id map (the manifest's original Id, mapped to whatever fresh
+Guid the imported copy actually got) alongside their import count, which
+`ImportNpcSectionFromZip` uses to relink each imported state's
+portrait/token/sound references to the copies that landed in the same
+import rather than to a foreign Id that no longer means anything on this
+machine. A reference to an asset that wasn't part of the bundle (e.g. a
+Shared-scoped asset outside a session-scoped export) has no entry in the
+map and is silently dropped, matching `ClearNpcReferencesById`'s existing
+"unset the reference, don't crash" behavior for outright deletions.
+
+While fixing that, a related bug surfaced: `NpcLibraryItemViewModel.AddState`
+always minted a brand-new `Guid` for the state, even when reconstructing a
+state that already had a persisted Id (`FromNpcLibraryEntryDto` was calling
+it without passing `stateEntry.Id` through). Since `ActiveStateId` is
+matched by state Id, this meant a Character's Active-state selection
+silently reset to its Default state on *every* normal save/load round-trip,
+not just on import - `AddState` now takes an optional `id` parameter so a
+restored state keeps the Id it was saved with.
+
 ## Map `FormatVersion`, added before any format change actually needs one
 
 `MapItemViewModel.CurrentFormatVersion`/`FormatVersion` and the matching

@@ -72,6 +72,9 @@ public sealed partial class MapItemViewModel : ObservableObject
     ///     currently open Session's own folder - see LibraryScope.</summary>
     [ObservableProperty] private LibraryScope _scope;
 
+    /// <summary>See LibraryItemViewModelBase.IsSessionLocal's doc comment - same purpose here.</summary>
+    public bool IsSessionLocal => Scope == LibraryScope.SessionLocal;
+
     /// <summary>The format version this map was loaded/imported at - not user-editable, and
     ///     always saved back as CurrentFormatVersion (see MainWindowViewModel.SaveMapLibrarySettings)
     ///     once any future migration step has brought it up to date in memory.</summary>
@@ -108,6 +111,7 @@ public sealed partial class MapItemViewModel : ObservableObject
 
     partial void OnScopeChanged(LibraryScope value)
     {
+        OnPropertyChanged(nameof(IsSessionLocal));
         _onChanged?.Invoke(this);
     }
 

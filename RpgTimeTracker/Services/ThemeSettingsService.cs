@@ -239,6 +239,7 @@ public static class ThemeSettingsService
         public List<MusicLibraryEntryDto> MusicLibrary { get; set; } = [];
         public List<PlaylistEntryDto> Playlists { get; set; } = [];
         public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
+        public List<NpcLibraryEntryDto> NpcLibrary { get; set; } = [];
         // Property name kept as "ClientAudioPreferences" (not renamed to match the DTO type)
         // purely for JSON backward-compat - System.Text.Json round-trips by property name, so
         // renaming this would silently drop every existing user's saved Music/Sound routing

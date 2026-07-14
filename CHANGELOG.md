@@ -7,7 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Sessions shipped without any way to actually move an item between the
+  Shared Library and a session after adding it - the backend for Media/
+  Sound/Music already existed but had no UI, and Maps/Characters had
+  neither. Every library tile now has a "move to Shared Library"/"move to
+  this Session" action (Maps and Characters via their "⋮" menu, the
+  others as a small icon button), and Maps/Characters gained the missing
+  move logic itself (a map moves its whole per-map folder in one step; a
+  Character has no files to move, just its Scope).
+- The Map Live/Prepare editors' toolbar rows (floor selector, brush tools,
+  zoom controls, and the Live window's Reset/Show-to-players row) used a
+  fixed-width horizontal layout that squeezed together or overflowed on a
+  narrower window instead of wrapping - same fix already applied to the
+  Maps tab's floor-action row, now applied here too.
+
 ### Added
+
+- New "Characters" tab: a library of NPCs/PCs, each with a portrait, a map
+  token (an image, a Bootstrap icon, or initials derived from the name -
+  whichever is set, in that order), GM-only reference notes (any number of
+  named, ordered blocks, e.g. "Motivation"/"Secrets"), and any number of
+  named states/moods (e.g. "Neutral"/"Angry") that can each override the
+  portrait, token, player info, and connected sounds - left unset, a state
+  falls back to the character's Default state, so you only need to
+  override what actually changes. A character's portrait and sounds
+  reference the Media/Sound Libraries rather than owning copies; deleting
+  a referenced item now warns if a character still uses it, the same way
+  it already does for trigger media and playlists. Player info is
+  GM-facing only in this pass - not yet sent to connected players.
 
 - Adding an image/video, sound, or music track now names the stored file
   by its content hash instead of a random ID - adding or importing the
@@ -221,6 +250,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- NPCs (the Characters library) were silently left out of both "Export
+  Session" and "Export Full Session" (and their matching imports) - a
+  bundle looked complete but every character was simply gone on the other
+  end. Import now also relinks each state's portrait/token/sound references
+  to the freshly-imported copies bundled in the same zip, and a state's
+  Active state selection now survives a save/load round-trip too (it
+  previously always reset to the Default state on reload, since a fresh Id
+  was minted for every state even when restoring one that already had one).
 - A currently playing sound that finished purely on a remote client (Host
   window closed, or Sound turned off locally) never left the GM's "Active
   Sounds" panel - the natural-end report only ever checked whether it

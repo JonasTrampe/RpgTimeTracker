@@ -1,0 +1,40 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RpgTimeTracker.ViewModels"
+        x:Class="RpgTimeTracker.Views.SoundLibraryPickerWindow"
+        Title="{DynamicResource SoundLibraryPicker.WindowTitle}"
+        Width="420" Height="520"
+        MinWidth="360" MinHeight="420"
+        Background="{DynamicResource WindowBackgroundBrush}">
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="14" LastChildFill="True">
+        <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,10">
+            <TextBlock Text="{DynamicResource SoundLibraryPicker.Title}" FontWeight="Bold" FontSize="16" />
+            <TextBlock Text="{DynamicResource SoundLibraryPicker.Description}"
+                       TextWrapping="Wrap" Opacity="0.75" />
+            <TextBlock Name="EmptyText" Text="{DynamicResource SoundLibraryPicker.EmptyState}" IsVisible="False"
+                       Opacity="0.75" FontStyle="Italic" />
+        </StackPanel>
+
+        <ListBox Name="SoundList" DoubleTapped="OnItemDoubleTapped">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:SoundLibraryItemViewModel">
+                    <Grid ColumnDefinitions="Auto,*" Margin="6">
+                        <PathIcon Grid.Column="0" Data="{Binding IconGeometry}" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextBrush}" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</Window>

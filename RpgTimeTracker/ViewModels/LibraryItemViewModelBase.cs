@@ -69,8 +69,14 @@ public abstract partial class LibraryItemViewModelBase<TSelf> : ObservableObject
     ///     requiring the item to be recreated.</summary>
     [ObservableProperty] private LibraryScope _scope;
 
+    /// <summary>Bound by the tile's "move to Shared"/"move to this Session" buttons to decide
+    ///     which one to show - see MainWindowViewModel's MoveMediaLibraryItemToShared/ToSession
+    ///     (and the Sound/Music equivalents).</summary>
+    public bool IsSessionLocal => Scope == LibraryScope.SessionLocal;
+
     partial void OnScopeChanged(LibraryScope value)
     {
+        OnPropertyChanged(nameof(IsSessionLocal));
         NotifyChanged();
     }
 

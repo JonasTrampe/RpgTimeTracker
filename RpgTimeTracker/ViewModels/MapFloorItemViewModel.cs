@@ -51,9 +51,20 @@ public sealed partial class MapFloorItemViewModel : ObservableObject
     }
 
     public Guid Id { get; }
-    public string ImagePath { get; }
-    public string FogPath { get; }
+    public string ImagePath { get; private set; }
+    public string FogPath { get; private set; }
     public Bitmap? Thumbnail { get; }
+
+    /// <summary>Called only after the backing files have already been moved to their new
+    ///     location - see MainWindowViewModel.MoveMapLibraryItemToScope, which moves the whole
+    ///     per-map directory in one step and then updates every floor's paths to match.</summary>
+    public void UpdatePaths(string newImagePath, string newFogPath)
+    {
+        ImagePath = newImagePath;
+        FogPath = newFogPath;
+        OnPropertyChanged(nameof(ImagePath));
+        OnPropertyChanged(nameof(FogPath));
+    }
 
     partial void OnNameChanged(string value)
     {

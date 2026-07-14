@@ -15,4 +15,5 @@ public sealed class SessionLibraryDto
     public List<SoundLibraryEntryDto> SoundLibrary { get; set; } = [];
     public List<MusicLibraryEntryDto> MusicLibrary { get; set; } = [];
     public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
+    public List<NpcLibraryEntryDto> NpcLibrary { get; set; } = [];
 }

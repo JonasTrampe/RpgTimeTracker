@@ -613,9 +613,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             MapLibrary.Add(map);
         }
 
+        foreach (var npcEntry in library.NpcLibrary)
+        {
+            var npc = FromNpcLibraryEntryDto(npcEntry, LibraryScope.SessionLocal);
+            if (npc is not null) NpcLibrary.Add(npc);
+        }
+
         OnPropertyChanged(nameof(HasNoMediaLibraryItems));
         OnPropertyChanged(nameof(HasNoSoundLibraryItems));
         OnPropertyChanged(nameof(HasNoMaps));
+        OnPropertyChanged(nameof(HasNoNpcLibraryItems));
     }
 
     private void RemoveSessionLocalItemsFromCollections()
@@ -628,9 +635,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             MusicLibrary.Remove(item);
         foreach (var item in MapLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList())
             MapLibrary.Remove(item);
+        foreach (var item in NpcLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList())
+        {
+            NpcLibrary.Remove(item);
+            if (SelectedNpc == item) SelectedNpc = null;
+        }
 
         OnPropertyChanged(nameof(HasNoMediaLibraryItems));
         OnPropertyChanged(nameof(HasNoSoundLibraryItems));
+        OnPropertyChanged(nameof(HasNoNpcLibraryItems));
         OnPropertyChanged(nameof(HasNoMaps));
     }
 
@@ -640,6 +653,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _usageRegistry.RegisterClearAction(ClearTriggerMediaReferencesById);
         _usageRegistry.Register(FindPlaylistUsagesById);
         _usageRegistry.RegisterClearAction(ClearPlaylistReferencesById);
+        _usageRegistry.Register(FindNpcUsagesById);
+        _usageRegistry.RegisterClearAction(ClearNpcReferencesById);
 
         // Reasonable fantasy start time, can be changed immediately.
         var start = DateTime.Now;
@@ -770,6 +785,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             }
 
             MapLibrary.Add(map);
+        }
+
+        foreach (var npcEntry in settings.NpcLibrary)
+        {
+            var npc = FromNpcLibraryEntryDto(npcEntry, LibraryScope.Shared);
+            if (npc is not null) NpcLibrary.Add(npc);
         }
 
         // One-time migration of old data so that nothing is lost when switching to the separate
@@ -1144,6 +1165,49 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         SaveMapLibrarySettings();
     }
 
+    /// <summary>See MoveMediaLibraryItemToScope's doc comment - same move/flip-Scope/re-save
+    ///     pattern, except a map moves its whole per-map directory (all floors' image+fog files)
+    ///     in one step instead of a single file, since that Id-named folder is already the
+    ///     natural on-disk unit here (see GetMapLibraryBaseDirectory).</summary>
+    public void MoveMapLibraryItemToScope(MapItemViewModel map, LibraryScope targetScope)
+    {
+        if (map.Scope == targetScope) return;
+        if (targetScope == LibraryScope.SessionLocal && !_sessionService.IsSessionOpen) return;
+
+        try
+        {
+            var targetBaseDirectory = GetMapLibraryBaseDirectory(targetScope);
+            Directory.CreateDirectory(targetBaseDirectory);
+            var sourceMapDirectory = Path.Combine(GetMapLibraryBaseDirectory(map.Scope), map.Id.ToString("N"));
+            var targetMapDirectory = Path.Combine(targetBaseDirectory, map.Id.ToString("N"));
+            if (Directory.Exists(sourceMapDirectory)) Directory.Move(sourceMapDirectory, targetMapDirectory);
+
+            foreach (var floor in map.Floors)
+            {
+                floor.UpdatePaths(
+                    Path.Combine(targetMapDirectory, Path.GetFileName(floor.ImagePath)),
+                    Path.Combine(targetMapDirectory, Path.GetFileName(floor.FogPath)));
+            }
+
+            map.Scope = targetScope;
+            SaveMapLibrarySettings();
+            Log.Information("Map moved to {Scope}: {Name}", targetScope, map.Name);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warning(ex, "Map could not be moved to {Scope} ({Name})", targetScope, map.Name);
+        }
+    }
+
+    /// <summary>See MoveMediaLibraryItemToShared/ToSession's doc comment - same wrapping for Maps.</summary>
+    [RelayCommand]
+    private void MoveMapLibraryItemToShared(MapItemViewModel map) =>
+        MoveMapLibraryItemToScope(map, LibraryScope.Shared);
+
+    [RelayCommand]
+    private void MoveMapLibraryItemToSession(MapItemViewModel map) =>
+        MoveMapLibraryItemToScope(map, LibraryScope.SessionLocal);
+
     public async Task AddFloorToMapAsync(MapItemViewModel map, string sourcePath)
     {
         if (!MediaTypeHelper.TryGetKind(sourcePath, out var kind, out _) || kind != MediaKind.Image)
@@ -1280,6 +1344,171 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             sessionLibrary.MapLibrary = MapLibrary
                 .Where(map => map.Scope == LibraryScope.SessionLocal)
                 .Select(ToMapLibraryEntryDto)
+                .ToList();
+            _sessionService.SaveLibrary(sessionLibrary);
+        }
+    }
+
+    // ==================== Characters (NPC) library ====================
+    // Own top-level library, not nested under Maps - see NpcLibraryItemViewModel's doc comment
+    // for why it doesn't derive from LibraryItemViewModelBase<TSelf> like Media/Sound.
+
+    public ObservableCollection<NpcLibraryItemViewModel> NpcLibrary { get; } = [];
+
+    public bool HasNoNpcLibraryItems => NpcLibrary.Count == 0;
+
+    [ObservableProperty] private NpcLibraryItemViewModel? _selectedNpc;
+
+    [RelayCommand]
+    private async Task AddNpcAsync()
+    {
+        var scope = await ResolveScopeForNewItemAsync();
+        var npc = new NpcLibraryItemViewModel(Guid.NewGuid(),
+            LocalizationService.Get("MainWindowViewModel.Defaults.NewNpcName"), RemoveNpc,
+            OnNpcLibraryItemChanged, scope);
+        npc.AddState(LocalizationService.Get("MainWindowViewModel.Defaults.DefaultStateName"), isDefault: true);
+        NpcLibrary.Add(npc);
+        SelectedNpc = npc;
+        OnPropertyChanged(nameof(HasNoNpcLibraryItems));
+        SaveNpcLibrarySettings();
+    }
+
+    private void RemoveNpc(NpcLibraryItemViewModel npc)
+    {
+        NpcLibrary.Remove(npc);
+        if (SelectedNpc == npc) SelectedNpc = null;
+        OnPropertyChanged(nameof(HasNoNpcLibraryItems));
+        SaveNpcLibrarySettings();
+    }
+
+    private void OnNpcLibraryItemChanged(NpcLibraryItemViewModel npc)
+    {
+        SaveNpcLibrarySettings();
+    }
+
+    /// <summary>See MoveMediaLibraryItemToScope's doc comment - Characters own no files (see
+    ///     NpcLibraryItemViewModel's doc comment), so moving scope is just a Scope flip + re-save,
+    ///     no file to relocate.</summary>
+    public void MoveNpcLibraryItemToScope(NpcLibraryItemViewModel npc, LibraryScope targetScope)
+    {
+        if (npc.Scope == targetScope) return;
+        if (targetScope == LibraryScope.SessionLocal && !_sessionService.IsSessionOpen) return;
+
+        npc.Scope = targetScope;
+        SaveNpcLibrarySettings();
+        Log.Information("Character moved to {Scope}: {Name}", targetScope, npc.Name);
+    }
+
+    /// <summary>See MoveMediaLibraryItemToShared/ToSession's doc comment - same wrapping for Characters.</summary>
+    [RelayCommand]
+    private void MoveNpcLibraryItemToShared(NpcLibraryItemViewModel npc) =>
+        MoveNpcLibraryItemToScope(npc, LibraryScope.Shared);
+
+    [RelayCommand]
+    private void MoveNpcLibraryItemToSession(NpcLibraryItemViewModel npc) =>
+        MoveNpcLibraryItemToScope(npc, LibraryScope.SessionLocal);
+
+    /// <summary>Who references a Media/Sound Library item by Id from any NPC state's Image/
+    ///     TokenImage/Sounds - registered into _usageRegistry so deleting that Media/Sound item
+    ///     goes through the same 3-way confirm-delete flow as any other in-use item.</summary>
+    private IEnumerable<string> FindNpcUsagesById(Guid id)
+    {
+        foreach (var npc in NpcLibrary)
+        foreach (var state in npc.States)
+        {
+            if (state.Image?.Id == id || state.TokenImage?.Id == id || state.Sounds.Any(s => s.Id == id))
+                yield return string.Format(LocalizationService.Get("MainWindowViewModel.Labels.NpcUsage"),
+                    npc.Name, state.Name);
+        }
+    }
+
+    private void ClearNpcReferencesById(Guid id)
+    {
+        foreach (var npc in NpcLibrary)
+        foreach (var state in npc.States)
+        {
+            if (state.Image?.Id == id) state.Image = null;
+            if (state.TokenImage?.Id == id) state.TokenImage = null;
+
+            var staleSounds = state.Sounds.Where(s => s.Id == id).ToList();
+            foreach (var sound in staleSounds) state.RemoveSound(sound);
+        }
+    }
+
+    private static NpcLibraryEntryDto ToNpcLibraryEntryDto(NpcLibraryItemViewModel npc) => new()
+    {
+        Id = npc.Id,
+        Name = npc.Name,
+        GmInfoBlocks = npc.GmInfoBlocks.Select(b => new NpcGmInfoBlockDto
+        {
+            Title = b.Title, MarkdownBody = b.MarkdownBody
+        }).ToList(),
+        States = npc.States.Select(s => new NpcStateEntryDto
+        {
+            Id = s.Id,
+            Name = s.Name,
+            IsDefault = s.IsDefault,
+            ImageId = s.Image?.Id,
+            TokenImageId = s.TokenImage?.Id,
+            TokenIcon = s.TokenIcon,
+            PlayerInfo = s.PlayerInfo,
+            SoundIds = s.HasSoundsOverride ? s.Sounds.Select(sound => sound.Id).ToList() : null
+        }).ToList(),
+        ActiveStateId = npc.ActiveState?.Id ?? npc.DefaultState.Id
+    };
+
+    private NpcLibraryItemViewModel? FromNpcLibraryEntryDto(NpcLibraryEntryDto entry, LibraryScope scope)
+    {
+        var npc = new NpcLibraryItemViewModel(entry.Id, entry.Name, RemoveNpc, OnNpcLibraryItemChanged, scope);
+        foreach (var block in entry.GmInfoBlocks)
+            npc.GmInfoBlocks.Add(new NpcGmInfoBlockViewModel(block.Title, block.MarkdownBody,
+                b => { npc.GmInfoBlocks.Remove(b); OnNpcLibraryItemChanged(npc); }, _ => OnNpcLibraryItemChanged(npc)));
+
+        foreach (var stateEntry in entry.States)
+        {
+            var state = npc.AddState(stateEntry.Name, stateEntry.IsDefault, stateEntry.Id);
+            state.Image = stateEntry.ImageId is { } imageId
+                ? MediaLibrary.FirstOrDefault(m => m.Id == imageId)
+                : null;
+            state.TokenImage = stateEntry.TokenImageId is { } tokenImageId
+                ? MediaLibrary.FirstOrDefault(m => m.Id == tokenImageId)
+                : null;
+            state.TokenIcon = stateEntry.TokenIcon;
+            state.PlayerInfo = stateEntry.PlayerInfo;
+            if (stateEntry.SoundIds is { } soundIds)
+            {
+                foreach (var soundId in soundIds)
+                {
+                    var sound = SoundLibrary.FirstOrDefault(s => s.Id == soundId);
+                    if (sound is not null) state.Sounds.Add(sound);
+                }
+
+                state.HasSoundsOverride = true;
+            }
+        }
+
+        if (npc.States.Count == 0) return null; // a Default state is required - drop a malformed entry
+
+        npc.ActiveState = npc.States.FirstOrDefault(s => s.Id == entry.ActiveStateId) ?? npc.DefaultState;
+        return npc;
+    }
+
+    /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
+    private void SaveNpcLibrarySettings()
+    {
+        var settings = ThemeSettingsService.LoadSettings();
+        settings.NpcLibrary = NpcLibrary
+            .Where(n => n.Scope == LibraryScope.Shared)
+            .Select(ToNpcLibraryEntryDto)
+            .ToList();
+        ThemeSettingsService.SaveSettings(settings);
+
+        if (_sessionService.IsSessionOpen)
+        {
+            var sessionLibrary = _sessionService.LoadLibrary();
+            sessionLibrary.NpcLibrary = NpcLibrary
+                .Where(n => n.Scope == LibraryScope.SessionLocal)
+                .Select(ToNpcLibraryEntryDto)
                 .ToList();
             _sessionService.SaveLibrary(sessionLibrary);
         }
@@ -1750,19 +1979,22 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             WriteMediaManifestSection(zip, MediaLibrary);
             WriteSoundManifestSection(zip, SoundLibrary);
             WriteMapManifestSection(zip, MapLibrary);
+            WriteNpcManifestSection(zip, NpcLibrary);
         }
 
-        Log.Information("Full session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps",
-            MediaLibrary.Count, SoundLibrary.Count, MapLibrary.Count);
+        Log.Information("Full session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} characters",
+            MediaLibrary.Count, SoundLibrary.Count, MapLibrary.Count, NpcLibrary.Count);
         return stream.ToArray();
     }
 
     /// <summary>
     ///     Exports only the currently open session: its own state + its own SessionLocal-scoped
-    ///     Media/Sound/Map entries (Shared-scoped items the session merely references aren't
-    ///     bundled - nothing in this session can reference a Shared asset yet, since that
-    ///     requires the Characters/NPC library, a later milestone; extend this to walk that
-    ///     reference graph once NPCs exist). Caller must check IsSessionOpen first.
+    ///     Media/Sound/Map/NPC entries. An NPC referencing a Shared-scoped Media/Sound item is
+    ///     still exported (NPCs themselves are always included, regardless of scope elsewhere -
+    ///     only the referenced asset's bundling is scope-gated); if that Shared asset isn't
+    ///     bundled (because it's Shared, not session-local), the reference is silently dropped on
+    ///     import rather than left dangling - see ImportNpcEntry. Caller must check IsSessionOpen
+    ///     first.
     /// </summary>
     public byte[] ExportSessionToZipBytes()
     {
@@ -1773,12 +2005,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var sessionMedia = MediaLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList();
             var sessionSound = SoundLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList();
             var sessionMaps = MapLibrary.Where(m => m.Scope == LibraryScope.SessionLocal).ToList();
+            var sessionNpcs = NpcLibrary.Where(n => n.Scope == LibraryScope.SessionLocal).ToList();
             WriteMediaManifestSection(zip, sessionMedia);
             WriteSoundManifestSection(zip, sessionSound);
             WriteMapManifestSection(zip, sessionMaps);
+            WriteNpcManifestSection(zip, sessionNpcs);
 
-            Log.Information("Session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps",
-                sessionMedia.Count, sessionSound.Count, sessionMaps.Count);
+            Log.Information("Session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} characters",
+                sessionMedia.Count, sessionSound.Count, sessionMaps.Count, sessionNpcs.Count);
         }
 
         return stream.ToArray();
@@ -1795,7 +2029,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             WriteZipFileEntry(zip, $"media/{fileName}", item.LocalPath);
             manifest.Items.Add(new LibraryManifestEntryDto
             {
-                Name = item.Name, FileName = fileName, MimeType = item.MimeType,
+                Id = item.Id, Name = item.Name, FileName = fileName, MimeType = item.MimeType,
                 Kind = item.Kind.ToString(), Loop = item.Loop
             });
         }
@@ -1814,7 +2048,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             WriteZipFileEntry(zip, $"sound/{fileName}", item.LocalPath);
             manifest.Items.Add(new LibraryManifestEntryDto
             {
-                Name = item.Name, Icon = item.Icon, FileName = fileName, MimeType = item.MimeType, Loop = item.Loop,
+                Id = item.Id, Name = item.Name, Icon = item.Icon, FileName = fileName, MimeType = item.MimeType, Loop = item.Loop,
                 Volume = item.Volume, RepeatCount = item.RepeatCount,
                 TrimStartMs = (long)(item.TrimStartSeconds * 1000), TrimEndMs = (long)(item.TrimEndSeconds * 1000)
             });
@@ -1852,6 +2086,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         WriteZipTextEntry(zip, "maps/manifest.json", JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
     }
 
+    private static void WriteNpcManifestSection(ZipArchive zip, IEnumerable<NpcLibraryItemViewModel> npcs)
+    {
+        var manifest = new NpcLibraryManifestDto { Npcs = npcs.Select(ToNpcLibraryEntryDto).ToList() };
+        WriteZipTextEntry(zip, "npcs/manifest.json", JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
+    }
+
     /// <summary>
     ///     Restores game state (replacing it, like a normal load) and adds every library item
     ///     found in the bundle (appending, like a normal library import - existing library
@@ -1879,12 +2119,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 ImportStateFromJson(reader.ReadToEnd());
             }
 
-            var mediaImported = ImportMediaSectionFromZip(zip);
-            var soundImported = ImportSoundSectionFromZip(zip);
+            var (mediaImported, mediaIdMap) = ImportMediaSectionFromZip(zip);
+            var (soundImported, soundIdMap) = ImportSoundSectionFromZip(zip);
             var mapsImported = ImportMapsSectionFromZip(zip);
+            var npcsImported = ImportNpcSectionFromZip(zip, LibraryScope.Shared, mediaIdMap, soundIdMap);
 
-            Log.Information("Full session imported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps",
-                mediaImported, soundImported, mapsImported);
+            Log.Information(
+                "Full session imported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs",
+                mediaImported, soundImported, mapsImported, npcsImported);
             ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.FullSessionImported"),
                 mediaImported, soundImported, mapsImported));
         }
@@ -1929,13 +2171,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 ImportStateFromJson(reader.ReadToEnd());
             }
 
-            var mediaImported = ImportMediaSectionFromZip(zip, LibraryScope.SessionLocal);
-            var soundImported = ImportSoundSectionFromZip(zip, LibraryScope.SessionLocal);
+            var (mediaImported, mediaIdMap) = ImportMediaSectionFromZip(zip, LibraryScope.SessionLocal);
+            var (soundImported, soundIdMap) = ImportSoundSectionFromZip(zip, LibraryScope.SessionLocal);
             var mapsImported = ImportMapsSectionFromZip(zip, LibraryScope.SessionLocal);
+            var npcsImported = ImportNpcSectionFromZip(zip, LibraryScope.SessionLocal, mediaIdMap, soundIdMap);
             NotifySessionChanged();
 
-            Log.Information("Session imported into {FolderPath}: {MediaCount} media, {SoundCount} sounds, {MapCount} maps",
-                targetFolderPath, mediaImported, soundImported, mapsImported);
+            Log.Information(
+                "Session imported into {FolderPath}: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs",
+                targetFolderPath, mediaImported, soundImported, mapsImported, npcsImported);
             ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.FullSessionImported"),
                 mediaImported, soundImported, mapsImported));
         }
@@ -1950,10 +2194,17 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    private int ImportMediaSectionFromZip(ZipArchive zip, LibraryScope scope = LibraryScope.Shared)
+    /// <summary>Imports the media/ section, returning both the count and an old-Id -&gt; new-Id
+    ///     map (the manifest's LibraryManifestEntryDto.Id, from the exporting machine, mapped to
+    ///     the freshly minted Id the imported item actually gets) - used by
+    ///     ImportNpcSectionFromZip to relink a character state's portrait/token reference to the
+    ///     newly-imported copy instead of a stale foreign Id.</summary>
+    private (int Imported, Dictionary<Guid, Guid> IdMap) ImportMediaSectionFromZip(ZipArchive zip,
+        LibraryScope scope = LibraryScope.Shared)
     {
+        var idMap = new Dictionary<Guid, Guid>();
         var manifest = ReadZipJsonEntry<LibraryManifestDto>(zip, "media/manifest.json");
-        if (manifest is null) return 0;
+        if (manifest is null) return (0, idMap);
 
         var targetDirectory = scope == LibraryScope.SessionLocal
             ? _sessionService.MediaDirectory
@@ -1974,12 +2225,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 entryStream.CopyTo(target);
             }
 
+            var newId = Guid.NewGuid();
             MediaLibrary.Add(new MediaLibraryItemViewModel(
-                Guid.NewGuid(), item.Name, cachedPath, kind, item.MimeType, item.Loop,
+                newId, item.Name, cachedPath, kind, item.MimeType, item.Loop,
                 RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged)
             {
                 Scope = scope
             });
+            if (item.Id != Guid.Empty) idMap[item.Id] = newId;
             imported++;
         }
 
@@ -1989,13 +2242,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SaveMediaLibrarySettings();
         }
 
-        return imported;
+        return (imported, idMap);
     }
 
-    private int ImportSoundSectionFromZip(ZipArchive zip, LibraryScope scope = LibraryScope.Shared)
+    /// <summary>See ImportMediaSectionFromZip's doc comment - same reasoning for Sound.</summary>
+    private (int Imported, Dictionary<Guid, Guid> IdMap) ImportSoundSectionFromZip(ZipArchive zip,
+        LibraryScope scope = LibraryScope.Shared)
     {
+        var idMap = new Dictionary<Guid, Guid>();
         var manifest = ReadZipJsonEntry<LibraryManifestDto>(zip, "sound/manifest.json");
-        if (manifest is null) return 0;
+        if (manifest is null) return (0, idMap);
 
         var targetDirectory = scope == LibraryScope.SessionLocal
             ? _sessionService.SoundDirectory
@@ -2015,11 +2271,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 entryStream.CopyTo(target);
             }
 
-            var soundItem = CreateSoundLibraryItem(Guid.NewGuid(), item.Name, item.Icon ?? VisualItemHelper.IconTimer, cachedPath,
+            var newId = Guid.NewGuid();
+            var soundItem = CreateSoundLibraryItem(newId, item.Name, item.Icon ?? VisualItemHelper.IconTimer, cachedPath,
                 item.MimeType, item.Loop, item.Volume ?? 100, item.RepeatCount ?? 1,
                 item.TrimStartMs / 1000.0, item.TrimEndMs / 1000.0);
             soundItem.Scope = scope;
             SoundLibrary.Add(soundItem);
+            if (item.Id != Guid.Empty) idMap[item.Id] = newId;
             imported++;
         }
 
@@ -2030,7 +2288,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SaveSoundLibrarySettings();
         }
 
-        return imported;
+        return (imported, idMap);
     }
 
     private int ImportMapsSectionFromZip(ZipArchive zip, LibraryScope scope = LibraryScope.Shared)
@@ -2080,6 +2338,65 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
 
         if (imported > 0) SaveMapLibrarySettings();
+        return imported;
+    }
+
+    /// <summary>Imports the npcs/ section. mediaIdMap/soundIdMap (from ImportMediaSectionFromZip/
+    ///     ImportSoundSectionFromZip, called first for the same zip) relink each state's
+    ///     Image/TokenImage/Sound references from the exporting machine's Id to the freshly-imported
+    ///     copy's Id; a reference to an asset that wasn't bundled (e.g. a Shared asset outside a
+    ///     session-scoped export) has no entry in the map and is silently dropped rather than left
+    ///     dangling, matching ClearNpcReferencesById's "unset, don't crash" behavior for deletions.</summary>
+    private int ImportNpcSectionFromZip(ZipArchive zip, LibraryScope scope,
+        IReadOnlyDictionary<Guid, Guid> mediaIdMap, IReadOnlyDictionary<Guid, Guid> soundIdMap)
+    {
+        var manifest = ReadZipJsonEntry<NpcLibraryManifestDto>(zip, "npcs/manifest.json");
+        if (manifest is null) return 0;
+
+        var imported = 0;
+        foreach (var npcEntry in manifest.Npcs)
+        {
+            var remapped = new NpcLibraryEntryDto
+            {
+                Id = Guid.NewGuid(),
+                Name = npcEntry.Name,
+                GmInfoBlocks = npcEntry.GmInfoBlocks,
+                States = npcEntry.States.Select(s => new NpcStateEntryDto
+                {
+                    Id = Guid.NewGuid(),
+                    Name = s.Name,
+                    IsDefault = s.IsDefault,
+                    ImageId = s.ImageId is { } imageId && mediaIdMap.TryGetValue(imageId, out var newImageId)
+                        ? newImageId
+                        : null,
+                    TokenImageId = s.TokenImageId is { } tokenImageId &&
+                                   mediaIdMap.TryGetValue(tokenImageId, out var newTokenImageId)
+                        ? newTokenImageId
+                        : null,
+                    TokenIcon = s.TokenIcon,
+                    PlayerInfo = s.PlayerInfo,
+                    SoundIds = s.SoundIds?.Select(id => soundIdMap.TryGetValue(id, out var newSoundId) ? newSoundId : (Guid?)null)
+                        .Where(id => id is not null).Select(id => id!.Value).ToList()
+                }).ToList()
+            };
+            // ActiveStateId must reference one of the freshly-minted state Ids above, positionally
+            // matching the original entry (states are processed in the same order).
+            var activeIndex = npcEntry.States.FindIndex(s => s.Id == npcEntry.ActiveStateId);
+            remapped.ActiveStateId = activeIndex >= 0 ? remapped.States[activeIndex].Id : Guid.Empty;
+
+            var npc = FromNpcLibraryEntryDto(remapped, scope);
+            if (npc is null) continue;
+
+            NpcLibrary.Add(npc);
+            imported++;
+        }
+
+        if (imported > 0)
+        {
+            OnPropertyChanged(nameof(HasNoNpcLibraryItems));
+            SaveNpcLibrarySettings();
+        }
+
         return imported;
     }
 
@@ -3075,6 +3392,17 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
+    /// <summary>Thin single-argument wrappers around MoveMediaLibraryItemToScope so the tile's
+    ///     "move" buttons can bind a plain ICommand with CommandParameter="{Binding}" (the item),
+    ///     rather than needing a two-argument command.</summary>
+    [RelayCommand]
+    private void MoveMediaLibraryItemToShared(MediaLibraryItemViewModel item) =>
+        MoveMediaLibraryItemToScope(item, LibraryScope.Shared);
+
+    [RelayCommand]
+    private void MoveMediaLibraryItemToSession(MediaLibraryItemViewModel item) =>
+        MoveMediaLibraryItemToScope(item, LibraryScope.SessionLocal);
+
     /// <summary>
     ///     Set by the view (see MainWindow.axaml.cs), since a warning/confirmation needs a window,
     ///     which the view model itself doesn't know about - analogous to the LibraryPanelView funcs
@@ -3232,6 +3560,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             Log.Warning(ex, "Sound could not be moved to {Scope} ({Name})", targetScope, item.Name);
         }
     }
+
+    /// <summary>See MoveMediaLibraryItemToShared/ToSession's doc comment - same wrapping for Sound.</summary>
+    [RelayCommand]
+    private void MoveSoundLibraryItemToShared(SoundLibraryItemViewModel item) =>
+        MoveSoundLibraryItemToScope(item, LibraryScope.Shared);
+
+    [RelayCommand]
+    private void MoveSoundLibraryItemToSession(SoundLibraryItemViewModel item) =>
+        MoveSoundLibraryItemToScope(item, LibraryScope.SessionLocal);
 
     private static Task<string> CopyIntoSoundLibraryAsync(string sourcePath, string targetDirectory)
     {
@@ -3629,6 +3966,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             Log.Warning(ex, "Music track could not be moved to {Scope} ({Name})", targetScope, item.Name);
         }
     }
+
+    /// <summary>See MoveMediaLibraryItemToShared/ToSession's doc comment - same wrapping for Music.</summary>
+    [RelayCommand]
+    private void MoveMusicLibraryItemToShared(MusicLibraryItemViewModel item) =>
+        MoveMusicLibraryItemToScope(item, LibraryScope.Shared);
+
+    [RelayCommand]
+    private void MoveMusicLibraryItemToSession(MusicLibraryItemViewModel item) =>
+        MoveMusicLibraryItemToScope(item, LibraryScope.SessionLocal);
 
     private static Task<string> CopyIntoMusicLibraryAsync(string sourcePath, string targetDirectory)
     {
@@ -5915,6 +6261,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private sealed class LibraryManifestEntryDto
     {
+        /// <summary>The item's original Id on the exporting machine - used only to build an
+        ///     old-id -&gt; new-id map during import (see ImportMediaSectionFromZip/
+        ///     ImportSoundSectionFromZip), so an NPC state referencing this item in the same
+        ///     bundle can be relinked to the freshly-imported copy. Never reused as the imported
+        ///     item's actual Id (imports always mint fresh Guids, per this class's established
+        ///     convention).</summary>
+        public Guid Id { get; init; }
+
         public string Name { get; init; } = string.Empty;
         public string FileName { get; init; } = string.Empty;
         public string MimeType { get; init; } = string.Empty;
@@ -5977,6 +6331,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private sealed class MapLibraryManifestDto
     {
         public List<MapLibraryManifestEntryDto> Maps { get; init; } = [];
+    }
+
+    /// <summary>Manifest for the "npcs" section of a full-session/session export - NPCs own no
+    ///     files themselves (see NpcLibraryItemViewModel's doc comment), so this just wraps the
+    ///     same NpcLibraryEntryDto shape used for Shared/session-local library persistence; the
+    ///     Image/TokenImage/Sound Ids it carries are relinked on import via ImportNpcSectionFromZip's
+    ///     mediaIdMap/soundIdMap parameters.</summary>
+    private sealed class NpcLibraryManifestDto
+    {
+        public List<NpcLibraryEntryDto> Npcs { get; init; } = [];
     }
 
     private sealed class CalendarExportDto
