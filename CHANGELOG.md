@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- CI check (`RPC Protocol Version` workflow) that fails a PR if
+  `RpcMethods.cs`/`RpcParams.cs` change by more than whitespace without
+  `ProtocolInfo.Version` also being increased - catches wire-format changes
+  that forgot to bump the version the host/client handshake relies on to
+  reject mismatched builds. See `docs/protocol.md`'s new "Protocol
+  versioning" section.
+
 ### Changed
 
 - Renamed a character's named mood/preset from "State" to "Variant"
