@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Adding an image/video, sound, or music track now names the stored file
+  by its content hash instead of a random ID - adding or importing the
+  exact same file twice into the same library (Shared, or the same open
+  session) reuses the existing copy instead of storing it again. Only
+  applies within one storage location; the same file added to both the
+  Shared Library and a session is still stored once per location, by
+  design.
+
 - Media and Sound Library entries now carry a stable `Id` (a `Guid`), like
   Music Library entries already did - groundwork for an upcoming Characters
   (NPC) library, which needs to reference a portrait/sound by value instead

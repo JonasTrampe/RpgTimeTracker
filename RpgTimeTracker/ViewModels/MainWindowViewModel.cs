@@ -3026,14 +3026,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var targetDirectory = scope == LibraryScope.SessionLocal
                 ? _sessionService.MediaDirectory
                 : ThemeSettingsService.MediaLibraryDirectory;
-            Directory.CreateDirectory(targetDirectory);
-            var cachedPath = Path.Combine(targetDirectory,
-                $"{Guid.NewGuid():N}{Path.GetExtension(sourcePath)}");
-            await using (var source = File.OpenRead(sourcePath))
-            await using (var target = File.Create(cachedPath))
-            {
-                await source.CopyToAsync(target);
-            }
+            var cachedPath = await ContentAddressedStorage.StoreFileAsync(sourcePath, targetDirectory);
 
             var item = new MediaLibraryItemViewModel(
                 Guid.NewGuid(), Path.GetFileNameWithoutExtension(sourcePath), cachedPath, kind, mimeType, false,
@@ -3240,16 +3233,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    private static async Task<string> CopyIntoSoundLibraryAsync(string sourcePath, string targetDirectory)
+    private static Task<string> CopyIntoSoundLibraryAsync(string sourcePath, string targetDirectory)
     {
-        Directory.CreateDirectory(targetDirectory);
-        var cachedPath = Path.Combine(targetDirectory,
-            $"{Guid.NewGuid():N}{Path.GetExtension(sourcePath)}");
-        await using var source = File.OpenRead(sourcePath);
-        await using var target = File.Create(cachedPath);
-        await source.CopyToAsync(target);
-
-        return cachedPath;
+        return ContentAddressedStorage.StoreFileAsync(sourcePath, targetDirectory);
     }
 
     private SoundLibraryItemViewModel CreateSoundLibraryItem(
@@ -3644,16 +3630,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    private static async Task<string> CopyIntoMusicLibraryAsync(string sourcePath, string targetDirectory)
+    private static Task<string> CopyIntoMusicLibraryAsync(string sourcePath, string targetDirectory)
     {
-        Directory.CreateDirectory(targetDirectory);
-        var cachedPath = Path.Combine(targetDirectory,
-            $"{Guid.NewGuid():N}{Path.GetExtension(sourcePath)}");
-        await using var source = File.OpenRead(sourcePath);
-        await using var target = File.Create(cachedPath);
-        await source.CopyToAsync(target);
-
-        return cachedPath;
+        return ContentAddressedStorage.StoreFileAsync(sourcePath, targetDirectory);
     }
 
     private MusicLibraryItemViewModel CreateMusicLibraryItem(
