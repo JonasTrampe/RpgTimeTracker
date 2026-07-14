@@ -36,18 +36,13 @@ public partial class MusicLibraryItemViewModel : LibraryItemViewModelBase<MusicL
         Action<MusicLibraryItemViewModel> onPlayRequested,
         Action<MusicLibraryItemViewModel> onTestRequested,
         Action<MusicLibraryItemViewModel>? onChanged = null)
-        : base(name, localPath, mimeType, onDeleteRequested, onChanged)
+        : base(id, name, localPath, mimeType, onDeleteRequested, onChanged)
     {
-        Id = id;
         _icon = VisualItemHelper.NormalizeIcon(icon);
         _volume = volume;
         _onPlayRequested = onPlayRequested;
         _onTestRequested = onTestRequested;
     }
-
-    /// <summary>Stable identity, unlike Media/SoundLibraryItemViewModel - referenced by Playlists
-    ///     (and later Scenes) instead of matching by name/path.</summary>
-    public Guid Id { get; }
 
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);

@@ -2581,6 +2581,29 @@
                                            IsVisible="{Binding MediaErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                            Foreground="{DynamicResource WarnBrush}"
                                            TextWrapping="Wrap" />
+
+                                <!-- Session (a folder-scoped campaign, see SessionService) is an
+                                     optional, additive concept - with none open the app behaves
+                                     exactly as before this feature existed. -->
+                                <TextBlock Text="•" Classes="muted" Margin="8,0" />
+                                <TextBlock Text="{Binding CurrentSessionName}" Classes="muted"
+                                           VerticalAlignment="Center" MaxWidth="160"
+                                           TextTrimming="CharacterEllipsis"
+                                           ToolTip.Tip="{Binding CurrentSessionPath}"
+                                           IsVisible="{Binding IsSessionOpen}" />
+                                <TextBlock Text="{DynamicResource MainWindow.StatusBar.NoSessionOpen}" Classes="muted"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSessionOpen}" />
+                                <Button Classes="iconsquare" Content="&#128193;" Width="22" Height="22" FontSize="12"
+                                        Click="OnNewSessionClick"
+                                        ToolTip.Tip="{DynamicResource MainWindow.StatusBar.NewSessionTooltip}" />
+                                <Button Classes="iconsquare" Content="&#128194;" Width="22" Height="22" FontSize="12"
+                                        Click="OnOpenSessionClick"
+                                        ToolTip.Tip="{DynamicResource MainWindow.StatusBar.OpenSessionTooltip}" />
+                                <Button Classes="iconsquare" Content="&#10005;" Width="22" Height="22" FontSize="10"
+                                        Click="OnCloseSessionClick"
+                                        IsVisible="{Binding IsSessionOpen}"
+                                        ToolTip.Tip="{DynamicResource MainWindow.StatusBar.CloseSessionTooltip}" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center"

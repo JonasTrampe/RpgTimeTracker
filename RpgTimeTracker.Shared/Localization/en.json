@@ -282,6 +282,10 @@
   "MainWindow.StatusBar.NotificationsTooltip": "Notifications",
   "MainWindow.StatusBar.NotificationsHeader": "Notifications",
   "MainWindow.StatusBar.NoNotifications": "No notifications yet.",
+  "MainWindow.StatusBar.NoSessionOpen": "No session open",
+  "MainWindow.StatusBar.NewSessionTooltip": "New session…",
+  "MainWindow.StatusBar.OpenSessionTooltip": "Open session…",
+  "MainWindow.StatusBar.CloseSessionTooltip": "Close session",
 
   "MainWindow.FileTypes.GameState": "Game state (.rtt-save)",
   "MainWindow.FileTypes.GameStateLegacyJson": "Game state (legacy JSON)",
@@ -310,6 +314,8 @@
   "MainWindow.Dialogs.ExportSessionLog": "Export session log",
   "MainWindow.Dialogs.ExportCalendar": "Export calendar",
   "MainWindow.Dialogs.ImportCalendar": "Import calendar",
+  "MainWindow.Dialogs.NewSessionFolder": "Choose a folder for the new session",
+  "MainWindow.Dialogs.OpenSessionFolder": "Open session folder",
 
   "MainWindow.Errors.MediaNoLocalFilePath": "Medium could not be sent: no local file path available.",
   "MainWindow.Errors.MediaCouldNotBeSent": "Medium could not be sent: {0}",
@@ -324,6 +330,9 @@
   "MainWindow.Status.GameStateSaved": "Game state saved",
   "MainWindow.Status.SessionExported": "Session exported",
   "MainWindow.Status.GameStateLoaded": "Game state loaded",
+  "MainWindow.Status.SessionCreated": "Session created: {0}",
+  "MainWindow.Status.SessionOpened": "Session opened: {0}",
+  "MainWindow.Status.SessionClosed": "Session closed",
   "MainWindow.Status.CalendarExported": "Calendar exported",
   "MainWindow.Status.CalendarImported": "Calendar imported",
 
@@ -511,6 +520,12 @@
   "ConfirmTriggerMediaDelete.KeepButton": "Keep File",
   "ConfirmTriggerMediaDelete.RemoveAndDeleteButton": "Remove from Items + Delete",
   "ConfirmTriggerMediaDelete.UsageTextFormat": "\"{0}\" is currently used as event medium by: {1}.",
+
+  "ChooseLibraryScope.WindowTitle": "RPG Time Tracker",
+  "ChooseLibraryScope.Header": "Where should this go?",
+  "ChooseLibraryScope.Description": "A session is open. Add this to the Shared Library (reusable across every campaign), or keep it only in this session?",
+  "ChooseLibraryScope.SharedButton": "Shared Library",
+  "ChooseLibraryScope.SessionButton": "This Session Only",
 
   "NewItemBasics.IconComboTooltip": "Double-click: search Bootstrap icon",
   "NewItemBasics.ChooseIconTooltip": "Search Bootstrap icon",

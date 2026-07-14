@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Media and Sound Library entries now carry a stable `Id` (a `Guid`), like
+  Music Library entries already did - groundwork for an upcoming Characters
+  (NPC) library, which needs to reference a portrait/sound by value instead
+  of by its mutable name/file path. Existing entries get a fresh Id
+  assigned automatically the next time settings are loaded.
+
+- **Sessions**: an optional, folder-scoped campaign the GM can create or
+  open via "New Session…"/"Open Session…" in the status bar, sitting
+  alongside the always-present Shared Library. With no session open, the
+  app behaves exactly as before this feature existed. While a session is
+  open:
+  - Adding a new Media/Sound/Music item, or creating a new map, asks
+    whether it belongs to the Shared Library (reusable across every
+    campaign) or to this session only - the file is copied into the right
+    place accordingly.
+  - Closing the session hides its session-local items again (nothing is
+    deleted); reopening the same folder brings them back.
+  - "Export Session"/"Import Session" (the existing 📦 buttons) now bundle
+    just that session's own state and session-local library entries, and
+    importing always creates a brand-new session folder with fresh IDs
+    rather than merging into the Shared Library. With no session open,
+    these buttons keep their previous meaning (the whole Shared Library).
+
 - New "Music" tab with its own Music Library, deliberately separate from
   the existing Sound Library (own storage directory, own settings section,
   own export/import) - music will later be organized into playlists and

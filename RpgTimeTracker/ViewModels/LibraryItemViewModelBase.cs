@@ -1,6 +1,7 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RpgTimeTracker.Models;
 
 namespace RpgTimeTracker.ViewModels;
 
@@ -25,21 +26,53 @@ public abstract partial class LibraryItemViewModelBase<TSelf> : ObservableObject
     [ObservableProperty] private string _name;
 
     protected LibraryItemViewModelBase(
+        Guid id,
         string name,
         string localPath,
         string mimeType,
         Action<TSelf> onDeleteRequested,
-        Action<TSelf>? onChanged)
+        Action<TSelf>? onChanged,
+        LibraryScope scope = LibraryScope.Shared)
     {
+        Id = id;
         _name = name;
         LocalPath = localPath;
         MimeType = mimeType;
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
+        _scope = scope;
     }
 
-    public string LocalPath { get; }
+    /// <summary>Stable identity for this library item - added so it can be referenced by value
+    ///     (e.g. by an NPC's portrait/sound reference, or the usage registry) instead of by its
+    ///     mutable Name/LocalPath, matching the precedent already set by MusicLibraryItemViewModel/
+    ///     MapItemViewModel.</summary>
+    public Guid Id { get; }
+
+    /// <summary>Settable (not get-only) so a "move to Shared"/"move to this Session" action can
+    ///     update it in place once the underlying file has actually been moved on disk - see
+    ///     MainWindowViewModel's MoveMediaLibraryItemToScope/MoveSoundLibraryItemToScope.</summary>
+    public string LocalPath { get; private set; }
+
     public string MimeType { get; }
+
+    /// <summary>Called only after the backing file has already been moved to its new location.</summary>
+    public void UpdateLocalPath(string newLocalPath)
+    {
+        LocalPath = newLocalPath;
+        OnPropertyChanged(nameof(LocalPath));
+    }
+
+    /// <summary>Whether this item lives in the always-present Shared Library or inside the
+    ///     currently open Session's own folder - see LibraryScope. Settable (not get-only) since
+    ///     a "move to Shared"/"move to this Session" action changes it in place rather than
+    ///     requiring the item to be recreated.</summary>
+    [ObservableProperty] private LibraryScope _scope;
+
+    partial void OnScopeChanged(LibraryScope value)
+    {
+        NotifyChanged();
+    }
 
     partial void OnNameChanged(string value)
     {

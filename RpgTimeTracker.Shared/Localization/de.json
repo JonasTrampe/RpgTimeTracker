@@ -282,6 +282,10 @@
   "MainWindow.StatusBar.NotificationsTooltip": "Benachrichtigungen",
   "MainWindow.StatusBar.NotificationsHeader": "Benachrichtigungen",
   "MainWindow.StatusBar.NoNotifications": "Noch keine Benachrichtigungen.",
+  "MainWindow.StatusBar.NoSessionOpen": "Keine Session geöffnet",
+  "MainWindow.StatusBar.NewSessionTooltip": "Neue Session…",
+  "MainWindow.StatusBar.OpenSessionTooltip": "Session öffnen…",
+  "MainWindow.StatusBar.CloseSessionTooltip": "Session schließen",
 
   "MainWindow.FileTypes.GameState": "Spielstand (.rtt-save)",
   "MainWindow.FileTypes.GameStateLegacyJson": "Spielstand (alte JSON-Datei)",
@@ -310,6 +314,8 @@
   "MainWindow.Dialogs.ExportSessionLog": "Sitzungsprotokoll exportieren",
   "MainWindow.Dialogs.ExportCalendar": "Kalender exportieren",
   "MainWindow.Dialogs.ImportCalendar": "Kalender importieren",
+  "MainWindow.Dialogs.NewSessionFolder": "Ordner für die neue Session wählen",
+  "MainWindow.Dialogs.OpenSessionFolder": "Session-Ordner öffnen",
 
   "MainWindow.Errors.MediaNoLocalFilePath": "Medium konnte nicht gesendet werden: kein lokaler Dateipfad verfügbar.",
   "MainWindow.Errors.MediaCouldNotBeSent": "Medium konnte nicht gesendet werden: {0}",
@@ -324,6 +330,9 @@
   "MainWindow.Status.GameStateSaved": "Spielstand gespeichert",
   "MainWindow.Status.SessionExported": "Sitzung exportiert",
   "MainWindow.Status.GameStateLoaded": "Spielstand geladen",
+  "MainWindow.Status.SessionCreated": "Session erstellt: {0}",
+  "MainWindow.Status.SessionOpened": "Session geöffnet: {0}",
+  "MainWindow.Status.SessionClosed": "Session geschlossen",
   "MainWindow.Status.CalendarExported": "Kalender exportiert",
   "MainWindow.Status.CalendarImported": "Kalender importiert",
 
@@ -511,6 +520,12 @@
   "ConfirmTriggerMediaDelete.KeepButton": "Datei behalten",
   "ConfirmTriggerMediaDelete.RemoveAndDeleteButton": "Aus Elementen entfernen + löschen",
   "ConfirmTriggerMediaDelete.UsageTextFormat": "\"{0}\" wird aktuell als Event-Medium verwendet von: {1}.",
+
+  "ChooseLibraryScope.WindowTitle": "RPG Zeitverfolgung",
+  "ChooseLibraryScope.Header": "Wohin damit?",
+  "ChooseLibraryScope.Description": "Eine Session ist geöffnet. Zur Gemeinsamen Bibliothek hinzufügen (wiederverwendbar in jeder Kampagne), oder nur in dieser Session behalten?",
+  "ChooseLibraryScope.SharedButton": "Gemeinsame Bibliothek",
+  "ChooseLibraryScope.SessionButton": "Nur diese Session",
 
   "NewItemBasics.IconComboTooltip": "Doppelklick: Bootstrap Icon suchen",
   "NewItemBasics.ChooseIconTooltip": "Bootstrap Icon suchen",

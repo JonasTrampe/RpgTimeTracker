@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RpgTimeTracker.Models;
 
 namespace RpgTimeTracker.ViewModels;
 
@@ -48,7 +49,8 @@ public sealed partial class MapItemViewModel : ObservableObject
         int? fogOpacityPercent = null,
         double? fogBlurRadius = null,
         bool? fogBlurEnabled = null,
-        int formatVersion = CurrentFormatVersion)
+        int formatVersion = CurrentFormatVersion,
+        LibraryScope scope = LibraryScope.Shared)
     {
         Id = id;
         _name = name;
@@ -58,12 +60,17 @@ public sealed partial class MapItemViewModel : ObservableObject
         _fogBlurRadius = fogBlurRadius;
         _fogBlurEnabled = fogBlurEnabled;
         FormatVersion = formatVersion;
+        _scope = scope;
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
         Floors.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoFloors));
     }
 
     public Guid Id { get; }
+
+    /// <summary>Whether this map lives in the always-present Shared Library or inside the
+    ///     currently open Session's own folder - see LibraryScope.</summary>
+    [ObservableProperty] private LibraryScope _scope;
 
     /// <summary>The format version this map was loaded/imported at - not user-editable, and
     ///     always saved back as CurrentFormatVersion (see MainWindowViewModel.SaveMapLibrarySettings)
@@ -95,6 +102,11 @@ public sealed partial class MapItemViewModel : ObservableObject
     }
 
     partial void OnFogBlurEnabledChanged(bool? value)
+    {
+        _onChanged?.Invoke(this);
+    }
+
+    partial void OnScopeChanged(LibraryScope value)
     {
         _onChanged?.Invoke(this);
     }

@@ -450,6 +450,146 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private int _playbackPosition;
 
+    private readonly SessionService _sessionService = new();
+
+    /// <summary>Whether a Session (a folder-scoped campaign, see SessionService) is currently
+    ///     open. With none open, every library item is Shared and the app behaves exactly as it
+    ///     did before this concept existed.</summary>
+    public bool IsSessionOpen => _sessionService.IsSessionOpen;
+
+    public string? CurrentSessionPath => _sessionService.CurrentSessionPath;
+
+    /// <summary>Just the folder name, for a compact status display - the full path is available
+    ///     via CurrentSessionPath (e.g. for a tooltip).</summary>
+    public string CurrentSessionName => CurrentSessionPath is null
+        ? string.Empty
+        : Path.GetFileName(CurrentSessionPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+    /// <summary>Creates a brand-new session folder and opens it (see SessionService.CreateSession).</summary>
+    public void CreateSession(string folderPath)
+    {
+        _sessionService.CreateSession(folderPath);
+        NotifySessionChanged();
+    }
+
+    /// <summary>Opens an existing session folder, merging its session-local library entries into
+    ///     the existing MediaLibrary/SoundLibrary/MusicLibrary/MapLibrary collections (Shared
+    ///     items, already loaded from ThemeSettingsService, are untouched).</summary>
+    public void OpenSession(string folderPath)
+    {
+        _sessionService.OpenSession(folderPath);
+        AddSessionLibraryToCollections(_sessionService.LoadLibrary());
+        NotifySessionChanged();
+    }
+
+    /// <summary>Closes the currently open session - removes every SessionLocal item from the
+    ///     displayed collections (the files themselves are untouched on disk) so the app reverts
+    ///     to showing only the Shared Library, exactly as with no session ever opened.</summary>
+    public void CloseSession()
+    {
+        RemoveSessionLocalItemsFromCollections();
+        _sessionService.CloseSession();
+        NotifySessionChanged();
+    }
+
+    private void NotifySessionChanged()
+    {
+        OnPropertyChanged(nameof(IsSessionOpen));
+        OnPropertyChanged(nameof(CurrentSessionPath));
+        OnPropertyChanged(nameof(CurrentSessionName));
+    }
+
+    /// <summary>
+    ///     Set by the view (see MainWindow.axaml.cs) to show a Shared/"this session only" chooser
+    ///     - analogous to ConfirmTriggerMediaDeleteAsync below. Only ever consulted when a session
+    ///     is actually open (see ResolveScopeForNewItemAsync); with no session open, or no handler
+    ///     assigned (e.g. during testing), every new item is Shared, matching pre-Session behavior.
+    /// </summary>
+    public Func<Task<LibraryScope>>? ChooseLibraryScopeForNewItemAsync { get; set; }
+
+    /// <summary>Called by every "add new library item" flow (Media/Sound/Music/Map) right before
+    ///     deciding which physical directory to copy the new file into.</summary>
+    private async Task<LibraryScope> ResolveScopeForNewItemAsync()
+    {
+        if (!_sessionService.IsSessionOpen || ChooseLibraryScopeForNewItemAsync is null)
+            return LibraryScope.Shared;
+
+        return await ChooseLibraryScopeForNewItemAsync();
+    }
+
+    private void AddSessionLibraryToCollections(SessionLibraryDto library)
+    {
+        foreach (var entry in library.MediaLibrary)
+        {
+            if (!File.Exists(entry.Path)) continue;
+            if (!Enum.TryParse<MediaKind>(entry.Kind, out var kind) || kind == MediaKind.Audio) continue;
+
+            MediaLibrary.Add(new MediaLibraryItemViewModel(
+                entry.Id, entry.Name, entry.Path, kind, entry.MimeType, entry.Loop,
+                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged)
+            {
+                Scope = LibraryScope.SessionLocal
+            });
+        }
+
+        foreach (var entry in library.SoundLibrary)
+        {
+            if (!File.Exists(entry.Path)) continue;
+            var item = CreateSoundLibraryItem(entry.Id, entry.Name, entry.Icon, entry.Path, entry.MimeType,
+                entry.Loop, entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0);
+            item.Scope = LibraryScope.SessionLocal;
+            SoundLibrary.Add(item);
+        }
+
+        foreach (var entry in library.MusicLibrary)
+        {
+            if (!File.Exists(entry.Path)) continue;
+            var item = CreateMusicLibraryItem(entry.Id, entry.Name, entry.Icon, entry.Path, entry.MimeType,
+                entry.Volume);
+            item.Scope = LibraryScope.SessionLocal;
+            MusicLibrary.Add(item);
+        }
+
+        foreach (var mapEntry in library.MapLibrary)
+        {
+            var map = new MapItemViewModel(mapEntry.Id, mapEntry.Name, mapEntry.DefaultCellSizePx, RemoveMap,
+                OnMapLibraryItemChanged, mapEntry.FogColorHex, mapEntry.FogOpacityPercent,
+                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled, mapEntry.FormatVersion, LibraryScope.SessionLocal);
+            foreach (var floorEntry in mapEntry.Floors.OrderBy(f => f.Order))
+            {
+                if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
+
+                map.Floors.Add(new MapFloorItemViewModel(
+                    floorEntry.Id, floorEntry.Name, floorEntry.ImagePath, floorEntry.FogPath,
+                    floorEntry.CellSizePx, floorEntry.GridWidth, floorEntry.GridHeight,
+                    LoadMapFloorThumbnail(floorEntry.ImagePath),
+                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
+            }
+
+            MapLibrary.Add(map);
+        }
+
+        OnPropertyChanged(nameof(HasNoMediaLibraryItems));
+        OnPropertyChanged(nameof(HasNoSoundLibraryItems));
+        OnPropertyChanged(nameof(HasNoMaps));
+    }
+
+    private void RemoveSessionLocalItemsFromCollections()
+    {
+        foreach (var item in MediaLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList())
+            MediaLibrary.Remove(item);
+        foreach (var item in SoundLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList())
+            SoundLibrary.Remove(item);
+        foreach (var item in MusicLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList())
+            MusicLibrary.Remove(item);
+        foreach (var item in MapLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList())
+            MapLibrary.Remove(item);
+
+        OnPropertyChanged(nameof(HasNoMediaLibraryItems));
+        OnPropertyChanged(nameof(HasNoSoundLibraryItems));
+        OnPropertyChanged(nameof(HasNoMaps));
+    }
+
     public MainWindowViewModel()
     {
         // Reasonable fantasy start time, can be changed immediately.
@@ -529,14 +669,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             if (!Enum.TryParse<MediaKind>(entry.Kind, out var kind) || kind == MediaKind.Audio) continue;
 
             MediaLibrary.Add(new MediaLibraryItemViewModel(
-                entry.Name, entry.Path, kind, entry.MimeType, entry.Loop,
+                entry.Id, entry.Name, entry.Path, kind, entry.MimeType, entry.Loop,
                 RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged));
         }
 
         foreach (var entry in settings.SoundLibrary)
         {
             if (!File.Exists(entry.Path)) continue;
-            SoundLibrary.Add(CreateSoundLibraryItem(entry.Name, entry.Icon, entry.Path, entry.MimeType, entry.Loop,
+            SoundLibrary.Add(CreateSoundLibraryItem(entry.Id, entry.Name, entry.Icon, entry.Path, entry.MimeType, entry.Loop,
                 entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0));
         }
 
@@ -592,7 +732,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             foreach (var legacy in settings.CustomSounds)
             {
                 if (!File.Exists(legacy.Path) || SoundLibrary.Any(s => s.LocalPath == legacy.Path)) continue;
-                SoundLibrary.Add(CreateSoundLibraryItem(legacy.Name, VisualItemHelper.IconTimer, legacy.Path, "audio/*",
+                SoundLibrary.Add(CreateSoundLibraryItem(Guid.NewGuid(), legacy.Name, VisualItemHelper.IconTimer, legacy.Path, "audio/*",
                     false, 100));
                 needsMigrationSave = true;
             }
@@ -604,7 +744,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var legacyAudio in settings.MediaLibrary.Where(e => e.Kind == nameof(MediaKind.Audio)))
         {
             if (!File.Exists(legacyAudio.Path) || SoundLibrary.Any(s => s.LocalPath == legacyAudio.Path)) continue;
-            SoundLibrary.Add(CreateSoundLibraryItem(legacyAudio.Name, VisualItemHelper.IconTimer, legacyAudio.Path,
+            SoundLibrary.Add(CreateSoundLibraryItem(Guid.NewGuid(), legacyAudio.Name, VisualItemHelper.IconTimer, legacyAudio.Path,
                 legacyAudio.MimeType, legacyAudio.Loop, 100));
             needsMigrationSave = true;
         }
@@ -614,9 +754,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         if (needsMigrationSave)
         {
             settings.SoundLibrary = SoundLibrary
-                .Select(s => new ThemeSettingsService.SoundLibraryEntryDto
+                .Select(s => new SoundLibraryEntryDto
                 {
-                    Name = s.Name, Icon = s.Icon, Path = s.LocalPath, MimeType = s.MimeType, Loop = s.Loop,
+                    Id = s.Id, Name = s.Name, Icon = s.Icon, Path = s.LocalPath, MimeType = s.MimeType, Loop = s.Loop,
                     Volume = s.Volume, RepeatCount = s.RepeatCount, TrimStartMs = (long)(s.TrimStartSeconds * 1000),
                     TrimEndMs = (long)(s.TrimEndSeconds * 1000)
                 })
@@ -896,7 +1036,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private void SavePlaylistsSettings()
     {
         var settings = ThemeSettingsService.LoadSettings();
-        settings.Playlists = Playlists.Select(p => new ThemeSettingsService.PlaylistEntryDto
+        settings.Playlists = Playlists.Select(p => new PlaylistEntryDto
         {
             Id = p.Id,
             Name = p.Name,
@@ -920,15 +1060,22 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private const int DefaultMapCellSizePx = 8;
 
     [RelayCommand]
-    private void AddMap()
+    private async Task AddMapAsync()
     {
+        var scope = await ResolveScopeForNewItemAsync();
         var map = new MapItemViewModel(Guid.NewGuid(),
             LocalizationService.Get("MainWindowViewModel.Defaults.NewMapName"), DefaultMapCellSizePx, RemoveMap,
-            OnMapLibraryItemChanged);
+            OnMapLibraryItemChanged, scope: scope);
         MapLibrary.Add(map);
         SelectedMap = map;
         SaveMapLibrarySettings();
     }
+
+    /// <summary>Root folder a map's own subfolder (named by its Id) lives under - the Shared
+    ///     AppData directory, or the open session's own maps/ folder for a SessionLocal map.</summary>
+    private string GetMapLibraryBaseDirectory(LibraryScope scope) => scope == LibraryScope.SessionLocal
+        ? _sessionService.MapDirectory
+        : ThemeSettingsService.MapLibraryDirectory;
 
     private void RemoveMap(MapItemViewModel map)
     {
@@ -937,7 +1084,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         try
         {
-            var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, map.Id.ToString("N"));
+            var mapDirectory = Path.Combine(GetMapLibraryBaseDirectory(map.Scope), map.Id.ToString("N"));
             if (Directory.Exists(mapDirectory)) Directory.Delete(mapDirectory, recursive: true);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -964,7 +1111,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         try
         {
-            var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, map.Id.ToString("N"));
+            var mapDirectory = Path.Combine(GetMapLibraryBaseDirectory(map.Scope), map.Id.ToString("N"));
             Directory.CreateDirectory(mapDirectory);
 
             var floorId = Guid.NewGuid();
@@ -1045,32 +1192,48 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         if (ReferenceEquals(map, OpenMap)) ApplyAndBroadcastEffectiveFogStyleForOpenMap();
     }
 
+    private static MapLibraryEntryDto ToMapLibraryEntryDto(MapItemViewModel map) => new()
+    {
+        Id = map.Id,
+        Name = map.Name,
+        FogColorHex = map.FogColorHex,
+        FogOpacityPercent = map.FogOpacityPercent,
+        FogBlurRadius = map.FogBlurRadius,
+        FogBlurEnabled = map.FogBlurEnabled,
+        DefaultCellSizePx = map.DefaultCellSizePx,
+        FormatVersion = map.FormatVersion,
+        Floors = map.Floors.Select((floor, index) => new MapFloorEntryDto
+        {
+            Id = floor.Id,
+            Name = floor.Name,
+            ImagePath = floor.ImagePath,
+            FogPath = floor.FogPath,
+            CellSizePx = floor.CellSizePx,
+            GridWidth = floor.GridWidth,
+            GridHeight = floor.GridHeight,
+            Order = index
+        }).ToList()
+    };
+
+    /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
     private void SaveMapLibrarySettings()
     {
         var settings = ThemeSettingsService.LoadSettings();
-        settings.MapLibrary = MapLibrary.Select(map => new ThemeSettingsService.MapLibraryEntryDto
-        {
-            Id = map.Id,
-            Name = map.Name,
-            FogColorHex = map.FogColorHex,
-            FogOpacityPercent = map.FogOpacityPercent,
-            FogBlurRadius = map.FogBlurRadius,
-            FogBlurEnabled = map.FogBlurEnabled,
-            DefaultCellSizePx = map.DefaultCellSizePx,
-            FormatVersion = map.FormatVersion,
-            Floors = map.Floors.Select((floor, index) => new ThemeSettingsService.MapFloorEntryDto
-            {
-                Id = floor.Id,
-                Name = floor.Name,
-                ImagePath = floor.ImagePath,
-                FogPath = floor.FogPath,
-                CellSizePx = floor.CellSizePx,
-                GridWidth = floor.GridWidth,
-                GridHeight = floor.GridHeight,
-                Order = index
-            }).ToList()
-        }).ToList();
+        settings.MapLibrary = MapLibrary
+            .Where(map => map.Scope == LibraryScope.Shared)
+            .Select(ToMapLibraryEntryDto)
+            .ToList();
         ThemeSettingsService.SaveSettings(settings);
+
+        if (_sessionService.IsSessionOpen)
+        {
+            var sessionLibrary = _sessionService.LoadLibrary();
+            sessionLibrary.MapLibrary = MapLibrary
+                .Where(map => map.Scope == LibraryScope.SessionLocal)
+                .Select(ToMapLibraryEntryDto)
+                .ToList();
+            _sessionService.SaveLibrary(sessionLibrary);
+        }
     }
 
     // ==================== Map display (open to players, live fog editing) ====================
@@ -1172,7 +1335,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     /// <summary>Resolves a map's effective fog render style: its own per-map override where set,
     ///     falling back to the global Settings-tab values otherwise (see
-    ///     ThemeSettingsService.MapLibraryEntryDto's fog-style fields). Public so MapPrepareWindow/
+    ///     MapLibraryEntryDto's fog-style fields). Public so MapPrepareWindow/
     ///     MapLiveWindow can render their own local preview with the same effective style used for
     ///     the real broadcast.</summary>
     public (string ColorHex, int OpacityPercent, double BlurRadius, bool BlurEnabled) GetEffectiveFogStyle(MapItemViewModel map)
@@ -1535,70 +1698,109 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
             WriteZipTextEntry(zip, "state.json", ExportStateToJson());
-
-            var mediaManifest = new LibraryManifestDto { LibraryType = "Media" };
-            foreach (var item in MediaLibrary)
-            {
-                if (!File.Exists(item.LocalPath)) continue;
-
-                var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(item.LocalPath)}";
-                WriteZipFileEntry(zip, $"media/{fileName}", item.LocalPath);
-                mediaManifest.Items.Add(new LibraryManifestEntryDto
-                {
-                    Name = item.Name, FileName = fileName, MimeType = item.MimeType,
-                    Kind = item.Kind.ToString(), Loop = item.Loop
-                });
-            }
-
-            WriteZipTextEntry(zip, "media/manifest.json", JsonSerializer.Serialize(mediaManifest, LibraryManifestJsonOptions));
-
-            var soundManifest = new LibraryManifestDto { LibraryType = "Sound" };
-            foreach (var item in SoundLibrary)
-            {
-                if (!File.Exists(item.LocalPath)) continue;
-
-                var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(item.LocalPath)}";
-                WriteZipFileEntry(zip, $"sound/{fileName}", item.LocalPath);
-                soundManifest.Items.Add(new LibraryManifestEntryDto
-                {
-                    Name = item.Name, Icon = item.Icon, FileName = fileName, MimeType = item.MimeType, Loop = item.Loop,
-                    Volume = item.Volume, RepeatCount = item.RepeatCount,
-                    TrimStartMs = (long)(item.TrimStartSeconds * 1000), TrimEndMs = (long)(item.TrimEndSeconds * 1000)
-                });
-            }
-
-            WriteZipTextEntry(zip, "sound/manifest.json", JsonSerializer.Serialize(soundManifest, LibraryManifestJsonOptions));
-
-            var mapManifest = new MapLibraryManifestDto();
-            foreach (var map in MapLibrary)
-            {
-                var mapEntry = new MapLibraryManifestEntryDto { Name = map.Name, FormatVersion = map.FormatVersion };
-                var order = 0;
-                foreach (var floor in map.Floors)
-                {
-                    if (!File.Exists(floor.ImagePath) || !File.Exists(floor.FogPath)) continue;
-
-                    var imageFileName = $"{Guid.NewGuid():N}{Path.GetExtension(floor.ImagePath)}";
-                    var fogFileName = $"{Guid.NewGuid():N}.fog";
-                    WriteZipFileEntry(zip, $"maps/{imageFileName}", floor.ImagePath);
-                    WriteZipFileEntry(zip, $"maps/{fogFileName}", floor.FogPath);
-                    mapEntry.Floors.Add(new MapFloorManifestEntryDto
-                    {
-                        Name = floor.Name, ImageFileName = imageFileName, FogFileName = fogFileName,
-                        CellSizePx = floor.CellSizePx, GridWidth = floor.GridWidth, GridHeight = floor.GridHeight,
-                        Order = order++
-                    });
-                }
-
-                mapManifest.Maps.Add(mapEntry);
-            }
-
-            WriteZipTextEntry(zip, "maps/manifest.json", JsonSerializer.Serialize(mapManifest, LibraryManifestJsonOptions));
+            WriteMediaManifestSection(zip, MediaLibrary);
+            WriteSoundManifestSection(zip, SoundLibrary);
+            WriteMapManifestSection(zip, MapLibrary);
         }
 
         Log.Information("Full session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps",
             MediaLibrary.Count, SoundLibrary.Count, MapLibrary.Count);
         return stream.ToArray();
+    }
+
+    /// <summary>
+    ///     Exports only the currently open session: its own state + its own SessionLocal-scoped
+    ///     Media/Sound/Map entries (Shared-scoped items the session merely references aren't
+    ///     bundled - nothing in this session can reference a Shared asset yet, since that
+    ///     requires the Characters/NPC library, a later milestone; extend this to walk that
+    ///     reference graph once NPCs exist). Caller must check IsSessionOpen first.
+    /// </summary>
+    public byte[] ExportSessionToZipBytes()
+    {
+        using var stream = new MemoryStream();
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            WriteZipTextEntry(zip, "state.json", ExportStateToJson());
+            var sessionMedia = MediaLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList();
+            var sessionSound = SoundLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList();
+            var sessionMaps = MapLibrary.Where(m => m.Scope == LibraryScope.SessionLocal).ToList();
+            WriteMediaManifestSection(zip, sessionMedia);
+            WriteSoundManifestSection(zip, sessionSound);
+            WriteMapManifestSection(zip, sessionMaps);
+
+            Log.Information("Session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps",
+                sessionMedia.Count, sessionSound.Count, sessionMaps.Count);
+        }
+
+        return stream.ToArray();
+    }
+
+    private static void WriteMediaManifestSection(ZipArchive zip, IEnumerable<MediaLibraryItemViewModel> items)
+    {
+        var manifest = new LibraryManifestDto { LibraryType = "Media" };
+        foreach (var item in items)
+        {
+            if (!File.Exists(item.LocalPath)) continue;
+
+            var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(item.LocalPath)}";
+            WriteZipFileEntry(zip, $"media/{fileName}", item.LocalPath);
+            manifest.Items.Add(new LibraryManifestEntryDto
+            {
+                Name = item.Name, FileName = fileName, MimeType = item.MimeType,
+                Kind = item.Kind.ToString(), Loop = item.Loop
+            });
+        }
+
+        WriteZipTextEntry(zip, "media/manifest.json", JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
+    }
+
+    private static void WriteSoundManifestSection(ZipArchive zip, IEnumerable<SoundLibraryItemViewModel> items)
+    {
+        var manifest = new LibraryManifestDto { LibraryType = "Sound" };
+        foreach (var item in items)
+        {
+            if (!File.Exists(item.LocalPath)) continue;
+
+            var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(item.LocalPath)}";
+            WriteZipFileEntry(zip, $"sound/{fileName}", item.LocalPath);
+            manifest.Items.Add(new LibraryManifestEntryDto
+            {
+                Name = item.Name, Icon = item.Icon, FileName = fileName, MimeType = item.MimeType, Loop = item.Loop,
+                Volume = item.Volume, RepeatCount = item.RepeatCount,
+                TrimStartMs = (long)(item.TrimStartSeconds * 1000), TrimEndMs = (long)(item.TrimEndSeconds * 1000)
+            });
+        }
+
+        WriteZipTextEntry(zip, "sound/manifest.json", JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
+    }
+
+    private static void WriteMapManifestSection(ZipArchive zip, IEnumerable<MapItemViewModel> maps)
+    {
+        var manifest = new MapLibraryManifestDto();
+        foreach (var map in maps)
+        {
+            var mapEntry = new MapLibraryManifestEntryDto { Name = map.Name, FormatVersion = map.FormatVersion };
+            var order = 0;
+            foreach (var floor in map.Floors)
+            {
+                if (!File.Exists(floor.ImagePath) || !File.Exists(floor.FogPath)) continue;
+
+                var imageFileName = $"{Guid.NewGuid():N}{Path.GetExtension(floor.ImagePath)}";
+                var fogFileName = $"{Guid.NewGuid():N}.fog";
+                WriteZipFileEntry(zip, $"maps/{imageFileName}", floor.ImagePath);
+                WriteZipFileEntry(zip, $"maps/{fogFileName}", floor.FogPath);
+                mapEntry.Floors.Add(new MapFloorManifestEntryDto
+                {
+                    Name = floor.Name, ImageFileName = imageFileName, FogFileName = fogFileName,
+                    CellSizePx = floor.CellSizePx, GridWidth = floor.GridWidth, GridHeight = floor.GridHeight,
+                    Order = order++
+                });
+            }
+
+            manifest.Maps.Add(mapEntry);
+        }
+
+        WriteZipTextEntry(zip, "maps/manifest.json", JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
     }
 
     /// <summary>
@@ -1648,12 +1850,66 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    private int ImportMediaSectionFromZip(ZipArchive zip)
+    /// <summary>
+    ///     Imports a .rtt-session bundle into a brand-new Session folder rather than merging into
+    ///     the Shared Library: creates the session (see SessionService.CreateSession), restores
+    ///     state, and lands every Media/Sound/Map entry as a fresh, SessionLocal-scoped copy with
+    ///     a brand-new Id/file (matching the existing "imports always mint fresh Guids" precedent
+    ///     from every other import path in this class) - never silently merged into the target
+    ///     machine's Shared Library.
+    /// </summary>
+    public void ImportSessionIntoNewFolder(byte[] data, string targetFolderPath)
+    {
+        try
+        {
+            using var stream = new MemoryStream(data);
+            using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
+
+            var stateEntry = zip.GetEntry("state.json");
+            if (stateEntry is null)
+            {
+                MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.NoValidSessionExportFound");
+                return;
+            }
+
+            _sessionService.CreateSession(targetFolderPath);
+
+            using (var entryStream = stateEntry.Open())
+            using (var reader = new StreamReader(entryStream, Encoding.UTF8))
+            {
+                ImportStateFromJson(reader.ReadToEnd());
+            }
+
+            var mediaImported = ImportMediaSectionFromZip(zip, LibraryScope.SessionLocal);
+            var soundImported = ImportSoundSectionFromZip(zip, LibraryScope.SessionLocal);
+            var mapsImported = ImportMapsSectionFromZip(zip, LibraryScope.SessionLocal);
+            NotifySessionChanged();
+
+            Log.Information("Session imported into {FolderPath}: {MediaCount} media, {SoundCount} sounds, {MapCount} maps",
+                targetFolderPath, mediaImported, soundImported, mapsImported);
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.FullSessionImported"),
+                mediaImported, soundImported, mapsImported));
+        }
+        catch (InvalidDataException)
+        {
+            MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.NoValidSessionExportFound");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Session import failed");
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+        }
+    }
+
+    private int ImportMediaSectionFromZip(ZipArchive zip, LibraryScope scope = LibraryScope.Shared)
     {
         var manifest = ReadZipJsonEntry<LibraryManifestDto>(zip, "media/manifest.json");
         if (manifest is null) return 0;
 
-        Directory.CreateDirectory(ThemeSettingsService.MediaLibraryDirectory);
+        var targetDirectory = scope == LibraryScope.SessionLocal
+            ? _sessionService.MediaDirectory
+            : ThemeSettingsService.MediaLibraryDirectory;
+        Directory.CreateDirectory(targetDirectory);
         var imported = 0;
         foreach (var item in manifest.Items)
         {
@@ -1661,7 +1917,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             if (fileEntry is null) continue;
             if (!Enum.TryParse<MediaKind>(item.Kind, out var kind) || kind == MediaKind.Audio) continue;
 
-            var cachedPath = Path.Combine(ThemeSettingsService.MediaLibraryDirectory,
+            var cachedPath = Path.Combine(targetDirectory,
                 $"{Guid.NewGuid():N}{Path.GetExtension(item.FileName)}");
             using (var entryStream = fileEntry.Open())
             using (var target = File.Create(cachedPath))
@@ -1670,8 +1926,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             }
 
             MediaLibrary.Add(new MediaLibraryItemViewModel(
-                item.Name, cachedPath, kind, item.MimeType, item.Loop,
-                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged));
+                Guid.NewGuid(), item.Name, cachedPath, kind, item.MimeType, item.Loop,
+                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged)
+            {
+                Scope = scope
+            });
             imported++;
         }
 
@@ -1684,19 +1943,22 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         return imported;
     }
 
-    private int ImportSoundSectionFromZip(ZipArchive zip)
+    private int ImportSoundSectionFromZip(ZipArchive zip, LibraryScope scope = LibraryScope.Shared)
     {
         var manifest = ReadZipJsonEntry<LibraryManifestDto>(zip, "sound/manifest.json");
         if (manifest is null) return 0;
 
-        Directory.CreateDirectory(ThemeSettingsService.SoundLibraryDirectory);
+        var targetDirectory = scope == LibraryScope.SessionLocal
+            ? _sessionService.SoundDirectory
+            : ThemeSettingsService.SoundLibraryDirectory;
+        Directory.CreateDirectory(targetDirectory);
         var imported = 0;
         foreach (var item in manifest.Items)
         {
             var fileEntry = zip.GetEntry($"sound/{item.FileName}");
             if (fileEntry is null) continue;
 
-            var cachedPath = Path.Combine(ThemeSettingsService.SoundLibraryDirectory,
+            var cachedPath = Path.Combine(targetDirectory,
                 $"{Guid.NewGuid():N}{Path.GetExtension(item.FileName)}");
             using (var entryStream = fileEntry.Open())
             using (var target = File.Create(cachedPath))
@@ -1704,9 +1966,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 entryStream.CopyTo(target);
             }
 
-            SoundLibrary.Add(CreateSoundLibraryItem(item.Name, item.Icon ?? VisualItemHelper.IconTimer, cachedPath,
+            var soundItem = CreateSoundLibraryItem(Guid.NewGuid(), item.Name, item.Icon ?? VisualItemHelper.IconTimer, cachedPath,
                 item.MimeType, item.Loop, item.Volume ?? 100, item.RepeatCount ?? 1,
-                item.TrimStartMs / 1000.0, item.TrimEndMs / 1000.0));
+                item.TrimStartMs / 1000.0, item.TrimEndMs / 1000.0);
+            soundItem.Scope = scope;
+            SoundLibrary.Add(soundItem);
             imported++;
         }
 
@@ -1720,7 +1984,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         return imported;
     }
 
-    private int ImportMapsSectionFromZip(ZipArchive zip)
+    private int ImportMapsSectionFromZip(ZipArchive zip, LibraryScope scope = LibraryScope.Shared)
     {
         var manifest = ReadZipJsonEntry<MapLibraryManifestDto>(zip, "maps/manifest.json");
         if (manifest is null) return 0;
@@ -1730,8 +1994,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             var mapId = Guid.NewGuid();
             var map = new MapItemViewModel(mapId, mapEntry.Name, DefaultMapCellSizePx, RemoveMap,
-                OnMapLibraryItemChanged, formatVersion: mapEntry.FormatVersion);
-            var mapDirectory = Path.Combine(ThemeSettingsService.MapLibraryDirectory, mapId.ToString("N"));
+                OnMapLibraryItemChanged, formatVersion: mapEntry.FormatVersion, scope: scope);
+            var mapDirectory = Path.Combine(GetMapLibraryBaseDirectory(scope), mapId.ToString("N"));
             Directory.CreateDirectory(mapDirectory);
 
             foreach (var floorEntry in mapEntry.Floors.OrderBy(f => f.Order))
@@ -2709,8 +2973,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         try
         {
-            Directory.CreateDirectory(ThemeSettingsService.MediaLibraryDirectory);
-            var cachedPath = Path.Combine(ThemeSettingsService.MediaLibraryDirectory,
+            var scope = await ResolveScopeForNewItemAsync();
+            var targetDirectory = scope == LibraryScope.SessionLocal
+                ? _sessionService.MediaDirectory
+                : ThemeSettingsService.MediaLibraryDirectory;
+            Directory.CreateDirectory(targetDirectory);
+            var cachedPath = Path.Combine(targetDirectory,
                 $"{Guid.NewGuid():N}{Path.GetExtension(sourcePath)}");
             await using (var source = File.OpenRead(sourcePath))
             await using (var target = File.Create(cachedPath))
@@ -2719,19 +2987,49 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             }
 
             var item = new MediaLibraryItemViewModel(
-                Path.GetFileNameWithoutExtension(sourcePath), cachedPath, kind, mimeType, false,
-                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged);
+                Guid.NewGuid(), Path.GetFileNameWithoutExtension(sourcePath), cachedPath, kind, mimeType, false,
+                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged)
+            {
+                Scope = scope
+            };
             MediaLibrary.Add(item);
             OnPropertyChanged(nameof(HasNoMediaLibraryItems));
             SaveMediaLibrarySettings();
             MediaErrorMessage = null;
-            Log.Information("Medium added to library: {Name} ({Kind})", item.Name, item.Kind);
+            Log.Information("Medium added to library: {Name} ({Kind}, {Scope})", item.Name, item.Kind, scope);
             ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedToMediaLibrary"), item.Name));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Medium could not be added to library ({SourcePath})", sourcePath);
             MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MediaCouldNotBeAddedToLibrary"), ex.Message);
+        }
+    }
+
+    /// <summary>Moves a Media Library item's file between the Shared directory and the open
+    ///     session's media/ folder, then flips its Scope and re-saves both stores. A no-op if
+    ///     already in targetScope, or if targetScope is SessionLocal but no session is open.</summary>
+    public void MoveMediaLibraryItemToScope(MediaLibraryItemViewModel item, LibraryScope targetScope)
+    {
+        if (item.Scope == targetScope) return;
+        if (targetScope == LibraryScope.SessionLocal && !_sessionService.IsSessionOpen) return;
+
+        var targetDirectory = targetScope == LibraryScope.SessionLocal
+            ? _sessionService.MediaDirectory
+            : ThemeSettingsService.MediaLibraryDirectory;
+        try
+        {
+            Directory.CreateDirectory(targetDirectory);
+            var newPath = Path.Combine(targetDirectory, Path.GetFileName(item.LocalPath));
+            File.Move(item.LocalPath, newPath);
+            item.UpdateLocalPath(newPath);
+            item.Scope = targetScope;
+            SaveMediaLibrarySettings();
+            Log.Information("Medium moved to {Scope}: {Name}", targetScope, item.Name);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warning(ex, "Medium could not be moved to {Scope} ({Name})", targetScope, item.Name);
         }
     }
 
@@ -2841,15 +3139,20 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         try
         {
-            var cachedPath = await CopyIntoSoundLibraryAsync(sourcePath);
-            var item = CreateSoundLibraryItem(Path.GetFileNameWithoutExtension(sourcePath), VisualItemHelper.IconTimer,
+            var scope = await ResolveScopeForNewItemAsync();
+            var targetDirectory = scope == LibraryScope.SessionLocal
+                ? _sessionService.SoundDirectory
+                : ThemeSettingsService.SoundLibraryDirectory;
+            var cachedPath = await CopyIntoSoundLibraryAsync(sourcePath, targetDirectory);
+            var item = CreateSoundLibraryItem(Guid.NewGuid(), Path.GetFileNameWithoutExtension(sourcePath), VisualItemHelper.IconTimer,
                 cachedPath, mimeType, false, 100);
+            item.Scope = scope;
             SoundLibrary.Add(item);
             OnPropertyChanged(nameof(HasNoSoundLibraryItems));
             SyncSoundServiceLibrary();
             SaveSoundLibrarySettings();
             MediaErrorMessage = null;
-            Log.Information("Sound added to library: {Name}", item.Name);
+            Log.Information("Sound added to library: {Name} ({Scope})", item.Name, scope);
             ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedToSoundLibrary"), item.Name));
         }
         catch (Exception ex)
@@ -2859,10 +3162,37 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    private static async Task<string> CopyIntoSoundLibraryAsync(string sourcePath)
+    /// <summary>See MoveMediaLibraryItemToScope's doc comment - same move-file/flip-Scope/re-save
+    ///     pattern for the Sound Library.</summary>
+    public void MoveSoundLibraryItemToScope(SoundLibraryItemViewModel item, LibraryScope targetScope)
     {
-        Directory.CreateDirectory(ThemeSettingsService.SoundLibraryDirectory);
-        var cachedPath = Path.Combine(ThemeSettingsService.SoundLibraryDirectory,
+        if (item.Scope == targetScope) return;
+        if (targetScope == LibraryScope.SessionLocal && !_sessionService.IsSessionOpen) return;
+
+        var targetDirectory = targetScope == LibraryScope.SessionLocal
+            ? _sessionService.SoundDirectory
+            : ThemeSettingsService.SoundLibraryDirectory;
+        try
+        {
+            Directory.CreateDirectory(targetDirectory);
+            var newPath = Path.Combine(targetDirectory, Path.GetFileName(item.LocalPath));
+            File.Move(item.LocalPath, newPath);
+            item.UpdateLocalPath(newPath);
+            item.Scope = targetScope;
+            SyncSoundServiceLibrary();
+            SaveSoundLibrarySettings();
+            Log.Information("Sound moved to {Scope}: {Name}", targetScope, item.Name);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warning(ex, "Sound could not be moved to {Scope} ({Name})", targetScope, item.Name);
+        }
+    }
+
+    private static async Task<string> CopyIntoSoundLibraryAsync(string sourcePath, string targetDirectory)
+    {
+        Directory.CreateDirectory(targetDirectory);
+        var cachedPath = Path.Combine(targetDirectory,
             $"{Guid.NewGuid():N}{Path.GetExtension(sourcePath)}");
         await using var source = File.OpenRead(sourcePath);
         await using var target = File.Create(cachedPath);
@@ -2872,10 +3202,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     }
 
     private SoundLibraryItemViewModel CreateSoundLibraryItem(
-        string name, string icon, string localPath, string mimeType, bool loop, int volume,
+        Guid id, string name, string icon, string localPath, string mimeType, bool loop, int volume,
         int repeatCount = 1, double trimStartSeconds = 0, double trimEndSeconds = 0)
     {
-        return new SoundLibraryItemViewModel(name, icon, localPath, mimeType, loop, volume, repeatCount,
+        return new SoundLibraryItemViewModel(id, name, icon, localPath, mimeType, loop, volume, repeatCount,
             trimStartSeconds, trimEndSeconds,
             RemoveSoundLibraryItem,
             PlaySoundLibraryItem,
@@ -2986,24 +3316,39 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         SoundService.SyncLibrarySounds(SoundLibrary.Select(s => (s.Name, s.LocalPath)));
     }
 
+    private static SoundLibraryEntryDto ToSoundLibraryEntryDto(SoundLibraryItemViewModel s) => new()
+    {
+        Id = s.Id,
+        Name = s.Name,
+        Icon = s.Icon,
+        Path = s.LocalPath,
+        MimeType = s.MimeType,
+        Loop = s.Loop,
+        Volume = s.Volume,
+        RepeatCount = s.RepeatCount,
+        TrimStartMs = (long)(s.TrimStartSeconds * 1000),
+        TrimEndMs = (long)(s.TrimEndSeconds * 1000)
+    };
+
+    /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
     private void SaveSoundLibrarySettings()
     {
         var settings = ThemeSettingsService.LoadSettings();
         settings.SoundLibrary = SoundLibrary
-            .Select(s => new ThemeSettingsService.SoundLibraryEntryDto
-            {
-                Name = s.Name,
-                Icon = s.Icon,
-                Path = s.LocalPath,
-                MimeType = s.MimeType,
-                Loop = s.Loop,
-                Volume = s.Volume,
-                RepeatCount = s.RepeatCount,
-                TrimStartMs = (long)(s.TrimStartSeconds * 1000),
-                TrimEndMs = (long)(s.TrimEndSeconds * 1000)
-            })
+            .Where(s => s.Scope == LibraryScope.Shared)
+            .Select(ToSoundLibraryEntryDto)
             .ToList();
         ThemeSettingsService.SaveSettings(settings);
+
+        if (_sessionService.IsSessionOpen)
+        {
+            var sessionLibrary = _sessionService.LoadLibrary();
+            sessionLibrary.SoundLibrary = SoundLibrary
+                .Where(s => s.Scope == LibraryScope.SessionLocal)
+                .Select(ToSoundLibraryEntryDto)
+                .ToList();
+            _sessionService.SaveLibrary(sessionLibrary);
+        }
     }
 
     public async Task ExportMediaLibraryAsync(string targetFolder)
@@ -3059,7 +3404,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                     $"{Guid.NewGuid():N}{Path.GetExtension(entry.FileName)}");
                 File.Copy(sourceFile, cachedPath, true);
                 MediaLibrary.Add(new MediaLibraryItemViewModel(
-                    entry.Name, cachedPath, kind, entry.MimeType, entry.Loop,
+                    Guid.NewGuid(), entry.Name, cachedPath, kind, entry.MimeType, entry.Loop,
                     RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged));
                 imported++;
             }
@@ -3131,7 +3476,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 var cachedPath = Path.Combine(ThemeSettingsService.SoundLibraryDirectory,
                     $"{Guid.NewGuid():N}{Path.GetExtension(entry.FileName)}");
                 File.Copy(sourceFile, cachedPath, true);
-                SoundLibrary.Add(CreateSoundLibraryItem(entry.Name, entry.Icon ?? VisualItemHelper.IconTimer,
+                SoundLibrary.Add(CreateSoundLibraryItem(Guid.NewGuid(), entry.Name, entry.Icon ?? VisualItemHelper.IconTimer,
                     cachedPath,
                     entry.MimeType, entry.Loop, entry.Volume ?? 100,
                     entry.RepeatCount ?? 1, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0));
@@ -3167,14 +3512,19 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         try
         {
-            var cachedPath = await CopyIntoMusicLibraryAsync(sourcePath);
+            var scope = await ResolveScopeForNewItemAsync();
+            var targetDirectory = scope == LibraryScope.SessionLocal
+                ? _sessionService.MusicDirectory
+                : ThemeSettingsService.MusicLibraryDirectory;
+            var cachedPath = await CopyIntoMusicLibraryAsync(sourcePath, targetDirectory);
             var item = CreateMusicLibraryItem(Guid.NewGuid(), Path.GetFileNameWithoutExtension(sourcePath),
                 VisualItemHelper.IconTimer, cachedPath, mimeType, 100);
+            item.Scope = scope;
             MusicLibrary.Add(item);
             OnPropertyChanged(nameof(HasNoMusicLibraryItems));
             SaveMusicLibrarySettings();
             MediaErrorMessage = null;
-            Log.Information("Music track added to library: {Name}", item.Name);
+            Log.Information("Music track added to library: {Name} ({Scope})", item.Name, scope);
             ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedToMusicLibrary"), item.Name));
         }
         catch (Exception ex)
@@ -3184,10 +3534,36 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    private static async Task<string> CopyIntoMusicLibraryAsync(string sourcePath)
+    /// <summary>See MoveMediaLibraryItemToScope's doc comment - same move-file/flip-Scope/re-save
+    ///     pattern for the Music Library.</summary>
+    public void MoveMusicLibraryItemToScope(MusicLibraryItemViewModel item, LibraryScope targetScope)
     {
-        Directory.CreateDirectory(ThemeSettingsService.MusicLibraryDirectory);
-        var cachedPath = Path.Combine(ThemeSettingsService.MusicLibraryDirectory,
+        if (item.Scope == targetScope) return;
+        if (targetScope == LibraryScope.SessionLocal && !_sessionService.IsSessionOpen) return;
+
+        var targetDirectory = targetScope == LibraryScope.SessionLocal
+            ? _sessionService.MusicDirectory
+            : ThemeSettingsService.MusicLibraryDirectory;
+        try
+        {
+            Directory.CreateDirectory(targetDirectory);
+            var newPath = Path.Combine(targetDirectory, Path.GetFileName(item.LocalPath));
+            File.Move(item.LocalPath, newPath);
+            item.UpdateLocalPath(newPath);
+            item.Scope = targetScope;
+            SaveMusicLibrarySettings();
+            Log.Information("Music track moved to {Scope}: {Name}", targetScope, item.Name);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warning(ex, "Music track could not be moved to {Scope} ({Name})", targetScope, item.Name);
+        }
+    }
+
+    private static async Task<string> CopyIntoMusicLibraryAsync(string sourcePath, string targetDirectory)
+    {
+        Directory.CreateDirectory(targetDirectory);
+        var cachedPath = Path.Combine(targetDirectory,
             $"{Guid.NewGuid():N}{Path.GetExtension(sourcePath)}");
         await using var source = File.OpenRead(sourcePath);
         await using var target = File.Create(cachedPath);
@@ -3530,21 +3906,35 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         SaveMusicLibrarySettings();
     }
 
+    private static MusicLibraryEntryDto ToMusicLibraryEntryDto(MusicLibraryItemViewModel m) => new()
+    {
+        Id = m.Id,
+        Name = m.Name,
+        Icon = m.Icon,
+        Path = m.LocalPath,
+        MimeType = m.MimeType,
+        Volume = m.Volume
+    };
+
+    /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
     private void SaveMusicLibrarySettings()
     {
         var settings = ThemeSettingsService.LoadSettings();
         settings.MusicLibrary = MusicLibrary
-            .Select(m => new ThemeSettingsService.MusicLibraryEntryDto
-            {
-                Id = m.Id,
-                Name = m.Name,
-                Icon = m.Icon,
-                Path = m.LocalPath,
-                MimeType = m.MimeType,
-                Volume = m.Volume
-            })
+            .Where(m => m.Scope == LibraryScope.Shared)
+            .Select(ToMusicLibraryEntryDto)
             .ToList();
         ThemeSettingsService.SaveSettings(settings);
+
+        if (_sessionService.IsSessionOpen)
+        {
+            var sessionLibrary = _sessionService.LoadLibrary();
+            sessionLibrary.MusicLibrary = MusicLibrary
+                .Where(m => m.Scope == LibraryScope.SessionLocal)
+                .Select(ToMusicLibraryEntryDto)
+                .ToList();
+            _sessionService.SaveLibrary(sessionLibrary);
+        }
     }
 
     public async Task ExportMusicLibraryAsync(string targetFolder)
@@ -3683,20 +4073,39 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         RefreshCalendarViews();
     }
 
+    private static MediaLibraryEntryDto ToMediaLibraryEntryDto(MediaLibraryItemViewModel i) => new()
+    {
+        Id = i.Id,
+        Name = i.Name,
+        Path = i.LocalPath,
+        Kind = i.Kind.ToString(),
+        MimeType = i.MimeType,
+        Loop = i.Loop
+    };
+
+    /// <summary>Splits MediaLibrary by Scope: Shared items round-trip through the always-present
+    ///     ThemeSettingsService store, exactly as before Sessions existed; SessionLocal items
+    ///     (only possible while a session is open) round-trip through that session's own
+    ///     session-library.json instead, leaving the other session-local library sections in that
+    ///     file untouched.</summary>
     private void SaveMediaLibrarySettings()
     {
         var settings = ThemeSettingsService.LoadSettings();
         settings.MediaLibrary = MediaLibrary
-            .Select(i => new ThemeSettingsService.MediaLibraryEntryDto
-            {
-                Name = i.Name,
-                Path = i.LocalPath,
-                Kind = i.Kind.ToString(),
-                MimeType = i.MimeType,
-                Loop = i.Loop
-            })
+            .Where(i => i.Scope == LibraryScope.Shared)
+            .Select(ToMediaLibraryEntryDto)
             .ToList();
         ThemeSettingsService.SaveSettings(settings);
+
+        if (_sessionService.IsSessionOpen)
+        {
+            var sessionLibrary = _sessionService.LoadLibrary();
+            sessionLibrary.MediaLibrary = MediaLibrary
+                .Where(i => i.Scope == LibraryScope.SessionLocal)
+                .Select(ToMediaLibraryEntryDto)
+                .ToList();
+            _sessionService.SaveLibrary(sessionLibrary);
+        }
     }
 
     private void SetCurrentMediaStatus(MediaKind kind, string localPath, string fileName, bool isOwnedCache)
@@ -5444,7 +5853,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         public int GridWidth { get; init; }
         public int GridHeight { get; init; }
 
-        /// <summary>See ThemeSettingsService.MapFloorEntryDto.Order.</summary>
+        /// <summary>See MapFloorEntryDto.Order.</summary>
         public int Order { get; init; }
     }
 
