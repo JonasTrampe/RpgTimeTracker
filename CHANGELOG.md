@@ -32,6 +32,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     rather than merging into the Shared Library. With no session open,
     these buttons keep their previous meaning (the whole Shared Library).
 
+- Deleting a Sound or Music Library item now warns if it's still in use
+  (a sound assigned as a timer/alarm/interval's event medium, or a track
+  still in a playlist) and offers the same Cancel / clear-and-delete /
+  keep-file choice the Media Library already had - previously Sound
+  deletion had no safeguard at all, and Music deletion silently dropped
+  playlist references with no warning.
+
 - New "Music" tab with its own Music Library, deliberately separate from
   the existing Sound Library (own storage directory, own settings section,
   own export/import) - music will later be organized into playlists and

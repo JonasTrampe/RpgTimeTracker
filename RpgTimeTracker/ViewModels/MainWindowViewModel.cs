@@ -452,6 +452,50 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private readonly SessionService _sessionService = new();
 
+    /// <summary>Generalized "who references this item" lookup - see LibraryUsageRegistry. Finders/
+    ///     clear-actions are registered once, in the constructor.</summary>
+    private readonly LibraryUsageRegistry _usageRegistry = new();
+
+    /// <summary>Registered into _usageRegistry for both Media and Sound library items - trigger
+    ///     media configs (Timer/Alarm/IntervalEvent/CalendarEntry) reference a file by Path, not
+    ///     by Id, so this resolves the Id back to whichever library currently holds it and defers
+    ///     to the existing path-based scan.</summary>
+    private IEnumerable<string> FindTriggerMediaUsagesById(Guid id)
+    {
+        var localPath = MediaLibrary.FirstOrDefault(i => i.Id == id)?.LocalPath
+                         ?? SoundLibrary.FirstOrDefault(i => i.Id == id)?.LocalPath;
+        return localPath is null ? [] : FindTriggerMediaUsageLabels(localPath);
+    }
+
+    private void ClearTriggerMediaReferencesById(Guid id)
+    {
+        var localPath = MediaLibrary.FirstOrDefault(i => i.Id == id)?.LocalPath
+                         ?? SoundLibrary.FirstOrDefault(i => i.Id == id)?.LocalPath;
+        if (localPath is not null) ClearTriggerMediaReferences(localPath);
+    }
+
+    /// <summary>Registered into _usageRegistry for Music library items - Playlists already
+    ///     reference tracks by stable Id (see MusicLibraryEntryDto.TrackIds).</summary>
+    private IEnumerable<string> FindPlaylistUsagesById(Guid id)
+    {
+        var track = MusicLibrary.FirstOrDefault(m => m.Id == id);
+        if (track is null) yield break;
+
+        foreach (var playlist in Playlists)
+        {
+            if (playlist.Tracks.Any(t => t.Track == track))
+                yield return string.Format(LocalizationService.Get("MainWindowViewModel.Labels.PlaylistUsage"), playlist.Name);
+        }
+    }
+
+    private void ClearPlaylistReferencesById(Guid id)
+    {
+        var track = MusicLibrary.FirstOrDefault(m => m.Id == id);
+        if (track is null) return;
+
+        foreach (var playlist in Playlists) playlist.RemoveTracksReferencing(track);
+    }
+
     /// <summary>Whether a Session (a folder-scoped campaign, see SessionService) is currently
     ///     open. With none open, every library item is Shared and the app behaves exactly as it
     ///     did before this concept existed.</summary>
@@ -592,6 +636,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     public MainWindowViewModel()
     {
+        _usageRegistry.Register(FindTriggerMediaUsagesById);
+        _usageRegistry.RegisterClearAction(ClearTriggerMediaReferencesById);
+        _usageRegistry.Register(FindPlaylistUsagesById);
+        _usageRegistry.RegisterClearAction(ClearPlaylistReferencesById);
+
         // Reasonable fantasy start time, can be changed immediately.
         var start = DateTime.Now;
         _clock = new GameClockService(start);
@@ -3035,10 +3084,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     /// <summary>
     ///     Set by the view (see MainWindow.axaml.cs), since a warning/confirmation needs a window,
-    ///     which the view model itself doesn't know about - analogous to the LibraryPanelView funcs above.
-    ///     Without a handler (e.g. during testing) an assigned medium is NEVER silently deleted.
+    ///     which the view model itself doesn't know about - analogous to the LibraryPanelView funcs
+    ///     above. Takes just the item's display name (not a concrete MediaLibraryItemViewModel) so
+    ///     Sound/Music deletion can reuse the exact same dialog. Without a handler (e.g. during
+    ///     testing) an in-use item is NEVER silently deleted.
     /// </summary>
-    public Func<MediaLibraryItemViewModel, IReadOnlyList<string>, Task<TriggerMediaDeleteChoice>>?
+    public Func<string, IReadOnlyList<string>, Task<TriggerMediaDeleteChoice>>?
         ConfirmTriggerMediaDeleteAsync { get; set; }
 
     private void RemoveMediaLibraryItem(MediaLibraryItemViewModel item)
@@ -3048,19 +3099,19 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private async Task RemoveMediaLibraryItemAsync(MediaLibraryItemViewModel item)
     {
-        var usedBy = FindTriggerMediaUsageLabels(item.LocalPath);
+        var usedBy = _usageRegistry.FindUsagesOf(item.Id);
         if (usedBy.Count > 0)
         {
             var choice = ConfirmTriggerMediaDeleteAsync is null
                 ? TriggerMediaDeleteChoice.Cancel
-                : await ConfirmTriggerMediaDeleteAsync(item, usedBy).ConfigureAwait(true);
+                : await ConfirmTriggerMediaDeleteAsync(item.Name, usedBy).ConfigureAwait(true);
 
             switch (choice)
             {
                 case TriggerMediaDeleteChoice.Cancel:
                     return;
                 case TriggerMediaDeleteChoice.RemoveFromItemsAndDelete:
-                    ClearTriggerMediaReferences(item.LocalPath);
+                    _usageRegistry.ClearReferencesTo(item.Id);
                     break;
                 case TriggerMediaDeleteChoice.KeepInItemsRemoveFromLibraryOnly:
                     // File deliberately stays on disk - the affected items still reference
@@ -3215,6 +3266,39 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private void RemoveSoundLibraryItem(SoundLibraryItemViewModel item)
     {
+        _ = RemoveSoundLibraryItemAsync(item);
+    }
+
+    private async Task RemoveSoundLibraryItemAsync(SoundLibraryItemViewModel item)
+    {
+        var usedBy = _usageRegistry.FindUsagesOf(item.Id);
+        if (usedBy.Count > 0)
+        {
+            var choice = ConfirmTriggerMediaDeleteAsync is null
+                ? TriggerMediaDeleteChoice.Cancel
+                : await ConfirmTriggerMediaDeleteAsync(item.Name, usedBy).ConfigureAwait(true);
+
+            switch (choice)
+            {
+                case TriggerMediaDeleteChoice.Cancel:
+                    return;
+                case TriggerMediaDeleteChoice.RemoveFromItemsAndDelete:
+                    _usageRegistry.ClearReferencesTo(item.Id);
+                    break;
+                case TriggerMediaDeleteChoice.KeepInItemsRemoveFromLibraryOnly:
+                    // File deliberately stays on disk - see RemoveMediaLibraryItemAsync's identical comment.
+                    SoundLibrary.Remove(item);
+                    OnPropertyChanged(nameof(HasNoSoundLibraryItems));
+                    SyncSoundServiceLibrary();
+                    SaveSoundLibrarySettings();
+                    RefreshCalendarViews();
+                    Log.Information(
+                        "Sound removed from library only, file kept (still used by {Count} items): {Name}",
+                        usedBy.Count, item.Name);
+                    return;
+            }
+        }
+
         SoundLibrary.Remove(item);
         OnPropertyChanged(nameof(HasNoSoundLibraryItems));
         DeleteFileQuietly(item.LocalPath);
@@ -3584,6 +3668,38 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private void RemoveMusicLibraryItem(MusicLibraryItemViewModel item)
     {
+        _ = RemoveMusicLibraryItemAsync(item);
+    }
+
+    private async Task RemoveMusicLibraryItemAsync(MusicLibraryItemViewModel item)
+    {
+        var usedBy = _usageRegistry.FindUsagesOf(item.Id);
+        if (usedBy.Count > 0)
+        {
+            var choice = ConfirmTriggerMediaDeleteAsync is null
+                ? TriggerMediaDeleteChoice.Cancel
+                : await ConfirmTriggerMediaDeleteAsync(item.Name, usedBy).ConfigureAwait(true);
+
+            switch (choice)
+            {
+                case TriggerMediaDeleteChoice.Cancel:
+                    return;
+                case TriggerMediaDeleteChoice.RemoveFromItemsAndDelete:
+                    _usageRegistry.ClearReferencesTo(item.Id);
+                    break;
+                case TriggerMediaDeleteChoice.KeepInItemsRemoveFromLibraryOnly:
+                    // File deliberately stays on disk - see RemoveMediaLibraryItemAsync's identical comment.
+                    if (CurrentPlaylistTrack == item) StopPlaylistPlayback();
+                    MusicLibrary.Remove(item);
+                    OnPropertyChanged(nameof(HasNoMusicLibraryItems));
+                    SaveMusicLibrarySettings();
+                    Log.Information(
+                        "Music track removed from library only, file kept (still used by {Count} items): {Name}",
+                        usedBy.Count, item.Name);
+                    return;
+            }
+        }
+
         // Stop rather than try to skip past it mid-deletion - simpler and safer than juggling
         // playback indices while the very file/track object the sequencer is playing disappears.
         if (CurrentPlaylistTrack == item) StopPlaylistPlayback();

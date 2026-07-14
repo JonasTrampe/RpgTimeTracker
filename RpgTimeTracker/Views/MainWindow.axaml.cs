@@ -628,12 +628,12 @@ public partial class MainWindow : Window
     /// <summary>
     ///     Attached to MainWindowViewModel.ConfirmTriggerMediaDeleteAsync (see OnDataContextChanged) -
     ///     the view model cannot open a window itself, but needs the confirmation before an already
-    ///     assigned library image/video is actually deleted.
+    ///     in-use library item (Media, Sound, or Music) is actually deleted.
     /// </summary>
-    private async Task<TriggerMediaDeleteChoice> ShowConfirmTriggerMediaDeleteAsync(MediaLibraryItemViewModel item,
+    private async Task<TriggerMediaDeleteChoice> ShowConfirmTriggerMediaDeleteAsync(string itemName,
         IReadOnlyList<string> usedBy)
     {
-        var dialog = new ConfirmTriggerMediaDeleteWindow(item.Name, usedBy);
+        var dialog = new ConfirmTriggerMediaDeleteWindow(itemName, usedBy);
         return await dialog.ShowDialog<TriggerMediaDeleteChoice>(this);
     }
 

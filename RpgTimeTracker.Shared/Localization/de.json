@@ -438,6 +438,7 @@
   "MainWindowViewModel.Labels.AlarmUsage": "Wecker \"{0}\"",
   "MainWindowViewModel.Labels.IntervalUsage": "Intervall \"{0}\"",
   "MainWindowViewModel.Labels.CalendarEntryUsage": "Kalendereintrag \"{0}\"",
+  "MainWindowViewModel.Labels.PlaylistUsage": "Playlist \"{0}\"",
   "MainWindowViewModel.Labels.KindTimer": "Timer",
   "MainWindowViewModel.Labels.KindAlarm": "Wecker",
   "MainWindowViewModel.Labels.KindOnTime": "OnTime",
