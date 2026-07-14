@@ -1366,7 +1366,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         var npc = new NpcLibraryItemViewModel(Guid.NewGuid(),
             LocalizationService.Get("MainWindowViewModel.Defaults.NewNpcName"), RemoveNpc,
             OnNpcLibraryItemChanged, scope);
-        npc.AddState(LocalizationService.Get("MainWindowViewModel.Defaults.DefaultStateName"), isDefault: true);
+        npc.AddVariant(LocalizationService.Get("MainWindowViewModel.Defaults.DefaultVariantName"), isDefault: true);
         NpcLibrary.Add(npc);
         SelectedNpc = npc;
         OnPropertyChanged(nameof(HasNoNpcLibraryItems));
@@ -1408,30 +1408,30 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private void MoveNpcLibraryItemToSession(NpcLibraryItemViewModel npc) =>
         MoveNpcLibraryItemToScope(npc, LibraryScope.SessionLocal);
 
-    /// <summary>Who references a Media/Sound Library item by Id from any NPC state's Image/
+    /// <summary>Who references a Media/Sound Library item by Id from any NPC variant's Image/
     ///     TokenImage/Sounds - registered into _usageRegistry so deleting that Media/Sound item
     ///     goes through the same 3-way confirm-delete flow as any other in-use item.</summary>
     private IEnumerable<string> FindNpcUsagesById(Guid id)
     {
         foreach (var npc in NpcLibrary)
-        foreach (var state in npc.States)
+        foreach (var variant in npc.Variants)
         {
-            if (state.Image?.Id == id || state.TokenImage?.Id == id || state.Sounds.Any(s => s.Id == id))
+            if (variant.Image?.Id == id || variant.TokenImage?.Id == id || variant.Sounds.Any(s => s.Id == id))
                 yield return string.Format(LocalizationService.Get("MainWindowViewModel.Labels.NpcUsage"),
-                    npc.Name, state.Name);
+                    npc.Name, variant.Name);
         }
     }
 
     private void ClearNpcReferencesById(Guid id)
     {
         foreach (var npc in NpcLibrary)
-        foreach (var state in npc.States)
+        foreach (var variant in npc.Variants)
         {
-            if (state.Image?.Id == id) state.Image = null;
-            if (state.TokenImage?.Id == id) state.TokenImage = null;
+            if (variant.Image?.Id == id) variant.Image = null;
+            if (variant.TokenImage?.Id == id) variant.TokenImage = null;
 
-            var staleSounds = state.Sounds.Where(s => s.Id == id).ToList();
-            foreach (var sound in staleSounds) state.RemoveSound(sound);
+            var staleSounds = variant.Sounds.Where(s => s.Id == id).ToList();
+            foreach (var sound in staleSounds) variant.RemoveSound(sound);
         }
     }
 
@@ -1443,54 +1443,70 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             Title = b.Title, MarkdownBody = b.MarkdownBody
         }).ToList(),
-        States = npc.States.Select(s => new NpcStateEntryDto
+        Variants = npc.Variants.Select(v => new NpcVariantEntryDto
         {
-            Id = s.Id,
-            Name = s.Name,
-            IsDefault = s.IsDefault,
-            ImageId = s.Image?.Id,
-            TokenImageId = s.TokenImage?.Id,
-            TokenIcon = s.TokenIcon,
-            PlayerInfo = s.PlayerInfo,
-            SoundIds = s.HasSoundsOverride ? s.Sounds.Select(sound => sound.Id).ToList() : null
+            Id = v.Id,
+            Name = v.Name,
+            IsDefault = v.IsDefault,
+            ImageId = v.Image?.Id,
+            TokenImageId = v.TokenImage?.Id,
+            TokenIcon = v.TokenIcon,
+            PlayerInfo = v.PlayerInfo,
+            SoundIds = v.HasSoundsOverride ? v.Sounds.Select(sound => sound.Id).ToList() : null
         }).ToList(),
-        ActiveStateId = npc.ActiveState?.Id ?? npc.DefaultState.Id
+        ActiveVariantId = npc.ActiveVariant?.Id ?? npc.DefaultVariant.Id
     };
 
+    /// <summary>Wrapped in BeginBulkLoad/EndBulkLoad - this NPC isn't in the NpcLibrary collection
+    ///     yet while this method builds it, so every AddVariant/property-set call below would
+    ///     otherwise fire a save that serializes NpcLibrary as it stood before this (and any later)
+    ///     entry was added, silently truncating the on-disk library. See
+    ///     NpcLibraryItemViewModel._suppressChangeNotifications' doc comment.</summary>
     private NpcLibraryItemViewModel? FromNpcLibraryEntryDto(NpcLibraryEntryDto entry, LibraryScope scope)
     {
         var npc = new NpcLibraryItemViewModel(entry.Id, entry.Name, RemoveNpc, OnNpcLibraryItemChanged, scope);
-        foreach (var block in entry.GmInfoBlocks)
-            npc.GmInfoBlocks.Add(new NpcGmInfoBlockViewModel(block.Title, block.MarkdownBody,
-                b => { npc.GmInfoBlocks.Remove(b); OnNpcLibraryItemChanged(npc); }, _ => OnNpcLibraryItemChanged(npc)));
-
-        foreach (var stateEntry in entry.States)
+        npc.BeginBulkLoad();
+        try
         {
-            var state = npc.AddState(stateEntry.Name, stateEntry.IsDefault, stateEntry.Id);
-            state.Image = stateEntry.ImageId is { } imageId
-                ? MediaLibrary.FirstOrDefault(m => m.Id == imageId)
-                : null;
-            state.TokenImage = stateEntry.TokenImageId is { } tokenImageId
-                ? MediaLibrary.FirstOrDefault(m => m.Id == tokenImageId)
-                : null;
-            state.TokenIcon = stateEntry.TokenIcon;
-            state.PlayerInfo = stateEntry.PlayerInfo;
-            if (stateEntry.SoundIds is { } soundIds)
+            foreach (var block in entry.GmInfoBlocks)
+                npc.GmInfoBlocks.Add(new NpcGmInfoBlockViewModel(block.Title, block.MarkdownBody,
+                    b => { npc.GmInfoBlocks.Remove(b); OnNpcLibraryItemChanged(npc); }, _ => OnNpcLibraryItemChanged(npc)));
+
+            foreach (var variantEntry in entry.Variants)
             {
-                foreach (var soundId in soundIds)
+                var variant = npc.AddVariant(variantEntry.Name, variantEntry.IsDefault, variantEntry.Id);
+                variant.Image = variantEntry.ImageId is { } imageId
+                    ? MediaLibrary.FirstOrDefault(m => m.Id == imageId)
+                    : null;
+                variant.TokenImage = variantEntry.TokenImageId is { } tokenImageId
+                    ? MediaLibrary.FirstOrDefault(m => m.Id == tokenImageId)
+                    : null;
+                variant.TokenIcon = variantEntry.TokenIcon;
+                variant.PlayerInfo = variantEntry.PlayerInfo;
+                // Empty PlayerInfo starts in edit mode (nothing to preview); non-empty PlayerInfo
+                // loaded from disk starts in preview - see IsPlayerInfoPreviewMode's doc comment.
+                variant.IsPlayerInfoPreviewMode = !string.IsNullOrWhiteSpace(variantEntry.PlayerInfo);
+                if (variantEntry.SoundIds is { } soundIds)
                 {
-                    var sound = SoundLibrary.FirstOrDefault(s => s.Id == soundId);
-                    if (sound is not null) state.Sounds.Add(sound);
+                    foreach (var soundId in soundIds)
+                    {
+                        var sound = SoundLibrary.FirstOrDefault(s => s.Id == soundId);
+                        if (sound is not null) variant.Sounds.Add(sound);
+                    }
+
+                    variant.HasSoundsOverride = true;
                 }
-
-                state.HasSoundsOverride = true;
             }
+
+            if (npc.Variants.Count == 0) return null; // a Default variant is required - drop a malformed entry
+
+            npc.ActiveVariant = npc.Variants.FirstOrDefault(v => v.Id == entry.ActiveVariantId) ?? npc.DefaultVariant;
+            return npc;
         }
-
-        if (npc.States.Count == 0) return null; // a Default state is required - drop a malformed entry
-
-        npc.ActiveState = npc.States.FirstOrDefault(s => s.Id == entry.ActiveStateId) ?? npc.DefaultState;
-        return npc;
+        finally
+        {
+            npc.EndBulkLoad();
+        }
     }
 
     /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
@@ -2197,7 +2213,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// <summary>Imports the media/ section, returning both the count and an old-Id -&gt; new-Id
     ///     map (the manifest's LibraryManifestEntryDto.Id, from the exporting machine, mapped to
     ///     the freshly minted Id the imported item actually gets) - used by
-    ///     ImportNpcSectionFromZip to relink a character state's portrait/token reference to the
+    ///     ImportNpcSectionFromZip to relink a character variant's portrait/token reference to the
     ///     newly-imported copy instead of a stale foreign Id.</summary>
     private (int Imported, Dictionary<Guid, Guid> IdMap) ImportMediaSectionFromZip(ZipArchive zip,
         LibraryScope scope = LibraryScope.Shared)
@@ -2342,7 +2358,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     }
 
     /// <summary>Imports the npcs/ section. mediaIdMap/soundIdMap (from ImportMediaSectionFromZip/
-    ///     ImportSoundSectionFromZip, called first for the same zip) relink each state's
+    ///     ImportSoundSectionFromZip, called first for the same zip) relink each variant's
     ///     Image/TokenImage/Sound references from the exporting machine's Id to the freshly-imported
     ///     copy's Id; a reference to an asset that wasn't bundled (e.g. a Shared asset outside a
     ///     session-scoped export) has no entry in the map and is silently dropped rather than left
@@ -2361,28 +2377,28 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 Id = Guid.NewGuid(),
                 Name = npcEntry.Name,
                 GmInfoBlocks = npcEntry.GmInfoBlocks,
-                States = npcEntry.States.Select(s => new NpcStateEntryDto
+                Variants = npcEntry.Variants.Select(v => new NpcVariantEntryDto
                 {
                     Id = Guid.NewGuid(),
-                    Name = s.Name,
-                    IsDefault = s.IsDefault,
-                    ImageId = s.ImageId is { } imageId && mediaIdMap.TryGetValue(imageId, out var newImageId)
+                    Name = v.Name,
+                    IsDefault = v.IsDefault,
+                    ImageId = v.ImageId is { } imageId && mediaIdMap.TryGetValue(imageId, out var newImageId)
                         ? newImageId
                         : null,
-                    TokenImageId = s.TokenImageId is { } tokenImageId &&
+                    TokenImageId = v.TokenImageId is { } tokenImageId &&
                                    mediaIdMap.TryGetValue(tokenImageId, out var newTokenImageId)
                         ? newTokenImageId
                         : null,
-                    TokenIcon = s.TokenIcon,
-                    PlayerInfo = s.PlayerInfo,
-                    SoundIds = s.SoundIds?.Select(id => soundIdMap.TryGetValue(id, out var newSoundId) ? newSoundId : (Guid?)null)
+                    TokenIcon = v.TokenIcon,
+                    PlayerInfo = v.PlayerInfo,
+                    SoundIds = v.SoundIds?.Select(id => soundIdMap.TryGetValue(id, out var newSoundId) ? newSoundId : (Guid?)null)
                         .Where(id => id is not null).Select(id => id!.Value).ToList()
                 }).ToList()
             };
-            // ActiveStateId must reference one of the freshly-minted state Ids above, positionally
-            // matching the original entry (states are processed in the same order).
-            var activeIndex = npcEntry.States.FindIndex(s => s.Id == npcEntry.ActiveStateId);
-            remapped.ActiveStateId = activeIndex >= 0 ? remapped.States[activeIndex].Id : Guid.Empty;
+            // ActiveVariantId must reference one of the freshly-minted variant Ids above, positionally
+            // matching the original entry (variants are processed in the same order).
+            var activeIndex = npcEntry.Variants.FindIndex(v => v.Id == npcEntry.ActiveVariantId);
+            remapped.ActiveVariantId = activeIndex >= 0 ? remapped.Variants[activeIndex].Id : Guid.Empty;
 
             var npc = FromNpcLibraryEntryDto(remapped, scope);
             if (npc is null) continue;
@@ -6263,7 +6279,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         /// <summary>The item's original Id on the exporting machine - used only to build an
         ///     old-id -&gt; new-id map during import (see ImportMediaSectionFromZip/
-        ///     ImportSoundSectionFromZip), so an NPC state referencing this item in the same
+        ///     ImportSoundSectionFromZip), so an NPC variant referencing this item in the same
         ///     bundle can be relinked to the freshly-imported copy. Never reused as the imported
         ///     item's actual Id (imports always mint fresh Guids, per this class's established
         ///     convention).</summary>

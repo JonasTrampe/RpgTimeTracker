@@ -4,11 +4,152 @@
         xmlns:controls="using:RpgTimeTracker.Views.Controls"
         xmlns:conv="using:RpgTimeTracker.Views.Converters"
         xmlns:viewModels="clr-namespace:RpgTimeTracker.Shared.ViewModels;assembly=RpgTimeTracker.Shared"
+        xmlns:mdxaml="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
         x:Class="RpgTimeTracker.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{DynamicResource MainWindow.WindowTitle}"
         Width="1150" Height="740" MinWidth="900" MinHeight="600"
         Background="{DynamicResource WindowBackgroundBrush}">
+
+    <Window.Resources>
+        <!-- Shared by the Variants section below: a TabControl.ContentTemplate when a character
+             has more than one variant, and a plain ContentControl when it only has the Default
+             one - both need the exact same editor markup, so it's defined once here instead of
+             duplicated. -->
+        <DataTemplate x:Key="NpcVariantEditorTemplate" x:DataType="vm:NpcVariantViewModel">
+            <StackPanel Spacing="10" Margin="0,10,0,0">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox Grid.Column="0" Classes="settingsGroupTitle"
+                             Text="{Binding Name, Mode=TwoWay}"
+                             IsEnabled="{Binding !IsDefault}" />
+                    <TextBlock Grid.Column="1" Classes="muted"
+                               Text="{DynamicResource MainWindow.Characters.DefaultVariantLabel}"
+                               IsVisible="{Binding IsDefault}"
+                               VerticalAlignment="Center"
+                               Margin="6,0" />
+                </Grid>
+
+                <Border Classes="settingsGroup">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Classes="muted"
+                                       Text="{DynamicResource MainWindow.Characters.PortraitLabel}"
+                                       VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="iconsquare"
+                                    Content="&#9998;" Width="22" Height="22" FontSize="11"
+                                    ToolTip.Tip="{DynamicResource MainWindow.Characters.EditTooltip}">
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{DynamicResource MainWindow.Characters.ChooseButton}"
+                                                  Click="OnChooseNpcVariantImageClick" />
+                                        <MenuItem Header="{DynamicResource MainWindow.Characters.ClearButton}"
+                                                  Click="OnClearNpcVariantImageClick" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </Grid>
+                        <Border Width="96" Height="96" CornerRadius="6" ClipToBounds="True"
+                                Background="{DynamicResource SurfaceAltBrush}"
+                                HorizontalAlignment="Left">
+                            <Image Source="{Binding Image.Thumbnail}" Stretch="UniformToFill" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="settingsGroup">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Classes="muted"
+                                       Text="{DynamicResource MainWindow.Characters.TokenLabel}"
+                                       VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="iconsquare"
+                                    Content="&#9998;" Width="22" Height="22" FontSize="11"
+                                    ToolTip.Tip="{DynamicResource MainWindow.Characters.EditTooltip}">
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{DynamicResource MainWindow.Characters.ChooseImageButton}"
+                                                  Click="OnChooseNpcVariantTokenImageClick" />
+                                        <MenuItem Header="{DynamicResource MainWindow.Characters.ChooseIconButton}"
+                                                  Click="OnChooseNpcVariantTokenIconClick" />
+                                        <MenuItem Header="{DynamicResource MainWindow.Characters.ClearButton}"
+                                                  Click="OnClearNpcVariantTokenClick" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </Grid>
+                        <Border Width="72" Height="72" CornerRadius="36" ClipToBounds="True"
+                                Background="{DynamicResource SurfaceAltBrush}"
+                                HorizontalAlignment="Left">
+                            <Panel>
+                                <Image Source="{Binding TokenImage.Thumbnail}"
+                                       Stretch="UniformToFill"
+                                       IsVisible="{Binding TokenImage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                <TextBlock Text="{Binding TokenIcon}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontSize="22"
+                                           IsVisible="{Binding TokenIcon, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            </Panel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="settingsGroup">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{DynamicResource MainWindow.Characters.PlayerInfoLabel}"
+                                   Classes="muted" />
+                        <Panel>
+                            <TextBox Text="{Binding PlayerInfo, Mode=TwoWay}"
+                                     AcceptsReturn="True" TextWrapping="Wrap"
+                                     MinHeight="80"
+                                     MaxHeight="{Binding $parent[Window].Bounds.Height, Converter={x:Static conv:FractionOfConverter.Instance}, ConverterParameter=0.6}"
+                                     IsVisible="{Binding !IsPlayerInfoPreviewMode}" />
+                            <mdxaml:MarkdownScrollViewer Markdown="{Binding PlayerInfo}"
+                                     MinHeight="80"
+                                     MaxHeight="{Binding $parent[Window].Bounds.Height, Converter={x:Static conv:FractionOfConverter.Instance}, ConverterParameter=0.6}"
+                                     IsVisible="{Binding IsPlayerInfoPreviewMode}" />
+                            <Button Classes="iconsquare"
+                                    Content="{Binding PlayerInfoPreviewToggleIcon}"
+                                    Width="22" Height="22" FontSize="11"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,2,2,0"
+                                    Command="{Binding TogglePlayerInfoPreviewCommand}"
+                                    ToolTip.Tip="{DynamicResource MainWindow.Characters.TogglePreviewTooltip}" />
+                        </Panel>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Spacing="6">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="{DynamicResource MainWindow.Characters.SoundsLabel}"
+                                   Classes="muted" VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Content="{DynamicResource MainWindow.Characters.AddSoundButton}"
+                                Click="OnAddNpcVariantSoundClick" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Sounds}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SoundLibraryItemViewModel">
+                                <Border Classes="settingsGroup" Padding="8,6" Margin="0,0,0,6">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                   VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Classes="iconsquare"
+                                                Content="&#10005;" Width="22" Height="22"
+                                                FontSize="10"
+                                                Click="OnRemoveNpcVariantSoundClick"
+                                                ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
 
     <Window.Styles>
         <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
@@ -1963,8 +2104,13 @@
                                     </TabItem>
 
                                     <TabItem Header="{DynamicResource MainWindow.Tabs.Characters}">
+                                        <!-- BringIntoViewOnFocusChange="False": without this, adding/removing/switching a
+                                             variant (which moves keyboard focus, e.g. to the newly selected tab or back
+                                             to the Default editor) made Avalonia auto-scroll this whole ScrollViewer to
+                                             keep the focused control in view - visible as the page jumping up unprompted. -->
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
-                                                      VerticalScrollBarVisibility="Visible">
+                                                      VerticalScrollBarVisibility="Visible"
+                                                      BringIntoViewOnFocusChange="False">
                                             <Grid ColumnDefinitions="300,*" Margin="4,14,13,16">
                                                 <Border Grid.Column="0" Classes="settingsGroup" Margin="0,0,14,14">
                                                     <StackPanel Spacing="10">
@@ -2020,174 +2166,150 @@
                                                 <Border Grid.Column="1" Classes="settingsGroup" Margin="0,0,14,14"
                                                         IsVisible="{Binding SelectedNpc, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                     <StackPanel Spacing="14" DataContext="{Binding SelectedNpc}">
+                                                        <!-- Compact header: name + a glance at the Active variant's portrait/token,
+                                                             so switching variants below is visually confirmed without needing to
+                                                             scroll into the Variants section. -->
                                                         <TextBox Classes="settingsGroupTitle"
                                                                  Text="{Binding Name, Mode=TwoWay}" />
-
-                                                        <StackPanel Spacing="6">
-                                                            <Grid ColumnDefinitions="*,Auto">
-                                                                <TextBlock Grid.Column="0" Classes="h2"
-                                                                           Text="{DynamicResource MainWindow.Characters.GmInfoTitle}" />
-                                                                <Button Grid.Column="1"
-                                                                        Content="{DynamicResource MainWindow.Characters.AddGmBlockButton}"
-                                                                        Click="OnAddNpcGmInfoBlockClick" />
-                                                            </Grid>
-                                                            <ItemsControl ItemsSource="{Binding GmInfoBlocks}">
-                                                                <ItemsControl.ItemTemplate>
-                                                                    <DataTemplate x:DataType="vm:NpcGmInfoBlockViewModel">
-                                                                        <Border Classes="settingsGroup" Margin="0,0,0,8">
-                                                                            <StackPanel Spacing="6">
-                                                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
-                                                                                    <TextBox Grid.Column="0"
-                                                                                             Text="{Binding Title, Mode=TwoWay}" />
-                                                                                    <Button Grid.Column="1" Classes="iconsquare"
-                                                                                            Content="&#9650;" Width="22" Height="22"
-                                                                                            FontSize="9"
-                                                                                            Click="OnMoveNpcGmInfoBlockUpClick"
-                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Maps.MoveUpTooltip}" />
-                                                                                    <Button Grid.Column="2" Classes="iconsquare"
-                                                                                            Content="&#9660;" Width="22" Height="22"
-                                                                                            FontSize="9"
-                                                                                            Click="OnMoveNpcGmInfoBlockDownClick"
-                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Maps.MoveDownTooltip}" />
-                                                                                    <Button Grid.Column="3" Classes="iconsquare"
-                                                                                            Content="&#10005;" Width="22" Height="22"
-                                                                                            FontSize="10"
-                                                                                            Command="{Binding DeleteCommand}"
-                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
-                                                                                </Grid>
-                                                                                <TextBox Text="{Binding MarkdownBody, Mode=TwoWay}"
-                                                                                         AcceptsReturn="True" TextWrapping="Wrap"
-                                                                                         MinHeight="80" />
-                                                                            </StackPanel>
-                                                                        </Border>
-                                                                    </DataTemplate>
-                                                                </ItemsControl.ItemTemplate>
-                                                            </ItemsControl>
+                                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                                            <Border Width="48" Height="48" CornerRadius="6"
+                                                                    ClipToBounds="True"
+                                                                    Background="{DynamicResource SurfaceAltBrush}">
+                                                                <Image Source="{Binding ActiveVariant.Image.Thumbnail}"
+                                                                       Stretch="UniformToFill" />
+                                                            </Border>
+                                                            <Border Width="40" Height="40" CornerRadius="20"
+                                                                    ClipToBounds="True"
+                                                                    Background="{DynamicResource SurfaceAltBrush}">
+                                                                <Panel>
+                                                                    <Image Source="{Binding ActiveVariant.TokenImage.Thumbnail}"
+                                                                           Stretch="UniformToFill"
+                                                                           IsVisible="{Binding ActiveVariant.TokenImage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                                    <TextBlock Text="{Binding ActiveVariant.TokenIcon}"
+                                                                               HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"
+                                                                               IsVisible="{Binding ActiveVariant.TokenIcon, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                                </Panel>
+                                                            </Border>
+                                                            <TextBlock Text="{Binding ActiveVariant.Name}"
+                                                                       Classes="muted" VerticalAlignment="Center"
+                                                                       IsVisible="{Binding HasMultipleVariants}" />
                                                         </StackPanel>
 
-                                                        <StackPanel Spacing="6">
-                                                            <Grid ColumnDefinitions="*,Auto">
-                                                                <TextBlock Grid.Column="0" Classes="h2"
-                                                                           Text="{DynamicResource MainWindow.Characters.StatesTitle}" />
-                                                                <Button Grid.Column="1"
-                                                                        Content="{DynamicResource MainWindow.Characters.AddStateButton}"
-                                                                        Click="OnAddNpcStateClick" />
-                                                            </Grid>
-                                                            <ListBox ItemsSource="{Binding States}"
-                                                                     SelectedItem="{Binding ActiveState, Mode=TwoWay}">
-                                                                <ListBox.ItemTemplate>
-                                                                    <DataTemplate x:DataType="vm:NpcStateViewModel">
-                                                                        <Grid ColumnDefinitions="*,Auto,Auto">
-                                                                            <TextBox Grid.Column="0"
-                                                                                     Text="{Binding Name, Mode=TwoWay}"
-                                                                                     IsEnabled="{Binding !IsDefault}" />
-                                                                            <TextBlock Grid.Column="1" Classes="muted"
-                                                                                       Text="{DynamicResource MainWindow.Characters.DefaultStateLabel}"
-                                                                                       IsVisible="{Binding IsDefault}"
-                                                                                       VerticalAlignment="Center"
-                                                                                       Margin="6,0" />
-                                                                            <Button Grid.Column="2" Classes="iconsquare"
-                                                                                    Content="&#10005;" Width="22" Height="22"
-                                                                                    FontSize="10"
-                                                                                    Command="{Binding DeleteCommand}"
-                                                                                    IsVisible="{Binding !IsDefault}"
-                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
-                                                                        </Grid>
-                                                                    </DataTemplate>
-                                                                </ListBox.ItemTemplate>
-                                                            </ListBox>
-                                                        </StackPanel>
-
-                                                        <StackPanel Spacing="10" DataContext="{Binding ActiveState}"
-                                                                    IsVisible="{Binding ., Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <TextBlock Classes="h2"
-                                                                       Text="{DynamicResource MainWindow.Characters.StateEditorTitle}" />
-
-                                                            <Grid ColumnDefinitions="Auto,*">
-                                                                <Border Grid.Column="0" Width="72" Height="72"
-                                                                        CornerRadius="6" ClipToBounds="True"
-                                                                        Background="{DynamicResource SurfaceAltBrush}"
-                                                                        Margin="0,0,10,0">
-                                                                    <Image Source="{Binding Image.Thumbnail}"
-                                                                           Stretch="UniformToFill" />
-                                                                </Border>
-                                                                <StackPanel Grid.Column="1" Spacing="4"
-                                                                            VerticalAlignment="Center">
-                                                                    <TextBlock Text="{DynamicResource MainWindow.Characters.PortraitLabel}"
-                                                                               Classes="muted" />
-                                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                        <Button Content="{DynamicResource MainWindow.Characters.ChooseButton}"
-                                                                                Click="OnChooseNpcStateImageClick" />
-                                                                        <Button Content="{DynamicResource MainWindow.Characters.ClearButton}"
-                                                                                Click="OnClearNpcStateImageClick" />
-                                                                    </StackPanel>
-                                                                </StackPanel>
-                                                            </Grid>
-
-                                                            <Grid ColumnDefinitions="Auto,*">
-                                                                <Border Grid.Column="0" Width="56" Height="56"
-                                                                        CornerRadius="28" ClipToBounds="True"
-                                                                        Background="{DynamicResource SurfaceAltBrush}"
-                                                                        Margin="0,0,10,0">
-                                                                    <Panel>
-                                                                        <Image Source="{Binding TokenImage.Thumbnail}"
-                                                                               Stretch="UniformToFill"
-                                                                               IsVisible="{Binding TokenImage, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                                                        <TextBlock Text="{Binding TokenIcon}"
-                                                                                   HorizontalAlignment="Center"
-                                                                                   VerticalAlignment="Center"
-                                                                                   IsVisible="{Binding TokenIcon, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                                                                    </Panel>
-                                                                </Border>
-                                                                <StackPanel Grid.Column="1" Spacing="4"
-                                                                            VerticalAlignment="Center">
-                                                                    <TextBlock Text="{DynamicResource MainWindow.Characters.TokenLabel}"
-                                                                               Classes="muted" />
-                                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                        <Button Content="{DynamicResource MainWindow.Characters.ChooseImageButton}"
-                                                                                Click="OnChooseNpcStateTokenImageClick" />
-                                                                        <Button Content="{DynamicResource MainWindow.Characters.ChooseIconButton}"
-                                                                                Click="OnChooseNpcStateTokenIconClick" />
-                                                                        <Button Content="{DynamicResource MainWindow.Characters.ClearButton}"
-                                                                                Click="OnClearNpcStateTokenClick" />
-                                                                    </StackPanel>
-                                                                </StackPanel>
-                                                            </Grid>
-
-                                                            <StackPanel Spacing="4">
-                                                                <TextBlock Text="{DynamicResource MainWindow.Characters.PlayerInfoLabel}"
-                                                                           Classes="muted" />
-                                                                <TextBox Text="{Binding PlayerInfo, Mode=TwoWay}"
-                                                                         AcceptsReturn="True" TextWrapping="Wrap"
-                                                                         MinHeight="80" />
-                                                            </StackPanel>
-
-                                                            <StackPanel Spacing="6">
-                                                                <Grid ColumnDefinitions="*,Auto">
-                                                                    <TextBlock Grid.Column="0"
-                                                                               Text="{DynamicResource MainWindow.Characters.SoundsLabel}"
-                                                                               Classes="muted" VerticalAlignment="Center" />
-                                                                    <Button Grid.Column="1"
-                                                                            Content="{DynamicResource MainWindow.Characters.AddSoundButton}"
-                                                                            Click="OnAddNpcStateSoundClick" />
-                                                                </Grid>
-                                                                <ItemsControl ItemsSource="{Binding Sounds}">
+                                                        <!-- GM Info is its own collapsible section, wrapped in the same
+                                                             settingsGroup card look as everywhere else in the app - the
+                                                             Expander itself is made transparent/borderless so it only
+                                                             contributes the collapse arrow, not a second, mismatched
+                                                             background/border of its own. -->
+                                                        <Border Classes="settingsGroup">
+                                                            <Expander IsExpanded="True"
+                                                                      Background="Transparent" BorderThickness="0" Padding="0"
+                                                                      HorizontalAlignment="Stretch"
+                                                                      HorizontalContentAlignment="Stretch">
+                                                                <Expander.Header>
+                                                                    <Grid ColumnDefinitions="*,Auto">
+                                                                        <TextBlock Grid.Column="0" Classes="h2"
+                                                                                   Text="{DynamicResource MainWindow.Characters.GmInfoTitle}"
+                                                                                   VerticalAlignment="Center" />
+                                                                        <Button Grid.Column="1"
+                                                                                Content="{DynamicResource MainWindow.Characters.AddGmBlockButton}"
+                                                                                Click="OnAddNpcGmInfoBlockClick" />
+                                                                    </Grid>
+                                                                </Expander.Header>
+                                                                <ItemsControl ItemsSource="{Binding GmInfoBlocks}" Margin="0,8,0,0">
                                                                     <ItemsControl.ItemTemplate>
-                                                                        <DataTemplate x:DataType="vm:SoundLibraryItemViewModel">
-                                                                            <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                                                                                <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                                                           VerticalAlignment="Center" />
-                                                                                <Button Grid.Column="1" Classes="iconsquare"
-                                                                                        Content="&#10005;" Width="22" Height="22"
-                                                                                        FontSize="10"
-                                                                                        Click="OnRemoveNpcStateSoundClick"
-                                                                                        ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
-                                                                            </Grid>
+                                                                        <DataTemplate x:DataType="vm:NpcGmInfoBlockViewModel">
+                                                                            <Border Classes="settingsGroup" Margin="0,0,0,8">
+                                                                                <StackPanel Spacing="6">
+                                                                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                                                                        <TextBox Grid.Column="0"
+                                                                                                 Text="{Binding Title, Mode=TwoWay}" />
+                                                                                        <Button Grid.Column="1" Classes="iconsquare"
+                                                                                                Content="&#9650;" Width="22" Height="22"
+                                                                                                FontSize="9"
+                                                                                                Click="OnMoveNpcGmInfoBlockUpClick"
+                                                                                                ToolTip.Tip="{DynamicResource MainWindow.Maps.MoveUpTooltip}" />
+                                                                                        <Button Grid.Column="2" Classes="iconsquare"
+                                                                                                Content="&#9660;" Width="22" Height="22"
+                                                                                                FontSize="9"
+                                                                                                Click="OnMoveNpcGmInfoBlockDownClick"
+                                                                                                ToolTip.Tip="{DynamicResource MainWindow.Maps.MoveDownTooltip}" />
+                                                                                        <Button Grid.Column="3" Classes="iconsquare"
+                                                                                                Content="&#10005;" Width="22" Height="22"
+                                                                                                FontSize="10"
+                                                                                                Command="{Binding DeleteCommand}"
+                                                                                                ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
+                                                                                    </Grid>
+                                                                                    <Panel>
+                                                                                        <TextBox Text="{Binding MarkdownBody, Mode=TwoWay}"
+                                                                                                 AcceptsReturn="True" TextWrapping="Wrap"
+                                                                                                 MinHeight="80"
+                                                                                                 MaxHeight="{Binding $parent[Window].Bounds.Height, Converter={x:Static conv:FractionOfConverter.Instance}, ConverterParameter=0.6}"
+                                                                                                 IsVisible="{Binding !IsPreviewMode}" />
+                                                                                        <mdxaml:MarkdownScrollViewer Markdown="{Binding MarkdownBody}"
+                                                                                                 MinHeight="80"
+                                                                                                 MaxHeight="{Binding $parent[Window].Bounds.Height, Converter={x:Static conv:FractionOfConverter.Instance}, ConverterParameter=0.6}"
+                                                                                                 IsVisible="{Binding IsPreviewMode}" />
+                                                                                        <Button Classes="iconsquare"
+                                                                                                Content="{Binding PreviewToggleIcon}"
+                                                                                                Width="22" Height="22" FontSize="11"
+                                                                                                HorizontalAlignment="Right"
+                                                                                                VerticalAlignment="Top"
+                                                                                                Margin="0,2,2,0"
+                                                                                                Command="{Binding TogglePreviewCommand}"
+                                                                                                ToolTip.Tip="{DynamicResource MainWindow.Characters.TogglePreviewTooltip}" />
+                                                                                    </Panel>
+                                                                                </StackPanel>
+                                                                            </Border>
                                                                         </DataTemplate>
                                                                     </ItemsControl.ItemTemplate>
                                                                 </ItemsControl>
+                                                            </Expander>
+                                                        </Border>
+
+                                                        <!-- Variants: a plain settingsGroup card (not an Expander - a
+                                                             character always has at least one variant, so there's nothing
+                                                             to collapse) with the Add button in its header row. Once a
+                                                             second variant exists, they're switched between via tabs
+                                                             instead of a list; with just Default, its editor (the shared
+                                                             NpcVariantEditorTemplate resource) is shown directly. -->
+                                                        <Border Classes="settingsGroup">
+                                                            <StackPanel Spacing="10">
+                                                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                                                    <TextBlock Grid.Column="0" Classes="muted"
+                                                                               Text="{DynamicResource MainWindow.Characters.VariantsTitle}"
+                                                                               VerticalAlignment="Center" />
+                                                                    <Button Grid.Column="1"
+                                                                            Content="{DynamicResource MainWindow.Characters.AddVariantButton}"
+                                                                            Click="OnAddNpcVariantClick" />
+                                                                    <!-- Deleting the active variant lives here (not in the tab/editor
+                                                                         below) so its position never shifts: it's the last column,
+                                                                         so showing/hiding it only affects the space to its own right. -->
+                                                                    <Button Grid.Column="2" Classes="iconsquare"
+                                                                            Content="&#10005;" Width="30" Height="30" FontSize="12"
+                                                                            Margin="6,0,0,0"
+                                                                            Command="{Binding ActiveVariant.DeleteCommand}"
+                                                                            IsVisible="{Binding CanDeleteActiveVariant}"
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
+                                                                </Grid>
+
+                                                                <TabControl Classes="subtabs"
+                                                                            ItemsSource="{Binding Variants}"
+                                                                            SelectedItem="{Binding ActiveVariant, Mode=TwoWay}"
+                                                                            ContentTemplate="{StaticResource NpcVariantEditorTemplate}"
+                                                                            IsVisible="{Binding HasMultipleVariants}">
+                                                                    <TabControl.ItemTemplate>
+                                                                        <DataTemplate x:DataType="vm:NpcVariantViewModel">
+                                                                            <TextBlock Text="{Binding Name}" />
+                                                                        </DataTemplate>
+                                                                    </TabControl.ItemTemplate>
+                                                                </TabControl>
+
+                                                                <ContentControl Content="{Binding ActiveVariant}"
+                                                                                 ContentTemplate="{StaticResource NpcVariantEditorTemplate}"
+                                                                                 IsVisible="{Binding !HasMultipleVariants}" />
                                                             </StackPanel>
-                                                        </StackPanel>
+                                                        </Border>
                                                     </StackPanel>
                                                 </Border>
                                             </Grid>

@@ -17,6 +17,15 @@ public partial class NpcGmInfoBlockViewModel : ObservableObject
     [ObservableProperty] private string _title;
     [ObservableProperty] private string _markdownBody;
 
+    /// <summary>Purely local UI state (not persisted) - whether this block currently shows its
+    ///     rendered Markdown preview instead of the plain-text editor. See MainWindow.axaml's
+    ///     per-field preview toggle button. Starts true (preview) whenever markdownBody already
+    ///     has content to render, and false (edit) for a genuinely empty/new block - previewing
+    ///     nothing would just look broken, and there'd be no obvious way to start typing.</summary>
+    [ObservableProperty] private bool _isPreviewMode;
+
+    public string PreviewToggleIcon => IsPreviewMode ? "✎" : "👁";
+
     public NpcGmInfoBlockViewModel(
         string title,
         string markdownBody,
@@ -25,6 +34,7 @@ public partial class NpcGmInfoBlockViewModel : ObservableObject
     {
         _title = title;
         _markdownBody = markdownBody;
+        _isPreviewMode = !string.IsNullOrWhiteSpace(markdownBody);
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
     }
@@ -37,6 +47,17 @@ public partial class NpcGmInfoBlockViewModel : ObservableObject
     partial void OnMarkdownBodyChanged(string value)
     {
         _onChanged?.Invoke(this);
+    }
+
+    partial void OnIsPreviewModeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(PreviewToggleIcon));
+    }
+
+    [RelayCommand]
+    private void TogglePreview()
+    {
+        IsPreviewMode = !IsPreviewMode;
     }
 
     [RelayCommand]

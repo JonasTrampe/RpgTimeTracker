@@ -1674,6 +1674,41 @@ ordering guarantee explicit and self-documenting in the data itself
 instead of an implicit property of "whatever order this list happens to
 be in right now."
 
+## Loading a Character must suppress its own change-notification saves
+
+Every library item's "reconstruct from a saved DTO" path (Media, Sound,
+Music, Maps) constructs the item and appends it to its collection in one
+step, so no save-triggering callback ever fires before the item is actually
+registered. Characters broke this pattern by accident: `AddVariant` (and
+several `NpcVariantViewModel` property setters - `Image`, `TokenImage`,
+`PlayerInfo`, `Sounds`, `HasSoundsOverride`) unconditionally invoke the
+owning `NpcLibraryItemViewModel`'s `onChanged` callback, which is exactly
+what should happen for an interactive GM edit but is actively harmful
+during `FromNpcLibraryEntryDto`: that method builds the whole object graph
+(GM info blocks, every variant, the active-variant selection) *before* the
+caller adds the finished `NpcLibraryItemViewModel` to `MainWindowViewModel.NpcLibrary`.
+
+**The bug this caused**: each of those premature saves calls
+`SaveNpcLibrarySettings`, which serializes the *live* `NpcLibrary`
+collection as it stands *at that instant* - not yet containing the
+character currently being built, and not yet containing any character
+later in the load loop. In practice this meant the last character in the
+Shared library (or the last session-local one, on session open) was
+silently dropped from `settings.json`/`session-library.json` on every
+single app launch, without the GM doing anything that looked like an edit.
+This is worse than "changes aren't saved" - it actively erases previously-
+saved data on load.
+
+**Fix**: `NpcLibraryItemViewModel` gained a `_suppressChangeNotifications`
+flag (`BeginBulkLoad()`/`EndBulkLoad()`) and a `NotifyChanged()` wrapper
+that every internal save-trigger now goes through instead of calling the
+`onChanged` callback directly. `FromNpcLibraryEntryDto` wraps its entire
+population step in `BeginBulkLoad()`/`EndBulkLoad()` (in a `try`/`finally`,
+so a malformed entry returning early still re-enables notifications), so
+no save fires until the character is fully built and handed back to the
+caller to add to `NpcLibrary`. From that point on, real edits behave
+exactly as before.
+
 ## Sessions: an optional folder-scoped Shared/session-local split, not a database of campaigns
 
 The Characters (NPC) design conversation surfaced a problem the app never
@@ -1777,18 +1812,18 @@ already opted out of it. That base assumes a single owned `LocalPath`/
 layer per floor), while a Character has *zero* owned files at all. Its
 portrait, map token, and connected sounds are foreign keys into the Media/
 Sound Libraries (`ImageId`/`TokenImageId`/`SoundIds` on
-`NpcStateEntryDto`), not copies - the first cross-library reference
+`NpcVariantEntryDto`), not copies - the first cross-library reference
 relationship in this codebase, which is why `LibraryUsageRegistry` (above)
 had to exist before Characters could ship safely.
 
-**Per-state overrides fall back to the Default state, not to a blank
-value**: a state's `Image`/`TokenImage`/`TokenIcon`/`PlayerInfo` are all
+**Per-variant overrides fall back to the Default variant, not to a blank
+value**: a variant's `Image`/`TokenImage`/`TokenIcon`/`PlayerInfo` are all
 nullable, and `Sounds` carries a separate `HasSoundsOverride` flag (since
 "no sounds" is itself a meaningful override, distinct from "inherit the
-Default state's sounds"). `NpcLibraryItemViewModel.GetEffectiveImage` etc.
+Default variant's sounds"). `NpcLibraryItemViewModel.GetEffectiveImage` etc.
 resolve the fallback, mirroring `MainWindowViewModel.GetEffectiveFogStyle`'s
 existing per-map-falls-back-to-global pattern - just with the "global"
-here being local to one Character (its Default state) instead of an
+here being local to one Character (its Default variant) instead of an
 app-wide setting.
 
 **NPCs were initially missing from both session export paths entirely** -
@@ -1798,7 +1833,7 @@ shipped. Fixed by adding an `npcs/manifest.json` section to both, and by
 having `ImportMediaSectionFromZip`/`ImportSoundSectionFromZip` return an
 old-Id→new-Id map (the manifest's original Id, mapped to whatever fresh
 Guid the imported copy actually got) alongside their import count, which
-`ImportNpcSectionFromZip` uses to relink each imported state's
+`ImportNpcSectionFromZip` uses to relink each imported variant's
 portrait/token/sound references to the copies that landed in the same
 import rather than to a foreign Id that no longer means anything on this
 machine. A reference to an asset that wasn't part of the bundle (e.g. a
@@ -1806,14 +1841,29 @@ Shared-scoped asset outside a session-scoped export) has no entry in the
 map and is silently dropped, matching `ClearNpcReferencesById`'s existing
 "unset the reference, don't crash" behavior for outright deletions.
 
-While fixing that, a related bug surfaced: `NpcLibraryItemViewModel.AddState`
-always minted a brand-new `Guid` for the state, even when reconstructing a
-state that already had a persisted Id (`FromNpcLibraryEntryDto` was calling
-it without passing `stateEntry.Id` through). Since `ActiveStateId` is
-matched by state Id, this meant a Character's Active-state selection
-silently reset to its Default state on *every* normal save/load round-trip,
-not just on import - `AddState` now takes an optional `id` parameter so a
-restored state keeps the Id it was saved with.
+While fixing that, a related bug surfaced: `NpcLibraryItemViewModel.AddVariant`
+(then still called `AddState`) always minted a brand-new `Guid` for the
+variant, even when reconstructing one that already had a persisted Id
+(`FromNpcLibraryEntryDto` was calling it without passing the entry's Id
+through). Since the active variant is matched by Id, this meant a
+Character's Active-variant selection silently reset to its Default variant
+on *every* normal save/load round-trip, not just on import - `AddVariant`
+now takes an optional `id` parameter so a restored variant keeps the Id it
+was saved with.
+
+**Later renamed "state" to "variant" throughout** (`NpcStateViewModel` →
+`NpcVariantViewModel`, `States`/`ActiveState`/`DefaultState`/`AddState` →
+`Variants`/`ActiveVariant`/`DefaultVariant`/`AddVariant`, localization keys,
+etc.) at the user's request, since "state" reads as a UI/lifecycle term
+(loading state, connection state) rather than "a named mood/preset of this
+character," which is what the feature actually is. The on-disk JSON shape
+was **not** renamed alongside the C# identifiers: `NpcLibraryEntryDto.Variants`/
+`ActiveVariantId` carry `[JsonPropertyName("States")]`/`[JsonPropertyName("ActiveStateId")]`
+so `settings.json`/`session-library.json` files saved before the rename
+keep loading their characters' variants correctly instead of silently
+losing them the next time settings load (System.Text.Json binds by
+property name, not just by shape - a renamed C# property with no matching
+JSON key just comes back empty, no error, no warning).
 
 ## Map `FormatVersion`, added before any format change actually needs one
 

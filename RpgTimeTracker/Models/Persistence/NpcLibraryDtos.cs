@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace RpgTimeTracker.Models.Persistence;
 
@@ -14,14 +15,20 @@ public sealed class NpcLibraryEntryDto
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Shared across all states (see NpcGmInfoBlockDto) - private GM reference notes
-    ///     (motivation, secrets, stat block) don't change with the NPC's mood/state.</summary>
+    /// <summary>Shared across all variants (see NpcGmInfoBlockDto) - private GM reference notes
+    ///     (motivation, secrets, stat block) don't change with the NPC's mood/variant.</summary>
     public List<NpcGmInfoBlockDto> GmInfoBlocks { get; set; } = [];
 
-    public List<NpcStateEntryDto> States { get; set; } = [];
+    /// <summary>C# name renamed from "State(s)" to "Variant(s)" (see NpcVariantEntryDto), but the
+    ///     JSON key stays "States" so settings.json/session-library.json files saved before this
+    ///     rename keep loading their characters' variants instead of silently losing them.</summary>
+    [JsonPropertyName("States")]
+    public List<NpcVariantEntryDto> Variants { get; set; } = [];
 
-    /// <summary>Which state is currently "true" for this NPC - must match one of States' Id.</summary>
-    public Guid ActiveStateId { get; set; }
+    /// <summary>Which variant is currently "true" for this NPC - must match one of Variants' Id.
+    ///     JSON key kept as "ActiveStateId" - see Variants' doc comment.</summary>
+    [JsonPropertyName("ActiveStateId")]
+    public Guid ActiveVariantId { get; set; }
 }
 
 /// <summary>A GM-named, ordered markdown section (e.g. "Motivation", "Secrets", "Combat stats") -
@@ -35,14 +42,14 @@ public sealed class NpcGmInfoBlockDto
 
 /// <summary>
 ///     One named mood/variant of an NPC (e.g. "Neutral", "Angry", "Wounded"). Every field below is
-///     nullable - null on a non-default state means "inherit from the Default state" (same pattern
+///     nullable - null on a non-default variant means "inherit from the Default variant" (same pattern
 ///     as MapLibraryEntryDto's per-map fog-style overrides falling back to the global default -
 ///     see MainWindowViewModel.GetEffectiveFogStyle). ImageId/TokenImageId reference Media Library
 ///     entries by Id; SoundIds reference Sound Library entries by Id - none of these are owned
 ///     copies, just foreign keys (see NpcLibraryItemViewModel's doc comment for why this makes the
 ///     usage registry/deletion safeguard relevant here for the first time).
 /// </summary>
-public sealed class NpcStateEntryDto
+public sealed class NpcVariantEntryDto
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
@@ -61,7 +68,7 @@ public sealed class NpcStateEntryDto
     ///     design conversation this feature was built from: "model now, wire later").</summary>
     public string? PlayerInfo { get; set; }
 
-    /// <summary>Null/absent = inherit the Default state's sounds; present (even as an empty list)
-    ///     = an explicit override, including "no sounds at all" for this state.</summary>
+    /// <summary>Null/absent = inherit the Default variant's sounds; present (even as an empty list)
+    ///     = an explicit override, including "no sounds at all" for this variant.</summary>
     public List<Guid>? SoundIds { get; set; }
 }

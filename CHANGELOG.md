@@ -7,8 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed a character's named mood/preset from "State" to "Variant"
+  throughout the Characters tab and its underlying code, since "state" read
+  as a UI/lifecycle term rather than "Neutral"/"Angry"/"Wounded" etc. The
+  on-disk file format is unchanged - existing characters and their
+  moods/presets keep loading exactly as before.
+- Restructured the Characters tab's detail editor: GM Info and Variants
+  are now their own collapsible sections instead of one long scrolling
+  column, and a compact header shows the selected character's name plus
+  a glance at the Active variant's portrait/token - editing a variant no
+  longer requires scrolling past every GM info block first. Both sections
+  now stretch to the panel's full width. The Variants list only appears
+  once a second variant has actually been added - with just the
+  always-present Default variant, its editor is shown directly instead
+  of a one-row list above a redundant "Selected Variant" heading, with a
+  short hint explaining why, and the editor heading now always names the
+  variant it's showing so deleting your only extra variant doesn't look
+  like the character's data got wiped (it just switches back to Default).
+- Reworked the Characters tab's GM Info/Variants sections again: both are
+  now wrapped in the same bordered card look used everywhere else in the
+  app (the GM Info Expander itself is transparent/borderless, so only the
+  wrapping card's background/border shows, instead of Avalonia's default
+  Expander chrome looking out of place). The "Add" button for each section
+  now sits in its header row instead of below it. Variants switched from a
+  list to tabs once a character has more than one - Default-only
+  characters show their (single) editor directly, with no tab strip.
+  Each sound attached to a variant is now its own bordered row, matching
+  GM info blocks, instead of a plain list line.
+- GM Info blocks and Player Info now render as Markdown (via the same
+  ClassIsland.Markdown.Avalonia control already used for the About
+  screen) instead of only ever showing as plain text. Each of those text
+  fields has a small toggle button in its top-right corner to switch
+  between the plain-text editor and the rendered preview. Both start in
+  preview mode - opening a character shows rendered notes, not raw
+  Markdown source, until you toggle to edit.
+- Refined the Characters tab further: GM Info/Player Info text areas now
+  cap out at 60% of the window's height instead of growing unbounded, and
+  a genuinely empty field (a brand-new GM info block, or a variant with no
+  Player Info yet) starts in edit mode instead of an empty preview with no
+  obvious way to start typing. The Active-variant name and the "only
+  Default variant" hint in the compact header now only show once a
+  character actually has more than one variant. The "Variants" section
+  title is de-emphasized to match Player Info's label styling. Deleting
+  the active variant moved into the section header (to the right of "Add
+  Variant", so its own visibility never shifts Add's position) instead of
+  living inside the per-variant editor. Adding/deleting a variant no
+  longer scrolls the whole tab back to the top. Portrait, Token, and
+  Player Info are each now their own bordered card (matching GM Info
+  blocks), and Portrait/Token replaced their Choose/Clear text buttons
+  with a single edit (✎) button opening a small menu, so the image itself
+  gets more room instead of competing with button rows.
+
 ### Fixed
 
+- Characters were silently losing data on every app launch: loading a
+  saved character (rebuilding it from `settings.json`) triggered the same
+  save-on-change path used for interactive edits, before that character
+  was actually registered in the library - each save serialized the
+  library as it stood at that moment, missing the character currently
+  being loaded and any not yet reached. In practice this meant the last
+  character in your Shared library quietly disappeared from disk every
+  time you started the app (and the last session-local character every
+  time you opened a session), even though nothing you did in the UI
+  triggered it. Loading a character now suppresses those saves until it's
+  fully built and back in the library.
 - Sessions shipped without any way to actually move an item between the
   Shared Library and a session after adding it - the backend for Media/
   Sound/Music already existed but had no UI, and Maps/Characters had
@@ -29,9 +93,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   token (an image, a Bootstrap icon, or initials derived from the name -
   whichever is set, in that order), GM-only reference notes (any number of
   named, ordered blocks, e.g. "Motivation"/"Secrets"), and any number of
-  named states/moods (e.g. "Neutral"/"Angry") that can each override the
-  portrait, token, player info, and connected sounds - left unset, a state
-  falls back to the character's Default state, so you only need to
+  named variants/moods (e.g. "Neutral"/"Angry") that can each override the
+  portrait, token, player info, and connected sounds - left unset, a variant
+  falls back to the character's Default variant, so you only need to
   override what actually changes. A character's portrait and sounds
   reference the Media/Sound Libraries rather than owning copies; deleting
   a referenced item now warns if a character still uses it, the same way
@@ -253,11 +317,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - NPCs (the Characters library) were silently left out of both "Export
   Session" and "Export Full Session" (and their matching imports) - a
   bundle looked complete but every character was simply gone on the other
-  end. Import now also relinks each state's portrait/token/sound references
-  to the freshly-imported copies bundled in the same zip, and a state's
-  Active state selection now survives a save/load round-trip too (it
-  previously always reset to the Default state on reload, since a fresh Id
-  was minted for every state even when restoring one that already had one).
+  end. Import now also relinks each variant's portrait/token/sound references
+  to the freshly-imported copies bundled in the same zip, and a variant's
+  Active variant selection now survives a save/load round-trip too (it
+  previously always reset to the Default variant on reload, since a fresh Id
+  was minted for every variant even when restoring one that already had one).
 - A currently playing sound that finished purely on a remote client (Host
   window closed, or Sound turned off locally) never left the GM's "Active
   Sounds" panel - the natural-end report only ever checked whether it

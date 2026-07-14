@@ -646,64 +646,64 @@ public partial class MainWindow : Window
         if (sender is Control { DataContext: NpcGmInfoBlockViewModel block }) npc.MoveGmInfoBlockDown(block);
     }
 
-    private void OnAddNpcStateClick(object? sender, RoutedEventArgs e)
+    private void OnAddNpcVariantClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel { SelectedNpc: { } npc }) return;
-        var state = npc.AddState(LocalizationService.Get("MainWindowViewModel.Defaults.NewStateName"));
-        npc.ActiveState = state;
+        var variant = npc.AddVariant(LocalizationService.Get("MainWindowViewModel.Defaults.NewVariantName"));
+        npc.ActiveVariant = variant;
     }
 
-    private void OnChooseNpcStateImageClick(object? sender, RoutedEventArgs e)
+    private void OnChooseNpcVariantImageClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state } vm) return;
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant } vm) return;
 
         var picker = new MediaLibraryPickerWindow(vm.MediaLibrary.Where(m => m.Kind == MediaKind.Image),
-            item => state.Image = item);
+            item => variant.Image = item);
         picker.Show(this);
     }
 
-    private void OnClearNpcStateImageClick(object? sender, RoutedEventArgs e)
+    private void OnClearNpcVariantImageClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state }) return;
-        state.Image = null;
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant }) return;
+        variant.Image = null;
     }
 
-    private void OnChooseNpcStateTokenImageClick(object? sender, RoutedEventArgs e)
+    private void OnChooseNpcVariantTokenImageClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state } vm) return;
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant } vm) return;
 
         var picker = new MediaLibraryPickerWindow(vm.MediaLibrary.Where(m => m.Kind == MediaKind.Image),
-            item => state.TokenImage = item);
+            item => variant.TokenImage = item);
         picker.Show(this);
     }
 
-    private void OnChooseNpcStateTokenIconClick(object? sender, RoutedEventArgs e)
+    private void OnChooseNpcVariantTokenIconClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state }) return;
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant }) return;
 
-        var picker = new IconPickerWindow(icon => state.TokenIcon = icon);
+        var picker = new IconPickerWindow(icon => variant.TokenIcon = icon);
         picker.Show(this);
     }
 
-    private void OnClearNpcStateTokenClick(object? sender, RoutedEventArgs e)
+    private void OnClearNpcVariantTokenClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state }) return;
-        state.TokenImage = null;
-        state.TokenIcon = null;
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant }) return;
+        variant.TokenImage = null;
+        variant.TokenIcon = null;
     }
 
-    private void OnAddNpcStateSoundClick(object? sender, RoutedEventArgs e)
+    private void OnAddNpcVariantSoundClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state } vm) return;
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant } vm) return;
 
-        var picker = new SoundLibraryPickerWindow(vm.SoundLibrary, sound => state.AddSound(sound));
+        var picker = new SoundLibraryPickerWindow(vm.SoundLibrary, sound => variant.AddSound(sound));
         picker.Show(this);
     }
 
-    private void OnRemoveNpcStateSoundClick(object? sender, RoutedEventArgs e)
+    private void OnRemoveNpcVariantSoundClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveState: { } state }) return;
-        if (sender is Control { DataContext: SoundLibraryItemViewModel sound }) state.RemoveSound(sound);
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant }) return;
+        if (sender is Control { DataContext: SoundLibraryItemViewModel sound }) variant.RemoveSound(sound);
     }
 
     /// <summary>

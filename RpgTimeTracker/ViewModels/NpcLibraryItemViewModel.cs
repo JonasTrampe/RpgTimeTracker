@@ -23,18 +23,41 @@ public sealed partial class NpcLibraryItemViewModel : ObservableObject
     private readonly Action<NpcLibraryItemViewModel> _onDeleteRequested;
     private readonly Action<NpcLibraryItemViewModel>? _onChanged;
 
+    /// <summary>Set while MainWindowViewModel.FromNpcLibraryEntryDto is reconstructing this
+    ///     Character from its saved DTO - suppresses NotifyChanged (and therefore
+    ///     SaveNpcLibrarySettings) while GmInfoBlocks/Variants/ActiveVariant are being populated,
+    ///     since at that point this instance isn't registered in MainWindowViewModel.NpcLibrary
+    ///     yet. Without this, every AddVariant/property-set call during load would trigger a save
+    ///     that serializes the in-memory NpcLibrary as it stood *before* this (and any later)
+    ///     Character was added - on every app launch, this silently truncated the last Character
+    ///     in the Shared library from settings.json. See BeginBulkLoad/EndBulkLoad.</summary>
+    private bool _suppressChangeNotifications;
+
     [ObservableProperty] private string _name;
     [ObservableProperty] private LibraryScope _scope;
-    [ObservableProperty] private NpcStateViewModel? _activeState;
+    [ObservableProperty] private NpcVariantViewModel? _activeVariant;
 
     public Guid Id { get; }
 
-    /// <summary>Shared across all States - private GM reference notes, not per-mood.</summary>
+    /// <summary>Shared across all Variants - private GM reference notes, not per-mood.</summary>
     public ObservableCollection<NpcGmInfoBlockViewModel> GmInfoBlocks { get; } = [];
 
-    public ObservableCollection<NpcStateViewModel> States { get; } = [];
+    public ObservableCollection<NpcVariantViewModel> Variants { get; } = [];
 
-    public NpcStateViewModel DefaultState => States.First(s => s.IsDefault);
+    public NpcVariantViewModel DefaultVariant => Variants.First(v => v.IsDefault);
+
+    /// <summary>Whether this Character has any variant beyond the always-present Default one -
+    ///     bound by the Characters tab to hide the Variants tab strip (and the ActiveVariant name
+    ///     label in the compact header) until there's actually a choice to make; with only the
+    ///     Default variant, the editor below already IS that variant's editor, so naming/switching
+    ///     UI would just be redundant chrome.</summary>
+    public bool HasMultipleVariants => Variants.Count > 1;
+
+    /// <summary>Whether the currently active variant can be deleted (the Default variant never
+    ///     can) - bound by the Characters tab's Variants section header to show/hide its delete
+    ///     button, which sits there (not in the per-variant editor) precisely so toggling its
+    ///     visibility never shifts the Add button next to it.</summary>
+    public bool CanDeleteActiveVariant => ActiveVariant is { IsDefault: false };
 
     /// <summary>See LibraryItemViewModelBase.IsSessionLocal's doc comment - same purpose here.</summary>
     public bool IsSessionLocal => Scope == LibraryScope.SessionLocal;
@@ -55,18 +78,19 @@ public sealed partial class NpcLibraryItemViewModel : ObservableObject
 
     partial void OnNameChanged(string value)
     {
-        _onChanged?.Invoke(this);
+        NotifyChanged();
     }
 
     partial void OnScopeChanged(LibraryScope value)
     {
         OnPropertyChanged(nameof(IsSessionLocal));
-        _onChanged?.Invoke(this);
+        NotifyChanged();
     }
 
-    partial void OnActiveStateChanged(NpcStateViewModel? value)
+    partial void OnActiveVariantChanged(NpcVariantViewModel? value)
     {
-        _onChanged?.Invoke(this);
+        OnPropertyChanged(nameof(CanDeleteActiveVariant));
+        NotifyChanged();
     }
 
     [RelayCommand]
@@ -75,40 +99,53 @@ public sealed partial class NpcLibraryItemViewModel : ObservableObject
         _onDeleteRequested(this);
     }
 
-    // ==================== States ====================
-
-    public NpcStateViewModel AddState(string name, bool isDefault = false, Guid? id = null)
+    private void NotifyChanged()
     {
-        var state = new NpcStateViewModel(id ?? Guid.NewGuid(), name, isDefault, RemoveState, _ => _onChanged?.Invoke(this));
-        States.Add(state);
-        if (isDefault || States.Count == 1) ActiveState ??= state;
-        _onChanged?.Invoke(this);
-        return state;
+        if (!_suppressChangeNotifications) _onChanged?.Invoke(this);
     }
 
-    /// <summary>The Default state can't be removed - a no-op if attempted, since NpcStateViewModel's
-    ///     own Delete command has no way to refuse and stay silent otherwise.</summary>
-    private void RemoveState(NpcStateViewModel state)
-    {
-        if (state.IsDefault) return;
+    /// <summary>See _suppressChangeNotifications' doc comment. Must always be paired with a
+    ///     matching EndBulkLoad(), even if population fails/returns early.</summary>
+    public void BeginBulkLoad() => _suppressChangeNotifications = true;
 
-        States.Remove(state);
-        if (ActiveState == state) ActiveState = DefaultState;
-        _onChanged?.Invoke(this);
+    public void EndBulkLoad() => _suppressChangeNotifications = false;
+
+    // ==================== Variants ====================
+
+    public NpcVariantViewModel AddVariant(string name, bool isDefault = false, Guid? id = null)
+    {
+        var variant = new NpcVariantViewModel(id ?? Guid.NewGuid(), name, isDefault, RemoveVariant, _ => NotifyChanged());
+        Variants.Add(variant);
+        if (isDefault || Variants.Count == 1) ActiveVariant ??= variant;
+        OnPropertyChanged(nameof(HasMultipleVariants));
+        NotifyChanged();
+        return variant;
+    }
+
+    /// <summary>The Default variant can't be removed - a no-op if attempted, since
+    ///     NpcVariantViewModel's own Delete command has no way to refuse and stay silent otherwise.</summary>
+    private void RemoveVariant(NpcVariantViewModel variant)
+    {
+        if (variant.IsDefault) return;
+
+        Variants.Remove(variant);
+        if (ActiveVariant == variant) ActiveVariant = DefaultVariant;
+        OnPropertyChanged(nameof(HasMultipleVariants));
+        NotifyChanged();
     }
 
     // ==================== GM info blocks ====================
 
     public void AddGmInfoBlock(string title)
     {
-        GmInfoBlocks.Add(new NpcGmInfoBlockViewModel(title, string.Empty, RemoveGmInfoBlock, _ => _onChanged?.Invoke(this)));
-        _onChanged?.Invoke(this);
+        GmInfoBlocks.Add(new NpcGmInfoBlockViewModel(title, string.Empty, RemoveGmInfoBlock, _ => NotifyChanged()));
+        NotifyChanged();
     }
 
     private void RemoveGmInfoBlock(NpcGmInfoBlockViewModel block)
     {
         GmInfoBlocks.Remove(block);
-        _onChanged?.Invoke(this);
+        NotifyChanged();
     }
 
     /// <summary>GM info blocks are ordered - mirrors MapItemViewModel.MoveFloorUp/MoveFloorDown.</summary>
@@ -118,7 +155,7 @@ public sealed partial class NpcLibraryItemViewModel : ObservableObject
         if (index <= 0) return;
 
         GmInfoBlocks.Move(index, index - 1);
-        _onChanged?.Invoke(this);
+        NotifyChanged();
     }
 
     public void MoveGmInfoBlockDown(NpcGmInfoBlockViewModel block)
@@ -127,28 +164,28 @@ public sealed partial class NpcLibraryItemViewModel : ObservableObject
         if (index < 0 || index >= GmInfoBlocks.Count - 1) return;
 
         GmInfoBlocks.Move(index, index + 1);
-        _onChanged?.Invoke(this);
+        NotifyChanged();
     }
 
     // ==================== Effective (fallback-to-Default) accessors ====================
     // Same pattern as MainWindowViewModel.GetEffectiveFogStyle (per-map override falling back to
-    // a global default) - here the "default" is local to the NPC (its Default state) rather than
+    // a global default) - here the "default" is local to the NPC (its Default variant) rather than
     // a global setting.
 
-    public MediaLibraryItemViewModel? GetEffectiveImage(NpcStateViewModel state) =>
-        state.IsDefault ? state.Image : state.Image ?? DefaultState.Image;
+    public MediaLibraryItemViewModel? GetEffectiveImage(NpcVariantViewModel variant) =>
+        variant.IsDefault ? variant.Image : variant.Image ?? DefaultVariant.Image;
 
-    public MediaLibraryItemViewModel? GetEffectiveTokenImage(NpcStateViewModel state) =>
-        state.IsDefault ? state.TokenImage : state.TokenImage ?? DefaultState.TokenImage;
+    public MediaLibraryItemViewModel? GetEffectiveTokenImage(NpcVariantViewModel variant) =>
+        variant.IsDefault ? variant.TokenImage : variant.TokenImage ?? DefaultVariant.TokenImage;
 
-    public string? GetEffectiveTokenIcon(NpcStateViewModel state) =>
-        state.IsDefault ? state.TokenIcon : state.TokenIcon ?? DefaultState.TokenIcon;
+    public string? GetEffectiveTokenIcon(NpcVariantViewModel variant) =>
+        variant.IsDefault ? variant.TokenIcon : variant.TokenIcon ?? DefaultVariant.TokenIcon;
 
-    public string? GetEffectivePlayerInfo(NpcStateViewModel state) =>
-        state.IsDefault ? state.PlayerInfo : state.PlayerInfo ?? DefaultState.PlayerInfo;
+    public string? GetEffectivePlayerInfo(NpcVariantViewModel variant) =>
+        variant.IsDefault ? variant.PlayerInfo : variant.PlayerInfo ?? DefaultVariant.PlayerInfo;
 
-    public IReadOnlyList<SoundLibraryItemViewModel> GetEffectiveSounds(NpcStateViewModel state) =>
-        state.IsDefault || state.HasSoundsOverride ? state.Sounds : DefaultState.Sounds;
+    public IReadOnlyList<SoundLibraryItemViewModel> GetEffectiveSounds(NpcVariantViewModel variant) =>
+        variant.IsDefault || variant.HasSoundsOverride ? variant.Sounds : DefaultVariant.Sounds;
 
     /// <summary>Last link of the token fallback chain (explicit token image -> icon -> initials) -
     ///     initials derived from up to the first two words of the NPC's Name.</summary>

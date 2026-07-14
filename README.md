@@ -100,10 +100,10 @@ method list, media streaming) can be found in [`docs/protocol.md`](docs/protocol
   portrait, a map token (an image, a Bootstrap icon, or initials derived
   from the name - whichever is set, in that order), any number of named,
   ordered GM-only reference note blocks (e.g. "Motivation"/"Secrets",
-  rendered as Markdown), and any number of named states/moods (e.g.
+  rendered as Markdown), and any number of named variants/moods (e.g.
   "Neutral"/"Angry") that can each override the portrait, token, player
-  info, and connected sounds - a state left unset falls back to the
-  character's Default state, so only what actually changes needs
+  info, and connected sounds - a variant left unset falls back to the
+  character's Default variant, so only what actually changes needs
   overriding. A character's portrait and sounds reference the Media/Sound
   Libraries by ID instead of owning copies; deleting a referenced item
   warns if a character still uses it, the same 3-way confirm-delete already
@@ -359,8 +359,8 @@ More detailed technical documentation lives in [`docs/`](docs/):
 - Auto-save on closing the app / remember the last-used file
 - Video chunking with progressive playback already during transfer
 - Characters: drag a token onto a map (with fog-linked visibility), send
-  player info to connected clients, automatic/triggered state-switching
-  (currently only manual GM switching of a character's Active state), and a
+  player info to connected clients, automatic/triggered variant-switching
+  (currently only manual GM switching of a character's Active variant), and a
   live side-by-side Markdown preview for GM info blocks/player info
   (currently a toggleable preview, not split-view)
 - Standalone Character export/import (folder-based, like Media/Sound/Music)
