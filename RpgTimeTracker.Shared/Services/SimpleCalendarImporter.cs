@@ -19,9 +19,10 @@ namespace RpgTimeTracker.Shared.Services;
 ///       approximate: the two engines compute elapsed days from their epoch differently, so
 ///       FirstWeekdayIndex is carried over as-is but is not guaranteed to reproduce the exact
 ///       real-world weekday of any specific historical date from the source calendar.
-///     - Only a "custom" or "none" leap-year rule can be represented exactly; Simple Calendar's
-///       built-in "gregorian" rule is mapped to the equivalent Interval(4)/Feb/+1 rule, and other
-///       named built-in rules (if present) fall back to "none" with a warning in the result.
+///     - "none", "gregorian", and "custom" leap-year rules are all represented exactly (gregorian
+///       maps to CalendarLeapYearRuleKind.Gregorian - the real 4/100/400 rule, not an Interval(4)
+///       approximation); other named built-in rules (if present) fall back to "none" with a
+///       warning in the result.
 ///     - Some (not all) predefined-calendar exports bundle a sibling top-level "notes" array -
 ///       holidays/festivals authored against that calendar, e.g. dsa-tde5e.json's 19 real
 ///       Aventurian feast days. Only Yearly-repeating notes (Simple Calendar's NoteRepeat.Yearly,
@@ -220,8 +221,7 @@ public static class SimpleCalendarImporter
             case "gregorian":
                 return new CalendarLeapYearRule
                 {
-                    Kind = CalendarLeapYearRuleKind.Interval,
-                    IntervalYears = 4,
+                    Kind = CalendarLeapYearRuleKind.Gregorian,
                     MonthIndexAffected = 1,
                     ExtraDays = 1
                 };

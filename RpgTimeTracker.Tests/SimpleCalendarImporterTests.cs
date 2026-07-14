@@ -145,8 +145,7 @@ public class SimpleCalendarImporterTests
         Assert.Equal(31, definition.Months[0].Days);
         Assert.Equal(["Sunday", "Monday"], definition.Weekdays);
         Assert.Equal(24, definition.HoursPerDay);
-        Assert.Equal(CalendarLeapYearRuleKind.Interval, definition.LeapYear.Kind);
-        Assert.Equal(4, definition.LeapYear.IntervalYears);
+        Assert.Equal(CalendarLeapYearRuleKind.Gregorian, definition.LeapYear.Kind);
         Assert.Equal(1, definition.LeapYear.MonthIndexAffected);
         Assert.Equal(1, definition.LeapYear.ExtraDays);
         Assert.Single(definition.Seasons);

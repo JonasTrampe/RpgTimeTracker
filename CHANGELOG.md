@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The bundled Gregorian calendar used a plain "every 4 years" leap rule,
+  which wrongly marks century years like 1900/2100 as leap years (the
+  real rule skips those unless also divisible by 400, e.g. 2000). Added
+  a proper `CalendarLeapYearRuleKind.Gregorian` rule implementing the
+  actual 4/100/400 logic, switched the bundled Gregorian calendar and the
+  Simple Calendar importer's "gregorian" rule mapping to use it, and
+  added regression tests covering 1900/2000/2024/2100/2400.
+
 ### Added
 
 - Scenes library (Phase 2 of the Scenes/Tags/Calendars project): a new

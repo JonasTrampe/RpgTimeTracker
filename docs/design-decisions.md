@@ -2107,3 +2107,28 @@ what is, structurally, "another library with a detail editor":
   instead (`PendingSoundToAdd` + `AddPendingSoundCommand`), since a
   `ComboBox` can't represent "add to a collection" as a `SelectedItem`
   binding on its own.
+
+## Fix: Gregorian calendar's leap-year rule was missing the century exception
+
+`CalendarLeapYearRuleKind` originally only had `None` and `Interval`
+(leap every N years), and the bundled Gregorian calendar used
+`Interval(4)` to approximate the real-world rule. That's wrong: the
+actual Gregorian rule is "every 4 years, except centuries, except every
+4th century" - 1900 and 2100 are *not* leap years, but 2000 and 2400
+*are*. `Interval(4)` alone marks 1900/2100 as leap incorrectly, which
+would show a non-existent Feb 29 and shift every later date in those
+years by a day.
+
+Fixed by adding a dedicated `CalendarLeapYearRuleKind.Gregorian` value
+that implements the real `(year % 4 == 0 && year % 100 != 0) || year %
+400 == 0` check in `CalendarDefinition.IsLeapYear`, and switching both
+the bundled `gregorian.json` and `SimpleCalendarImporter`'s `"gregorian"`
+rule mapping (previously documented as an accepted `Interval(4)`
+approximation - now exact) to use it. `IntervalYears` stays as a
+separate rule for custom calendars that genuinely do want a flat
+N-year cycle (e.g. some homebrew calendars use a simpler rule than
+real-world centuries) - `Gregorian` isn't a generalization of `Interval`,
+it's a distinct, hardcoded rule shape. Regression tests cover 1900/2000/
+2024/2023/2100/2400 against the bundled calendar directly, rather than
+only exercising the round-trip test that happened to not touch a
+century year.

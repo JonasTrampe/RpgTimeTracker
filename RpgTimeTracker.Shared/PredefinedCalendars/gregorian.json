@@ -1,6 +1,6 @@
 {
   "Name": "Gregorian",
-  "Description": "The real-world calendar - 12 months, 7-day weeks, a leap day every 4 years. The default for a fresh campaign.",
+  "Description": "The real-world calendar - 12 months, 7-day weeks, a leap day every 4 years (except century years not divisible by 400). The default for a fresh campaign.",
   "Months": [
     { "Name": "January", "Days": 31 },
     { "Name": "February", "Days": 28 },
@@ -18,8 +18,7 @@
   "Weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
   "FirstWeekdayIndex": 0,
   "LeapYear": {
-    "Kind": 1,
-    "IntervalYears": 4,
+    "Kind": 2,
     "MonthIndexAffected": 1,
     "ExtraDays": 1
   },

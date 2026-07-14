@@ -18,7 +18,13 @@ public sealed class CalendarMonthDefinition
 public enum CalendarLeapYearRuleKind
 {
     None,
-    Interval
+    Interval,
+
+    /// <summary>The real Gregorian rule: a leap year every 4 years, except centuries (divisible by
+    ///     100) unless also divisible by 400 - e.g. 2000 was a leap year, 1900 and 2100 are not.
+    ///     IntervalYears is ignored for this kind (it's always base-4/100/400); MonthIndexAffected/
+    ///     ExtraDays still apply, since those describe *where* the extra day goes, not *when*.</summary>
+    Gregorian
 }
 
 /// <summary>How many extra days get added to which month, and how often. `IntervalYears = 4,
@@ -154,6 +160,7 @@ public sealed class CalendarDefinition
         return LeapYear.Kind switch
         {
             CalendarLeapYearRuleKind.Interval => LeapYear.IntervalYears > 0 && Mod(year, LeapYear.IntervalYears) == 0,
+            CalendarLeapYearRuleKind.Gregorian => (Mod(year, 4) == 0 && Mod(year, 100) != 0) || Mod(year, 400) == 0,
             _ => false
         };
     }

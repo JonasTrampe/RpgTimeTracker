@@ -69,4 +69,19 @@ public class CalendarDefinitionLoaderTests
         Assert.Equal(6, date.Minute);
         Assert.Equal(7, date.Second);
     }
+
+    [Theory]
+    [InlineData(2000, true)] // divisible by 400 - leap
+    [InlineData(1900, false)] // divisible by 100 but not 400 - not leap
+    [InlineData(2100, false)] // divisible by 100 but not 400 - not leap
+    [InlineData(2024, true)] // divisible by 4, not by 100 - leap
+    [InlineData(2023, false)] // not divisible by 4 - not leap
+    [InlineData(2400, true)] // divisible by 400 - leap
+    public void Gregorian_calendar_applies_the_real_century_exception_leap_rule(int year, bool expectedLeap)
+    {
+        var gregorian = CalendarDefinitionLoader.Resolve("Gregorian")!.Value.Definition;
+
+        Assert.Equal(expectedLeap, gregorian.IsLeapYear(year));
+        Assert.Equal(expectedLeap ? 29 : 28, gregorian.DaysInMonth(year, 1));
+    }
 }
