@@ -3,9 +3,12 @@
              xmlns:vm="using:RpgTimeTracker.ViewModels"
              x:Class="RpgTimeTracker.Views.Controls.MapEditCanvasControl">
     <DockPanel>
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10"
-                    VerticalAlignment="Center">
-            <ComboBox Name="FloorSelector" MinWidth="140" SelectionChanged="OnFloorSelectionChanged">
+        <!-- WrapPanel (not a horizontal StackPanel) so these wrap onto more than one line
+             instead of overflowing/squishing together when the window is resized narrower -
+             see the Maps tab's floor-action row for the same pattern. -->
+        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,10" VerticalAlignment="Center">
+            <ComboBox Name="FloorSelector" MinWidth="140" Margin="0,0,10,6"
+                      SelectionChanged="OnFloorSelectionChanged">
                 <ComboBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:MapFloorItemViewModel">
                         <TextBlock Text="{Binding Name}" />
@@ -13,21 +16,26 @@
                 </ComboBox.ItemTemplate>
             </ComboBox>
 
-            <ToggleButton Name="RevealModeToggle"
+            <ToggleButton Name="RevealModeToggle" Margin="0,0,10,6"
                           Content="{DynamicResource MapEditor.RevealToolButton}"
                           IsChecked="True" />
 
-            <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" VerticalAlignment="Center" />
+            <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" VerticalAlignment="Center"
+                       Margin="0,0,6,6" />
             <Slider Name="BrushSizeSlider" Minimum="0" Maximum="40" Value="4" Width="140"
-                    TickFrequency="1" IsSnapToTickEnabled="True" />
+                    Margin="0,0,10,6" TickFrequency="1" IsSnapToTickEnabled="True" />
 
             <Button Classes="iconsquare" Content="&#8722;" Width="24" Height="24" FontSize="14"
-                    Click="OnZoomOutClick" ToolTip.Tip="{DynamicResource MapEditor.ZoomOutTooltip}" />
-            <TextBlock Name="ZoomLabel" VerticalAlignment="Center" Width="42" TextAlignment="Center" />
+                    Margin="0,0,4,6" Click="OnZoomOutClick"
+                    ToolTip.Tip="{DynamicResource MapEditor.ZoomOutTooltip}" />
+            <TextBlock Name="ZoomLabel" VerticalAlignment="Center" Width="42" TextAlignment="Center"
+                       Margin="0,0,4,6" />
             <Button Classes="iconsquare" Content="&#43;" Width="24" Height="24" FontSize="14"
-                    Click="OnZoomInClick" ToolTip.Tip="{DynamicResource MapEditor.ZoomInTooltip}" />
-            <Button Content="{DynamicResource MapEditor.ZoomFitButton}" Click="OnZoomFitClick" />
-        </StackPanel>
+                    Margin="0,0,10,6" Click="OnZoomInClick"
+                    ToolTip.Tip="{DynamicResource MapEditor.ZoomInTooltip}" />
+            <Button Content="{DynamicResource MapEditor.ZoomFitButton}" Margin="0,0,0,6"
+                    Click="OnZoomFitClick" />
+        </WrapPanel>
 
         <ScrollViewer Name="ScrollHost" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <Panel Name="EditorCanvas"

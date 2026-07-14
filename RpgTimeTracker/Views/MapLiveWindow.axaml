@@ -12,14 +12,16 @@
     </Window.Styles>
 
     <DockPanel Margin="10">
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10"
-                    VerticalAlignment="Center">
-            <Button Content="{DynamicResource MapLiveWindow.ResetToPreparedButton}" Click="OnResetClick" />
+        <!-- WrapPanel so this row wraps instead of overflowing on a narrow window - see
+             MapEditCanvasControl's toolbar for the same pattern. -->
+        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,10" VerticalAlignment="Center">
+            <Button Content="{DynamicResource MapLiveWindow.ResetToPreparedButton}" Margin="0,0,10,6"
+                    Click="OnResetClick" />
 
-            <ToggleButton Name="OpenToPlayersToggle"
+            <ToggleButton Name="OpenToPlayersToggle" Margin="0,0,0,6"
                           Content="{DynamicResource MapEditor.OpenToPlayersButton}"
                           Click="OnToggleOpenClick" />
-        </StackPanel>
+        </WrapPanel>
 
         <Grid ColumnDefinitions="*,320">
             <controls:MapEditCanvasControl x:Name="EditCanvas" Grid.Column="0" />

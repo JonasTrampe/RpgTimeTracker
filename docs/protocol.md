@@ -6,6 +6,17 @@ instances are clients. The protocol is mostly one-way (Host → Client
 notifications), with a narrow client → Host exception for video-playback
 feedback.
 
+## Protocol versioning
+
+`ProtocolInfo.Version` (`RpgTimeTracker.Shared/Models/Rpc/ProtocolInfo.cs`) is
+exchanged in `session.hello`/`session.helloRejected` - a host rejects a
+connection from a client with a differing version instead of silently
+accepting it, giving a clear error instead of undefined behavior once
+multiple client/host builds are in circulation. The
+`RPC Protocol Version` CI check (`.github/workflows/protocol-version.yml`)
+enforces this on every PR: if `RpcMethods.cs`/`RpcParams.cs` change by more
+than whitespace, `ProtocolInfo.Version` must increase, or the check fails.
+
 ## Frame format
 
 Every message on the wire — RPC notification or raw media chunk — is wrapped

@@ -9,6 +9,168 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- CI check (`RPC Protocol Version` workflow) that fails a PR if
+  `RpcMethods.cs`/`RpcParams.cs` change by more than whitespace without
+  `ProtocolInfo.Version` also being increased - catches wire-format changes
+  that forgot to bump the version the host/client handshake relies on to
+  reject mismatched builds. See `docs/protocol.md`'s new "Protocol
+  versioning" section.
+
+### Changed
+
+- Double-clicking a character's portrait now shows it to players (same
+  action as double-clicking a Media Library tile), instead of only being
+  previewable inside the editor. Portrait and Map Token are now laid out
+  side by side instead of stacked, each still in its own bordered box.
+  With just the Default variant, the variant name/"Standard" badge row
+  above them is now also hidden (it was redundant chrome once the tab
+  strip is already hidden for the same reason).
+- Renamed the Characters tab's "Variants" section/button to "Profiles"
+  ("Steckbriefe"/"Steckbrief hinzufügen" in German) - the underlying
+  concept (a character's named moods/variants) is unchanged, but the
+  section is really the player-facing bundle (portrait, token, player
+  info, sounds), and "Steckbrief" (character dossier) reads more
+  naturally for that than "Variant" did.
+- Renamed a character's named mood/preset from "State" to "Variant"
+  throughout the Characters tab and its underlying code, since "state" read
+  as a UI/lifecycle term rather than "Neutral"/"Angry"/"Wounded" etc. The
+  on-disk file format is unchanged - existing characters and their
+  moods/presets keep loading exactly as before.
+- Restructured the Characters tab's detail editor: GM Info and Variants
+  are now their own collapsible sections instead of one long scrolling
+  column, and a compact header shows the selected character's name plus
+  a glance at the Active variant's portrait/token - editing a variant no
+  longer requires scrolling past every GM info block first. Both sections
+  now stretch to the panel's full width. The Variants list only appears
+  once a second variant has actually been added - with just the
+  always-present Default variant, its editor is shown directly instead
+  of a one-row list above a redundant "Selected Variant" heading, with a
+  short hint explaining why, and the editor heading now always names the
+  variant it's showing so deleting your only extra variant doesn't look
+  like the character's data got wiped (it just switches back to Default).
+- Reworked the Characters tab's GM Info/Variants sections again: both are
+  now wrapped in the same bordered card look used everywhere else in the
+  app (the GM Info Expander itself is transparent/borderless, so only the
+  wrapping card's background/border shows, instead of Avalonia's default
+  Expander chrome looking out of place). The "Add" button for each section
+  now sits in its header row instead of below it. Variants switched from a
+  list to tabs once a character has more than one - Default-only
+  characters show their (single) editor directly, with no tab strip.
+  Each sound attached to a variant is now its own bordered row, matching
+  GM info blocks, instead of a plain list line.
+- GM Info blocks and Player Info now render as Markdown (via the same
+  ClassIsland.Markdown.Avalonia control already used for the About
+  screen) instead of only ever showing as plain text. Each of those text
+  fields has a small toggle button in its top-right corner to switch
+  between the plain-text editor and the rendered preview. Both start in
+  preview mode - opening a character shows rendered notes, not raw
+  Markdown source, until you toggle to edit.
+- Refined the Characters tab further: GM Info/Player Info text areas now
+  cap out at 60% of the window's height instead of growing unbounded, and
+  a genuinely empty field (a brand-new GM info block, or a variant with no
+  Player Info yet) starts in edit mode instead of an empty preview with no
+  obvious way to start typing. The Active-variant name and the "only
+  Default variant" hint in the compact header now only show once a
+  character actually has more than one variant. The "Variants" section
+  title is de-emphasized to match Player Info's label styling. Deleting
+  the active variant moved into the section header (to the right of "Add
+  Variant", so its own visibility never shifts Add's position) instead of
+  living inside the per-variant editor. Adding/deleting a variant no
+  longer scrolls the whole tab back to the top. Portrait, Token, and
+  Player Info are each now their own bordered card (matching GM Info
+  blocks), and Portrait/Token replaced their Choose/Clear text buttons
+  with a single edit (✎) button opening a small menu, so the image itself
+  gets more room instead of competing with button rows.
+- Internal cleanup pass, no user-visible behavior change: unified the
+  per-library `Move*ItemToScope` and `Save*LibrarySettings` methods (Media/
+  Sound/Music/Map/Character) behind two shared helpers instead of five
+  near-identical copies each, removed two now-pointless single-line copy
+  wrappers left over from the content-hash dedup work, extracted the
+  repeated "move to Shared Library"/"move to this Session" icon-button
+  pair (Media/Sound/Music tiles) into a reusable `MoveToScopeButtons`
+  control, and split the ~6,300-line `MainWindowViewModel.cs` into
+  per-library partial-class files for readability.
+
+### Fixed
+
+- Characters were silently losing data on every app launch: loading a
+  saved character (rebuilding it from `settings.json`) triggered the same
+  save-on-change path used for interactive edits, before that character
+  was actually registered in the library - each save serialized the
+  library as it stood at that moment, missing the character currently
+  being loaded and any not yet reached. In practice this meant the last
+  character in your Shared library quietly disappeared from disk every
+  time you started the app (and the last session-local character every
+  time you opened a session), even though nothing you did in the UI
+  triggered it. Loading a character now suppresses those saves until it's
+  fully built and back in the library.
+- Sessions shipped without any way to actually move an item between the
+  Shared Library and a session after adding it - the backend for Media/
+  Sound/Music already existed but had no UI, and Maps/Characters had
+  neither. Every library tile now has a "move to Shared Library"/"move to
+  this Session" action (Maps and Characters via their "⋮" menu, the
+  others as a small icon button), and Maps/Characters gained the missing
+  move logic itself (a map moves its whole per-map folder in one step; a
+  Character has no files to move, just its Scope).
+- The Map Live/Prepare editors' toolbar rows (floor selector, brush tools,
+  zoom controls, and the Live window's Reset/Show-to-players row) used a
+  fixed-width horizontal layout that squeezed together or overflowed on a
+  narrower window instead of wrapping - same fix already applied to the
+  Maps tab's floor-action row, now applied here too.
+
+### Added
+
+- New "Characters" tab: a library of NPCs/PCs, each with a portrait, a map
+  token (an image, a Bootstrap icon, or initials derived from the name -
+  whichever is set, in that order), GM-only reference notes (any number of
+  named, ordered blocks, e.g. "Motivation"/"Secrets"), and any number of
+  named variants/moods (e.g. "Neutral"/"Angry") that can each override the
+  portrait, token, player info, and connected sounds - left unset, a variant
+  falls back to the character's Default variant, so you only need to
+  override what actually changes. A character's portrait and sounds
+  reference the Media/Sound Libraries rather than owning copies; deleting
+  a referenced item now warns if a character still uses it, the same way
+  it already does for trigger media and playlists. Player info is
+  GM-facing only in this pass - not yet sent to connected players.
+
+- Adding an image/video, sound, or music track now names the stored file
+  by its content hash instead of a random ID - adding or importing the
+  exact same file twice into the same library (Shared, or the same open
+  session) reuses the existing copy instead of storing it again. Only
+  applies within one storage location; the same file added to both the
+  Shared Library and a session is still stored once per location, by
+  design.
+
+- Media and Sound Library entries now carry a stable `Id` (a `Guid`), like
+  Music Library entries already did - groundwork for an upcoming Characters
+  (NPC) library, which needs to reference a portrait/sound by value instead
+  of by its mutable name/file path. Existing entries get a fresh Id
+  assigned automatically the next time settings are loaded.
+
+- **Sessions**: an optional, folder-scoped campaign the GM can create or
+  open via "New Session…"/"Open Session…" in the status bar, sitting
+  alongside the always-present Shared Library. With no session open, the
+  app behaves exactly as before this feature existed. While a session is
+  open:
+  - Adding a new Media/Sound/Music item, or creating a new map, asks
+    whether it belongs to the Shared Library (reusable across every
+    campaign) or to this session only - the file is copied into the right
+    place accordingly.
+  - Closing the session hides its session-local items again (nothing is
+    deleted); reopening the same folder brings them back.
+  - "Export Session"/"Import Session" (the existing 📦 buttons) now bundle
+    just that session's own state and session-local library entries, and
+    importing always creates a brand-new session folder with fresh IDs
+    rather than merging into the Shared Library. With no session open,
+    these buttons keep their previous meaning (the whole Shared Library).
+
+- Deleting a Sound or Music Library item now warns if it's still in use
+  (a sound assigned as a timer/alarm/interval's event medium, or a track
+  still in a playlist) and offers the same Cancel / clear-and-delete /
+  keep-file choice the Media Library already had - previously Sound
+  deletion had no safeguard at all, and Music deletion silently dropped
+  playlist references with no warning.
+
 - New "Music" tab with its own Music Library, deliberately separate from
   the existing Sound Library (own storage directory, own settings section,
   own export/import) - music will later be organized into playlists and
@@ -183,6 +345,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- NPCs (the Characters library) were silently left out of both "Export
+  Session" and "Export Full Session" (and their matching imports) - a
+  bundle looked complete but every character was simply gone on the other
+  end. Import now also relinks each variant's portrait/token/sound references
+  to the freshly-imported copies bundled in the same zip, and a variant's
+  Active variant selection now survives a save/load round-trip too (it
+  previously always reset to the Default variant on reload, since a fresh Id
+  was minted for every variant even when restoring one that already had one).
 - A currently playing sound that finished purely on a remote client (Host
   window closed, or Sound turned off locally) never left the GM's "Active
   Sounds" panel - the natural-end report only ever checked whether it

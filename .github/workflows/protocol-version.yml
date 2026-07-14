@@ -1,0 +1,66 @@
+name: RPC Protocol Version
+
+# Guards ProtocolInfo.Version (RpgTimeTracker.Shared/Models/Rpc/ProtocolInfo.cs): if a PR touches
+# the RPC wire-format files (RpcMethods.cs / RpcParams.cs) with anything beyond a whitespace-only
+# reformat, ProtocolInfo.Version must be strictly higher than on the base branch, or the check
+# fails with a message telling the author to bump it. Whitespace-only changes to the protocol
+# files (e.g. re-indentation) never require a bump. This is a check only - it never edits or
+# commits anything itself.
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+
+      - name: Check ProtocolInfo.Version was bumped if the protocol changed
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_REF="origin/${{ github.event.pull_request.base.ref }}"
+          PROTO_DIR="RpgTimeTracker.Shared/Models/Rpc"
+          VERSION_FILE="$PROTO_DIR/ProtocolInfo.cs"
+          PROTOCOL_FILES=("$PROTO_DIR/RpcMethods.cs" "$PROTO_DIR/RpcParams.cs")
+
+          meaningful_change=false
+          for f in "${PROTOCOL_FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              continue
+            fi
+            if ! git diff --exit-code -w --ignore-blank-lines "$BASE_REF" -- "$f" > /dev/null; then
+              echo "Non-whitespace change detected in $f"
+              meaningful_change=true
+            fi
+          done
+
+          if [ "$meaningful_change" = false ]; then
+            echo "No non-formatting RPC protocol changes detected - version bump not required."
+            exit 0
+          fi
+
+          base_version=$(git show "$BASE_REF:$VERSION_FILE" | grep -oP 'public const int Version = \K[0-9]+' || true)
+          head_version=$(grep -oP 'public const int Version = \K[0-9]+' "$VERSION_FILE" || true)
+
+          if [ -z "$base_version" ] || [ -z "$head_version" ]; then
+            echo "::error file=$VERSION_FILE::Could not read ProtocolInfo.Version from base (got '$base_version') or head (got '$head_version')."
+            exit 1
+          fi
+
+          echo "Base version: $base_version, Head version: $head_version"
+
+          if [ "$head_version" -le "$base_version" ]; then
+            echo "::error file=$VERSION_FILE::This PR changes the RPC protocol (RpcMethods.cs/RpcParams.cs) beyond formatting, but ProtocolInfo.Version was not increased (base=$base_version, head=$head_version). Bump 'public const int Version' in $VERSION_FILE."
+            exit 1
+          fi
+
+          echo "ProtocolInfo.Version was bumped from $base_version to $head_version - OK."

@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="RpgTimeTracker.Views.Controls.MoveToScopeButtons"
+             x:Name="Root">
+
+    <StackPanel Orientation="Horizontal" Spacing="4">
+        <Button Classes="iconsquare"
+                Content="🏠" Width="22" Height="22" FontSize="11"
+                IsVisible="{Binding #Root.IsSessionLocal}"
+                Command="{Binding #Root.MoveToSharedCommand}"
+                CommandParameter="{Binding #Root.Item}"
+                ToolTip.Tip="{DynamicResource MainWindow.Common.MoveToSharedTooltip}" />
+        <Button Classes="iconsquare"
+                Content="📦" Width="22" Height="22" FontSize="11"
+                IsVisible="{Binding !#Root.IsSessionLocal}"
+                IsEnabled="{Binding #Root.IsSessionOpen}"
+                Command="{Binding #Root.MoveToSessionCommand}"
+                CommandParameter="{Binding #Root.Item}"
+                ToolTip.Tip="{DynamicResource MainWindow.Common.MoveToSessionTooltip}" />
+    </StackPanel>
+</UserControl>

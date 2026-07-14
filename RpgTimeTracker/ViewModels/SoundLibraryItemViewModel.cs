@@ -35,6 +35,7 @@ public partial class SoundLibraryItemViewModel : LibraryItemViewModelBase<SoundL
     [ObservableProperty] private int _volume;
 
     public SoundLibraryItemViewModel(
+        Guid id,
         string name,
         string icon,
         string localPath,
@@ -48,7 +49,7 @@ public partial class SoundLibraryItemViewModel : LibraryItemViewModelBase<SoundL
         Action<SoundLibraryItemViewModel> onPlayRequested,
         Action<SoundLibraryItemViewModel> onTestRequested,
         Action<SoundLibraryItemViewModel>? onChanged = null)
-        : base(name, localPath, mimeType, onDeleteRequested, onChanged)
+        : base(id, name, localPath, mimeType, onDeleteRequested, onChanged)
     {
         _icon = VisualItemHelper.NormalizeIcon(icon);
         _loop = loop;

@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="RpgTimeTracker.Views.ChooseLibraryScopeWindow"
+        Title="{DynamicResource ChooseLibraryScope.WindowTitle}"
+        Width="420" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackgroundBrush}">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+    </Window.Styles>
+
+    <Border Classes="card" Padding="20">
+        <StackPanel Spacing="16">
+            <TextBlock Classes="h2" Text="{DynamicResource ChooseLibraryScope.Header}" />
+            <TextBlock TextWrapping="Wrap" Classes="muted"
+                       Text="{DynamicResource ChooseLibraryScope.Description}" />
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                <Button Content="{DynamicResource ChooseLibraryScope.SharedButton}" Click="OnSharedClick" />
+                <Button Classes="primary" Content="{DynamicResource ChooseLibraryScope.SessionButton}"
+                        Click="OnSessionClick" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

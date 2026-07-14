@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -135,6 +136,7 @@ public partial class MainWindow : Window
             MusicLibraryPanel.ImportAsync = vm.ImportMusicLibraryAsync;
 
             vm.ConfirmTriggerMediaDeleteAsync = ShowConfirmTriggerMediaDeleteAsync;
+            vm.ChooseLibraryScopeForNewItemAsync = ShowChooseLibraryScopeAsync;
             return;
         }
 
@@ -358,6 +360,11 @@ public partial class MainWindow : Window
         vm.ImportMapFromZipBytes(memoryStream.ToArray());
     }
 
+    /// <summary>
+    ///     With a session open: exports just that session (its own state + SessionLocal library
+    ///     entries). With none open: unchanged, bundles the entire Shared Library - see
+    ///     MainWindowViewModel.ExportSessionToZipBytes/ExportFullSessionToZipBytes.
+    /// </summary>
     private async void OnExportFullSessionClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
@@ -376,7 +383,7 @@ public partial class MainWindow : Window
 
         try
         {
-            var zipBytes = vm.ExportFullSessionToZipBytes();
+            var zipBytes = vm.IsSessionOpen ? vm.ExportSessionToZipBytes() : vm.ExportFullSessionToZipBytes();
             await using var stream = await file.OpenWriteAsync();
             stream.SetLength(0);
             await stream.WriteAsync(zipBytes);
@@ -388,6 +395,12 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    ///     With a session open: imports into a brand-new session folder (picked via a second
+    ///     dialog) rather than merging into the Shared Library. With none open: unchanged, merges
+    ///     into the Shared Library - see MainWindowViewModel.ImportSessionIntoNewFolder/
+    ///     ImportFullSessionFromZipBytes.
+    /// </summary>
     private async void OnImportFullSessionClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
@@ -409,7 +422,26 @@ public partial class MainWindow : Window
             await using var stream = await files[0].OpenReadAsync();
             using var memoryStream = new MemoryStream();
             await stream.CopyToAsync(memoryStream);
-            vm.ImportFullSessionFromZipBytes(memoryStream.ToArray());
+            var data = memoryStream.ToArray();
+
+            if (vm.IsSessionOpen)
+            {
+                var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+                {
+                    Title = LocalizationService.Get("MainWindow.Dialogs.NewSessionFolder"),
+                    AllowMultiple = false
+                });
+                if (folders.Count == 0) return;
+
+                var localPath = folders[0].TryGetLocalPath();
+                if (localPath is null) return;
+
+                vm.ImportSessionIntoNewFolder(data, localPath);
+            }
+            else
+            {
+                vm.ImportFullSessionFromZipBytes(data);
+            }
         }
         catch (Exception ex)
         {
@@ -594,16 +626,165 @@ public partial class MainWindow : Window
             item.ShowCommand.Execute(null);
     }
 
+    // ==================== Characters (NPC) tab handlers ====================
+
+    private void OnNpcVariantPortraitDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is Control { DataContext: NpcVariantViewModel { Image: { } image } })
+            image.ShowCommand.Execute(null);
+    }
+
+    private void OnAddNpcGmInfoBlockClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc: { } npc }) return;
+        npc.AddGmInfoBlock(LocalizationService.Get("MainWindowViewModel.Defaults.NewGmBlockTitle"));
+    }
+
+    private void OnMoveNpcGmInfoBlockUpClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc: { } npc }) return;
+        if (sender is Control { DataContext: NpcGmInfoBlockViewModel block }) npc.MoveGmInfoBlockUp(block);
+    }
+
+    private void OnMoveNpcGmInfoBlockDownClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc: { } npc }) return;
+        if (sender is Control { DataContext: NpcGmInfoBlockViewModel block }) npc.MoveGmInfoBlockDown(block);
+    }
+
+    private void OnAddNpcVariantClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc: { } npc }) return;
+        var variant = npc.AddVariant(LocalizationService.Get("MainWindowViewModel.Defaults.NewVariantName"));
+        npc.ActiveVariant = variant;
+    }
+
+    private void OnChooseNpcVariantImageClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant } vm) return;
+
+        var picker = new MediaLibraryPickerWindow(vm.MediaLibrary.Where(m => m.Kind == MediaKind.Image),
+            item => variant.Image = item);
+        picker.Show(this);
+    }
+
+    private void OnClearNpcVariantImageClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant }) return;
+        variant.Image = null;
+    }
+
+    private void OnChooseNpcVariantTokenImageClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant } vm) return;
+
+        var picker = new MediaLibraryPickerWindow(vm.MediaLibrary.Where(m => m.Kind == MediaKind.Image),
+            item => variant.TokenImage = item);
+        picker.Show(this);
+    }
+
+    private void OnChooseNpcVariantTokenIconClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant }) return;
+
+        var picker = new IconPickerWindow(icon => variant.TokenIcon = icon);
+        picker.Show(this);
+    }
+
+    private void OnClearNpcVariantTokenClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant }) return;
+        variant.TokenImage = null;
+        variant.TokenIcon = null;
+    }
+
+    private void OnAddNpcVariantSoundClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant } vm) return;
+
+        var picker = new SoundLibraryPickerWindow(vm.SoundLibrary, sound => variant.AddSound(sound));
+        picker.Show(this);
+    }
+
+    private void OnRemoveNpcVariantSoundClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel { SelectedNpc.ActiveVariant: { } variant }) return;
+        if (sender is Control { DataContext: SoundLibraryItemViewModel sound }) variant.RemoveSound(sound);
+    }
+
     /// <summary>
     ///     Attached to MainWindowViewModel.ConfirmTriggerMediaDeleteAsync (see OnDataContextChanged) -
     ///     the view model cannot open a window itself, but needs the confirmation before an already
-    ///     assigned library image/video is actually deleted.
+    ///     in-use library item (Media, Sound, or Music) is actually deleted.
     /// </summary>
-    private async Task<TriggerMediaDeleteChoice> ShowConfirmTriggerMediaDeleteAsync(MediaLibraryItemViewModel item,
+    private async Task<TriggerMediaDeleteChoice> ShowConfirmTriggerMediaDeleteAsync(string itemName,
         IReadOnlyList<string> usedBy)
     {
-        var dialog = new ConfirmTriggerMediaDeleteWindow(item.Name, usedBy);
+        var dialog = new ConfirmTriggerMediaDeleteWindow(itemName, usedBy);
         return await dialog.ShowDialog<TriggerMediaDeleteChoice>(this);
+    }
+
+    /// <summary>
+    ///     Attached to MainWindowViewModel.ChooseLibraryScopeForNewItemAsync (see
+    ///     OnDataContextChanged) - only ever invoked while a session is open (see
+    ///     ResolveScopeForNewItemAsync), so the GM decides where each new library item belongs.
+    /// </summary>
+    private async Task<LibraryScope> ShowChooseLibraryScopeAsync()
+    {
+        var dialog = new ChooseLibraryScopeWindow();
+        return await dialog.ShowDialog<LibraryScope>(this);
+    }
+
+    // Folder dialogs for the Session concept (New/Open) - deliberately code-behind, same reasoning
+    // as the file dialogs below (StorageProvider access needs a TopLevel).
+    private async void OnNewSessionClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var topLevel = GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = LocalizationService.Get("MainWindow.Dialogs.NewSessionFolder"),
+            AllowMultiple = false
+        });
+        if (folders.Count == 0) return;
+
+        var localPath = folders[0].TryGetLocalPath();
+        if (localPath is null) return;
+
+        vm.CreateSession(localPath);
+        vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindow.Status.SessionCreated"), vm.CurrentSessionName));
+    }
+
+    private async void OnOpenSessionClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var topLevel = GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = LocalizationService.Get("MainWindow.Dialogs.OpenSessionFolder"),
+            AllowMultiple = false
+        });
+        if (folders.Count == 0) return;
+
+        var localPath = folders[0].TryGetLocalPath();
+        if (localPath is null) return;
+
+        vm.OpenSession(localPath);
+        vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindow.Status.SessionOpened"), vm.CurrentSessionName));
+    }
+
+    private void OnCloseSessionClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        vm.CloseSession();
+        vm.NotifyActionStatus(LocalizationService.Get("MainWindow.Status.SessionClosed"));
     }
 
     // File dialogs need access to the TopLevel/StorageProvider and

@@ -25,6 +25,7 @@ public partial class MediaLibraryItemViewModel : LibraryItemViewModelBase<MediaL
     [ObservableProperty] private Bitmap? _thumbnail;
 
     public MediaLibraryItemViewModel(
+        Guid id,
         string name,
         string localPath,
         MediaKind kind,
@@ -33,7 +34,7 @@ public partial class MediaLibraryItemViewModel : LibraryItemViewModelBase<MediaL
         Action<MediaLibraryItemViewModel> onDeleteRequested,
         Action<MediaLibraryItemViewModel> onShowRequested,
         Action<MediaLibraryItemViewModel>? onChanged = null)
-        : base(name, localPath, mimeType, onDeleteRequested, onChanged)
+        : base(id, name, localPath, mimeType, onDeleteRequested, onChanged)
     {
         Kind = kind;
         _loop = loop;
