@@ -18,6 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Double-clicking a character's portrait now shows it to players (same
+  action as double-clicking a Media Library tile), instead of only being
+  previewable inside the editor. Portrait and Map Token are now laid out
+  side by side instead of stacked, each still in its own bordered box.
+  With just the Default variant, the variant name/"Standard" badge row
+  above them is now also hidden (it was redundant chrome once the tab
+  strip is already hidden for the same reason).
+- Renamed the Characters tab's "Variants" section/button to "Profiles"
+  ("Steckbriefe"/"Steckbrief hinzufügen" in German) - the underlying
+  concept (a character's named moods/variants) is unchanged, but the
+  section is really the player-facing bundle (portrait, token, player
+  info, sounds), and "Steckbrief" (character dossier) reads more
+  naturally for that than "Variant" did.
 - Renamed a character's named mood/preset from "State" to "Variant"
   throughout the Characters tab and its underlying code, since "state" read
   as a UI/lifecycle term rather than "Neutral"/"Angry"/"Wounded" etc. The

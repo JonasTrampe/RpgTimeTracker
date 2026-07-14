@@ -628,6 +628,12 @@ public partial class MainWindow : Window
 
     // ==================== Characters (NPC) tab handlers ====================
 
+    private void OnNpcVariantPortraitDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is Control { DataContext: NpcVariantViewModel { Image: { } image } })
+            image.ShowCommand.Execute(null);
+    }
+
     private void OnAddNpcGmInfoBlockClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel { SelectedNpc: { } npc }) return;

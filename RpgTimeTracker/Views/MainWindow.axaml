@@ -18,7 +18,15 @@
              duplicated. -->
         <DataTemplate x:Key="NpcVariantEditorTemplate" x:DataType="vm:NpcVariantViewModel">
             <StackPanel Spacing="10" Margin="0,10,0,0">
-                <Grid ColumnDefinitions="*,Auto">
+                <!-- Only shown once there's more than one variant to tell apart - with just Default,
+                     the tab strip above is already hidden (see HasMultipleVariants) and this editor
+                     IS that variant's editor, so a name/badge row here would just be redundant. The
+                     nearest Border ancestor is the "Varianten" card, whose DataContext is the owning
+                     NpcLibraryItemViewModel (not this template's own NpcVariantViewModel) - reached
+                     this way since the template is shared by both the multi-variant TabControl and
+                     the single-variant ContentControl branches below. -->
+                <Grid ColumnDefinitions="*,Auto"
+                      IsVisible="{Binding $parent[Border].((vm:NpcLibraryItemViewModel)DataContext).HasMultipleVariants}">
                     <TextBox Grid.Column="0" Classes="settingsGroupTitle"
                              Text="{Binding Name, Mode=TwoWay}"
                              IsEnabled="{Binding !IsDefault}" />
@@ -29,70 +37,74 @@
                                Margin="6,0" />
                 </Grid>
 
-                <Border Classes="settingsGroup">
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Classes="muted"
-                                       Text="{DynamicResource MainWindow.Characters.PortraitLabel}"
-                                       VerticalAlignment="Center" />
-                            <Button Grid.Column="1" Classes="iconsquare"
-                                    Content="&#9998;" Width="22" Height="22" FontSize="11"
-                                    ToolTip.Tip="{DynamicResource MainWindow.Characters.EditTooltip}">
-                                <Button.Flyout>
-                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                        <MenuItem Header="{DynamicResource MainWindow.Characters.ChooseButton}"
-                                                  Click="OnChooseNpcVariantImageClick" />
-                                        <MenuItem Header="{DynamicResource MainWindow.Characters.ClearButton}"
-                                                  Click="OnClearNpcVariantImageClick" />
-                                    </MenuFlyout>
-                                </Button.Flyout>
-                            </Button>
-                        </Grid>
-                        <Border Width="96" Height="96" CornerRadius="6" ClipToBounds="True"
-                                Background="{DynamicResource SurfaceAltBrush}"
-                                HorizontalAlignment="Left">
-                            <Image Source="{Binding Image.Thumbnail}" Stretch="UniformToFill" />
-                        </Border>
-                    </StackPanel>
-                </Border>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Border Classes="settingsGroup">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Classes="muted"
+                                           Text="{DynamicResource MainWindow.Characters.PortraitLabel}"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Classes="iconsquare"
+                                        Content="&#9998;" Width="22" Height="22" FontSize="11"
+                                        ToolTip.Tip="{DynamicResource MainWindow.Characters.EditTooltip}">
+                                    <Button.Flyout>
+                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuItem Header="{DynamicResource MainWindow.Characters.ChooseButton}"
+                                                      Click="OnChooseNpcVariantImageClick" />
+                                            <MenuItem Header="{DynamicResource MainWindow.Characters.ClearButton}"
+                                                      Click="OnClearNpcVariantImageClick" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
+                            <Border Width="96" Height="96" CornerRadius="6" ClipToBounds="True"
+                                    Background="{DynamicResource SurfaceAltBrush}"
+                                    HorizontalAlignment="Left"
+                                    DoubleTapped="OnNpcVariantPortraitDoubleTapped"
+                                    ToolTip.Tip="{DynamicResource MainWindow.Characters.ShowPortraitToPlayersTooltip}">
+                                <Image Source="{Binding Image.Thumbnail}" Stretch="UniformToFill" />
+                            </Border>
+                        </StackPanel>
+                    </Border>
 
-                <Border Classes="settingsGroup">
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Classes="muted"
-                                       Text="{DynamicResource MainWindow.Characters.TokenLabel}"
-                                       VerticalAlignment="Center" />
-                            <Button Grid.Column="1" Classes="iconsquare"
-                                    Content="&#9998;" Width="22" Height="22" FontSize="11"
-                                    ToolTip.Tip="{DynamicResource MainWindow.Characters.EditTooltip}">
-                                <Button.Flyout>
-                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                        <MenuItem Header="{DynamicResource MainWindow.Characters.ChooseImageButton}"
-                                                  Click="OnChooseNpcVariantTokenImageClick" />
-                                        <MenuItem Header="{DynamicResource MainWindow.Characters.ChooseIconButton}"
-                                                  Click="OnChooseNpcVariantTokenIconClick" />
-                                        <MenuItem Header="{DynamicResource MainWindow.Characters.ClearButton}"
-                                                  Click="OnClearNpcVariantTokenClick" />
-                                    </MenuFlyout>
-                                </Button.Flyout>
-                            </Button>
-                        </Grid>
-                        <Border Width="72" Height="72" CornerRadius="36" ClipToBounds="True"
-                                Background="{DynamicResource SurfaceAltBrush}"
-                                HorizontalAlignment="Left">
-                            <Panel>
-                                <Image Source="{Binding TokenImage.Thumbnail}"
-                                       Stretch="UniformToFill"
-                                       IsVisible="{Binding TokenImage, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                <TextBlock Text="{Binding TokenIcon}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           FontSize="22"
-                                           IsVisible="{Binding TokenIcon, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                            </Panel>
-                        </Border>
-                    </StackPanel>
-                </Border>
+                    <Border Classes="settingsGroup">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Classes="muted"
+                                           Text="{DynamicResource MainWindow.Characters.TokenLabel}"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Classes="iconsquare"
+                                        Content="&#9998;" Width="22" Height="22" FontSize="11"
+                                        ToolTip.Tip="{DynamicResource MainWindow.Characters.EditTooltip}">
+                                    <Button.Flyout>
+                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuItem Header="{DynamicResource MainWindow.Characters.ChooseImageButton}"
+                                                      Click="OnChooseNpcVariantTokenImageClick" />
+                                            <MenuItem Header="{DynamicResource MainWindow.Characters.ChooseIconButton}"
+                                                      Click="OnChooseNpcVariantTokenIconClick" />
+                                            <MenuItem Header="{DynamicResource MainWindow.Characters.ClearButton}"
+                                                      Click="OnClearNpcVariantTokenClick" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
+                            <Border Width="72" Height="72" CornerRadius="36" ClipToBounds="True"
+                                    Background="{DynamicResource SurfaceAltBrush}"
+                                    HorizontalAlignment="Left">
+                                <Panel>
+                                    <Image Source="{Binding TokenImage.Thumbnail}"
+                                           Stretch="UniformToFill"
+                                           IsVisible="{Binding TokenImage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <TextBlock Text="{Binding TokenIcon}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="22"
+                                               IsVisible="{Binding TokenIcon, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                </Panel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
 
                 <Border Classes="settingsGroup">
                     <StackPanel Spacing="4">
