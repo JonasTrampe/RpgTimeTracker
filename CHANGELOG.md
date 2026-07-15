@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Scene editor's bundle rows (Images/Maps/Sounds) had their send/remove
+  buttons packed edge-to-edge, making the "remove from bundle" button easy
+  to hit by accident while aiming for "send"/"stop showing" - added
+  spacing before the remove button in all three lists.
 - Game time appeared frozen in both the Host and Player windows (Timers/
   Alarms still worked, since they track elapsed time separately) -
   `GameInstant.Add` truncates its `TimeSpan` argument to whole seconds via
@@ -31,24 +35,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Scene bundles can now hold *multiple* Playlists, not just one - the same
+  "a Scene can legitimately need several" reasoning already applied to
+  Images/Maps. `SceneLibraryItemViewModel.Playlist` became a `Playlists`
+  collection with its own add/remove row, matching the Images/Maps/Sounds
+  bundle rows exactly (including a per-row Stop button that only shows
+  while that specific playlist is playing). `SceneLibraryEntryDto.PlaylistId`
+  became `PlaylistIds` - a Scene saved under the old shape loses its
+  Playlist reference on next load (no migration step), since this feature
+  hasn't shipped in a released version yet.
+- Scene editor: a "⏹ Stop showing" button next to a bundled map's send
+  button, visible only while that specific map is the one currently shown
+  to players (`IsCurrentlyOpenMapConverter`) - previously the only way to
+  stop showing a map was via the separate MapLiveWindow.
+- Scene editor: matching "⏹ Stop" buttons for bundled Images/Sounds and the
+  Playlist row. Images/Sounds retract or stop every gallery entry/active
+  sound that was sent from that library item (`StopShowingImageCommand`/
+  `StopShowingSoundCommand`, matching via a new `SourceItem` reference on
+  `SentMediaItemViewModel`/`ActiveSoundViewModel`) - always available since
+  the gallery/active-sounds panel can hold several entries at once. The
+  Playlist's Stop button reuses the existing `StopPlaylistCommand` and is
+  visible only while that specific playlist is the one currently playing
+  (`ReferenceEqualsNonNullConverter`, comparing against `CurrentPlaylist`).
+- Scene-owned Timers/Alarms/Intervals now also show up in the normal
+  Elementliste (the global item list tab), not just inside the Scene
+  editor - each carries a "Scene: <name>" chip so it's clear which Scene
+  owns it, and the same rich RemainingText/Progress/status display the
+  global timeline already had. They're still Host-local/non-networked
+  (never sent to players), matching the Scene timeline's existing design.
+  The Scene editor's own timeline section was also switched from a
+  stripped-down bespoke row (Name/Duration/Start/Reset only) to the exact
+  same item template as the Elementliste, via a shared "TimelineItemTemplate"
+  resource - so the icon/color/blink/sound/trigger-media config, progress
+  bar, and tag button are all available there too, not just in the
+  Elementliste.
+- A new, separate "Timer Tags" list (Settings tab) for tagging Timers/
+  Alarms/Intervals - deliberately apart from the library-wide Tags, so
+  tagging a timer doesn't clutter that list with Media/Sound/Map/NPC/Scene
+  tags and vice versa. The Elementliste gained a tag-filter chip bar
+  (toggle any number of Timer Tags to show only items carrying at least
+  one of them) and each item's row gained a "🏷" button to assign tags,
+  mirroring the existing per-item Tags flyout. Deleting a Timer Tag clears
+  it from every item that had it, same as the library-wide Tags.
 - Scenes library (Phase 2 of the Scenes/Tags/Calendars project): a new
   `SceneLibraryItemViewModel` (Name, GM-only Markdown description with a
-  preview toggle, a start date on the custom calendar via `GameInstant`,
-  and an optional bundle of Media/Sound/Music/Map references) with
-  Shared-vs-SessionLocal storage identical to the Characters library.
-  Registered into `LibraryUsageRegistry` so deleting a referenced Media/
-  Sound/Music/Map item is guarded the same way NPC references already are,
-  and Scenes can carry Tags like every other library item. A new "Scenes"
-  tab lists and edits them, mirroring the Characters tab's list+detail
-  layout, plus a "▶ Activate" button that pushes the Scene's bundled
-  Image/Map/Music/Sounds to players atomically through the existing
-  per-kind send paths (the same ones a Media Library double-click or a
-  Playlist already use). Scenes are now also included in both the
-  full-session and per-session `.rtt-session` export/import, with their
-  Image/Map/Music/Sound references remapped to the freshly-imported
-  copies' Ids the same way NPC references already are. This also fixed a
-  pre-existing gap where the Music library itself wasn't part of session
-  export/import at all.
+  preview toggle, an *optional* start date on the custom calendar via
+  `GameInstant?` - not every Scene is timebound, some are purely driven
+  by player action - and an optional bundle of *multiple* Images/Maps,
+  Sounds, and a Playlist reference) with Shared-vs-SessionLocal storage
+  identical to the Characters library. Registered into
+  `LibraryUsageRegistry` so deleting a referenced Media/Sound/Map item is
+  guarded the same way NPC references already are, and Scenes can carry
+  Tags like every other library item. A new "Scenes" tab lists and edits
+  them, mirroring the Characters tab's list+detail layout. Activating a
+  Scene ("▶ Activate") only makes it the `ActiveScene` (unpausing its own
+  timeline, see below) - it deliberately does NOT auto-push the bundle,
+  since a Scene can hold several maps/images at once and blindly firing
+  all of them would be surprising; the GM sends each bundled Image/Map/
+  Sound/Playlist individually via its own "▶" button, reusing the same
+  per-kind send commands the Media/Sound/Music tabs' own tiles already
+  use (`MediaLibraryItemViewModel.ShowCommand`, `OpenMapToPlayersCommand`,
+  `SoundLibraryItemViewModel.PlayCommand`, `PlayPlaylistCommand`). Scenes
+  are now also included in both the full-session and per-session
+  `.rtt-session` export/import, with their Image/Map/Sound references
+  remapped to the freshly-imported copies' Ids the same way NPC
+  references already are (a Scene's Playlist reference is not remapped -
+  Playlists themselves aren't part of session export/import, only the
+  Music items inside them are). This also fixed a pre-existing gap where
+  the Music library itself wasn't part of session export/import at all.
 - Scene-scoped timeline (Phase 3 of the Scenes/Tags/Calendars project): a
   Scene can now own its own Timers/Alarms/Intervals, reusing the exact
   same view models as the app's global timeline, added/removed from a new

@@ -1,8 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
@@ -11,7 +13,7 @@ using RpgTimeTracker.Shared.Services.Visuals;
 
 namespace RpgTimeTracker.ViewModels;
 
-public partial class IntervalEventItemViewModel : ObservableObject
+public partial class IntervalEventItemViewModel : ObservableObject, ITaggable
 {
     private readonly IntervalEventItem _model;
     private readonly Action<IntervalEventItemViewModel> _onDeleteRequested;
@@ -55,12 +57,17 @@ public partial class IntervalEventItemViewModel : ObservableObject
         _maxRepeatsText = model.MaxRepeats.HasValue && model.MaxRepeats.Value > 0
             ? model.MaxRepeats.Value.ToString()
             : string.Empty;
+        TagIds.CollectionChanged += (_, _) => StateChanged?.Invoke();
     }
 
     public Guid Id => _model.Id;
 
     /// <summary>Optional image/video that is automatically distributed when this interval becomes active.</summary>
     public TriggerMediaConfig TriggerMedia { get; } = new();
+
+    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate tag list from the library-wide
+    ///     Tags, used to filter the Elementliste.</summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
 
     /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this interval also
     ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.</summary>
@@ -274,7 +281,8 @@ public partial class IntervalEventItemViewModel : ObservableObject
             TriggerMediaFullscreen = TriggerMedia.Fullscreen,
             TriggerMediaPauseClock = TriggerMedia.PauseClockDuringVideo,
             TriggerMediaLoop = TriggerMedia.Loop,
-            TargetSceneId = TargetSceneId
+            TargetSceneId = TargetSceneId,
+            TagIds = TagIds.ToList()
         };
     }
 
@@ -298,6 +306,7 @@ public partial class IntervalEventItemViewModel : ObservableObject
         };
         model.Restore(TimeSpan.FromTicks(dto.ElapsedTicks), dto.IsRunning, dto.IsCompleted);
         var vm = new IntervalEventItemViewModel(model, onDeleteRequested) { TargetSceneId = dto.TargetSceneId };
+        foreach (var tagId in dto.TagIds) vm.TagIds.Add(tagId);
         if (!string.IsNullOrWhiteSpace(dto.TriggerMediaPath) &&
             Enum.TryParse<MediaKind>(dto.TriggerMediaKind, out var kind) && kind != MediaKind.None)
         {

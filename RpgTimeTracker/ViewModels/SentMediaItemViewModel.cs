@@ -56,6 +56,12 @@ public partial class SentMediaItemViewModel : ObservableObject, IDisposable
     public string LocalPath { get; }
     public string MimeType { get; }
 
+    /// <summary>The Media Library item this gallery entry was sent from, if any (ad-hoc sends
+    ///     have none) - lets MainWindowViewModel find and retract every gallery entry that
+    ///     originated from a given library item (see StopShowingImage), the same "stop" gesture
+    ///     Maps/Playlists already have.</summary>
+    public MediaLibraryItemViewModel? SourceItem => _sourceItem;
+
     /// <summary>
     ///     Whether LocalPath is a one-off ad-hoc cache copy (to be deleted
     ///     when removed from the gallery) or a persistent library file (remains independent of the gallery).

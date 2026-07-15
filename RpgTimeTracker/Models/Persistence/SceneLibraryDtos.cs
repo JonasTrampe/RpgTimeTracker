@@ -20,16 +20,23 @@ public sealed class SceneLibraryEntryDto
 
     /// <summary>GameInstant.TotalSeconds - a calendar-agnostic elapsed-time value, not a DateTime
     ///     (see the custom calendar engine's design decision). Interpreted against whichever
-    ///     CalendarDefinition happens to be active when displayed.</summary>
-    public long StartDateSeconds { get; set; }
+    ///     CalendarDefinition happens to be active when displayed. Null means this Scene has no
+    ///     start date at all - not every Scene is timebound, some are purely driven by player
+    ///     action.</summary>
+    public long? StartDateSeconds { get; set; }
 
-    /// <summary>Media/Sound/Music/Map Ids this Scene bundles - references into the existing
-    ///     libraries by Id, not owned copies, resolved the same way NPC portrait/token/sound Ids
-    ///     already are. None of these are required; a Scene can bundle any subset.</summary>
-    public Guid? ImageId { get; set; }
-    public Guid? MapId { get; set; }
+    /// <summary>Media/Sound/Map Ids this Scene bundles - references into the existing libraries
+    ///     by Id, not owned copies, resolved the same way NPC portrait/token/sound Ids already
+    ///     are. A Scene can bundle several Images/Maps at once, unlike NPC's single portrait/token
+    ///     - none of these are required, a Scene can bundle any subset.</summary>
+    public List<Guid> ImageIds { get; set; } = [];
+    public List<Guid> MapIds { get; set; } = [];
     public List<Guid> SoundIds { get; set; } = [];
-    public Guid? MusicId { get; set; }
+
+    /// <summary>References Playlists (from the Music tab) by Id, each sent via the existing
+    ///     playlist-playback sequencer (PlayPlaylistAsync) rather than a one-off single track. A
+    ///     Scene can bundle several Playlists, same as Images/Maps/Sounds above.</summary>
+    public List<Guid> PlaylistIds { get; set; } = [];
 
     /// <summary>Freeform Tag Ids attached to this Scene (see Tag) - separate from Scene
     ///     membership on other library items, a different, explicit mechanism.</summary>

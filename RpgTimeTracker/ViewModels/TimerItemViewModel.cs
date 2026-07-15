@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
@@ -11,7 +14,7 @@ using RpgTimeTracker.Shared.Services.Visuals;
 
 namespace RpgTimeTracker.ViewModels;
 
-public partial class TimerItemViewModel : ObservableObject
+public partial class TimerItemViewModel : ObservableObject, ITaggable
 {
     private readonly TimerItem _model;
     private readonly Action<TimerItemViewModel> _onDeleteRequested;
@@ -48,6 +51,7 @@ public partial class TimerItemViewModel : ObservableObject
         _isPlayerVisible = model.IsPlayerVisible;
         _durationText = FormatTimeSpan(model.Duration);
         _model.Completed += OnModelCompleted;
+        TagIds.CollectionChanged += (_, _) => StateChanged?.Invoke();
     }
 
     public Guid Id => _model.Id;
@@ -58,6 +62,10 @@ public partial class TimerItemViewModel : ObservableObject
     /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this Timer also
     ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.</summary>
     [ObservableProperty] private Guid? _targetSceneId;
+
+    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate tag list from the library-wide
+    ///     Tags, used to filter the Elementliste.</summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
 
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
@@ -235,7 +243,8 @@ public partial class TimerItemViewModel : ObservableObject
             TriggerMediaFullscreen = TriggerMedia.Fullscreen,
             TriggerMediaPauseClock = TriggerMedia.PauseClockDuringVideo,
             TriggerMediaLoop = TriggerMedia.Loop,
-            TargetSceneId = TargetSceneId
+            TargetSceneId = TargetSceneId,
+            TagIds = TagIds.ToList()
         };
     }
 
@@ -254,6 +263,7 @@ public partial class TimerItemViewModel : ObservableObject
         };
         model.Restore(TimeSpan.FromTicks(dto.ElapsedTicks), dto.IsRunning);
         var vm = new TimerItemViewModel(model, onDeleteRequested) { TargetSceneId = dto.TargetSceneId };
+        foreach (var tagId in dto.TagIds) vm.TagIds.Add(tagId);
         if (!string.IsNullOrWhiteSpace(dto.TriggerMediaPath) &&
             Enum.TryParse<MediaKind>(dto.TriggerMediaKind, out var kind) && kind != MediaKind.None)
         {

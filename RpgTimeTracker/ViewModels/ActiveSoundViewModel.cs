@@ -48,6 +48,12 @@ public partial class ActiveSoundViewModel : ObservableObject, IDisposable
 
     public string MediaId { get; }
     public bool Loop { get; }
+
+    /// <summary>The Sound Library item this playing sound was sent from, if any - lets
+    ///     MainWindowViewModel find and stop every active sound that originated from a given
+    ///     library item (see StopShowingSound), the same "stop" gesture Maps/Playlists have.</summary>
+    public SoundLibraryItemViewModel? SourceItem => _sourceItem;
+
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);
 

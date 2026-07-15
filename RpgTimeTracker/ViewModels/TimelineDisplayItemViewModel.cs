@@ -4,6 +4,7 @@ using System.ComponentModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Rpc;
@@ -18,7 +19,7 @@ namespace RpgTimeTracker.ViewModels;
 ///     The actual domain view models remain separate; this class merely bundles them
 ///     for the combined lists in the GM and player windows.
 /// </summary>
-public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTimelineEntry
+public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTimelineEntry, ITaggable
 {
     private readonly AlarmItemViewModel? _alarm;
     private readonly IntervalEventItemViewModel? _interval;
@@ -61,6 +62,26 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
     public Guid Id => _timer?.Id ?? _alarm?.Id ?? _interval?.Id ?? Guid.Empty;
 
     public TriggerMediaConfig TriggerMedia => _timer?.TriggerMedia ?? _alarm?.TriggerMedia ?? _interval!.TriggerMedia;
+
+    /// <summary>Timer-specific Tag Ids (see TimerTag), passed through to whichever domain view
+    ///     model this wraps - lets the Elementliste's tag-filter bar/assignment flyout work
+    ///     against this shared display row without knowing the concrete underlying type.</summary>
+    public ObservableCollection<Guid> TagIds =>
+        (_timer as ITaggable)?.TagIds ?? (_alarm as ITaggable)?.TagIds ?? ((ITaggable)_interval!).TagIds;
+
+    /// <summary>Set by MainWindowViewModel for a Scene-owned timeline item (Phase 3 of the
+    ///     Scenes/Tags/Calendars project) - null for a global Timer/Alarm/IntervalEvent. A
+    ///     reference rather than a snapshot of the name, so renaming the Scene updates the label
+    ///     shown in the Elementliste. Purely local UI state, not persisted (a Scene-owned item's
+    ///     ownership is implicit from which Scene's Timers/Alarms/IntervalEvents collection it
+    ///     lives in).</summary>
+    public SceneLibraryItemViewModel? OwningScene { get; init; }
+
+    public bool IsSceneOwned => OwningScene is not null;
+
+    public string OwningSceneLabel => OwningScene is { } scene
+        ? string.Format(LocalizationService.Get("MainWindow.ItemList.SceneOwnedFormat"), scene.Name)
+        : string.Empty;
 
     public bool IsTimer => _timer is not null;
     public bool IsAlarm => _alarm is not null;

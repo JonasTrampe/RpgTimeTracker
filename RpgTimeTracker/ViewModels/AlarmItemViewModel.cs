@@ -1,8 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
@@ -12,7 +14,7 @@ using RpgTimeTracker.Shared.Services.Visuals;
 
 namespace RpgTimeTracker.ViewModels;
 
-public partial class AlarmItemViewModel : ObservableObject
+public partial class AlarmItemViewModel : ObservableObject, ITaggable
 {
     private readonly AlarmItem _model;
     private readonly Action<AlarmItemViewModel> _onDeleteRequested;
@@ -59,12 +61,17 @@ public partial class AlarmItemViewModel : ObservableObject
             model.RepeatInterval.HasValue ? FormatTimeSpan(model.RepeatInterval.Value) : string.Empty;
         _isRepeating = model.RepeatInterval.HasValue;
         _model.Triggered += OnModelTriggered;
+        TagIds.CollectionChanged += (_, _) => StateChanged?.Invoke();
     }
 
     public Guid Id => _model.Id;
 
     /// <summary>Optional image/video that is automatically distributed when this alarm triggers.</summary>
     public TriggerMediaConfig TriggerMedia { get; } = new();
+
+    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate tag list from the library-wide
+    ///     Tags, used to filter the Elementliste.</summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
 
     /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this Alarm also
     ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.</summary>
@@ -247,7 +254,8 @@ public partial class AlarmItemViewModel : ObservableObject
             TriggerMediaFullscreen = TriggerMedia.Fullscreen,
             TriggerMediaPauseClock = TriggerMedia.PauseClockDuringVideo,
             TriggerMediaLoop = TriggerMedia.Loop,
-            TargetSceneId = TargetSceneId
+            TargetSceneId = TargetSceneId,
+            TagIds = TagIds.ToList()
         };
     }
 
@@ -268,6 +276,7 @@ public partial class AlarmItemViewModel : ObservableObject
         };
         model.Restore(dto.IsTriggered);
         var vm = new AlarmItemViewModel(model, currentGameTime, onDeleteRequested) { TargetSceneId = dto.TargetSceneId };
+        foreach (var tagId in dto.TagIds) vm.TagIds.Add(tagId);
         if (!string.IsNullOrWhiteSpace(dto.TriggerMediaPath) &&
             Enum.TryParse<MediaKind>(dto.TriggerMediaKind, out var kind) && kind != MediaKind.None)
         {

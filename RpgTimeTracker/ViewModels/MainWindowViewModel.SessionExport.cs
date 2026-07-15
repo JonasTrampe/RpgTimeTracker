@@ -235,7 +235,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var (mapsImported, mapIdMap) = ImportMapsSectionFromZip(zip);
             var npcsImported = ImportNpcSectionFromZip(zip, LibraryScope.Shared, mediaIdMap, soundIdMap);
             var (musicImported, musicIdMap) = ImportMusicSectionFromZip(zip);
-            var scenesImported = ImportSceneSectionFromZip(zip, LibraryScope.Shared, mediaIdMap, mapIdMap, musicIdMap, soundIdMap);
+            var scenesImported = ImportSceneSectionFromZip(zip, LibraryScope.Shared, mediaIdMap, mapIdMap, soundIdMap);
 
             Log.Information(
                 "Full session imported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs, {MusicCount} music, {SceneCount} scenes",
@@ -289,7 +289,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var (mapsImported, mapIdMap) = ImportMapsSectionFromZip(zip, LibraryScope.SessionLocal);
             var npcsImported = ImportNpcSectionFromZip(zip, LibraryScope.SessionLocal, mediaIdMap, soundIdMap);
             var (musicImported, musicIdMap) = ImportMusicSectionFromZip(zip, LibraryScope.SessionLocal);
-            var scenesImported = ImportSceneSectionFromZip(zip, LibraryScope.SessionLocal, mediaIdMap, mapIdMap, musicIdMap, soundIdMap);
+            var scenesImported = ImportSceneSectionFromZip(zip, LibraryScope.SessionLocal, mediaIdMap, mapIdMap, soundIdMap);
             NotifySessionChanged();
 
             Log.Information(
@@ -558,15 +558,17 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         return imported;
     }
 
-    /// <summary>Imports the scenes/ section. mediaIdMap/mapIdMap/musicIdMap/soundIdMap (from the
-    ///     corresponding Import*SectionFromZip calls for the same zip) relink each Scene's Image/
-    ///     Map/Music/Sounds references from the exporting machine's Id to the freshly-imported
-    ///     copy's Id; a reference to an asset that wasn't bundled has no entry in the map and is
-    ///     silently dropped rather than left dangling, matching ClearSceneReferencesById's
-    ///     "unset, don't crash" behavior for deletions.</summary>
+    /// <summary>Imports the scenes/ section. mediaIdMap/mapIdMap/soundIdMap (from the
+    ///     corresponding Import*SectionFromZip calls for the same zip) relink each Scene's Images/
+    ///     Maps/Sounds references from the exporting machine's Id to the freshly-imported copy's
+    ///     Id; a reference to an asset that wasn't bundled has no entry in the map and is silently
+    ///     dropped rather than left dangling, matching ClearSceneReferencesById's "unset, don't
+    ///     crash" behavior for deletions. A Scene's Playlist reference is NOT remapped - Playlists
+    ///     themselves aren't part of session export/import (only the Music library items inside
+    ///     them are), so there's nothing to relink to; the imported Scene simply has no Playlist.</summary>
     private int ImportSceneSectionFromZip(ZipArchive zip, LibraryScope scope,
         IReadOnlyDictionary<Guid, Guid> mediaIdMap, IReadOnlyDictionary<Guid, Guid> mapIdMap,
-        IReadOnlyDictionary<Guid, Guid> musicIdMap, IReadOnlyDictionary<Guid, Guid> soundIdMap)
+        IReadOnlyDictionary<Guid, Guid> soundIdMap)
     {
         var manifest = ReadZipJsonEntry<SceneLibraryManifestDto>(zip, "scenes/manifest.json");
         if (manifest is null) return 0;
@@ -580,15 +582,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 Name = sceneEntry.Name,
                 DescriptionMarkdown = sceneEntry.DescriptionMarkdown,
                 StartDateSeconds = sceneEntry.StartDateSeconds,
-                ImageId = sceneEntry.ImageId is { } imageId && mediaIdMap.TryGetValue(imageId, out var newImageId)
-                    ? newImageId
-                    : null,
-                MapId = sceneEntry.MapId is { } mapId && mapIdMap.TryGetValue(mapId, out var newMapId)
-                    ? newMapId
-                    : null,
-                MusicId = sceneEntry.MusicId is { } musicId && musicIdMap.TryGetValue(musicId, out var newMusicId)
-                    ? newMusicId
-                    : null,
+                ImageIds = sceneEntry.ImageIds
+                    .Select(id => mediaIdMap.TryGetValue(id, out var newId) ? newId : (Guid?)null)
+                    .Where(id => id is not null).Select(id => id!.Value).ToList(),
+                MapIds = sceneEntry.MapIds
+                    .Select(id => mapIdMap.TryGetValue(id, out var newId) ? newId : (Guid?)null)
+                    .Where(id => id is not null).Select(id => id!.Value).ToList(),
                 SoundIds = sceneEntry.SoundIds
                     .Select(id => soundIdMap.TryGetValue(id, out var newSoundId) ? newSoundId : (Guid?)null)
                     .Where(id => id is not null).Select(id => id!.Value).ToList(),
