@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Rpc;
 using RpgTimeTracker.Shared.Services.Visuals;
@@ -38,10 +42,17 @@ public partial class MapEditCanvasControl : UserControl
     private const double ZoomMax = 4.0;
     private const double ZoomStep = 0.25;
 
+    private const double TokenMarkerSizePx = 32;
+
     private Func<MapFloorItemViewModel, FogMask>? _getFog;
     private Color _hiddenColor = FogOverlayRenderer.EditorHiddenColor;
     private bool _isPainting;
     private Point? _lastPointerPosition;
+
+    private MainWindowViewModel? _vm;
+    private MapItemViewModel? _map;
+    private MapTokenViewModel? _draggingToken;
+    private bool _dragMoved;
 
     /// <summary>
     ///     Image-pixels-to-screen-pixels scale currently in effect - EditorCanvas is given
@@ -122,6 +133,174 @@ public partial class MapEditCanvasControl : UserControl
         FogOverlayControl.Source = FogOverlayRenderer.BuildColoredOverlayBitmap(fog, _hiddenColor);
     }
 
+    /// <summary>
+    ///     Fired when a token marker is clicked (press+release without a drag) - the owner
+    ///     uses this to highlight the matching row in its own token list panel (#32); this
+    ///     control has no side panel of its own.
+    /// </summary>
+    public event Action<MapTokenViewModel>? TokenSelected;
+
+    /// <summary>
+    ///     Must be called once (any time before/after SetMap) - the resolver methods on
+    ///     MainWindowViewModel (ResolveTokenName/Portrait/IconGlyph/Initials) are how a linked
+    ///     token's marker knows what to render without this control needing its own copy of the
+    ///     Character/PointOfInterest lookup logic.
+    /// </summary>
+    public void ConfigureTokens(MainWindowViewModel vm)
+    {
+        _vm = vm;
+    }
+
+    /// <summary>
+    ///     Tracks which Map's Tokens this control currently renders - re-subscribes to
+    ///     CollectionChanged so adding/removing a token from anywhere (this control's own drag
+    ///     handling, or a MapTokenPanelView row) re-renders the overlay.
+    /// </summary>
+    public void SetMap(MapItemViewModel? map)
+    {
+        if (_map is not null) _map.Tokens.CollectionChanged -= OnTokensCollectionChanged;
+
+        _map = map;
+        if (_map is not null) _map.Tokens.CollectionChanged += OnTokensCollectionChanged;
+
+        RenderTokens();
+    }
+
+    /// <summary>
+    ///     Re-renders the token overlay - call after mutating a token from outside this
+    ///     control (e.g. MapTokenPanelView's "move to floor"/reveal-mode editors), since only
+    ///     Tokens' own Add/Remove is observed automatically (see SetMap).
+    /// </summary>
+    public void RefreshTokens()
+    {
+        RenderTokens();
+    }
+
+    private void OnTokensCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        RenderTokens();
+    }
+
+    private void RenderTokens()
+    {
+        TokenLayer.Children.Clear();
+        if (_map is null || CurrentFloor is null || _vm is null) return;
+
+        foreach (var token in _map.Tokens.Where(t => t.FloorId == CurrentFloor.Id))
+            TokenLayer.Children.Add(CreateTokenMarker(token));
+    }
+
+    private Control CreateTokenMarker(MapTokenViewModel token)
+    {
+        var portrait = _vm!.ResolveTokenPortrait(token);
+        var iconGlyph = _vm.ResolveTokenIconGlyph(token);
+
+        Control content = portrait?.Thumbnail is { } thumbnail
+            ? new Image { Source = thumbnail, Stretch = Stretch.UniformToFill }
+            : iconGlyph is not null
+                ? new Avalonia.Controls.Shapes.Path
+                {
+                    Data = VisualItemHelper.IconGeometry(iconGlyph), Fill = Brushes.White, Stretch = Stretch.Uniform,
+                    Width = TokenMarkerSizePx * 0.55, Height = TokenMarkerSizePx * 0.55
+                }
+                : new TextBlock
+                {
+                    Text = _vm.ResolveTokenInitials(token), FontSize = 12, FontWeight = FontWeight.Bold,
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                };
+
+        var marker = new Border
+        {
+            Width = TokenMarkerSizePx,
+            Height = TokenMarkerSizePx,
+            CornerRadius = new CornerRadius(TokenMarkerSizePx / 2),
+            ClipToBounds = true,
+            BorderBrush = ResolveMarkerBorderBrush(token),
+            BorderThickness = new Thickness(2),
+            Background = Brushes.Black,
+            Cursor = new Cursor(StandardCursorType.Hand),
+            Child = content
+        };
+        ToolTip.SetTip(marker, BuildTokenTooltip(token));
+
+        marker.PointerPressed += (_, e) => OnTokenPointerPressed(token, marker, e);
+        marker.PointerMoved += (_, e) => OnTokenPointerMoved(token, marker, e);
+        marker.PointerReleased += (_, e) => OnTokenPointerReleased(token, e);
+
+        PositionMarker(marker, token);
+        return marker;
+    }
+
+    /// <summary>
+    ///     A quick color cue for the token's Reveal mode (#31's TokenRevealMode) - green for
+    ///     AlwaysVisible, amber for HiddenUntilRevealed, red for GmOnly - so the GM can tell at a
+    ///     glance without opening the settings flyout.
+    /// </summary>
+    private static IBrush ResolveMarkerBorderBrush(MapTokenViewModel token)
+    {
+        return token.RevealMode switch
+        {
+            TokenRevealMode.AlwaysVisible => Brushes.LimeGreen,
+            TokenRevealMode.HiddenUntilRevealed => Brushes.Orange,
+            TokenRevealMode.GmOnly => Brushes.OrangeRed,
+            _ => Brushes.Gray
+        };
+    }
+
+    /// <summary>
+    ///     Full info regardless of player-visibility toggles - the GM placed this token, so
+    ///     nothing is hidden from the GM (see the "mouseover info tooltip for every token" design
+    ///     decision; the PlayerClient-side equivalent only shows whatever the Host already
+    ///     resolved into that token's network payload, added in #33).
+    /// </summary>
+    private string BuildTokenTooltip(MapTokenViewModel token)
+    {
+        var name = _vm!.ResolveTokenName(token);
+        var detail = _vm.ResolveTokenDetail(token);
+        return string.IsNullOrWhiteSpace(detail) ? name : $"{name}\n{detail}";
+    }
+
+    private void PositionMarker(Control marker, MapTokenViewModel token)
+    {
+        Canvas.SetLeft(marker, token.X * _zoom - TokenMarkerSizePx / 2);
+        Canvas.SetTop(marker, token.Y * _zoom - TokenMarkerSizePx / 2);
+    }
+
+    private void OnTokenPointerPressed(MapTokenViewModel token, Control marker, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(marker).Properties.IsLeftButtonPressed) return;
+
+        _draggingToken = token;
+        _dragMoved = false;
+        e.Pointer.Capture(marker);
+        e.Handled = true;
+    }
+
+    private void OnTokenPointerMoved(MapTokenViewModel token, Control marker, PointerEventArgs e)
+    {
+        if (!ReferenceEquals(_draggingToken, token) || !ReferenceEquals(e.Pointer.Captured, marker)) return;
+
+        var position = e.GetPosition(EditorCanvas);
+        token.X = position.X / _zoom;
+        token.Y = position.Y / _zoom;
+        PositionMarker(marker, token);
+        _dragMoved = true;
+        e.Handled = true;
+    }
+
+    private void OnTokenPointerReleased(MapTokenViewModel token, PointerReleasedEventArgs e)
+    {
+        if (!ReferenceEquals(_draggingToken, token)) return;
+
+        e.Pointer.Capture(null);
+        _draggingToken = null;
+        e.Handled = true;
+
+        if (_dragMoved) _vm?.NotifyMapTokensChanged(_map!);
+        else TokenSelected?.Invoke(token);
+    }
+
     private void OnFloorSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         LoadFloor(FloorSelector.SelectedItem as MapFloorItemViewModel);
@@ -134,6 +313,7 @@ public partial class MapEditCanvasControl : UserControl
         {
             FloorImageControl.Source = null;
             FogOverlayControl.Source = null;
+            TokenLayer.Children.Clear();
             FloorChanged?.Invoke(null);
             return;
         }
@@ -190,6 +370,7 @@ public partial class MapEditCanvasControl : UserControl
 
         UpdateZoomLabel();
         if (_lastPointerPosition is { } position) UpdateBrushCursor(position);
+        RenderTokens();
     }
 
     private void UpdateZoomLabel()

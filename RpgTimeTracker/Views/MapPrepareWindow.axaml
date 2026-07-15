@@ -67,10 +67,14 @@
             <controls:MapEditCanvasControl x:Name="EditCanvas" Grid.Column="0" />
 
             <Border Grid.Column="1" Classes="settingsGroup" Margin="10,0,0,0">
-                <StackPanel Spacing="8">
-                    <TextBlock Classes="settingsGroupTitle" Text="{DynamicResource MapEditor.PreviewTitle}" />
-                    <sharedViews:MapDisplayView x:Name="PreviewDisplay" />
-                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="settingsGroupTitle" Text="{DynamicResource MapEditor.PreviewTitle}" />
+                        <sharedViews:MapDisplayView x:Name="PreviewDisplay" />
+                        <Separator Background="{DynamicResource BorderBrush}" Margin="0,6" />
+                        <controls:MapTokenPanelView x:Name="TokenPanel" />
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
     </DockPanel>

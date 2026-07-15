@@ -63,6 +63,11 @@ public partial class MapPrepareWindow : Window
             : map.Floors.Count > 0
                 ? map.Floors[0]
                 : null);
+        EditCanvas.ConfigureTokens(_vm);
+        EditCanvas.SetMap(_map);
+        EditCanvas.TokenSelected += token => TokenPanel.SelectedToken = token;
+        TokenPanel.Configure(_vm, _map);
+        TokenPanel.TokensMutated += EditCanvas.RefreshTokens;
 
         InitializeFogStyleControls();
         InitializeCellSizeControl();

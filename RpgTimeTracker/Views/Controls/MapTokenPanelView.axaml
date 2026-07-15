@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RpgTimeTracker.ViewModels"
+             x:Class="RpgTimeTracker.Views.Controls.MapTokenPanelView">
+    <StackPanel Spacing="8">
+        <TextBlock Classes="settingsGroupTitle" Text="{DynamicResource MapEditor.TokensTitle}" />
+
+        <Button Content="{DynamicResource MapEditor.AddFreeformTokenButton}" HorizontalAlignment="Stretch"
+                Click="OnAddFreeformClick" />
+
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+            <ComboBox Name="CharacterPicker" Grid.Column="0" HorizontalAlignment="Stretch"
+                      PlaceholderText="{DynamicResource MapEditor.CharacterPickerPlaceholder}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:NpcLibraryItemViewModel">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Grid.Column="1" Content="+" Width="32" Click="OnAddCharacterTokenClick" />
+        </Grid>
+
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+            <ComboBox Name="PoiPicker" Grid.Column="0" HorizontalAlignment="Stretch"
+                      PlaceholderText="{DynamicResource MapEditor.PoiPickerPlaceholder}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PointOfInterestLibraryItemViewModel">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Grid.Column="1" Content="+" Width="32" Click="OnAddPoiTokenClick" />
+        </Grid>
+
+        <TextBlock Name="EmptyStateLabel" Classes="muted" FontStyle="Italic"
+                   Text="{DynamicResource MapEditor.NoTokensText}" />
+
+        <StackPanel Name="TokenList" Spacing="4" />
+    </StackPanel>
+</UserControl>

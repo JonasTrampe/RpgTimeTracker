@@ -16,13 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   per entry) rather than a fixed set, with a small built-in default list
   for Themes that don't define their own - groundwork for map tokens and
   the initiative tracker.
-- **Map tokens (data model)**: `MapItemViewModel.Tokens` - markers placed on a
-  map, either freeform (own Name/Description/icon) or linked live to a
-  Character+Variant or a Point of Interest (no data copied onto the
-  token). Reveal mode (`AlwaysVisible`/`HiddenUntilRevealed`/`GmOnly`)
-  plus independent Name/Portrait/Detail player-visibility toggles.
-  Persisted alongside each map; editor UI and network sync land in a
-  follow-up PR.
+- **Map tokens**: markers placed on a map, either freeform (own Name/
+  Description/icon) or linked live to a Character+Variant or a Point of
+  Interest (no data copied onto the token). Editable from both the
+  Prepare and Live map windows: drag to reposition, a floor-filtered
+  canvas overlay with a color-coded Reveal-mode border and a full-info
+  hover tooltip, and a Tokens side panel to add/link/edit/delete (link
+  kind, Reveal mode, per-field player-visibility toggles, move-to-floor).
+  Network sync to PlayerClient lands in a follow-up PR.
 - **Points of Interest**: a new top-level library for non-Character map
   markers (chests, traps, signposts) - Name/GM-only Description, an icon
   (either a Media Library image or a Bootstrap icon), player-visibility

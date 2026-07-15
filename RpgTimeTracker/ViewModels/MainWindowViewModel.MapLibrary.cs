@@ -390,6 +390,92 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     }
 
     /// <summary>
+    ///     Public re-save trigger for map-token mutations made from the map-editor UI
+    ///     (MapEditCanvasControl/MapTokenPanelView, both windows) - those live outside
+    ///     MainWindowViewModel, so they can't call the private SaveMapLibrarySettings/
+    ///     OnMapLibraryItemChanged directly; this reuses the exact same path as any other
+    ///     map property change instead of duplicating it.
+    /// </summary>
+    public void NotifyMapTokensChanged(MapItemViewModel map)
+    {
+        OnMapLibraryItemChanged(map);
+    }
+
+    /// <summary>
+    ///     Resolves a token's display Name - read live from the linked Character/PointOfInterest
+    ///     entry, never copied onto the token itself (see MapTokenViewModel's doc comment). Falls
+    ///     back to the token's own Name field if the link no longer resolves (the linked entry was
+    ///     deleted without the token itself being cleaned up yet) or for a freeform token.
+    /// </summary>
+    public string ResolveTokenName(MapTokenViewModel token)
+    {
+        return token.LinkKind switch
+        {
+            TokenLinkKind.Character => NpcLibrary.FirstOrDefault(n => n.Id == token.LinkedId)?.Name ?? token.Name,
+            TokenLinkKind.PointOfInterest => PointOfInterestLibrary.FirstOrDefault(p => p.Id == token.LinkedId)
+                ?.Name ?? token.Name,
+            _ => token.Name
+        };
+    }
+
+    /// <summary>Health (Character) or Description (PointOfInterest/freeform) - see #31's "Detail" field.</summary>
+    public string? ResolveTokenDetail(MapTokenViewModel token)
+    {
+        switch (token.LinkKind)
+        {
+            case TokenLinkKind.Character:
+                var npc = NpcLibrary.FirstOrDefault(n => n.Id == token.LinkedId);
+                if (npc is null) return null;
+                var variant = npc.Variants.FirstOrDefault(v => v.Id == token.LinkedVariantId) ?? npc.DefaultVariant;
+                return variant.Health;
+            case TokenLinkKind.PointOfInterest:
+                return PointOfInterestLibrary.FirstOrDefault(p => p.Id == token.LinkedId)?.Description;
+            default:
+                return token.Description;
+        }
+    }
+
+    public MediaLibraryItemViewModel? ResolveTokenPortrait(MapTokenViewModel token)
+    {
+        switch (token.LinkKind)
+        {
+            case TokenLinkKind.Character:
+                var npc = NpcLibrary.FirstOrDefault(n => n.Id == token.LinkedId);
+                if (npc is null) return null;
+                var variant = npc.Variants.FirstOrDefault(v => v.Id == token.LinkedVariantId) ?? npc.DefaultVariant;
+                return npc.GetEffectiveTokenImage(variant);
+            case TokenLinkKind.PointOfInterest:
+                return PointOfInterestLibrary.FirstOrDefault(p => p.Id == token.LinkedId)?.IconImage;
+            default:
+                return token.IconImage;
+        }
+    }
+
+    public string? ResolveTokenIconGlyph(MapTokenViewModel token)
+    {
+        switch (token.LinkKind)
+        {
+            case TokenLinkKind.Character:
+                var npc = NpcLibrary.FirstOrDefault(n => n.Id == token.LinkedId);
+                if (npc is null) return null;
+                var variant = npc.Variants.FirstOrDefault(v => v.Id == token.LinkedVariantId) ?? npc.DefaultVariant;
+                return npc.GetEffectiveTokenIcon(variant);
+            case TokenLinkKind.PointOfInterest:
+                return PointOfInterestLibrary.FirstOrDefault(p => p.Id == token.LinkedId)?.IconGlyph;
+            default:
+                return token.IconGlyph;
+        }
+    }
+
+    /// <summary>Last-resort fallback (no portrait, no icon) - up to the first two words of the resolved Name.</summary>
+    public string ResolveTokenInitials(MapTokenViewModel token)
+    {
+        var name = ResolveTokenName(token);
+        return string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2)
+            .Select(word => char.ToUpperInvariant(word[0])));
+    }
+
+    /// <summary>
     ///     Who references a Media Library item (a freeform token's IconImage), a Character, or a
     ///     Point of Interest via a map token - registered into _usageRegistry so deleting any of
     ///     those goes through the same 3-way confirm-delete flow as any other in-use item. The
