@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Extracted the trigger-media editor, target-Scene picker, and Scene
   bundle's library-add row into three reusable controls, removing the
   duplicated markup/code-behind.
+- Consolidated a "flat sub-panel" Border style (background/border/radius/
+  padding), previously copy-pasted inline 8 times, into a shared `panel`
+  style class.
 - Unified per-library scope/save methods and split `MainWindowViewModel.cs`
   into partial classes.
 - Reworked the Characters tab's editor into collapsible cards with Markdown

@@ -262,12 +262,7 @@
                                                                             Padding="10"
                                                                             Margin="0,10,0,0">
                                                                         <StackPanel Spacing="12">
-                                                                            <Border
-                                                                                Background="{DynamicResource SurfaceBrush}"
-                                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                                BorderThickness="1"
-                                                                                CornerRadius="6"
-                                                                                Padding="10">
+                                                                            <Border Classes="panel">
                                                                                 <Grid
                                                                                     ColumnDefinitions="Auto,*,Auto,Auto"
                                                                                     RowDefinitions="Auto,Auto">
@@ -336,10 +331,7 @@
                                                                             </Border>
 
                                                                             <Border IsVisible="{Binding IsTimer}"
-                                                                                    Background="{DynamicResource SurfaceBrush}"
-                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                                    BorderThickness="1"
-                                                                                    CornerRadius="6" Padding="10">
+                                                                                    Classes="panel">
                                                                                 <Grid ColumnDefinitions="Auto,Auto,*">
                                                                                     <TextBlock Grid.Column="0"
                                                                                         Classes="muted"
@@ -362,10 +354,7 @@
                                                                             </Border>
 
                                                                             <Border IsVisible="{Binding IsAlarm}"
-                                                                                    Background="{DynamicResource SurfaceBrush}"
-                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                                    BorderThickness="1"
-                                                                                    CornerRadius="6" Padding="10">
+                                                                                    Classes="panel">
                                                                                 <StackPanel Spacing="8">
                                                                                     <Grid
                                                                                         ColumnDefinitions="Auto,Auto,*">
@@ -408,10 +397,7 @@
                                                                             </Border>
 
                                                                             <Border IsVisible="{Binding IsInterval}"
-                                                                                    Background="{DynamicResource SurfaceBrush}"
-                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                                    BorderThickness="1"
-                                                                                    CornerRadius="6" Padding="10">
+                                                                                    Classes="panel">
                                                                                 <StackPanel Spacing="8">
                                                                                     <Grid
                                                                                         ColumnDefinitions="Auto,Auto,Auto,Auto,*">
@@ -2836,11 +2822,7 @@
                                                                     Content="{DynamicResource MainWindow.Calendar.PlayerVisibleCheckbox}"
                                                                     IsChecked="{Binding SelectedCalendarEntry.IsPlayerVisible, Mode=TwoWay}" />
 
-                                                                <Border Background="{DynamicResource SurfaceBrush}"
-                                                                        BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                        BorderThickness="1"
-                                                                        CornerRadius="6"
-                                                                        Padding="10">
+                                                                <Border Classes="panel">
                                                                     <StackPanel Spacing="8">
                                                                         <TextBlock Classes="muted"
                                                                                 Text="{DynamicResource MainWindow.Calendar.TriggerMediaLabel}" />
@@ -3176,10 +3158,7 @@
                                                                             Command="{Binding ClearSessionLogCommand}"
                                                                             IsEnabled="{Binding HasSessionLogEntries}" />
                                                                 </Grid>
-                                                                <Border Background="{DynamicResource SurfaceBrush}"
-                                                                        BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                        BorderThickness="1"
-                                                                        CornerRadius="6"
+                                                                <Border Classes="panel"
                                                                         Padding="8"
                                                                         MaxHeight="140"
                                                                         IsVisible="{Binding HasSessionLogEntries}">

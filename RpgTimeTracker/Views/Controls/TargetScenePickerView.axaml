@@ -4,10 +4,7 @@
              x:Class="RpgTimeTracker.Views.Controls.TargetScenePickerView"
              x:Name="Root">
 
-    <Border Background="{DynamicResource SurfaceBrush}"
-            BorderBrush="{DynamicResource InnerFrameBrush}"
-            BorderThickness="1" CornerRadius="6"
-            Padding="10">
+    <Border Classes="panel">
         <StackPanel Spacing="6">
             <TextBlock Classes="muted"
                        Text="{DynamicResource MainWindow.Common.TargetSceneDescription}"
