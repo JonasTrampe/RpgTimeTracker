@@ -127,6 +127,9 @@ public partial class MainWindowViewModel
         foreach (var item in SceneLibrary)
             if (item.TagIds.Contains(tagId))
                 yield return item.Name;
+        foreach (var item in PointOfInterestLibrary)
+            if (item.TagIds.Contains(tagId))
+                yield return item.Name;
     }
 
     private void ClearTagReferencesById(Guid tagId)
@@ -137,6 +140,7 @@ public partial class MainWindowViewModel
         foreach (var item in MapLibrary) item.TagIds.Remove(tagId);
         foreach (var item in NpcLibrary) item.TagIds.Remove(tagId);
         foreach (var item in SceneLibrary) item.TagIds.Remove(tagId);
+        foreach (var item in PointOfInterestLibrary) item.TagIds.Remove(tagId);
     }
 
     /// <summary>

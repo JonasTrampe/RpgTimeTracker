@@ -17,4 +17,5 @@ public sealed class SessionLibraryDto
     public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
     public List<NpcLibraryEntryDto> NpcLibrary { get; set; } = [];
     public List<SceneLibraryEntryDto> SceneLibrary { get; set; } = [];
+    public List<PointOfInterestLibraryEntryDto> PointOfInterestLibrary { get; set; } = [];
 }

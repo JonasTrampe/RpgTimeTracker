@@ -484,6 +484,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _usageRegistry.RegisterClearAction(ClearNpcReferencesById);
         _usageRegistry.Register(FindSceneUsagesById);
         _usageRegistry.RegisterClearAction(ClearSceneReferencesById);
+        _usageRegistry.Register(FindPointOfInterestUsagesById);
+        _usageRegistry.RegisterClearAction(ClearPointOfInterestReferencesById);
         _usageRegistry.Register(FindTagUsagesById);
         _usageRegistry.RegisterClearAction(ClearTagReferencesById);
         _usageRegistry.Register(FindTimerTagUsagesById);
@@ -636,6 +638,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         foreach (var sceneEntry in settings.SceneLibrary)
             SceneLibrary.Add(FromSceneLibraryEntryDto(sceneEntry, LibraryScope.Shared));
+
+        foreach (var poiEntry in settings.PointOfInterestLibrary)
+            PointOfInterestLibrary.Add(FromPointOfInterestLibraryEntryDto(poiEntry, LibraryScope.Shared));
 
         LoadTags(settings.Tags);
         LoadTimerTags(settings.TimerTags);
@@ -1063,11 +1068,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var sceneEntry in library.SceneLibrary)
             SceneLibrary.Add(FromSceneLibraryEntryDto(sceneEntry, LibraryScope.SessionLocal));
 
+        foreach (var poiEntry in library.PointOfInterestLibrary)
+            PointOfInterestLibrary.Add(FromPointOfInterestLibraryEntryDto(poiEntry, LibraryScope.SessionLocal));
+
         OnPropertyChanged(nameof(HasNoMediaLibraryItems));
         OnPropertyChanged(nameof(HasNoSoundLibraryItems));
         OnPropertyChanged(nameof(HasNoMaps));
         OnPropertyChanged(nameof(HasNoNpcLibraryItems));
         OnPropertyChanged(nameof(HasNoScenes));
+        OnPropertyChanged(nameof(HasNoPointsOfInterest));
     }
 
     private void RemoveSessionLocalItemsFromCollections()
@@ -1092,11 +1101,18 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             if (SelectedScene == item) SelectedScene = null;
         }
 
+        foreach (var item in PointOfInterestLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList())
+        {
+            PointOfInterestLibrary.Remove(item);
+            if (SelectedPointOfInterest == item) SelectedPointOfInterest = null;
+        }
+
         OnPropertyChanged(nameof(HasNoMediaLibraryItems));
         OnPropertyChanged(nameof(HasNoSoundLibraryItems));
         OnPropertyChanged(nameof(HasNoNpcLibraryItems));
         OnPropertyChanged(nameof(HasNoMaps));
         OnPropertyChanged(nameof(HasNoScenes));
+        OnPropertyChanged(nameof(HasNoPointsOfInterest));
     }
 
     /// <summary>

@@ -430,6 +430,18 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         public List<SceneLibraryEntryDto> Scenes { get; init; } = [];
     }
 
+    /// <summary>
+    ///     Manifest for the "pointsofinterest" section of a full-session/session export - Points
+    ///     of Interest own no files themselves (see PointOfInterestLibraryItemViewModel's doc
+    ///     comment), so this just wraps the same PointOfInterestLibraryEntryDto shape used for
+    ///     Shared/session-local library persistence; the IconImage Id it carries is relinked on
+    ///     import via ImportPointOfInterestSectionFromZip's mediaIdMap parameter.
+    /// </summary>
+    private sealed class PointOfInterestLibraryManifestDto
+    {
+        public List<PointOfInterestLibraryEntryDto> PointsOfInterest { get; init; } = [];
+    }
+
     private sealed class CalendarExportDto
     {
         public int Version { get; init; } = 1;

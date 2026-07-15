@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   per entry) rather than a fixed set, with a small built-in default list
   for Themes that don't define their own - groundwork for map tokens and
   the initiative tracker.
+- **Points of Interest**: a new top-level library for non-Character map
+  markers (chests, traps, signposts) - Name/GM-only Description, an icon
+  (either a Media Library image or a Bootstrap icon), player-visibility
+  toggles, and Tags, following the same Shared/session-local scoping as
+  every other library. Groundwork for map tokens to link to something
+  other than a Character.
 - **Scenes/Tags/Calendars**: custom calendar engine (replacing `DateTime`,
   with bundled + importable calendars), a campaign-wide Tags system, a
   Scenes library (description, start date, media bundle) with its own
