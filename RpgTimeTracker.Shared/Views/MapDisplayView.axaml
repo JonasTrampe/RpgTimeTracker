@@ -34,6 +34,19 @@
                      MapTokenSnapshotDto), this side has no extra visibility logic to apply, just
                      renders whatever's in VisibleTokens (current floor only). -->
                 <ItemsControl ItemsSource="{Binding VisibleTokens}">
+                    <!-- Canvas only positions its OWN direct children - the generated item
+                         container (a ContentPresenter), not an arbitrary element nested inside
+                         the ItemTemplate's content. Canvas.Left/Top must be set here, targeting
+                         that container, not on the Border below (setting it there compiled and
+                         "rendered" fine, but every token silently piled up at the Canvas's
+                         default (0,0) instead of its real position - a classic Canvas+ItemsControl
+                         pitfall neither a compile check nor a size-only render test would catch). -->
+                    <ItemsControl.Styles>
+                        <Style Selector="ContentPresenter" x:DataType="rpc:MapTokenSnapshotDto">
+                            <Setter Property="Canvas.Left" Value="{Binding X}" />
+                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                        </Style>
+                    </ItemsControl.Styles>
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <Canvas />
@@ -41,9 +54,13 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="rpc:MapTokenSnapshotDto">
+                            <!-- The container above is positioned at the token's raw (X,Y) - its
+                                 center, matching MapEditCanvasControl's own marker placement - so
+                                 this Border shifts itself to center on that point via a plain
+                                 static RenderTransform (half its own 32px size). -->
                             <Border Width="32" Height="32" CornerRadius="16" ClipToBounds="True"
                                     Background="Black" BorderBrush="White" BorderThickness="2"
-                                    Canvas.Left="{Binding X}" Canvas.Top="{Binding Y}"
+                                    RenderTransform="translate(-16px, -16px)"
                                     ToolTip.Tip="{Binding Name}">
                                 <TextBlock Text="{Binding Name}" FontSize="10" Foreground="White"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"

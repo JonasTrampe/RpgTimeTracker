@@ -90,8 +90,11 @@ public partial class MapTokenPanelView : UserControl
     {
         if (_map is null || _vm is null) return;
 
-        var floorId = _map.Floors.FirstOrDefault()?.Id ?? Guid.Empty;
-        var token = _map.AddOrSelectToken(linkKind, linkedId, floorId, 0, 0,
+        var floor = _map.Floors.FirstOrDefault();
+        var floorId = floor?.Id ?? Guid.Empty;
+        var centerX = floor is null ? 0 : floor.GridWidth * floor.CellSizePx / 2.0;
+        var centerY = floor is null ? 0 : floor.GridHeight * floor.CellSizePx / 2.0;
+        var token = _map.AddOrSelectToken(linkKind, linkedId, floorId, centerX, centerY,
             t => { _map.RemoveToken(t); _vm.NotifyTokenRemoved(_map, t.Id); },
             t => _vm.NotifyTokenChanged(_map, t));
         _vm.NotifyTokenChanged(_map, token);
