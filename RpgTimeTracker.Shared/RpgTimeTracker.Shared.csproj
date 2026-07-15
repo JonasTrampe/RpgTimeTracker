@@ -36,6 +36,11 @@
              propagation pattern as above, so both apps can resolve any icon name to its path
              data without embedding it in source. -->
         <Content Include="Assets\BootstrapIcons\*.json" CopyToOutputDirectory="PreserveNewest" />
+        <!-- Built-in alarm/timer sound effects (see SoundService.ResolvePath, Host-only) - same
+             content propagation pattern as above; previously duplicated as separate physical
+             copies in both the Host's and Client's own Assets\Sounds, even though only the Host
+             ever plays them by disk path. -->
+        <Content Include="Assets\Sounds\*.wav" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>

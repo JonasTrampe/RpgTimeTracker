@@ -35,6 +35,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Consolidated a "flat sub-panel" Border style (background/border/radius/
   padding), previously copy-pasted inline 8 times, into a shared `panel`
   style class.
+- Moved MainWindow's ~165-line Host-only `<Window.Styles>` block out of the
+  view markup into its own `HostStyles.axaml`.
+- Removed ~78MB of unreferenced legacy theme background/button PNGs, byte-
+  identical and dead in both `RpgTimeTracker/Assets` and
+  `RpgTimeTracker.PlayerClient/Assets` (superseded by
+  `RpgTimeTracker.Shared/SampleThemes`). Moved the built-in alarm sounds
+  (`bell`/`digital`/`pling.wav`), which the Client never actually played,
+  into `RpgTimeTracker.Shared` as the single source, propagated to both
+  apps' output the same way `SampleThemes`/`BootstrapIcons` already are.
 - Unified per-library scope/save methods and split `MainWindowViewModel.cs`
   into partial classes.
 - Reworked the Characters tab's editor into collapsible cards with Markdown
