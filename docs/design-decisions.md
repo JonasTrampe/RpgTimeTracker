@@ -2366,19 +2366,22 @@ round early or adjust manually, but per-turn advancement would have
 meant every single "Next" click needed its own time-math instead of one
 lump adjustment when the order wraps.
 
-## Map tokens: quick reveal via mouseover, not just the settings flyout
+## Map tokens: hover shows an info tooltip for every token, not just hidden ones
 
-**Decision**: a `HiddenUntilRevealed` map token gets a lightweight
-mouseover popup on the Host's own canvas view with a single "Reveal to
-players" toggle, in addition to (not instead of) the full per-token
-settings flyout that already exposes Reveal mode and the visibility
-toggles.
+**Decision**: hovering any token shows a small info popup (name,
+portrait/icon thumbnail, Health/Detail) - on the Host's own local
+preview this always shows everything about the token regardless of its
+player-visible toggles or Reveal mode (the GM placed it, so nothing is
+hidden from the GM); on a connected PlayerClient the same kind of
+tooltip shows only whatever fields the Host already included in that
+token's resolved payload for that client (see #33's "Host resolves,
+client just renders" rule - no extra visibility logic on the client
+side).
 
-**Why**: the settings flyout is a setup-time tool - reveal state
-usually flips in response to something happening at the table right
-then (a player's perception check succeeding), and making the GM dig
-into a full flyout for that one action breaks the pace of play. The
-mouseover popup is purely a faster path to the same underlying flag
-the flyout already controls, not a new data model - `AlwaysVisible`/
-`GmOnly` tokens have nothing to toggle there, so the popup only appears
-for `HiddenUntilRevealed` tokens.
+**Why**: this generalizes the earlier "quick reveal via mouseover"
+decision (a `HiddenUntilRevealed` token's popup also getting a
+one-click reveal toggle) into the normal, always-available way to
+glance at a token's info, for both sides of the table - a GM checking
+"who/what is this token again" and a player checking "what do I know
+about this thing" both want the same lightweight hover affordance
+instead of a separate details window.
