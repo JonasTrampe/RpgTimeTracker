@@ -257,6 +257,7 @@ public static class ThemeSettingsService
         public List<PlaylistEntryDto> Playlists { get; set; } = [];
         public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
         public List<NpcLibraryEntryDto> NpcLibrary { get; set; } = [];
+        public List<SceneLibraryEntryDto> SceneLibrary { get; set; } = [];
 
         /// <summary>Freeform labels a GM can attach to any library item (see Tag/TagIds on each
         ///     library item view model) - a single flat, campaign-wide list, not

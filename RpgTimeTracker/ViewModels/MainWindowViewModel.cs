@@ -624,10 +624,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             if (npc is not null) NpcLibrary.Add(npc);
         }
 
+        foreach (var sceneEntry in library.SceneLibrary)
+            SceneLibrary.Add(FromSceneLibraryEntryDto(sceneEntry, LibraryScope.SessionLocal));
+
         OnPropertyChanged(nameof(HasNoMediaLibraryItems));
         OnPropertyChanged(nameof(HasNoSoundLibraryItems));
         OnPropertyChanged(nameof(HasNoMaps));
         OnPropertyChanged(nameof(HasNoNpcLibraryItems));
+        OnPropertyChanged(nameof(HasNoScenes));
     }
 
     private void RemoveSessionLocalItemsFromCollections()
@@ -646,10 +650,17 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             if (SelectedNpc == item) SelectedNpc = null;
         }
 
+        foreach (var item in SceneLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList())
+        {
+            SceneLibrary.Remove(item);
+            if (SelectedScene == item) SelectedScene = null;
+        }
+
         OnPropertyChanged(nameof(HasNoMediaLibraryItems));
         OnPropertyChanged(nameof(HasNoSoundLibraryItems));
         OnPropertyChanged(nameof(HasNoNpcLibraryItems));
         OnPropertyChanged(nameof(HasNoMaps));
+        OnPropertyChanged(nameof(HasNoScenes));
     }
 
     public MainWindowViewModel()
@@ -660,6 +671,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _usageRegistry.RegisterClearAction(ClearPlaylistReferencesById);
         _usageRegistry.Register(FindNpcUsagesById);
         _usageRegistry.RegisterClearAction(ClearNpcReferencesById);
+        _usageRegistry.Register(FindSceneUsagesById);
+        _usageRegistry.RegisterClearAction(ClearSceneReferencesById);
         _usageRegistry.Register(FindTagUsagesById);
         _usageRegistry.RegisterClearAction(ClearTagReferencesById);
 
@@ -804,6 +817,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var npc = FromNpcLibraryEntryDto(npcEntry, LibraryScope.Shared);
             if (npc is not null) NpcLibrary.Add(npc);
         }
+
+        foreach (var sceneEntry in settings.SceneLibrary)
+            SceneLibrary.Add(FromSceneLibraryEntryDto(sceneEntry, LibraryScope.Shared));
 
         LoadTags(settings.Tags);
 

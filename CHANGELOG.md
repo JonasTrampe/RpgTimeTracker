@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Scenes library (Phase 2 of the Scenes/Tags/Calendars project): a new
+  `SceneLibraryItemViewModel` (Name, GM-only Markdown description with a
+  preview toggle, a start date on the custom calendar via `GameInstant`,
+  and an optional bundle of Media/Sound/Music/Map references) with
+  Shared-vs-SessionLocal storage identical to the Characters library.
+  Registered into `LibraryUsageRegistry` so deleting a referenced Media/
+  Sound/Music/Map item is guarded the same way NPC references already are,
+  and Scenes can carry Tags like every other library item. A new "Scenes"
+  tab lists and edits them, mirroring the Characters tab's list+detail
+  layout. "Activate Scene" orchestration (actually pushing the bundle to
+  players), a Scene-scoped timeline, and full-session export/import
+  wiring aren't built yet.
 - Tags (Phase 1 of the Scenes/Tags/Calendars project): a flat, campaign-wide
   list of freeform tags (name + color) manageable from a new "Tags" group in
   Settings. Media, Sound, Music, Map, and NPC library items each gained a

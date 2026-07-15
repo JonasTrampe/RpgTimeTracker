@@ -2036,3 +2036,74 @@ This keeps `MainWindowViewModel` completely unaware that filtering exists
   chrome the ViewModel doesn't know about either. Only the Media/Sound/
   Music tabs use `LibraryPanelView`; Map and NPC use a simpler direct
   `ListBox`, so the filter bar doesn't (yet) cover those two.
+
+## Scenes library (Phase 2): data layer first, no tab UI yet
+
+The full plan for Scenes is large - a start date on the custom calendar, a
+media bundle, its own scoped timeline, and "activate Scene" orchestration
+that pushes that bundle to players atomically. Rather than building all of
+that (plus a new Scenes tab) in one pass, this round ships only the data/
+persistence layer, following the same incremental approach the Characters
+(NPC) library and the Tags feature were built in.
+
+`SceneLibraryItemViewModel` (`ViewModels/SceneLibraryItemViewModel.cs`)
+follows `NpcLibraryItemViewModel`'s precedent exactly: it doesn't derive
+from `LibraryItemViewModelBase<TSelf>` because a Scene owns no single
+file, just references - `Image`/`Map`/`Music` (nullable) and `Sounds` (a
+collection) are foreign keys into the Media/Map/Music/Sound libraries by
+Id, resolved the same way NPC portrait/token/sound references already
+are. `StartDate` is a `GameInstant` (see the custom calendar engine's
+design decision), not a `DateTime` - it's meaningless without knowing
+which `CalendarDefinition` is active, exactly like every other game-time
+value in this codebase since Phase 0.
+
+Scenes get the same Shared-vs-SessionLocal split as every other library
+(`SaveLibrarySettings`, `ThemeSettingsDto.SceneLibrary` +
+`SessionLibraryDto.SceneLibrary`), the same `LibraryUsageRegistry`
+registration so deleting a bundled Media/Sound/Music/Map item is guarded
+against, and implement `ITaggable` so Scenes can carry Tags like every
+other library item (registered into `FindTagUsagesById`/
+`ClearTagReferencesById` alongside the other five).
+
+Deliberately not done yet, left for later rounds per the plan: a
+GM-only description pop-out window (the inline Markdown editor/preview
+toggle in the tab covers the same need for now), "activate Scene"
+orchestration (pushing the bundle to players atomically through the
+existing per-kind send paths), the Scene-scoped timeline, and inclusion
+in the full-session `.rtt-session` export/import (a known gap, same
+shape as the one NPCs briefly had - see "Fix: include NPCs in session/
+full-session export-import" in the CHANGELOG history).
+
+## Scenes tab: mirrors the Characters tab's list+detail layout, no new patterns
+
+The Scenes tab (`MainWindow.axaml`) is deliberately built from pieces
+this codebase already has, rather than inventing new UI conventions for
+what is, structurally, "another library with a detail editor":
+
+- List+detail two-column layout, `ListBox` with an inline-editable Name
+  `TextBox` and a "⋮" MenuFlyout for move-to-Shared/Session, copied from
+  the Characters tab's Character list.
+- The description field reuses the exact plain-text/Markdown-preview
+  toggle pair (`TextBox` + `mdxaml:MarkdownScrollViewer`, switched by an
+  `IsDescriptionPreviewMode` bool and a "👁"/"✎" icon button) already used
+  for NPC GM Info blocks (`NpcGmInfoBlockViewModel.IsPreviewMode`) -
+  `SceneLibraryItemViewModel` carries its own copy of that same small
+  pattern rather than factoring out a shared control, since it's only
+  used in these two places and the binding paths differ.
+- `StartDate` is edited via the existing `CalendarDateInput` control
+  through a `StartDateText` bridge property, following
+  `CalendarEntryViewModel.StartDateTimeText`'s exact precedent: invalid
+  text is left as typed until `CalendarService.Active.TryParseDateTimeText`
+  succeeds, at which point `StartDate` (the real, persisted `GameInstant`)
+  updates; edits to `StartDate` from elsewhere (e.g. on load) reformat
+  `StartDateText` the other way, guarded by an equality check to avoid
+  fighting the user while they're mid-edit.
+- The media bundle (Image/Map/Music) is three `ComboBox`es bound directly
+  to `MediaLibrary`/`MapLibrary`/`MusicLibrary` with `SelectedItem`
+  two-way bound to the Scene's own `Image`/`Map`/`Music` properties -
+  the same "pick a library item by reference" `ComboBox` pattern already
+  used for a Calendar entry's trigger media. Sounds (a list, not a single
+  reference) get a small "pick from `SoundLibrary`, then click Add" row
+  instead (`PendingSoundToAdd` + `AddPendingSoundCommand`), since a
+  `ComboBox` can't represent "add to a collection" as a `SelectedItem`
+  binding on its own.
