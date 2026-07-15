@@ -91,8 +91,10 @@ public partial class MapTokenPanelView : UserControl
         if (_map is null || _vm is null) return;
 
         var floorId = _map.Floors.FirstOrDefault()?.Id ?? Guid.Empty;
-        _map.AddOrSelectToken(linkKind, linkedId, floorId, 0, 0, _map.RemoveToken,
-            _ => _vm.NotifyMapTokensChanged(_map));
+        var token = _map.AddOrSelectToken(linkKind, linkedId, floorId, 0, 0,
+            t => { _map.RemoveToken(t); _vm.NotifyTokenRemoved(_map, t.Id); },
+            t => _vm.NotifyTokenChanged(_map, t));
+        _vm.NotifyTokenChanged(_map, token);
         TokensMutated?.Invoke();
     }
 
@@ -130,10 +132,13 @@ public partial class MapTokenPanelView : UserControl
         gearButton.Flyout = flyout;
         Grid.SetColumn(gearButton, 1);
 
-        var deleteButton = new Button
+        var deleteButton = new Button { Classes = { "iconsquare" }, Content = "✕", Width = 26, Height = 26 };
+        deleteButton.Click += (_, _) =>
         {
-            Classes = { "iconsquare" }, Content = "✕", Width = 26, Height = 26,
-            Command = token.DeleteCommand
+            var tokenId = token.Id;
+            _map!.RemoveToken(token);
+            _vm!.NotifyTokenRemoved(_map, tokenId);
+            TokensMutated?.Invoke();
         };
         Grid.SetColumn(deleteButton, 2);
 
@@ -249,7 +254,7 @@ public partial class MapTokenPanelView : UserControl
 
         void NotifyMutated()
         {
-            _vm?.NotifyMapTokensChanged(_map!);
+            _vm?.NotifyTokenChanged(_map!, token);
             TokensMutated?.Invoke();
             RenderRows();
         }
@@ -263,7 +268,7 @@ public partial class MapTokenPanelView : UserControl
         nameBox.TextChanged += (_, _) =>
         {
             token.Name = nameBox.Text ?? string.Empty;
-            _vm?.NotifyMapTokensChanged(_map!);
+            _vm?.NotifyTokenChanged(_map!, token);
         };
         var descriptionBox = new TextBox
         {
@@ -273,7 +278,7 @@ public partial class MapTokenPanelView : UserControl
         descriptionBox.TextChanged += (_, _) =>
         {
             token.Description = descriptionBox.Text ?? string.Empty;
-            _vm?.NotifyMapTokensChanged(_map!);
+            _vm?.NotifyTokenChanged(_map!, token);
         };
         panel.Children.Add(new TextBlock { Classes = { "muted" }, Text = LocalizationService.Get("MapEditor.TokenNameLabel") });
         panel.Children.Add(nameBox);
@@ -313,14 +318,14 @@ public partial class MapTokenPanelView : UserControl
             token.LinkedId = npc?.Id;
             RefreshVariants(npc);
             token.LinkedVariantId = (variantCombo.SelectedItem as NpcVariantViewModel)?.Id;
-            _vm.NotifyMapTokensChanged(_map!);
+            _vm.NotifyTokenChanged(_map!, token);
             TokensMutated?.Invoke();
             RenderRows();
         };
         variantCombo.SelectionChanged += (_, _) =>
         {
             token.LinkedVariantId = (variantCombo.SelectedItem as NpcVariantViewModel)?.Id;
-            _vm.NotifyMapTokensChanged(_map!);
+            _vm.NotifyTokenChanged(_map!, token);
         };
 
         panel.Children.Add(new TextBlock { Classes = { "muted" }, Text = LocalizationService.Get("MapEditor.CharacterLabel") });
@@ -343,7 +348,7 @@ public partial class MapTokenPanelView : UserControl
         poiCombo.SelectionChanged += (_, _) =>
         {
             token.LinkedId = (poiCombo.SelectedItem as PointOfInterestLibraryItemViewModel)?.Id;
-            _vm.NotifyMapTokensChanged(_map!);
+            _vm.NotifyTokenChanged(_map!, token);
             TokensMutated?.Invoke();
             RenderRows();
         };

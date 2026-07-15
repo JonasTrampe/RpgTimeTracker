@@ -155,7 +155,7 @@ public sealed class MapFogIntegrationTests : IDisposable
                 h => client.MapFloorImageReceived += h,
                 h => client.MapFloorImageReceived -= h);
 
-            await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor]).ConfigureAwait(false);
+            await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor], []).ConfigureAwait(false);
             var (receivedFloorId, tempPath) = await received;
 
             Assert.Equal(floorId, receivedFloorId);
@@ -179,7 +179,7 @@ public sealed class MapFogIntegrationTests : IDisposable
 
             var mapShown =
                 WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
-            await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor]).ConfigureAwait(false);
+            await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor], []).ConfigureAwait(false);
             var mapShow = await mapShown;
 
             var clientFog = FogMaskSerializer.Deserialize(Convert.FromBase64String(mapShow.Floors[0].CurrentFogBase64));
@@ -203,6 +203,44 @@ public sealed class MapFogIntegrationTests : IDisposable
     }
 
     [Fact]
+    public Task MapShow_includes_tokens_and_upsert_remove_reach_the_client()
+    {
+        return HeadlessDispatch.RunAsync(async () =>
+        {
+            var client = await StartServerAndConnectedClientAsync();
+            var floorId = Guid.NewGuid();
+            var floor = CreateFloor(floorId, [1, 2, 3], FogMask.CreateFullyHidden(4, 4, 32));
+            var tokenId = Guid.NewGuid();
+            var initialToken = new MapTokenSnapshotDto { Id = tokenId, FloorId = floorId, Name = "Goblin" };
+
+            var mapShown =
+                WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
+            await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor], [initialToken])
+                .ConfigureAwait(false);
+            var mapShow = await mapShown;
+
+            Assert.Single(mapShow.Tokens);
+            Assert.Equal("Goblin", mapShow.Tokens[0].Name);
+
+            var upserted = WaitForEvent<MapTokenSnapshotDto>(h => client.MapTokenUpsertReceived += h,
+                h => client.MapTokenUpsertReceived -= h);
+            await _server.PublishMapTokenUpsertAsync(new MapTokenSnapshotDto
+                { Id = tokenId, FloorId = floorId, Name = "Goblin (wounded)" }).ConfigureAwait(false);
+            var upsertedToken = await upserted;
+
+            Assert.Equal(tokenId, upsertedToken.Id);
+            Assert.Equal("Goblin (wounded)", upsertedToken.Name);
+
+            var removed = WaitForEvent<Guid>(h => client.MapTokenRemoveReceived += h,
+                h => client.MapTokenRemoveReceived -= h);
+            await _server.PublishMapTokenRemoveAsync(tokenId).ConfigureAwait(false);
+            var removedTokenId = await removed;
+
+            Assert.Equal(tokenId, removedTokenId);
+        });
+    }
+
+    [Fact]
     public Task Fog_reset_restores_the_starting_template()
     {
         return HeadlessDispatch.RunAsync(async () =>
@@ -214,7 +252,7 @@ public sealed class MapFogIntegrationTests : IDisposable
 
             var mapShown =
                 WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
-            await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor]).ConfigureAwait(false);
+            await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor], []).ConfigureAwait(false);
             var mapShow = await mapShown;
             var clientStartingFog =
                 FogMaskSerializer.Deserialize(Convert.FromBase64String(mapShow.Floors[0].StartingFogBase64));
@@ -277,7 +315,7 @@ public sealed class MapFogIntegrationTests : IDisposable
 
             var firstMapShow =
                 WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
-            await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor]).ConfigureAwait(false);
+            await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor], []).ConfigureAwait(false);
             await firstMapShow;
 
             // Reveal a cell - PublishMapFogUpdateAsync also updates the SERVER's own cached

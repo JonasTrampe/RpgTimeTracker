@@ -297,7 +297,7 @@ public partial class MapEditCanvasControl : UserControl
         _draggingToken = null;
         e.Handled = true;
 
-        if (_dragMoved) _vm?.NotifyMapTokensChanged(_map!);
+        if (_dragMoved) _vm?.NotifyTokenMoved(_map!, token);
         else TokenSelected?.Invoke(token);
     }
 

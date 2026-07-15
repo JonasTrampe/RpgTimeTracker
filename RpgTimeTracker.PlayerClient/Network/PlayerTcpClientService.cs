@@ -118,6 +118,8 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action<MapFogUpdateParams>? MapFogUpdateReceived;
     public event Action<Guid>? MapFogResetReceived;
     public event Action? MapHideReceived;
+    public event Action<MapTokenSnapshotDto>? MapTokenUpsertReceived;
+    public event Action<Guid>? MapTokenRemoveReceived;
     public event Action<MapRenderStyleChangedParams>? MapRenderStyleChanged;
 
     /// <summary>
@@ -580,6 +582,14 @@ public sealed class PlayerTcpClientService : IDisposable
                 case RpcMethods.MapRenderStyleChanged:
                     var renderStyle = raw.GetParams<MapRenderStyleChangedParams>();
                     if (renderStyle is not null) MapRenderStyleChanged?.Invoke(renderStyle);
+                    break;
+                case RpcMethods.MapTokenUpsert:
+                    var tokenUpsert = raw.GetParams<MapTokenSnapshotDto>();
+                    if (tokenUpsert is not null) MapTokenUpsertReceived?.Invoke(tokenUpsert);
+                    break;
+                case RpcMethods.MapTokenRemove:
+                    var tokenRemove = raw.GetParams<MapTokenRemoveParams>();
+                    if (tokenRemove is not null) MapTokenRemoveReceived?.Invoke(tokenRemove.TokenId);
                     break;
                 case RpcMethods.MusicStop:
                     MusicStopRequested?.Invoke();

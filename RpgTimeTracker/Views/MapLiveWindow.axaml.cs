@@ -78,6 +78,9 @@ public partial class MapLiveWindow : Window
         // already use - just tell them to re-render, no cell list to hand over.
         _vm.MapDisplay.NotifyFogChanged(floor.Id);
         _previewDisplay.NotifyFogChanged(floor.Id);
+        // A HiddenUntilRevealed token sitting in one of the just-painted cells may have just
+        // become visible (or hidden again) - re-evaluate just those tokens' network/preview state.
+        _vm.NotifyTokensAffectedByFogChange(_map, floor, cells);
     }
 
     /// <summary>

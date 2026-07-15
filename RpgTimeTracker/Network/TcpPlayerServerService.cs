@@ -514,13 +514,14 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     Kind=MediaKindMapFloor) followed by the map.show metadata (fog masks base64-encoded).
     ///     Caches the open state so later-connecting clients get the same full resync.
     /// </summary>
-    public async Task PublishMapShowAsync(Guid mapId, string mapName, List<OpenMapFloor> floors)
+    public async Task PublishMapShowAsync(Guid mapId, string mapName, List<OpenMapFloor> floors,
+        List<MapTokenSnapshotDto> tokens)
     {
         if (!IsRunning) return;
 
         lock (_mediaGate)
         {
-            _openMap = new OpenMapState(mapId, mapName, floors);
+            _openMap = new OpenMapState(mapId, mapName, floors, tokens);
         }
 
         ClientConnection[] clients;
@@ -529,14 +530,14 @@ public sealed class TcpPlayerServerService : IDisposable
             clients = _clients.Where(c => c.MapEnabled).ToArray();
         }
 
-        Log.Information("Map opened: {MapName} ({FloorCount} floors) to {ClientCount} client(s)",
-            mapName, floors.Count, clients.Length);
+        Log.Information("Map opened: {MapName} ({FloorCount} floors, {TokenCount} tokens) to {ClientCount} client(s)",
+            mapName, floors.Count, tokens.Count, clients.Length);
 
         await _mediaSendLock.WaitAsync().ConfigureAwait(false);
         try
         {
             foreach (var client in clients)
-                await SendMapShowToClientAsync(client, mapId, mapName, floors).ConfigureAwait(false);
+                await SendMapShowToClientAsync(client, mapId, mapName, floors, tokens).ConfigureAwait(false);
         }
         finally
         {
@@ -615,8 +616,40 @@ public sealed class TcpPlayerServerService : IDisposable
         }, c => c.MapEnabled);
     }
 
+    /// <summary>
+    ///     Adds/fully updates one map token - see RpcMethods.MapTokenUpsert's doc comment for why
+    ///     there's no separate "move" variant. Updates the cached snapshot list (replacing any
+    ///     existing entry with the same Id) so a later-connecting client's map.show resync includes
+    ///     it, exactly like PublishMapFogUpdateAsync keeps _openMap's cached fog current.
+    /// </summary>
+    public Task PublishMapTokenUpsertAsync(MapTokenSnapshotDto token)
+    {
+        lock (_mediaGate)
+        {
+            if (_openMap is null) return Task.CompletedTask;
+
+            var index = _openMap.Tokens.FindIndex(t => t.Id == token.Id);
+            if (index >= 0) _openMap.Tokens[index] = token;
+            else _openMap.Tokens.Add(token);
+        }
+
+        return BroadcastRpcAsync(RpcMethods.MapTokenUpsert, token, c => c.MapEnabled);
+    }
+
+    /// <summary>See RpcMethods.MapTokenRemove's doc comment - also covers "no longer visible".</summary>
+    public Task PublishMapTokenRemoveAsync(Guid tokenId)
+    {
+        lock (_mediaGate)
+        {
+            _openMap?.Tokens.RemoveAll(t => t.Id == tokenId);
+        }
+
+        return BroadcastRpcAsync(RpcMethods.MapTokenRemove, new MapTokenRemoveParams { TokenId = tokenId },
+            c => c.MapEnabled);
+    }
+
     private async Task SendMapShowToClientAsync(ClientConnection client, Guid mapId, string mapName,
-        List<OpenMapFloor> floors)
+        List<OpenMapFloor> floors, List<MapTokenSnapshotDto> tokens)
     {
         foreach (var floor in floors)
         {
@@ -645,7 +678,8 @@ public sealed class TcpPlayerServerService : IDisposable
                 GridHeight = f.GridHeight,
                 StartingFogBase64 = Convert.ToBase64String(FogMaskSerializer.Serialize(f.StartingFog)),
                 CurrentFogBase64 = Convert.ToBase64String(FogMaskSerializer.Serialize(f.CurrentFog))
-            }).ToList()
+            }).ToList(),
+            Tokens = tokens
         };
 
         var payload = RpcMessage.Serialize(RpcMethods.MapShow, showParams);
@@ -902,7 +936,8 @@ public sealed class TcpPlayerServerService : IDisposable
             // Full resync (all floor images + current fog), never an incremental replay - a
             // reconnecting client must never end up with a fog state that's partially stale.
             if (openMap is not null)
-                await SendMapShowToClientAsync(connection, openMap.MapId, openMap.MapName, openMap.Floors)
+                await SendMapShowToClientAsync(connection, openMap.MapId, openMap.MapName, openMap.Floors,
+                        openMap.Tokens)
                     .ConfigureAwait(false);
         }
 
@@ -1179,7 +1214,8 @@ public sealed class TcpPlayerServerService : IDisposable
             }
 
             if (openMap is not null)
-                _ = SendMapShowToClientAsync(target, openMap.MapId, openMap.MapName, openMap.Floors);
+                _ = SendMapShowToClientAsync(target, openMap.MapId, openMap.MapName, openMap.Floors,
+                    openMap.Tokens);
         }
         else
         {
@@ -1332,11 +1368,20 @@ public sealed class TcpPlayerServerService : IDisposable
         public FogMask CurrentFog { get; set; } = FogMask.CreateFullyHidden(1, 1, 32);
     }
 
-    private sealed class OpenMapState(Guid mapId, string mapName, List<OpenMapFloor> floors)
+    private sealed class OpenMapState(Guid mapId, string mapName, List<OpenMapFloor> floors,
+        List<MapTokenSnapshotDto> tokens)
     {
         public Guid MapId { get; } = mapId;
         public string MapName { get; } = mapName;
         public List<OpenMapFloor> Floors { get; } = floors;
+
+        /// <summary>
+        ///     Every token currently visible to players (already filtered/resolved by the
+        ///     caller) - kept in sync by PublishMapTokenUpsertAsync/PublishMapTokenRemoveAsync so a
+        ///     later-connecting client's resync (SendCatchUpAsync) sees the same state already-
+        ///     connected clients do.
+        /// </summary>
+        public List<MapTokenSnapshotDto> Tokens { get; } = tokens;
     }
 
     private sealed class ClientConnection : IDisposable

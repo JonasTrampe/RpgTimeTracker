@@ -23,7 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   canvas overlay with a color-coded Reveal-mode border and a full-info
   hover tooltip, and a Tokens side panel to add/link/edit/delete (link
   kind, Reveal mode, per-field player-visibility toggles, move-to-floor).
-  Network sync to PlayerClient lands in a follow-up PR.
+  Now synced live to PlayerClient (`map.tokenUpsert`/`map.tokenRemove`,
+  full resync on connect via `map.show`): the Host resolves and filters
+  each token (link data, Reveal mode vs. live fog) before it ever reaches
+  the wire, so a hidden or GM-only token's data never leaves the Host.
+  Portrait image transfer (vs. a fallback icon glyph) is deferred to a
+  follow-up.
 - **Points of Interest**: a new top-level library for non-Character map
   markers (chests, traps, signposts) - Name/GM-only Description, an icon
   (either a Media Library image or a Bootstrap icon), player-visibility

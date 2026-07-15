@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:viewModels="using:RpgTimeTracker.Shared.ViewModels"
+             xmlns:rpc="using:RpgTimeTracker.Shared.Models.Rpc"
              x:Class="RpgTimeTracker.Shared.Views.MapDisplayView"
              x:DataType="viewModels:MapDisplayViewModel">
 
@@ -28,6 +29,29 @@
                 </Image>
                 <Rectangle Fill="{Binding TintBrush}" OpacityMask="{Binding MaskBrush}"
                            IsVisible="{Binding HasFogMask}" />
+
+                <!-- Token overlay - already fully resolved/filtered by the Host (see
+                     MapTokenSnapshotDto), this side has no extra visibility logic to apply, just
+                     renders whatever's in VisibleTokens (current floor only). -->
+                <ItemsControl ItemsSource="{Binding VisibleTokens}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="rpc:MapTokenSnapshotDto">
+                            <Border Width="32" Height="32" CornerRadius="16" ClipToBounds="True"
+                                    Background="Black" BorderBrush="White" BorderThickness="2"
+                                    Canvas.Left="{Binding X}" Canvas.Top="{Binding Y}"
+                                    ToolTip.Tip="{Binding Name}">
+                                <TextBlock Text="{Binding Name}" FontSize="10" Foreground="White"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" MaxWidth="30" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </Panel>
         </Viewbox>
 

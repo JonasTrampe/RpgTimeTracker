@@ -128,6 +128,25 @@ public static class RpcMethods
     public const string MapRenderStyleChanged = "map.renderStyleChanged";
 
     /// <summary>
+    ///     Adds or fully updates one map token (#31/#33) - always the whole resolved snapshot
+    ///     (Name/Detail/IconGlyph already filtered by that token's player-visible toggles, position,
+    ///     and current floor), never a partial diff: unlike fog cells, a token's payload is tiny, so
+    ///     there's no incremental "move-only" variant - a drag, a floor reassignment, a relink, and
+    ///     a visibility-toggle change are all just another map.tokenUpsert. Also carries a token that
+    ///     just became visible (e.g. HiddenUntilRevealed, its cell was just revealed) for the first
+    ///     time - the client has no prior state to diff against either way.
+    /// </summary>
+    public const string MapTokenUpsert = "map.tokenUpsert";
+
+    /// <summary>
+    ///     Removes one map token, or - equally - tells the client a token it knew about is no
+    ///     longer visible to players (GmOnly, or HiddenUntilRevealed and its cell became hidden
+    ///     again) - the client doesn't distinguish the two cases, both just mean "stop showing this
+    ///     token".
+    /// </summary>
+    public const string MapTokenRemove = "map.tokenRemove";
+
+    /// <summary>
     ///     GM stops the currently playing music track/playlist - independent of the image/video
     ///     "current medium" slot and of sound effects, see MediaHeaderDto.MediaKindMusic.
     /// </summary>
