@@ -263,6 +263,11 @@ public static class ThemeSettingsService
         ///     library item view model) - a single flat, campaign-wide list, not
         ///     Shared-vs-SessionLocal like the libraries they tag (see Tag's doc comment).</summary>
         public List<Tag> Tags { get; set; } = [];
+
+        /// <summary>Timer-specific Tags (see TimerItemViewModel/AlarmItemViewModel/
+        ///     IntervalEventItemViewModel.TagIds) - a separate flat list from the library-wide
+        ///     Tags above, so filtering the Elementliste isn't cluttered with Media/Sound tags.</summary>
+        public List<Tag> TimerTags { get; set; } = [];
         // Property name kept as "ClientAudioPreferences" (not renamed to match the DTO type)
         // purely for JSON backward-compat - System.Text.Json round-trips by property name, so
         // renaming this would silently drop every existing user's saved Music/Sound routing

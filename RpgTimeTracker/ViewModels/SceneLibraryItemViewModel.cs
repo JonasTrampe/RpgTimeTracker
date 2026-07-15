@@ -102,6 +102,15 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
 
     public ObservableCollection<IntervalEventItemViewModel> IntervalEvents { get; } = [];
 
+    /// <summary>Same Timers/Alarms/IntervalEvents, each wrapped in a TimelineDisplayItemViewModel
+    ///     by MainWindowViewModel.AddSceneTimelineItem - lets the Scene editor reuse the exact
+    ///     same rich item template (progress bar, status, full config panel) as the global
+    ///     Elementliste instead of a stripped-down bespoke row, via the shared
+    ///     "TimelineItemTemplate" resource in MainWindow.axaml. Kept in lock-step with
+    ///     Timers/Alarms/IntervalEvents by MainWindowViewModel; this class itself never adds to it
+    ///     directly.</summary>
+    public ObservableCollection<TimelineDisplayItemViewModel> TimelineDisplayItems { get; } = [];
+
     /// <summary>See LibraryItemViewModelBase.IsSessionLocal's doc comment - same purpose here.</summary>
     public bool IsSessionLocal => Scope == LibraryScope.SessionLocal;
 

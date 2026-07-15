@@ -675,6 +675,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _usageRegistry.RegisterClearAction(ClearSceneReferencesById);
         _usageRegistry.Register(FindTagUsagesById);
         _usageRegistry.RegisterClearAction(ClearTagReferencesById);
+        _usageRegistry.Register(FindTimerTagUsagesById);
+        _usageRegistry.RegisterClearAction(ClearTimerTagReferencesById);
+        InitializeTimelineTagFiltering();
 
         // Restore the GM's last chosen calendar before anything else touches CalendarService.Active,
         // since the "start" default below and every date display already depend on it.
@@ -822,6 +825,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SceneLibrary.Add(FromSceneLibraryEntryDto(sceneEntry, LibraryScope.Shared));
 
         LoadTags(settings.Tags);
+        LoadTimerTags(settings.TimerTags);
 
         // One-time migration of old data so that nothing is lost when switching to the separate
         // sound library: (a) sounds from the old "+ add sound" settings function,

@@ -31,6 +31,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Scene-owned Timers/Alarms/Intervals now also show up in the normal
+  Elementliste (the global item list tab), not just inside the Scene
+  editor - each carries a "Scene: <name>" chip so it's clear which Scene
+  owns it, and the same rich RemainingText/Progress/status display the
+  global timeline already had. They're still Host-local/non-networked
+  (never sent to players), matching the Scene timeline's existing design.
+  The Scene editor's own timeline section was also switched from a
+  stripped-down bespoke row (Name/Duration/Start/Reset only) to the exact
+  same item template as the Elementliste, via a shared "TimelineItemTemplate"
+  resource - so the icon/color/blink/sound/trigger-media config, progress
+  bar, and tag button are all available there too, not just in the
+  Elementliste.
+- A new, separate "Timer Tags" list (Settings tab) for tagging Timers/
+  Alarms/Intervals - deliberately apart from the library-wide Tags, so
+  tagging a timer doesn't clutter that list with Media/Sound/Map/NPC/Scene
+  tags and vice versa. The Elementliste gained a tag-filter chip bar
+  (toggle any number of Timer Tags to show only items carrying at least
+  one of them) and each item's row gained a "🏷" button to assign tags,
+  mirroring the existing per-item Tags flyout. Deleting a Timer Tag clears
+  it from every item that had it, same as the library-wide Tags.
 - Scenes library (Phase 2 of the Scenes/Tags/Calendars project): a new
   `SceneLibraryItemViewModel` (Name, GM-only Markdown description with a
   preview toggle, an *optional* start date on the custom calendar via

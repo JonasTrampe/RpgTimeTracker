@@ -64,6 +64,10 @@ public class TimerDto
     ///     activates the named Scene (MainWindowViewModel.ActivateSceneById), reusing the same
     ///     orchestration as the Scenes tab's "Activate" button.</summary>
     public Guid? TargetSceneId { get; set; }
+
+    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate flat tag list from the
+    ///     library-wide Tags, so filtering the Elementliste isn't cluttered with Media/Sound tags.</summary>
+    public List<Guid> TagIds { get; set; } = [];
 }
 
 public class AlarmDto
@@ -89,6 +93,10 @@ public class AlarmDto
 
     /// <summary>See TimerDto.TargetSceneId's doc comment - same meaning here.</summary>
     public Guid? TargetSceneId { get; set; }
+
+    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate flat tag list from the
+    ///     library-wide Tags, so filtering the Elementliste isn't cluttered with Media/Sound tags.</summary>
+    public List<Guid> TagIds { get; set; } = [];
 }
 
 public class IntervalEventDto
@@ -117,6 +125,10 @@ public class IntervalEventDto
 
     /// <summary>See TimerDto.TargetSceneId's doc comment - same meaning here.</summary>
     public Guid? TargetSceneId { get; set; }
+
+    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate flat tag list from the
+    ///     library-wide Tags, so filtering the Elementliste isn't cluttered with Media/Sound tags.</summary>
+    public List<Guid> TagIds { get; set; } = [];
 }
 
 public class JumpMarkerDto

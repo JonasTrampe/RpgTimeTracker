@@ -161,6 +161,365 @@
                 </StackPanel>
             </StackPanel>
         </DataTemplate>
+
+                                                        <DataTemplate x:Key="TimelineItemTemplate" x:DataType="vm:TimelineDisplayItemViewModel">
+                                                            <Border Classes="item"
+                                                                    Classes.completed="{Binding IsCompleted}"
+                                                                    Classes.pulse="{Binding IsActive}"
+                                                                    Classes.blink="{Binding IsBlinkActive}">
+                                                                <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                                                                      ColumnDefinitions="Auto,*,Auto">
+                                                                    <Border Grid.Row="0" Grid.RowSpan="3"
+                                                                            Grid.Column="0"
+                                                                            Width="8" CornerRadius="4"
+                                                                            Margin="0,0,10,0"
+                                                                            Background="{Binding ItemBorderBrush}" />
+
+                                                                    <StackPanel Grid.Row="0" Grid.Column="1"
+                                                                            Orientation="Horizontal" Spacing="10">
+                                                                        <PathIcon Data="{Binding IconGeometry}"
+                                                                                Width="20" Height="20"
+                                                                                Foreground="{DynamicResource TextBrush}"
+                                                                                PointerPressed="OnTimelineIconPointerPressed"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Common.IconPickerTooltip}" />
+                                                                        <TextBlock Text="{Binding Name}"
+                                                                                FontWeight="Bold"
+                                                                                VerticalAlignment="Center" />
+                                                                        <Border Classes="dataChip" Height="28"
+                                                                                Padding="8,3">
+                                                                            <TextBlock Text="{Binding KindLabel}"
+                                                                                    Classes="muted" />
+                                                                        </Border>
+                                                                        <Border Classes="dataChip" Height="28"
+                                                                                Padding="8,3"
+                                                                                IsVisible="{Binding IsSceneOwned}">
+                                                                            <TextBlock Text="{Binding OwningSceneLabel}"
+                                                                                    Classes="muted" />
+                                                                        </Border>
+                                                                        <TextBlock
+                                                                            Text="{DynamicResource MainWindow.ItemList.SlOnlyLabel}"
+                                                                            Foreground="{DynamicResource WarnBrush}"
+                                                                            VerticalAlignment="Center"
+                                                                            IsVisible="{Binding IsSlOnly}" />
+                                                                        <TextBlock Text="{Binding StatusText}"
+                                                                                Foreground="{DynamicResource OkBrush}"
+                                                                                VerticalAlignment="Center" />
+                                                                    </StackPanel>
+
+                                                                    <StackPanel Grid.Row="0" Grid.Column="2"
+                                                                            Orientation="Horizontal" Spacing="6">
+                                                                        <Button Content="{Binding StartPauseLabel}"
+                                                                                Command="{Binding ToggleRunCommand}"
+                                                                                IsVisible="{Binding CanStartPause}" />
+                                                                        <Button
+                                                                            Content="{DynamicResource MainWindow.ItemList.ResetButton}"
+                                                                            Command="{Binding ResetCommand}"
+                                                                            IsVisible="{Binding CanReset}" />
+                                                                        <Button
+                                                                            Content="{DynamicResource MainWindow.ItemList.ConfirmButton}"
+                                                                            Command="{Binding DismissCommand}"
+                                                                            IsVisible="{Binding CanDismiss}" />
+                                                                        <Button
+                                                                            Content="{DynamicResource MainWindow.ItemList.SettingsButton}"
+                                                                            Command="{Binding ToggleConfigCommand}" />
+                                                                        <Button Classes="iconsquare" Content="🏷"
+                                                                                Width="22" Height="22" FontSize="11"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Library.TagsTooltip}">
+                                                                            <Button.Flyout>
+                                                                                <Flyout Placement="Bottom">
+                                                                                    <controls:TagSelectorFlyout
+                                                                                        AllTags="{Binding $parent[Window].DataContext.TimerTags}"
+                                                                                        AssignedTagIds="{Binding TagIds}"
+                                                                                        CreateTagCommand="{Binding $parent[Window].DataContext.CreateTimerTagCommand}" />
+                                                                                </Flyout>
+                                                                            </Button.Flyout>
+                                                                        </Button>
+                                                                        <Button Classes="iconsquare" Content="&#10005;"
+                                                                                Command="{Binding DeleteCommand}" />
+                                                                    </StackPanel>
+
+                                                                    <StackPanel Grid.Row="1" Grid.Column="1"
+                                                                            Grid.ColumnSpan="2"
+                                                                            Orientation="Horizontal" Spacing="12"
+                                                                            Margin="0,8,0,0">
+                                                                        <TextBlock Classes="timeInline"
+                                                                                Text="{Binding PrimaryValue}"
+                                                                                MinWidth="130" />
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="{Binding DetailText}" />
+                                                                        <TextBlock Text="{Binding ErrorMessage}"
+                                                                                Foreground="{DynamicResource WarnBrush}"
+                                                                                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                                    </StackPanel>
+
+                                                                    <Border Grid.Row="2" Grid.Column="1"
+                                                                            Grid.ColumnSpan="2"
+                                                                            IsVisible="{Binding IsConfigVisible}"
+                                                                            Background="{DynamicResource TextInputHeaderBrush}"
+                                                                            BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                            BorderThickness="1"
+                                                                            CornerRadius="6"
+                                                                            Padding="10"
+                                                                            Margin="0,10,0,0">
+                                                                        <StackPanel Spacing="12">
+                                                                            <Border
+                                                                                Background="{DynamicResource SurfaceBrush}"
+                                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                BorderThickness="1"
+                                                                                CornerRadius="6"
+                                                                                Padding="10">
+                                                                                <Grid
+                                                                                    ColumnDefinitions="Auto,*,Auto,Auto"
+                                                                                    RowDefinitions="Auto,Auto">
+                                                                                    <TextBlock Grid.Row="0"
+                                                                                        Grid.Column="0" Classes="muted"
+                                                                                        Text="{DynamicResource MainWindow.Common.Name}"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Margin="0,0,10,8" />
+                                                                                    <TextBox Grid.Row="0"
+                                                                                        Grid.Column="1"
+                                                                                        Text="{Binding EditName, Mode=TwoWay}"
+                                                                                        MinWidth="220"
+                                                                                        Margin="0,0,12,8" />
+                                                                                    <TextBlock Grid.Row="0"
+                                                                                        Grid.Column="2" Classes="muted"
+                                                                                        Text="{DynamicResource MainWindow.ItemList.SoundLabel}"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Margin="0,0,10,8" />
+                                                                                    <StackPanel Grid.Row="0"
+                                                                                        Grid.Column="3"
+                                                                                        Orientation="Horizontal"
+                                                                                        Spacing="6" Margin="0,0,0,8">
+                                                                                        <ComboBox
+                                                                                            ItemsSource="{Binding SoundOptions}"
+                                                                                            SelectedItem="{Binding EditSound, Mode=TwoWay}"
+                                                                                            Width="150">
+                                                                                            <ComboBox.ItemTemplate>
+                                                                                                <DataTemplate>
+                                                                                                    <TextBlock
+                                                                                                        Text="{Binding Converter={x:Static conv:SoundDisplayNameConverter.Instance}}" />
+                                                                                                </DataTemplate>
+                                                                                            </ComboBox.ItemTemplate>
+                                                                                        </ComboBox>
+                                                                                        <NumericUpDown
+                                                                                            Value="{Binding EditSoundRepeatCount, Mode=TwoWay}"
+                                                                                            Minimum="0" Maximum="20"
+                                                                                            FormatString="0"
+                                                                                            Width="120"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.ItemList.SoundRepeatTooltip}" />
+                                                                                    </StackPanel>
+
+                                                                                    <TextBlock Grid.Row="1"
+                                                                                        Grid.Column="0" Classes="muted"
+                                                                                        Text="{DynamicResource MainWindow.Common.Color}"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Margin="0,0,10,0" />
+                                                                                    <ColorPicker Grid.Row="1"
+                                                                                        Grid.Column="1"
+                                                                                        Color="{Binding EditColorHex, Mode=TwoWay, Converter={x:Static conv:HexColorConverter.Instance}}"
+                                                                                        HorizontalAlignment="Left" />
+                                                                                    <StackPanel Grid.Row="1"
+                                                                                        Grid.Column="2"
+                                                                                        Grid.ColumnSpan="2"
+                                                                                        Orientation="Horizontal"
+                                                                                        Spacing="12">
+                                                                                        <CheckBox
+                                                                                            Content="{DynamicResource MainWindow.ItemList.BlinkCheckbox}"
+                                                                                            IsChecked="{Binding EditBlink, Mode=TwoWay}"
+                                                                                            VerticalAlignment="Center" />
+                                                                                        <CheckBox
+                                                                                            Content="{DynamicResource MainWindow.ItemList.PlayerVisibleCheckbox}"
+                                                                                            IsChecked="{Binding EditIsPlayerVisible, Mode=TwoWay}"
+                                                                                            VerticalAlignment="Center" />
+                                                                                    </StackPanel>
+                                                                                </Grid>
+                                                                            </Border>
+
+                                                                            <Border IsVisible="{Binding IsTimer}"
+                                                                                    Background="{DynamicResource SurfaceBrush}"
+                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                    BorderThickness="1"
+                                                                                    CornerRadius="6" Padding="10">
+                                                                                <Grid ColumnDefinitions="Auto,Auto,*">
+                                                                                    <TextBlock Grid.Column="0"
+                                                                                        Classes="muted"
+                                                                                        Text="{DynamicResource MainWindow.Common.Duration}"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Margin="0,0,10,0" />
+                                                                                    <controls:TimeSpanInput
+                                                                                        Grid.Column="1"
+                                                                                        Text="{Binding DurationText, Mode=TwoWay}"
+                                                                                        LimitDays="120"
+                                                                                        LimitHours="23"
+                                                                                        LimitMinutes="59"
+                                                                                        LimitSeconds="59" />
+                                                                                    <TextBlock Grid.Column="2"
+                                                                                        Classes="muted"
+                                                                                        Text="{DynamicResource MainWindow.ItemList.DurationUnitsHint}"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Margin="10,0,0,0" />
+                                                                                </Grid>
+                                                                            </Border>
+
+                                                                            <Border IsVisible="{Binding IsAlarm}"
+                                                                                    Background="{DynamicResource SurfaceBrush}"
+                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                    BorderThickness="1"
+                                                                                    CornerRadius="6" Padding="10">
+                                                                                <StackPanel Spacing="8">
+                                                                                    <Grid
+                                                                                        ColumnDefinitions="Auto,Auto,*">
+                                                                                        <TextBlock Grid.Column="0"
+                                                                                            Classes="muted"
+                                                                                            Text="{DynamicResource MainWindow.Common.TargetTime}"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="0,0,10,0" />
+                                                                                        <controls:CalendarDateInput
+                                                                                            Grid.Column="1"
+                                                                                            Text="{Binding TriggerAtDateTimeText, Mode=TwoWay}" />
+                                                                                        <TextBlock Grid.Column="2"
+                                                                                            Classes="muted"
+                                                                                            Text="{DynamicResource MainWindow.ItemList.MouseWheelHint}"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="10,0,0,0" />
+                                                                                    </Grid>
+                                                                                    <Grid
+                                                                                        ColumnDefinitions="Auto,Auto,*">
+                                                                                        <TextBlock Grid.Column="0"
+                                                                                            Classes="muted"
+                                                                                            Text="{DynamicResource MainWindow.Common.Repeat}"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="0,0,10,0" />
+                                                                                        <controls:TimeSpanInput
+                                                                                            Grid.Column="1"
+                                                                                            Text="{Binding RepeatIntervalTextEdit, Mode=TwoWay}"
+                                                                                            AllowEmpty="True"
+                                                                                            LimitDays="120"
+                                                                                            LimitHours="23"
+                                                                                            LimitMinutes="59"
+                                                                                            LimitSeconds="59" />
+                                                                                        <TextBlock Grid.Column="2"
+                                                                                            Classes="muted"
+                                                                                            Text="{DynamicResource MainWindow.Common.OnceIfEmpty}"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="10,0,0,0" />
+                                                                                    </Grid>
+                                                                                </StackPanel>
+                                                                            </Border>
+
+                                                                            <Border IsVisible="{Binding IsInterval}"
+                                                                                    Background="{DynamicResource SurfaceBrush}"
+                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                    BorderThickness="1"
+                                                                                    CornerRadius="6" Padding="10">
+                                                                                <StackPanel Spacing="8">
+                                                                                    <Grid
+                                                                                        ColumnDefinitions="Auto,Auto,Auto,Auto,*">
+                                                                                        <TextBlock Grid.Column="0"
+                                                                                            Classes="muted"
+                                                                                            Text="{DynamicResource MainWindow.Common.Every}"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="0,0,10,0" />
+                                                                                        <controls:TimeSpanInput
+                                                                                            Grid.Column="1"
+                                                                                            Text="{Binding IntervalText, Mode=TwoWay}"
+                                                                                            LimitDays="120"
+                                                                                            LimitHours="23"
+                                                                                            LimitMinutes="59"
+                                                                                            LimitSeconds="59" />
+                                                                                        <TextBlock Grid.Column="2"
+                                                                                            Classes="muted"
+                                                                                            Text="{DynamicResource MainWindow.ItemList.ActiveForLabelLower}"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="18,0,10,0" />
+                                                                                        <controls:TimeSpanInput
+                                                                                            Grid.Column="3"
+                                                                                            Text="{Binding ActiveDurationText, Mode=TwoWay}"
+                                                                                            LimitDays="120"
+                                                                                            LimitHours="23"
+                                                                                            LimitMinutes="59"
+                                                                                            LimitSeconds="59" />
+                                                                                    </Grid>
+                                                                                    <Grid
+                                                                                        ColumnDefinitions="Auto,100,*">
+                                                                                        <TextBlock Grid.Column="0"
+                                                                                            Classes="muted"
+                                                                                            Text="{DynamicResource MainWindow.Common.Max}"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="0,0,10,0" />
+                                                                                        <TextBox Grid.Column="1"
+                                                                                            Text="{Binding MaxRepeatsText, Mode=TwoWay}"
+                                                                                            PlaceholderText="∞" />
+                                                                                        <TextBlock Grid.Column="2"
+                                                                                            Classes="muted"
+                                                                                            Text="{DynamicResource MainWindow.Common.EmptyOrZeroUnlimited}"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="10,0,0,0" />
+                                                                                    </Grid>
+                                                                                </StackPanel>
+                                                                            </Border>
+
+                                                                            <Border
+                                                                                Background="{DynamicResource SurfaceBrush}"
+                                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                BorderThickness="1" CornerRadius="6"
+                                                                                Padding="10">
+                                                                                <StackPanel Spacing="6">
+                                                                                    <TextBlock Classes="muted"
+                                                                                        Text="{DynamicResource MainWindow.TriggerMedia.TriggerDescription}"
+                                                                                        TextWrapping="Wrap" />
+                                                                                    <Grid
+                                                                                        ColumnDefinitions="Auto,Auto,*,Auto">
+                                                                                        <Button Grid.Column="0"
+                                                                                            Content="{DynamicResource MainWindow.TriggerMedia.ChooseFromLibrary}"
+                                                                                            Click="OnChooseItemTriggerMediaClick"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ChooseTooltip}" />
+                                                                                        <TextBlock Grid.Column="2"
+                                                                                            Classes="muted"
+                                                                                            Text="{Binding TriggerMedia.FileName}"
+                                                                                            VerticalAlignment="Center"
+                                                                                            Margin="8,0"
+                                                                                            TextTrimming="CharacterEllipsis" />
+                                                                                        <Button Grid.Column="3"
+                                                                                            Classes="iconsquare"
+                                                                                            Content="&#10005;"
+                                                                                            Command="{Binding TriggerMedia.ClearCommand}"
+                                                                                            IsVisible="{Binding TriggerMedia.HasMedia}"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ClearTooltip}" />
+                                                                                    </Grid>
+                                                                                    <StackPanel
+                                                                                        Orientation="Horizontal"
+                                                                                        Spacing="12"
+                                                                                        IsVisible="{Binding TriggerMedia.HasMedia}">
+                                                                                        <CheckBox
+                                                                                            Content="{DynamicResource MainWindow.TriggerMedia.FullscreenCheckbox}"
+                                                                                            IsChecked="{Binding TriggerMedia.Fullscreen}" />
+                                                                                        <CheckBox
+                                                                                            Content="{DynamicResource MainWindow.TriggerMedia.PauseClockCheckbox}"
+                                                                                            IsChecked="{Binding TriggerMedia.PauseClockDuringVideo}"
+                                                                                            IsVisible="{Binding TriggerMedia.IsVideo}" />
+                                                                                    </StackPanel>
+                                                                                </StackPanel>
+                                                                            </Border>
+
+                                                                            <Button Classes="primary"
+                                                                                    Content="{DynamicResource MainWindow.ItemList.ApplyChangesButton}"
+                                                                                    Command="{Binding ApplyEditsCommand}"
+                                                                                    HorizontalAlignment="Right"
+                                                                                    MinWidth="230" />
+                                                                        </StackPanel>
+                                                                    </Border>
+
+                                                                    <ProgressBar Grid.Row="3" Grid.Column="1"
+                                                                            Grid.ColumnSpan="2"
+                                                                            Classes="timerbar"
+                                                                            IsVisible="{Binding HasProgress}"
+                                                                            Minimum="0" Maximum="1"
+                                                                            Value="{Binding Progress}" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+
     </Window.Resources>
 
     <Window.Styles>
@@ -907,363 +1266,40 @@
                                     <TabItem Header="{DynamicResource MainWindow.Tabs.ItemList}">
                                         <DockPanel LastChildFill="True">
                                             <Border Classes="sectionheader" DockPanel.Dock="Top">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <TextBlock Grid.Column="0" Classes="h2"
-                                                               Text="{DynamicResource MainWindow.ItemList.SharedTimelineHeader}" />
-                                                    <Button Grid.Column="1"
-                                                            Classes="primary"
-                                                            Content="{Binding NextEventJumpLabel}"
-                                                            Command="{Binding JumpToNextEventCommand}"
-                                                            VerticalAlignment="Center" />
-                                                </Grid>
+                                                <StackPanel Spacing="8">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Grid.Column="0" Classes="h2"
+                                                                   Text="{DynamicResource MainWindow.ItemList.SharedTimelineHeader}" />
+                                                        <Button Grid.Column="1"
+                                                                Classes="primary"
+                                                                Content="{Binding NextEventJumpLabel}"
+                                                                Command="{Binding JumpToNextEventCommand}"
+                                                                VerticalAlignment="Center" />
+                                                    </Grid>
+                                                    <ItemsControl ItemsSource="{Binding TimerTagFilterOptions}"
+                                                                  IsVisible="{Binding !HasNoTimerTagFilterOptions}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal" />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:TagFilterOptionViewModel">
+                                                                <ToggleButton Content="{Binding Tag.Name}"
+                                                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                                              Margin="0,0,6,6"
+                                                                              Padding="8,3" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
                                             </Border>
 
                                             <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                                           AllowAutoHide="false">
-                                                <ItemsControl ItemsSource="{Binding TimelineItems}"
-                                                              Margin="16,14,16,16">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:TimelineDisplayItemViewModel">
-                                                            <Border Classes="item"
-                                                                    Classes.completed="{Binding IsCompleted}"
-                                                                    Classes.pulse="{Binding IsActive}"
-                                                                    Classes.blink="{Binding IsBlinkActive}">
-                                                                <Grid RowDefinitions="Auto,Auto,Auto,Auto"
-                                                                      ColumnDefinitions="Auto,*,Auto">
-                                                                    <Border Grid.Row="0" Grid.RowSpan="3"
-                                                                            Grid.Column="0"
-                                                                            Width="8" CornerRadius="4"
-                                                                            Margin="0,0,10,0"
-                                                                            Background="{Binding ItemBorderBrush}" />
-
-                                                                    <StackPanel Grid.Row="0" Grid.Column="1"
-                                                                            Orientation="Horizontal" Spacing="10">
-                                                                        <PathIcon Data="{Binding IconGeometry}"
-                                                                                Width="20" Height="20"
-                                                                                Foreground="{DynamicResource TextBrush}"
-                                                                                PointerPressed="OnTimelineIconPointerPressed"
-                                                                                ToolTip.Tip="{DynamicResource MainWindow.Common.IconPickerTooltip}" />
-                                                                        <TextBlock Text="{Binding Name}"
-                                                                                FontWeight="Bold"
-                                                                                VerticalAlignment="Center" />
-                                                                        <Border Classes="dataChip" Height="28"
-                                                                                Padding="8,3">
-                                                                            <TextBlock Text="{Binding KindLabel}"
-                                                                                    Classes="muted" />
-                                                                        </Border>
-                                                                        <TextBlock
-                                                                            Text="{DynamicResource MainWindow.ItemList.SlOnlyLabel}"
-                                                                            Foreground="{DynamicResource WarnBrush}"
-                                                                            VerticalAlignment="Center"
-                                                                            IsVisible="{Binding IsSlOnly}" />
-                                                                        <TextBlock Text="{Binding StatusText}"
-                                                                                Foreground="{DynamicResource OkBrush}"
-                                                                                VerticalAlignment="Center" />
-                                                                    </StackPanel>
-
-                                                                    <StackPanel Grid.Row="0" Grid.Column="2"
-                                                                            Orientation="Horizontal" Spacing="6">
-                                                                        <Button Content="{Binding StartPauseLabel}"
-                                                                                Command="{Binding ToggleRunCommand}"
-                                                                                IsVisible="{Binding CanStartPause}" />
-                                                                        <Button
-                                                                            Content="{DynamicResource MainWindow.ItemList.ResetButton}"
-                                                                            Command="{Binding ResetCommand}"
-                                                                            IsVisible="{Binding CanReset}" />
-                                                                        <Button
-                                                                            Content="{DynamicResource MainWindow.ItemList.ConfirmButton}"
-                                                                            Command="{Binding DismissCommand}"
-                                                                            IsVisible="{Binding CanDismiss}" />
-                                                                        <Button
-                                                                            Content="{DynamicResource MainWindow.ItemList.SettingsButton}"
-                                                                            Command="{Binding ToggleConfigCommand}" />
-                                                                        <Button Classes="iconsquare" Content="&#10005;"
-                                                                                Command="{Binding DeleteCommand}" />
-                                                                    </StackPanel>
-
-                                                                    <StackPanel Grid.Row="1" Grid.Column="1"
-                                                                            Grid.ColumnSpan="2"
-                                                                            Orientation="Horizontal" Spacing="12"
-                                                                            Margin="0,8,0,0">
-                                                                        <TextBlock Classes="timeInline"
-                                                                                Text="{Binding PrimaryValue}"
-                                                                                MinWidth="130" />
-                                                                        <TextBlock Classes="muted"
-                                                                                Text="{Binding DetailText}" />
-                                                                        <TextBlock Text="{Binding ErrorMessage}"
-                                                                                Foreground="{DynamicResource WarnBrush}"
-                                                                                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                                                                    </StackPanel>
-
-                                                                    <Border Grid.Row="2" Grid.Column="1"
-                                                                            Grid.ColumnSpan="2"
-                                                                            IsVisible="{Binding IsConfigVisible}"
-                                                                            Background="{DynamicResource TextInputHeaderBrush}"
-                                                                            BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                            BorderThickness="1"
-                                                                            CornerRadius="6"
-                                                                            Padding="10"
-                                                                            Margin="0,10,0,0">
-                                                                        <StackPanel Spacing="12">
-                                                                            <Border
-                                                                                Background="{DynamicResource SurfaceBrush}"
-                                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                                BorderThickness="1"
-                                                                                CornerRadius="6"
-                                                                                Padding="10">
-                                                                                <Grid
-                                                                                    ColumnDefinitions="Auto,*,Auto,Auto"
-                                                                                    RowDefinitions="Auto,Auto">
-                                                                                    <TextBlock Grid.Row="0"
-                                                                                        Grid.Column="0" Classes="muted"
-                                                                                        Text="{DynamicResource MainWindow.Common.Name}"
-                                                                                        VerticalAlignment="Center"
-                                                                                        Margin="0,0,10,8" />
-                                                                                    <TextBox Grid.Row="0"
-                                                                                        Grid.Column="1"
-                                                                                        Text="{Binding EditName, Mode=TwoWay}"
-                                                                                        MinWidth="220"
-                                                                                        Margin="0,0,12,8" />
-                                                                                    <TextBlock Grid.Row="0"
-                                                                                        Grid.Column="2" Classes="muted"
-                                                                                        Text="{DynamicResource MainWindow.ItemList.SoundLabel}"
-                                                                                        VerticalAlignment="Center"
-                                                                                        Margin="0,0,10,8" />
-                                                                                    <StackPanel Grid.Row="0"
-                                                                                        Grid.Column="3"
-                                                                                        Orientation="Horizontal"
-                                                                                        Spacing="6" Margin="0,0,0,8">
-                                                                                        <ComboBox
-                                                                                            ItemsSource="{Binding SoundOptions}"
-                                                                                            SelectedItem="{Binding EditSound, Mode=TwoWay}"
-                                                                                            Width="150">
-                                                                                            <ComboBox.ItemTemplate>
-                                                                                                <DataTemplate>
-                                                                                                    <TextBlock
-                                                                                                        Text="{Binding Converter={x:Static conv:SoundDisplayNameConverter.Instance}}" />
-                                                                                                </DataTemplate>
-                                                                                            </ComboBox.ItemTemplate>
-                                                                                        </ComboBox>
-                                                                                        <NumericUpDown
-                                                                                            Value="{Binding EditSoundRepeatCount, Mode=TwoWay}"
-                                                                                            Minimum="0" Maximum="20"
-                                                                                            FormatString="0"
-                                                                                            Width="120"
-                                                                                            ToolTip.Tip="{DynamicResource MainWindow.ItemList.SoundRepeatTooltip}" />
-                                                                                    </StackPanel>
-
-                                                                                    <TextBlock Grid.Row="1"
-                                                                                        Grid.Column="0" Classes="muted"
-                                                                                        Text="{DynamicResource MainWindow.Common.Color}"
-                                                                                        VerticalAlignment="Center"
-                                                                                        Margin="0,0,10,0" />
-                                                                                    <ColorPicker Grid.Row="1"
-                                                                                        Grid.Column="1"
-                                                                                        Color="{Binding EditColorHex, Mode=TwoWay, Converter={x:Static conv:HexColorConverter.Instance}}"
-                                                                                        HorizontalAlignment="Left" />
-                                                                                    <StackPanel Grid.Row="1"
-                                                                                        Grid.Column="2"
-                                                                                        Grid.ColumnSpan="2"
-                                                                                        Orientation="Horizontal"
-                                                                                        Spacing="12">
-                                                                                        <CheckBox
-                                                                                            Content="{DynamicResource MainWindow.ItemList.BlinkCheckbox}"
-                                                                                            IsChecked="{Binding EditBlink, Mode=TwoWay}"
-                                                                                            VerticalAlignment="Center" />
-                                                                                        <CheckBox
-                                                                                            Content="{DynamicResource MainWindow.ItemList.PlayerVisibleCheckbox}"
-                                                                                            IsChecked="{Binding EditIsPlayerVisible, Mode=TwoWay}"
-                                                                                            VerticalAlignment="Center" />
-                                                                                    </StackPanel>
-                                                                                </Grid>
-                                                                            </Border>
-
-                                                                            <Border IsVisible="{Binding IsTimer}"
-                                                                                    Background="{DynamicResource SurfaceBrush}"
-                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                                    BorderThickness="1"
-                                                                                    CornerRadius="6" Padding="10">
-                                                                                <Grid ColumnDefinitions="Auto,Auto,*">
-                                                                                    <TextBlock Grid.Column="0"
-                                                                                        Classes="muted"
-                                                                                        Text="{DynamicResource MainWindow.Common.Duration}"
-                                                                                        VerticalAlignment="Center"
-                                                                                        Margin="0,0,10,0" />
-                                                                                    <controls:TimeSpanInput
-                                                                                        Grid.Column="1"
-                                                                                        Text="{Binding DurationText, Mode=TwoWay}"
-                                                                                        LimitDays="120"
-                                                                                        LimitHours="23"
-                                                                                        LimitMinutes="59"
-                                                                                        LimitSeconds="59" />
-                                                                                    <TextBlock Grid.Column="2"
-                                                                                        Classes="muted"
-                                                                                        Text="{DynamicResource MainWindow.ItemList.DurationUnitsHint}"
-                                                                                        VerticalAlignment="Center"
-                                                                                        Margin="10,0,0,0" />
-                                                                                </Grid>
-                                                                            </Border>
-
-                                                                            <Border IsVisible="{Binding IsAlarm}"
-                                                                                    Background="{DynamicResource SurfaceBrush}"
-                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                                    BorderThickness="1"
-                                                                                    CornerRadius="6" Padding="10">
-                                                                                <StackPanel Spacing="8">
-                                                                                    <Grid
-                                                                                        ColumnDefinitions="Auto,Auto,*">
-                                                                                        <TextBlock Grid.Column="0"
-                                                                                            Classes="muted"
-                                                                                            Text="{DynamicResource MainWindow.Common.TargetTime}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="0,0,10,0" />
-                                                                                        <controls:CalendarDateInput
-                                                                                            Grid.Column="1"
-                                                                                            Text="{Binding TriggerAtDateTimeText, Mode=TwoWay}" />
-                                                                                        <TextBlock Grid.Column="2"
-                                                                                            Classes="muted"
-                                                                                            Text="{DynamicResource MainWindow.ItemList.MouseWheelHint}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="10,0,0,0" />
-                                                                                    </Grid>
-                                                                                    <Grid
-                                                                                        ColumnDefinitions="Auto,Auto,*">
-                                                                                        <TextBlock Grid.Column="0"
-                                                                                            Classes="muted"
-                                                                                            Text="{DynamicResource MainWindow.Common.Repeat}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="0,0,10,0" />
-                                                                                        <controls:TimeSpanInput
-                                                                                            Grid.Column="1"
-                                                                                            Text="{Binding RepeatIntervalTextEdit, Mode=TwoWay}"
-                                                                                            AllowEmpty="True"
-                                                                                            LimitDays="120"
-                                                                                            LimitHours="23"
-                                                                                            LimitMinutes="59"
-                                                                                            LimitSeconds="59" />
-                                                                                        <TextBlock Grid.Column="2"
-                                                                                            Classes="muted"
-                                                                                            Text="{DynamicResource MainWindow.Common.OnceIfEmpty}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="10,0,0,0" />
-                                                                                    </Grid>
-                                                                                </StackPanel>
-                                                                            </Border>
-
-                                                                            <Border IsVisible="{Binding IsInterval}"
-                                                                                    Background="{DynamicResource SurfaceBrush}"
-                                                                                    BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                                    BorderThickness="1"
-                                                                                    CornerRadius="6" Padding="10">
-                                                                                <StackPanel Spacing="8">
-                                                                                    <Grid
-                                                                                        ColumnDefinitions="Auto,Auto,Auto,Auto,*">
-                                                                                        <TextBlock Grid.Column="0"
-                                                                                            Classes="muted"
-                                                                                            Text="{DynamicResource MainWindow.Common.Every}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="0,0,10,0" />
-                                                                                        <controls:TimeSpanInput
-                                                                                            Grid.Column="1"
-                                                                                            Text="{Binding IntervalText, Mode=TwoWay}"
-                                                                                            LimitDays="120"
-                                                                                            LimitHours="23"
-                                                                                            LimitMinutes="59"
-                                                                                            LimitSeconds="59" />
-                                                                                        <TextBlock Grid.Column="2"
-                                                                                            Classes="muted"
-                                                                                            Text="{DynamicResource MainWindow.ItemList.ActiveForLabelLower}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="18,0,10,0" />
-                                                                                        <controls:TimeSpanInput
-                                                                                            Grid.Column="3"
-                                                                                            Text="{Binding ActiveDurationText, Mode=TwoWay}"
-                                                                                            LimitDays="120"
-                                                                                            LimitHours="23"
-                                                                                            LimitMinutes="59"
-                                                                                            LimitSeconds="59" />
-                                                                                    </Grid>
-                                                                                    <Grid
-                                                                                        ColumnDefinitions="Auto,100,*">
-                                                                                        <TextBlock Grid.Column="0"
-                                                                                            Classes="muted"
-                                                                                            Text="{DynamicResource MainWindow.Common.Max}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="0,0,10,0" />
-                                                                                        <TextBox Grid.Column="1"
-                                                                                            Text="{Binding MaxRepeatsText, Mode=TwoWay}"
-                                                                                            PlaceholderText="∞" />
-                                                                                        <TextBlock Grid.Column="2"
-                                                                                            Classes="muted"
-                                                                                            Text="{DynamicResource MainWindow.Common.EmptyOrZeroUnlimited}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="10,0,0,0" />
-                                                                                    </Grid>
-                                                                                </StackPanel>
-                                                                            </Border>
-
-                                                                            <Border
-                                                                                Background="{DynamicResource SurfaceBrush}"
-                                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
-                                                                                BorderThickness="1" CornerRadius="6"
-                                                                                Padding="10">
-                                                                                <StackPanel Spacing="6">
-                                                                                    <TextBlock Classes="muted"
-                                                                                        Text="{DynamicResource MainWindow.TriggerMedia.TriggerDescription}"
-                                                                                        TextWrapping="Wrap" />
-                                                                                    <Grid
-                                                                                        ColumnDefinitions="Auto,Auto,*,Auto">
-                                                                                        <Button Grid.Column="0"
-                                                                                            Content="{DynamicResource MainWindow.TriggerMedia.ChooseFromLibrary}"
-                                                                                            Click="OnChooseItemTriggerMediaClick"
-                                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ChooseTooltip}" />
-                                                                                        <TextBlock Grid.Column="2"
-                                                                                            Classes="muted"
-                                                                                            Text="{Binding TriggerMedia.FileName}"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="8,0"
-                                                                                            TextTrimming="CharacterEllipsis" />
-                                                                                        <Button Grid.Column="3"
-                                                                                            Classes="iconsquare"
-                                                                                            Content="&#10005;"
-                                                                                            Command="{Binding TriggerMedia.ClearCommand}"
-                                                                                            IsVisible="{Binding TriggerMedia.HasMedia}"
-                                                                                            ToolTip.Tip="{DynamicResource MainWindow.TriggerMedia.ClearTooltip}" />
-                                                                                    </Grid>
-                                                                                    <StackPanel
-                                                                                        Orientation="Horizontal"
-                                                                                        Spacing="12"
-                                                                                        IsVisible="{Binding TriggerMedia.HasMedia}">
-                                                                                        <CheckBox
-                                                                                            Content="{DynamicResource MainWindow.TriggerMedia.FullscreenCheckbox}"
-                                                                                            IsChecked="{Binding TriggerMedia.Fullscreen}" />
-                                                                                        <CheckBox
-                                                                                            Content="{DynamicResource MainWindow.TriggerMedia.PauseClockCheckbox}"
-                                                                                            IsChecked="{Binding TriggerMedia.PauseClockDuringVideo}"
-                                                                                            IsVisible="{Binding TriggerMedia.IsVideo}" />
-                                                                                    </StackPanel>
-                                                                                </StackPanel>
-                                                                            </Border>
-
-                                                                            <Button Classes="primary"
-                                                                                    Content="{DynamicResource MainWindow.ItemList.ApplyChangesButton}"
-                                                                                    Command="{Binding ApplyEditsCommand}"
-                                                                                    HorizontalAlignment="Right"
-                                                                                    MinWidth="230" />
-                                                                        </StackPanel>
-                                                                    </Border>
-
-                                                                    <ProgressBar Grid.Row="3" Grid.Column="1"
-                                                                            Grid.ColumnSpan="2"
-                                                                            Classes="timerbar"
-                                                                            IsVisible="{Binding HasProgress}"
-                                                                            Minimum="0" Maximum="1"
-                                                                            Value="{Binding Progress}" />
-                                                                </Grid>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
+                                                <ItemsControl ItemsSource="{Binding FilteredTimelineItems}"
+                                                              Margin="16,14,16,16"
+                                                              ItemTemplate="{StaticResource TimelineItemTemplate}" />
                                             </ScrollViewer>
                                         </DockPanel>
                                     </TabItem>
@@ -2534,7 +2570,7 @@
                                                                             </ComboBox.ItemTemplate>
                                                                         </ComboBox>
                                                                         <Button Grid.Column="1"
-                                                                                Content="{DynamicResource MainWindow.Scenes.AddButton}"
+                                                                                Content="{DynamicResource MainWindow.Common.AddButton}"
                                                                                 Command="{Binding AddPendingImageCommand}"
                                                                                 Margin="4,0,0,0" />
                                                                     </Grid>
@@ -2578,7 +2614,7 @@
                                                                             </ComboBox.ItemTemplate>
                                                                         </ComboBox>
                                                                         <Button Grid.Column="1"
-                                                                                Content="{DynamicResource MainWindow.Scenes.AddButton}"
+                                                                                Content="{DynamicResource MainWindow.Common.AddButton}"
                                                                                 Command="{Binding AddPendingMapCommand}"
                                                                                 Margin="4,0,0,0" />
                                                                     </Grid>
@@ -2647,7 +2683,7 @@
                                                                             </ComboBox.ItemTemplate>
                                                                         </ComboBox>
                                                                         <Button Grid.Column="1"
-                                                                                Content="{DynamicResource MainWindow.Scenes.AddButton}"
+                                                                                Content="{DynamicResource MainWindow.Common.AddButton}"
                                                                                 Command="{Binding AddPendingSoundCommand}"
                                                                                 Margin="4,0,0,0" />
                                                                     </Grid>
@@ -2663,74 +2699,17 @@
                                                            Text="{DynamicResource MainWindow.Scenes.TimelineDescription}"
                                                            TextWrapping="Wrap" />
 
-                                                <ItemsControl ItemsSource="{Binding Timers}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:TimerItemViewModel">
-                                                            <Border Classes="settingsGroup" Margin="0,2">
-                                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="4">
-                                                                    <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" />
-                                                                    <TextBox Grid.Column="1" Width="90"
-                                                                             Text="{Binding DurationText, Mode=TwoWay}" />
-                                                                    <Button Grid.Column="2" Content="{Binding StartPauseLabel}"
-                                                                            Command="{Binding ToggleRunCommand}" />
-                                                                    <Button Grid.Column="3" Content="↺"
-                                                                            Command="{Binding ResetCommand}" />
-                                                                    <Button Grid.Column="4" Classes="iconsquare" Content="&#10005;"
-                                                                            Width="22" Height="22" FontSize="10"
-                                                                            Command="{Binding DeleteCommand}" />
-                                                                </Grid>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                                <Button Content="{DynamicResource MainWindow.Scenes.AddTimerButton}"
-                                                        Command="{Binding AddTimerCommand}" />
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Button Content="{DynamicResource MainWindow.Scenes.AddTimerButton}"
+                                                            Command="{Binding AddTimerCommand}" />
+                                                    <Button Content="{DynamicResource MainWindow.Scenes.AddAlarmButton}"
+                                                            Command="{Binding AddAlarmCommand}" />
+                                                    <Button Content="{DynamicResource MainWindow.Scenes.AddIntervalButton}"
+                                                            Command="{Binding AddIntervalEventCommand}" />
+                                                </StackPanel>
 
-                                                <ItemsControl ItemsSource="{Binding Alarms}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:AlarmItemViewModel">
-                                                            <Border Classes="settingsGroup" Margin="0,2">
-                                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4">
-                                                                    <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" />
-                                                                    <controls:CalendarDateInput Grid.Column="1"
-                                                                        Text="{Binding TriggerAtDateTimeTextEdit, Mode=TwoWay}" />
-                                                                    <Button Grid.Column="2" Content="✓"
-                                                                            Command="{Binding ApplyEditsCommand}" />
-                                                                    <Button Grid.Column="3" Classes="iconsquare" Content="&#10005;"
-                                                                            Width="22" Height="22" FontSize="10"
-                                                                            Command="{Binding DeleteCommand}" />
-                                                                </Grid>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                                <Button Content="{DynamicResource MainWindow.Scenes.AddAlarmButton}"
-                                                        Command="{Binding AddAlarmCommand}" />
-
-                                                <ItemsControl ItemsSource="{Binding IntervalEvents}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:IntervalEventItemViewModel">
-                                                            <Border Classes="settingsGroup" Margin="0,2">
-                                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="4">
-                                                                    <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" />
-                                                                    <TextBox Grid.Column="1" Width="80"
-                                                                             Text="{Binding IntervalText, Mode=TwoWay}" />
-                                                                    <TextBox Grid.Column="2" Width="80"
-                                                                             Text="{Binding ActiveDurationText, Mode=TwoWay}" />
-                                                                    <Button Grid.Column="3" Content="{Binding StartPauseLabel}"
-                                                                            Command="{Binding ToggleRunCommand}" />
-                                                                    <Button Grid.Column="4" Content="↺"
-                                                                            Command="{Binding ResetCommand}" />
-                                                                    <Button Grid.Column="5" Classes="iconsquare" Content="&#10005;"
-                                                                            Width="22" Height="22" FontSize="10"
-                                                                            Command="{Binding DeleteCommand}" />
-                                                                </Grid>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                                <Button Content="{DynamicResource MainWindow.Scenes.AddIntervalButton}"
-                                                        Command="{Binding AddIntervalEventCommand}" />
+                                                <ItemsControl ItemsSource="{Binding TimelineDisplayItems}"
+                                                              ItemTemplate="{StaticResource TimelineItemTemplate}" />
                                             </StackPanel>
                                         </Border>
                                                     </StackPanel>
@@ -3427,6 +3406,48 @@
                                                                        Text="{DynamicResource MainWindow.Settings.NoTags}"
                                                                        IsVisible="{Binding HasNoTags}" />
                                                             <ItemsControl ItemsSource="{Binding Tags}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:TagViewModel">
+                                                                        <Grid ColumnDefinitions="16,*,90,Auto"
+                                                                              ColumnSpacing="8" Margin="0,2">
+                                                                            <Ellipse Grid.Column="0" Width="12" Height="12"
+                                                                                     Fill="{Binding ColorBrush}"
+                                                                                     Stroke="{DynamicResource BorderBrush}"
+                                                                                     StrokeThickness="1"
+                                                                                     VerticalAlignment="Center" />
+                                                                            <TextBox Grid.Column="1"
+                                                                                     Text="{Binding Name, Mode=TwoWay}" />
+                                                                            <TextBox Grid.Column="2"
+                                                                                     Text="{Binding ColorHex, Mode=TwoWay}"
+                                                                                     PlaceholderText="#RRGGBB" />
+                                                                            <Button Grid.Column="3"
+                                                                                    Content="✕"
+                                                                                    Command="{Binding DeleteCommand}" />
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="settingsGroup" Width="520" Margin="0,0,14,14">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="{DynamicResource MainWindow.Settings.TimerTagsHeader}" />
+                                                            <TextBlock Classes="muted"
+                                                                       Text="{DynamicResource MainWindow.Settings.TimerTagsDescription}"
+                                                                       TextWrapping="Wrap" />
+                                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                                <TextBox Grid.Column="0"
+                                                                         Text="{Binding NewTimerTagName, Mode=TwoWay}"
+                                                                         PlaceholderText="{DynamicResource MainWindow.Settings.NewTagPlaceholder}" />
+                                                                <Button Grid.Column="1"
+                                                                        Content="{DynamicResource MainWindow.Settings.AddTagButton}"
+                                                                        Command="{Binding AddTimerTagCommand}" />
+                                                            </Grid>
+                                                            <TextBlock Classes="muted"
+                                                                       Text="{DynamicResource MainWindow.Settings.NoTags}"
+                                                                       IsVisible="{Binding HasNoTimerTags}" />
+                                                            <ItemsControl ItemsSource="{Binding TimerTags}">
                                                                 <ItemsControl.ItemTemplate>
                                                                     <DataTemplate x:DataType="vm:TagViewModel">
                                                                         <Grid ColumnDefinitions="16,*,90,Auto"

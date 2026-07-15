@@ -51,6 +51,7 @@ public partial class MainWindowViewModel
             LocalizationService.Get("MainWindowViewModel.Defaults.NewSceneName"), null,
             RemoveScene, OnSceneLibraryItemChanged, scope);
         SceneLibrary.Add(scene);
+        RegisterSceneTimelineSync(scene);
         SelectedScene = scene;
         OnPropertyChanged(nameof(HasNoScenes));
         SaveSceneLibrarySettings();
@@ -59,10 +60,82 @@ public partial class MainWindowViewModel
     private void RemoveScene(SceneLibraryItemViewModel scene)
     {
         SceneLibrary.Remove(scene);
+        foreach (var timer in scene.Timers) RemoveSceneTimelineItem(scene, item => item.Wraps(timer));
+        foreach (var alarm in scene.Alarms) RemoveSceneTimelineItem(scene, item => item.Wraps(alarm));
+        foreach (var interval in scene.IntervalEvents) RemoveSceneTimelineItem(scene, item => item.Wraps(interval));
         if (SelectedScene == scene) SelectedScene = null;
         if (ActiveScene == scene) ActiveScene = null;
         OnPropertyChanged(nameof(HasNoScenes));
         SaveSceneLibrarySettings();
+    }
+
+    /// <summary>Mirrors this Scene's own Timer/Alarm/IntervalEvent timeline into the shared
+    ///     TimelineItems collection (and the Scene's own TimelineDisplayItems, for the Scene
+    ///     editor's identical-to-Elementliste display) so it shows up in the normal Elementliste
+    ///     (with the same RemainingText/Progress/tag-filter UI as global items) alongside a label
+    ///     identifying which Scene owns it. Deliberately never added to PlayerTimelineItems and
+    ///     never wired to PublishItemState - a Scene's own timeline stays Host-local/non-networked,
+    ///     unlike the global timeline (see SceneLibraryItemViewModel's doc comment).</summary>
+    private void RegisterSceneTimelineSync(SceneLibraryItemViewModel scene)
+    {
+        foreach (var timer in scene.Timers) AddSceneTimelineItem(scene, timer);
+        foreach (var alarm in scene.Alarms) AddSceneTimelineItem(scene, alarm);
+        foreach (var interval in scene.IntervalEvents) AddSceneTimelineItem(scene, interval);
+
+        scene.Timers.CollectionChanged += (_, e) =>
+        {
+            if (e.NewItems is not null)
+                foreach (TimerItemViewModel timer in e.NewItems)
+                    AddSceneTimelineItem(scene, timer);
+            if (e.OldItems is not null)
+                foreach (TimerItemViewModel timer in e.OldItems)
+                    RemoveSceneTimelineItem(scene, item => item.Wraps(timer));
+        };
+        scene.Alarms.CollectionChanged += (_, e) =>
+        {
+            if (e.NewItems is not null)
+                foreach (AlarmItemViewModel alarm in e.NewItems)
+                    AddSceneTimelineItem(scene, alarm);
+            if (e.OldItems is not null)
+                foreach (AlarmItemViewModel alarm in e.OldItems)
+                    RemoveSceneTimelineItem(scene, item => item.Wraps(alarm));
+        };
+        scene.IntervalEvents.CollectionChanged += (_, e) =>
+        {
+            if (e.NewItems is not null)
+                foreach (IntervalEventItemViewModel interval in e.NewItems)
+                    AddSceneTimelineItem(scene, interval);
+            if (e.OldItems is not null)
+                foreach (IntervalEventItemViewModel interval in e.OldItems)
+                    RemoveSceneTimelineItem(scene, item => item.Wraps(interval));
+        };
+    }
+
+    private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, TimerItemViewModel vm) =>
+        AddSceneTimelineItem(scene, new TimelineDisplayItemViewModel(vm) { OwningScene = scene });
+
+    private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, AlarmItemViewModel vm) =>
+        AddSceneTimelineItem(scene, new TimelineDisplayItemViewModel(vm) { OwningScene = scene });
+
+    private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, IntervalEventItemViewModel vm) =>
+        AddSceneTimelineItem(scene, new TimelineDisplayItemViewModel(vm) { OwningScene = scene });
+
+    private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, TimelineDisplayItemViewModel item)
+    {
+        TimelineItems.Add(item);
+        scene.TimelineDisplayItems.Add(item);
+    }
+
+    /// <summary>Removes the Scene-owned wrapper matching predicate from both TimelineItems and the
+    ///     Scene's own TimelineDisplayItems - the two must always stay in lock-step (see
+    ///     AddSceneTimelineItem).</summary>
+    private void RemoveSceneTimelineItem(SceneLibraryItemViewModel scene, Func<TimelineDisplayItemViewModel, bool> predicate)
+    {
+        var item = scene.TimelineDisplayItems.FirstOrDefault(predicate);
+        if (item is null) return;
+
+        scene.TimelineDisplayItems.Remove(item);
+        TimelineItems.Remove(item);
     }
 
     private void OnSceneLibraryItemChanged(SceneLibraryItemViewModel scene) => SaveSceneLibrarySettings();
@@ -164,6 +237,8 @@ public partial class MainWindowViewModel
                 scene.Alarms.Add(AlarmItemViewModel.FromDto(alarmDto, scene.StartDate ?? default, scene.RemoveAlarm));
             foreach (var intervalDto in entry.IntervalEvents)
                 scene.IntervalEvents.Add(IntervalEventItemViewModel.FromDto(intervalDto, scene.RemoveIntervalEvent));
+
+            RegisterSceneTimelineSync(scene);
 
             return scene;
         }
