@@ -23,16 +23,19 @@ public class GameClockService : IDisposable
 {
     private readonly Stopwatch _stopwatch = new();
     private readonly DispatcherTimer _timer;
-    private TimeSpan _lastElapsed = TimeSpan.Zero;
 
-    /// <summary>Fractional game-seconds not yet applied to CurrentTime, carried over between
+    /// <summary>
+    ///     Fractional game-seconds not yet applied to CurrentTime, carried over between
     ///     ticks. GameInstant only stores whole seconds (see its doc comment), and the DispatcherTimer
     ///     fires every 200ms - at 1x speed that's a ~0.2s delta per tick, which truncates straight to
     ///     zero if applied directly (see GameInstant.Add's (long) cast), silently discarding the
     ///     game time and freezing CurrentTime as a result. Accumulating the remainder here instead
     ///     of dropping it means CurrentTime still advances correctly once enough sub-second ticks
-    ///     add up to a whole second, however slow SpeedMultiplier or the tick interval get.</summary>
+    ///     add up to a whole second, however slow SpeedMultiplier or the tick interval get.
+    /// </summary>
     private double _carrySeconds;
+
+    private TimeSpan _lastElapsed = TimeSpan.Zero;
 
     public GameClockService(GameInstant startTime)
     {

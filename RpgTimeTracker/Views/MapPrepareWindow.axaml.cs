@@ -35,10 +35,10 @@ namespace RpgTimeTracker.Views;
 /// </summary>
 public partial class MapPrepareWindow : Window
 {
-    private readonly MainWindowViewModel _vm;
-    private readonly MapItemViewModel _map;
     private readonly DispatcherTimer _flushTimer;
+    private readonly MapItemViewModel _map;
     private readonly MapDisplayViewModel _previewDisplay = new();
+    private readonly MainWindowViewModel _vm;
     private bool _isDirty;
 
     public MapPrepareWindow(MainWindowViewModel vm, MapItemViewModel map)
@@ -60,7 +60,9 @@ public partial class MapPrepareWindow : Window
         EditCanvas.CellsPainted += OnCellsPainted;
         EditCanvas.SetFloors(map.Floors, _vm.EditingFloor is not null && map.Floors.Contains(_vm.EditingFloor)
             ? _vm.EditingFloor
-            : map.Floors.Count > 0 ? map.Floors[0] : null);
+            : map.Floors.Count > 0
+                ? map.Floors[0]
+                : null);
 
         InitializeFogStyleControls();
         InitializeCellSizeControl();
@@ -84,9 +86,11 @@ public partial class MapPrepareWindow : Window
         _previewDisplay.NotifyFogChanged(floor.Id);
     }
 
-    /// <summary>Rebuilds the preview's single-floor state for the newly selected floor - cheap
+    /// <summary>
+    ///     Rebuilds the preview's single-floor state for the newly selected floor - cheap
     ///     (one floor, only on floor switch/rescale) and necessary since a floor's FogMask
-    ///     instance can be replaced entirely (RescaleFloorCellSizeAsync), not just mutated.</summary>
+    ///     instance can be replaced entirely (RescaleFloorCellSizeAsync), not just mutated.
+    /// </summary>
     private void RefreshPreviewFloor(MapFloorItemViewModel? floor)
     {
         if (floor is null)
@@ -98,7 +102,8 @@ public partial class MapPrepareWindow : Window
         using var stream = File.OpenRead(floor.ImagePath);
         var image = new Bitmap(stream);
         _previewDisplay.ShowMap(_map.Name, [
-            new MapDisplayFloor { FloorId = floor.Id, Name = floor.Name, Image = image, CurrentFog = _vm.GetPrepareFog(floor) }
+            new MapDisplayFloor
+                { FloorId = floor.Id, Name = floor.Name, Image = image, CurrentFog = _vm.GetPrepareFog(floor) }
         ]);
         RefreshPreviewStyle();
     }
@@ -110,9 +115,11 @@ public partial class MapPrepareWindow : Window
             style.BlurRadius, style.BlurEnabled);
     }
 
-    /// <summary>Seeds the fog-style controls from the map's override (falling back to the global
+    /// <summary>
+    ///     Seeds the fog-style controls from the map's override (falling back to the global
     ///     value when unset) and wires them to update the override - and the local preview - live
-    ///     on change.</summary>
+    ///     on change.
+    /// </summary>
     private void InitializeFogStyleControls()
     {
         var colorHex = _map.FogColorHex ?? _vm.FogColorHex;

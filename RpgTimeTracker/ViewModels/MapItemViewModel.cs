@@ -17,28 +17,42 @@ namespace RpgTimeTracker.ViewModels;
 /// </summary>
 public sealed partial class MapItemViewModel : ObservableObject, ITaggable
 {
-    /// <summary>Persisted format version for this map's data (settings entry + exported
+    /// <summary>
+    ///     Persisted format version for this map's data (settings entry + exported
     ///     .rtt-map/.rtt-session manifest) - not used for any migration yet (there's only ever
     ///     been version 1), but every map now carries it explicitly so a future format change can
-    ///     detect an older map on load and apply an upgrade step instead of guessing or breaking.</summary>
+    ///     detect an older map on load and apply an upgrade step instead of guessing or breaking.
+    /// </summary>
     public const int CurrentFormatVersion = 1;
 
-    private readonly Action<MapItemViewModel> _onDeleteRequested;
     private readonly Action<MapItemViewModel>? _onChanged;
 
-    [ObservableProperty] private string _name;
+    private readonly Action<MapItemViewModel> _onDeleteRequested;
 
-    /// <summary>Per-map fog render style override, falling back to the global setting when null -
-    ///     see MainWindowViewModel.GetEffectiveFogStyle/ThemeSettingsService.MapLibraryEntryDto.</summary>
+    /// <summary>
+    ///     Default CellSizePx for new floors added to this map - see
+    ///     ThemeSettingsService.MapLibraryEntryDto.DefaultCellSizePx.
+    /// </summary>
+    [ObservableProperty] private int _defaultCellSizePx;
+
+    [ObservableProperty] private bool? _fogBlurEnabled;
+    [ObservableProperty] private double? _fogBlurRadius;
+
+    /// <summary>
+    ///     Per-map fog render style override, falling back to the global setting when null -
+    ///     see MainWindowViewModel.GetEffectiveFogStyle/ThemeSettingsService.MapLibraryEntryDto.
+    /// </summary>
     [ObservableProperty] private string? _fogColorHex;
 
     [ObservableProperty] private int? _fogOpacityPercent;
-    [ObservableProperty] private double? _fogBlurRadius;
-    [ObservableProperty] private bool? _fogBlurEnabled;
 
-    /// <summary>Default CellSizePx for new floors added to this map - see
-    ///     ThemeSettingsService.MapLibraryEntryDto.DefaultCellSizePx.</summary>
-    [ObservableProperty] private int _defaultCellSizePx;
+    [ObservableProperty] private string _name;
+
+    /// <summary>
+    ///     Whether this map lives in the always-present Shared Library or inside the
+    ///     currently open Session's own folder - see LibraryScope.
+    /// </summary>
+    [ObservableProperty] private LibraryScope _scope;
 
     public MapItemViewModel(
         Guid id,
@@ -66,31 +80,33 @@ public sealed partial class MapItemViewModel : ObservableObject, ITaggable
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
         Floors.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoFloors));
-        if (tagIds is not null) foreach (var tagId in tagIds) TagIds.Add(tagId);
+        if (tagIds is not null)
+            foreach (var tagId in tagIds)
+                TagIds.Add(tagId);
         TagIds.CollectionChanged += (_, _) => _onChanged?.Invoke(this);
     }
 
     public Guid Id { get; }
 
-    /// <summary>Freeform Tag Ids attached to this map (see Tag) - separate from Scene
-    ///     membership, a different, explicit mechanism.</summary>
-    public ObservableCollection<Guid> TagIds { get; } = [];
-
-    /// <summary>Whether this map lives in the always-present Shared Library or inside the
-    ///     currently open Session's own folder - see LibraryScope.</summary>
-    [ObservableProperty] private LibraryScope _scope;
-
     /// <summary>See LibraryItemViewModelBase.IsSessionLocal's doc comment - same purpose here.</summary>
     public bool IsSessionLocal => Scope == LibraryScope.SessionLocal;
 
-    /// <summary>The format version this map was loaded/imported at - not user-editable, and
+    /// <summary>
+    ///     The format version this map was loaded/imported at - not user-editable, and
     ///     always saved back as CurrentFormatVersion (see MainWindowViewModel.SaveMapLibrarySettings)
-    ///     once any future migration step has brought it up to date in memory.</summary>
+    ///     once any future migration step has brought it up to date in memory.
+    /// </summary>
     public int FormatVersion { get; }
 
     public ObservableCollection<MapFloorItemViewModel> Floors { get; } = [];
 
     public bool HasNoFloors => Floors.Count == 0;
+
+    /// <summary>
+    ///     Freeform Tag Ids attached to this map (see Tag) - separate from Scene
+    ///     membership, a different, explicit mechanism.
+    /// </summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
 
     partial void OnNameChanged(string value)
     {
@@ -129,9 +145,11 @@ public sealed partial class MapItemViewModel : ObservableObject, ITaggable
         _onDeleteRequested(this);
     }
 
-    /// <summary>Floors are layers of the same building/map, so their order is meaningful (unlike
+    /// <summary>
+    ///     Floors are layers of the same building/map, so their order is meaningful (unlike
     ///     the map library list itself) - the GM can reorder them via the floor list's up/down
-    ///     buttons.</summary>
+    ///     buttons.
+    /// </summary>
     public void MoveFloorUp(MapFloorItemViewModel floor)
     {
         var index = Floors.IndexOf(floor);

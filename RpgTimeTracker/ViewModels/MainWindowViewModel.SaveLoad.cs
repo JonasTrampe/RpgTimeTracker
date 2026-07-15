@@ -1,36 +1,16 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using Avalonia;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using LibVLCSharp.Shared;
-using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
-using RpgTimeTracker.Network;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
-using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Models.Rpc;
-using RpgTimeTracker.Shared.Models.Theming;
 using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Theming;
-using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.Shared.ViewModels;
 using Serilog;
 
@@ -120,8 +100,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         return SaveFileArchive.Wrap(ExportStateToJson());
     }
 
-    /// <summary>Restores state from a .rtt-save zip container, or an old plain-JSON save
-    ///     (see SaveFileArchive.Unwrap for the upgrade-path fallback).</summary>
+    /// <summary>
+    ///     Restores state from a .rtt-save zip container, or an old plain-JSON save
+    ///     (see SaveFileArchive.Unwrap for the upgrade-path fallback).
+    /// </summary>
     public void ImportStateFromZipOrJson(byte[] data)
     {
         ImportStateFromJson(SaveFileArchive.Unwrap(data));
@@ -138,7 +120,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         catch (Exception ex)
         {
             Log.Error(ex, "Game state could not be parsed");
-            ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.FileCouldNotBeRead"), ex.Message);
+            ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.FileCouldNotBeRead"),
+                ex.Message);
             return;
         }
 
@@ -271,7 +254,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
         catch (Exception ex)
         {
-            ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.CalendarCouldNotBeRead"), ex.Message);
+            ClockErrorMessage =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Errors.CalendarCouldNotBeRead"), ex.Message);
             return;
         }
 
@@ -336,12 +320,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private sealed class LibraryManifestEntryDto
     {
-        /// <summary>The item's original Id on the exporting machine - used only to build an
+        /// <summary>
+        ///     The item's original Id on the exporting machine - used only to build an
         ///     old-id -&gt; new-id map during import (see ImportMediaSectionFromZip/
         ///     ImportSoundSectionFromZip), so an NPC variant referencing this item in the same
         ///     bundle can be relinked to the freshly-imported copy. Never reused as the imported
         ///     item's actual Id (imports always mint fresh Guids, per this class's established
-        ///     convention).</summary>
+        ///     convention).
+        /// </summary>
         public Guid Id { get; init; }
 
         public string Name { get; init; } = string.Empty;
@@ -396,13 +382,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// </summary>
     private sealed class MapLibraryManifestEntryDto
     {
-        /// <summary>Old-export Id, used only to relink a Scene's Map reference on import (see
-        ///         ImportMapsSectionFromZip/ImportSceneSectionFromZip) - Guid.Empty on exports
-        ///         predating this field, which just means no Scene can relink to it.</summary>
+        /// <summary>
+        ///     Old-export Id, used only to relink a Scene's Map reference on import (see
+        ///     ImportMapsSectionFromZip/ImportSceneSectionFromZip) - Guid.Empty on exports
+        ///     predating this field, which just means no Scene can relink to it.
+        /// </summary>
         public Guid Id { get; init; }
 
         public string Name { get; init; } = string.Empty;
-        public List<MapFloorManifestEntryDto> Floors { get; init; } = [];
+        public List<MapFloorManifestEntryDto> Floors { get; } = [];
 
         /// <summary>See MapItemViewModel.CurrentFormatVersion/FormatVersion.</summary>
         public int FormatVersion { get; init; } = MapItemViewModel.CurrentFormatVersion;
@@ -410,24 +398,28 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private sealed class MapLibraryManifestDto
     {
-        public List<MapLibraryManifestEntryDto> Maps { get; init; } = [];
+        public List<MapLibraryManifestEntryDto> Maps { get; } = [];
     }
 
-    /// <summary>Manifest for the "npcs" section of a full-session/session export - NPCs own no
+    /// <summary>
+    ///     Manifest for the "npcs" section of a full-session/session export - NPCs own no
     ///     files themselves (see NpcLibraryItemViewModel's doc comment), so this just wraps the
     ///     same NpcLibraryEntryDto shape used for Shared/session-local library persistence; the
     ///     Image/TokenImage/Sound Ids it carries are relinked on import via ImportNpcSectionFromZip's
-    ///     mediaIdMap/soundIdMap parameters.</summary>
+    ///     mediaIdMap/soundIdMap parameters.
+    /// </summary>
     private sealed class NpcLibraryManifestDto
     {
         public List<NpcLibraryEntryDto> Npcs { get; init; } = [];
     }
 
-    /// <summary>Manifest for the "scenes" section of a full-session/session export - Scenes own
+    /// <summary>
+    ///     Manifest for the "scenes" section of a full-session/session export - Scenes own
     ///     no files themselves (see SceneLibraryItemViewModel's doc comment), so this just wraps
     ///     the same SceneLibraryEntryDto shape used for Shared/session-local library persistence;
     ///     the Image/Map/Music/Sound Ids it carries are relinked on import via
-    ///     ImportSceneSectionFromZip's mediaIdMap/soundIdMap/musicIdMap/mapIdMap parameters.</summary>
+    ///     ImportSceneSectionFromZip's mediaIdMap/soundIdMap/musicIdMap/mapIdMap parameters.
+    /// </summary>
     private sealed class SceneLibraryManifestDto
     {
         public List<SceneLibraryEntryDto> Scenes { get; init; } = [];

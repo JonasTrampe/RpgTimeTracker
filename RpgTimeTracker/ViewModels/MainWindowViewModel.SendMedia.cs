@@ -1,20 +1,10 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Input;
-using Avalonia;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -25,11 +15,8 @@ using RpgTimeTracker.Network;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Network;
-using RpgTimeTracker.Shared.Models.Rpc;
-using RpgTimeTracker.Shared.Models.Theming;
 using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
-using RpgTimeTracker.Shared.Services.Theming;
 using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.Shared.ViewModels;
 using Serilog;
@@ -38,6 +25,15 @@ namespace RpgTimeTracker.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayContext
 {
+    /// <summary>
+    ///     Set by the view (see MainWindow.axaml.cs), since a warning/confirmation needs a window,
+    ///     which the view model itself doesn't know about - analogous to the LibraryPanelView funcs
+    ///     above. Takes just the item's display name (not a concrete MediaLibraryItemViewModel) so
+    ///     Sound/Music deletion can reuse the exact same dialog. Without a handler (e.g. during
+    ///     testing) an in-use item is NEVER silently deleted.
+    /// </summary>
+    public Func<string, IReadOnlyList<string>, Task<TriggerMediaDeleteChoice>>?
+        ConfirmTriggerMediaDeleteAsync { get; set; }
     // ==================== Send media (image/video) ====================
 
     /// <summary>
@@ -75,7 +71,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         // RetractSentMediaItem when this gallery entry is explicitly removed.
         SetCurrentMediaStatus(kind, cachedPath, fileName, false);
         AddSentMediaItem(header, cachedPath, true);
-        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.MediaSentAdHoc"), fileName));
+        RecordSessionEvent(
+            string.Format(LocalizationService.Get("MainWindowViewModel.Events.MediaSentAdHoc"), fileName));
         ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MediaSent"), fileName));
 
         await _playerServer.PublishMediaAsync(header, bytes);
@@ -104,7 +101,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         catch (Exception ex)
         {
             Log.Warning(ex, "Ad-hoc file could not be read ({SourcePath})", sourcePath);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.FileCouldNotBeRead"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.FileCouldNotBeRead"),
+                ex.Message);
             return null;
         }
 
@@ -125,7 +123,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         catch (Exception ex)
         {
             Log.Warning(ex, "Ad-hoc file could not be read ({SourcePath})", sourcePath);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.FileCouldNotBeRead"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.FileCouldNotBeRead"),
+                ex.Message);
             return null;
         }
 
@@ -139,7 +138,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         catch (Exception ex)
         {
             Log.Error(ex, "Ad-hoc file could not be cached ({SourcePath})", sourcePath);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MediaCouldNotBeCached"), ex.Message);
+            MediaErrorMessage =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MediaCouldNotBeCached"), ex.Message);
             return null;
         }
 
@@ -177,7 +177,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             Volume = 100
         };
 
-        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.SoundSentAdHoc"), fileName));
+        RecordSessionEvent(
+            string.Format(LocalizationService.Get("MainWindowViewModel.Events.SoundSentAdHoc"), fileName));
         ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.SoundSent"), fileName));
         await SendSoundAsync(header, bytes, cachedPath, true);
     }
@@ -237,19 +238,24 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SaveMediaLibrarySettings();
             MediaErrorMessage = null;
             Log.Information("Medium added to library: {Name} ({Kind}, {Scope})", item.Name, item.Kind, scope);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedToMediaLibrary"), item.Name));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedToMediaLibrary"),
+                item.Name));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Medium could not be added to library ({SourcePath})", sourcePath);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MediaCouldNotBeAddedToLibrary"), ex.Message);
+            MediaErrorMessage =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MediaCouldNotBeAddedToLibrary"),
+                    ex.Message);
         }
     }
 
-    /// <summary>Shared by every library's Move*ItemToScope method: the no-op guards (already in
+    /// <summary>
+    ///     Shared by every library's Move*ItemToScope method: the no-op guards (already in
     ///     targetScope; targetScope is SessionLocal but no session is open) and the try/catch/log
     ///     wrapper are identical for Media/Sound/Music/Map/Npc - only the actual file operation and
-    ///     which Save*LibrarySettings to call differ, so those are the caller's moveAndSave action.</summary>
+    ///     which Save*LibrarySettings to call differ, so those are the caller's moveAndSave action.
+    /// </summary>
     private void MoveLibraryItemToScope(LibraryScope currentScope, LibraryScope targetScope,
         string itemLabel, string itemName, Action moveAndSave)
     {
@@ -267,10 +273,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    /// <summary>Moves a Media Library item's file between the Shared directory and the open
+    /// <summary>
+    ///     Moves a Media Library item's file between the Shared directory and the open
     ///     session's media/ folder, then flips its Scope and re-saves both stores. A no-op if
-    ///     already in targetScope, or if targetScope is SessionLocal but no session is open.</summary>
-    public void MoveMediaLibraryItemToScope(MediaLibraryItemViewModel item, LibraryScope targetScope) =>
+    ///     already in targetScope, or if targetScope is SessionLocal but no session is open.
+    /// </summary>
+    public void MoveMediaLibraryItemToScope(MediaLibraryItemViewModel item, LibraryScope targetScope)
+    {
         MoveLibraryItemToScope(item.Scope, targetScope, "Medium", item.Name, () =>
         {
             var targetDirectory = GetMediaLibraryBaseDirectory(targetScope);
@@ -281,27 +290,24 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             item.Scope = targetScope;
             SaveMediaLibrarySettings();
         });
-
-    /// <summary>Thin single-argument wrappers around MoveMediaLibraryItemToScope so the tile's
-    ///     "move" buttons can bind a plain ICommand with CommandParameter="{Binding}" (the item),
-    ///     rather than needing a two-argument command.</summary>
-    [RelayCommand]
-    private void MoveMediaLibraryItemToShared(MediaLibraryItemViewModel item) =>
-        MoveMediaLibraryItemToScope(item, LibraryScope.Shared);
-
-    [RelayCommand]
-    private void MoveMediaLibraryItemToSession(MediaLibraryItemViewModel item) =>
-        MoveMediaLibraryItemToScope(item, LibraryScope.SessionLocal);
+    }
 
     /// <summary>
-    ///     Set by the view (see MainWindow.axaml.cs), since a warning/confirmation needs a window,
-    ///     which the view model itself doesn't know about - analogous to the LibraryPanelView funcs
-    ///     above. Takes just the item's display name (not a concrete MediaLibraryItemViewModel) so
-    ///     Sound/Music deletion can reuse the exact same dialog. Without a handler (e.g. during
-    ///     testing) an in-use item is NEVER silently deleted.
+    ///     Thin single-argument wrappers around MoveMediaLibraryItemToScope so the tile's
+    ///     "move" buttons can bind a plain ICommand with CommandParameter="{Binding}" (the item),
+    ///     rather than needing a two-argument command.
     /// </summary>
-    public Func<string, IReadOnlyList<string>, Task<TriggerMediaDeleteChoice>>?
-        ConfirmTriggerMediaDeleteAsync { get; set; }
+    [RelayCommand]
+    private void MoveMediaLibraryItemToShared(MediaLibraryItemViewModel item)
+    {
+        MoveMediaLibraryItemToScope(item, LibraryScope.Shared);
+    }
+
+    [RelayCommand]
+    private void MoveMediaLibraryItemToSession(MediaLibraryItemViewModel item)
+    {
+        MoveMediaLibraryItemToScope(item, LibraryScope.SessionLocal);
+    }
 
     private void RemoveMediaLibraryItem(MediaLibraryItemViewModel item)
     {
@@ -357,8 +363,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         var labels = new List<string>();
 
-        bool Matches(TriggerMediaConfig config) =>
-            !string.IsNullOrEmpty(config.Path) && string.Equals(config.Path, localPath, StringComparison.OrdinalIgnoreCase);
+        bool Matches(TriggerMediaConfig config)
+        {
+            return !string.IsNullOrEmpty(config.Path) &&
+                   string.Equals(config.Path, localPath, StringComparison.OrdinalIgnoreCase);
+        }
 
         labels.AddRange(Timers.Where(t => Matches(t.TriggerMedia))
             .Select(t => string.Format(LocalizationService.Get("MainWindowViewModel.Labels.TimerUsage"), t.Name)));
@@ -367,7 +376,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         labels.AddRange(IntervalEvents.Where(i => Matches(i.TriggerMedia))
             .Select(i => string.Format(LocalizationService.Get("MainWindowViewModel.Labels.IntervalUsage"), i.Name)));
         labels.AddRange(CalendarEntries.Where(c => Matches(c.TriggerMedia))
-            .Select(c => string.Format(LocalizationService.Get("MainWindowViewModel.Labels.CalendarEntryUsage"), c.Title)));
+            .Select(c =>
+                string.Format(LocalizationService.Get("MainWindowViewModel.Labels.CalendarEntryUsage"), c.Title)));
 
         return labels;
     }
@@ -375,13 +385,17 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// <summary>Resets TriggerMedia on all items that currently have localPath assigned (see FindTriggerMediaUsageLabels).</summary>
     private void ClearTriggerMediaReferences(string localPath)
     {
-        bool Matches(TriggerMediaConfig config) =>
-            !string.IsNullOrEmpty(config.Path) && string.Equals(config.Path, localPath, StringComparison.OrdinalIgnoreCase);
+        bool Matches(TriggerMediaConfig config)
+        {
+            return !string.IsNullOrEmpty(config.Path) &&
+                   string.Equals(config.Path, localPath, StringComparison.OrdinalIgnoreCase);
+        }
 
         foreach (var t in Timers.Where(t => Matches(t.TriggerMedia))) t.TriggerMedia.ClearCommand.Execute(null);
         foreach (var a in Alarms.Where(a => Matches(a.TriggerMedia))) a.TriggerMedia.ClearCommand.Execute(null);
         foreach (var i in IntervalEvents.Where(i => Matches(i.TriggerMedia))) i.TriggerMedia.ClearCommand.Execute(null);
-        foreach (var c in CalendarEntries.Where(c => Matches(c.TriggerMedia))) c.TriggerMedia.ClearCommand.Execute(null);
+        foreach (var c in CalendarEntries.Where(c => Matches(c.TriggerMedia)))
+            c.TriggerMedia.ClearCommand.Execute(null);
     }
 
     /// <summary>Adds an audio file to the sound library WITHOUT sending it immediately.</summary>
@@ -404,7 +418,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var scope = await ResolveScopeForNewItemAsync();
             var targetDirectory = GetSoundLibraryBaseDirectory(scope);
             var cachedPath = await ContentAddressedStorage.StoreFileAsync(sourcePath, targetDirectory);
-            var item = CreateSoundLibraryItem(Guid.NewGuid(), Path.GetFileNameWithoutExtension(sourcePath), VisualItemHelper.IconTimer,
+            var item = CreateSoundLibraryItem(Guid.NewGuid(), Path.GetFileNameWithoutExtension(sourcePath),
+                VisualItemHelper.IconTimer,
                 cachedPath, mimeType, false, 100);
             item.Scope = scope;
             SoundLibrary.Add(item);
@@ -413,18 +428,24 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SaveSoundLibrarySettings();
             MediaErrorMessage = null;
             Log.Information("Sound added to library: {Name} ({Scope})", item.Name, scope);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedToSoundLibrary"), item.Name));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedToSoundLibrary"),
+                item.Name));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Sound could not be added to library ({SourcePath})", sourcePath);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.SoundCouldNotBeAddedToLibrary"), ex.Message);
+            MediaErrorMessage =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Errors.SoundCouldNotBeAddedToLibrary"),
+                    ex.Message);
         }
     }
 
-    /// <summary>See MoveMediaLibraryItemToScope's doc comment - same move-file/flip-Scope/re-save
-    ///     pattern for the Sound Library.</summary>
-    public void MoveSoundLibraryItemToScope(SoundLibraryItemViewModel item, LibraryScope targetScope) =>
+    /// <summary>
+    ///     See MoveMediaLibraryItemToScope's doc comment - same move-file/flip-Scope/re-save
+    ///     pattern for the Sound Library.
+    /// </summary>
+    public void MoveSoundLibraryItemToScope(SoundLibraryItemViewModel item, LibraryScope targetScope)
+    {
         MoveLibraryItemToScope(item.Scope, targetScope, "Sound", item.Name, () =>
         {
             var targetDirectory = GetSoundLibraryBaseDirectory(targetScope);
@@ -436,15 +457,20 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SyncSoundServiceLibrary();
             SaveSoundLibrarySettings();
         });
+    }
 
     /// <summary>See MoveMediaLibraryItemToShared/ToSession's doc comment - same wrapping for Sound.</summary>
     [RelayCommand]
-    private void MoveSoundLibraryItemToShared(SoundLibraryItemViewModel item) =>
+    private void MoveSoundLibraryItemToShared(SoundLibraryItemViewModel item)
+    {
         MoveSoundLibraryItemToScope(item, LibraryScope.Shared);
+    }
 
     [RelayCommand]
-    private void MoveSoundLibraryItemToSession(SoundLibraryItemViewModel item) =>
+    private void MoveSoundLibraryItemToSession(SoundLibraryItemViewModel item)
+    {
         MoveSoundLibraryItemToScope(item, LibraryScope.SessionLocal);
+    }
 
     private SoundLibraryItemViewModel CreateSoundLibraryItem(
         Guid id, string name, string icon, string localPath, string mimeType, bool loop, int volume,
@@ -523,7 +549,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             Log.Error(ex, "Library sound could not be read: {Name} ({LocalPath})", item.Name,
                 item.LocalPath);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.FileCouldNotBeRead"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.FileCouldNotBeRead"),
+                ex.Message);
             return;
         }
 
@@ -543,7 +570,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             TrimEndMs = (long)(item.TrimEndSeconds * 1000)
         };
 
-        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.SoundSentLibrary"), item.Name));
+        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.SoundSentLibrary"),
+            item.Name));
         ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.SoundSent"), item.Name));
         await SendSoundAsync(header, bytes, item.LocalPath, false);
     }
@@ -596,26 +624,31 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         SoundService.SyncLibrarySounds(SoundLibrary.Select(s => (s.Name, s.LocalPath)));
     }
 
-    private static SoundLibraryEntryDto ToSoundLibraryEntryDto(SoundLibraryItemViewModel s) => new()
+    private static SoundLibraryEntryDto ToSoundLibraryEntryDto(SoundLibraryItemViewModel s)
     {
-        Id = s.Id,
-        Name = s.Name,
-        Icon = s.Icon,
-        Path = s.LocalPath,
-        MimeType = s.MimeType,
-        Loop = s.Loop,
-        Volume = s.Volume,
-        RepeatCount = s.RepeatCount,
-        TrimStartMs = (long)(s.TrimStartSeconds * 1000),
-        TrimEndMs = (long)(s.TrimEndSeconds * 1000),
-        TagIds = s.TagIds.ToList()
-    };
+        return new SoundLibraryEntryDto
+        {
+            Id = s.Id,
+            Name = s.Name,
+            Icon = s.Icon,
+            Path = s.LocalPath,
+            MimeType = s.MimeType,
+            Loop = s.Loop,
+            Volume = s.Volume,
+            RepeatCount = s.RepeatCount,
+            TrimStartMs = (long)(s.TrimStartSeconds * 1000),
+            TrimEndMs = (long)(s.TrimEndSeconds * 1000),
+            TagIds = s.TagIds.ToList()
+        };
+    }
 
     /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
-    private void SaveSoundLibrarySettings() =>
+    private void SaveSoundLibrarySettings()
+    {
         SaveLibrarySettings(SoundLibrary, s => s.Scope, ToSoundLibraryEntryDto,
             (settings, list) => settings.SoundLibrary = list,
             (sessionLibrary, list) => sessionLibrary.SoundLibrary = list);
+    }
 
     public async Task ExportMediaLibraryAsync(string targetFolder)
     {
@@ -642,12 +675,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
             Log.Information("Media library exported to {Folder} ({Count} files)", targetFolder,
                 manifest.Items.Count);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MediaLibraryExported"), manifest.Items.Count));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MediaLibraryExported"),
+                manifest.Items.Count));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Media library export failed ({Folder})", targetFolder);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"),
+                ex.Message);
         }
     }
 
@@ -678,12 +713,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             OnPropertyChanged(nameof(HasNoMediaLibraryItems));
             SaveMediaLibrarySettings();
             Log.Information("Media library imported from {Folder} ({Count} files)", sourceFolder, imported);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MediaImported"), imported));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MediaImported"),
+                imported));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Media library import failed ({Folder})", sourceFolder);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"),
+                ex.Message);
         }
     }
 
@@ -716,12 +753,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
             Log.Information("Sound library exported to {Folder} ({Count} files)", targetFolder,
                 manifest.Items.Count);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.SoundLibraryExported"), manifest.Items.Count));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.SoundLibraryExported"),
+                manifest.Items.Count));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Sound library export failed ({Folder})", targetFolder);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"),
+                ex.Message);
         }
     }
 
@@ -742,7 +781,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 var cachedPath = Path.Combine(ThemeSettingsService.SoundLibraryDirectory,
                     $"{Guid.NewGuid():N}{Path.GetExtension(entry.FileName)}");
                 File.Copy(sourceFile, cachedPath, true);
-                SoundLibrary.Add(CreateSoundLibraryItem(Guid.NewGuid(), entry.Name, entry.Icon ?? VisualItemHelper.IconTimer,
+                SoundLibrary.Add(CreateSoundLibraryItem(Guid.NewGuid(), entry.Name,
+                    entry.Icon ?? VisualItemHelper.IconTimer,
                     cachedPath,
                     entry.MimeType, entry.Loop, entry.Volume ?? 100,
                     entry.RepeatCount ?? 1, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0));
@@ -753,12 +793,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SyncSoundServiceLibrary();
             SaveSoundLibrarySettings();
             Log.Information("Sound library imported from {Folder} ({Count} files)", sourceFolder, imported);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.SoundsImported"), imported));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.SoundsImported"),
+                imported));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Sound library import failed ({Folder})", sourceFolder);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"),
+                ex.Message);
         }
     }
 
@@ -789,18 +831,24 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SaveMusicLibrarySettings();
             MediaErrorMessage = null;
             Log.Information("Music track added to library: {Name} ({Scope})", item.Name, scope);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedToMusicLibrary"), item.Name));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedToMusicLibrary"),
+                item.Name));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Music track could not be added to library ({SourcePath})", sourcePath);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MusicCouldNotBeAddedToLibrary"), ex.Message);
+            MediaErrorMessage =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MusicCouldNotBeAddedToLibrary"),
+                    ex.Message);
         }
     }
 
-    /// <summary>See MoveMediaLibraryItemToScope's doc comment - same move-file/flip-Scope/re-save
-    ///     pattern for the Music Library.</summary>
-    public void MoveMusicLibraryItemToScope(MusicLibraryItemViewModel item, LibraryScope targetScope) =>
+    /// <summary>
+    ///     See MoveMediaLibraryItemToScope's doc comment - same move-file/flip-Scope/re-save
+    ///     pattern for the Music Library.
+    /// </summary>
+    public void MoveMusicLibraryItemToScope(MusicLibraryItemViewModel item, LibraryScope targetScope)
+    {
         MoveLibraryItemToScope(item.Scope, targetScope, "Music track", item.Name, () =>
         {
             var targetDirectory = GetMusicLibraryBaseDirectory(targetScope);
@@ -811,15 +859,20 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             item.Scope = targetScope;
             SaveMusicLibrarySettings();
         });
+    }
 
     /// <summary>See MoveMediaLibraryItemToShared/ToSession's doc comment - same wrapping for Music.</summary>
     [RelayCommand]
-    private void MoveMusicLibraryItemToShared(MusicLibraryItemViewModel item) =>
+    private void MoveMusicLibraryItemToShared(MusicLibraryItemViewModel item)
+    {
         MoveMusicLibraryItemToScope(item, LibraryScope.Shared);
+    }
 
     [RelayCommand]
-    private void MoveMusicLibraryItemToSession(MusicLibraryItemViewModel item) =>
+    private void MoveMusicLibraryItemToSession(MusicLibraryItemViewModel item)
+    {
         MoveMusicLibraryItemToScope(item, LibraryScope.SessionLocal);
+    }
 
     private MusicLibraryItemViewModel CreateMusicLibraryItem(
         Guid id, string name, string icon, string localPath, string mimeType, int volume,
@@ -926,8 +979,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    /// <summary>Starts a playlist playing (to all connected players and the Host's own local
-    ///     preview, if the player window is open) - the actual "start" action the GM asked for.</summary>
+    /// <summary>
+    ///     Starts a playlist playing (to all connected players and the Host's own local
+    ///     preview, if the player window is open) - the actual "start" action the GM asked for.
+    /// </summary>
     [RelayCommand]
     private async Task PlayPlaylistAsync(PlaylistViewModel playlist)
     {
@@ -965,9 +1020,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         await PlayCurrentPlaylistTrackAsync();
     }
 
-    /// <summary>Builds the order tracks play in - the list order itself, or a one-time shuffle of
+    /// <summary>
+    ///     Builds the order tracks play in - the list order itself, or a one-time shuffle of
     ///     it if CurrentPlaylist.Shuffle is set (re-shuffled every time the playlist (re)starts,
-    ///     not live while playing, so the current+next track stay predictable mid-playback).</summary>
+    ///     not live while playing, so the current+next track stay predictable mid-playback).
+    /// </summary>
     private void BuildPlaybackOrder(PlaylistViewModel playlist)
     {
         var indices = Enumerable.Range(0, playlist.Tracks.Count).ToList();
@@ -1046,8 +1103,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         BeginMusicTracking(header, track.LocalPath);
     }
 
-    /// <summary>Advances to the next track in _playbackOrder, wrapping around (and reshuffling,
-    ///     if Shuffle is on) when CurrentPlaylist.LoopPlaylist is set, otherwise stopping.</summary>
+    /// <summary>
+    ///     Advances to the next track in _playbackOrder, wrapping around (and reshuffling,
+    ///     if Shuffle is on) when CurrentPlaylist.LoopPlaylist is set, otherwise stopping.
+    /// </summary>
     private async Task AdvancePlaylistAsync()
     {
         if (CurrentPlaylist is null) return;
@@ -1068,8 +1127,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         await PlayCurrentPlaylistTrackAsync();
     }
 
-    /// <summary>Stops playback entirely: cancels pending-track tracking, stops the Host's own
-    ///     local preview player, tells all clients to stop, and clears the Now Playing state.</summary>
+    /// <summary>
+    ///     Stops playback entirely: cancels pending-track tracking, stops the Host's own
+    ///     local preview player, tells all clients to stop, and clears the Now Playing state.
+    /// </summary>
     private void StopPlaylistPlayback()
     {
         CancelPendingMusicTracking();
@@ -1157,8 +1218,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _pendingMusicMediaId = null;
     }
 
-    /// <summary>Safety net: if no client (and no local preview) reports the track ending, don't
-    ///     stay stuck on it forever - e.g. no client connected and the player window closed.</summary>
+    /// <summary>
+    ///     Safety net: if no client (and no local preview) reports the track ending, don't
+    ///     stay stuck on it forever - e.g. no client connected and the player window closed.
+    /// </summary>
     private async Task RunMusicFallbackTimeoutAsync(string mediaId, string localPath, CancellationToken token)
     {
         var duration = await TryGetMediaDurationAsync(localPath) ?? TimeSpan.FromMinutes(10);
@@ -1189,22 +1252,27 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         SaveMusicLibrarySettings();
     }
 
-    private static MusicLibraryEntryDto ToMusicLibraryEntryDto(MusicLibraryItemViewModel m) => new()
+    private static MusicLibraryEntryDto ToMusicLibraryEntryDto(MusicLibraryItemViewModel m)
     {
-        Id = m.Id,
-        Name = m.Name,
-        Icon = m.Icon,
-        Path = m.LocalPath,
-        MimeType = m.MimeType,
-        Volume = m.Volume,
-        TagIds = m.TagIds.ToList()
-    };
+        return new MusicLibraryEntryDto
+        {
+            Id = m.Id,
+            Name = m.Name,
+            Icon = m.Icon,
+            Path = m.LocalPath,
+            MimeType = m.MimeType,
+            Volume = m.Volume,
+            TagIds = m.TagIds.ToList()
+        };
+    }
 
     /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
-    private void SaveMusicLibrarySettings() =>
+    private void SaveMusicLibrarySettings()
+    {
         SaveLibrarySettings(MusicLibrary, m => m.Scope, ToMusicLibraryEntryDto,
             (settings, list) => settings.MusicLibrary = list,
             (sessionLibrary, list) => sessionLibrary.MusicLibrary = list);
+    }
 
     public async Task ExportMusicLibraryAsync(string targetFolder)
     {
@@ -1231,12 +1299,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
             Log.Information("Music library exported to {Folder} ({Count} files)", targetFolder,
                 manifest.Items.Count);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MusicLibraryExported"), manifest.Items.Count));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MusicLibraryExported"),
+                manifest.Items.Count));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Music library export failed ({Folder})", targetFolder);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"),
+                ex.Message);
         }
     }
 
@@ -1265,12 +1335,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             OnPropertyChanged(nameof(HasNoMusicLibraryItems));
             SaveMusicLibrarySettings();
             Log.Information("Music library imported from {Folder} ({Count} files)", sourceFolder, imported);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MusicImported"), imported));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MusicImported"),
+                imported));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Music library import failed ({Folder})", sourceFolder);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"),
+                ex.Message);
         }
     }
 
@@ -1284,7 +1356,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
 
         var manifest = JsonSerializer.Deserialize<LibraryManifestDto>(await File.ReadAllTextAsync(manifestPath));
-        if (manifest is null) MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.ManifestCouldNotBeRead");
+        if (manifest is null)
+            MediaErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.ManifestCouldNotBeRead");
         return manifest;
     }
 
@@ -1307,7 +1380,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             Log.Error(ex, "Library medium could not be read: {Name} ({LocalPath})", item.Name,
                 item.LocalPath);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.FileCouldNotBeRead"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.FileCouldNotBeRead"),
+                ex.Message);
             return;
         }
 
@@ -1327,7 +1401,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         // deleted like a one-off cache on the next media change.
         SetCurrentMediaStatus(item.Kind, item.LocalPath, item.Name, false);
         AddSentMediaItem(header, item.LocalPath, false);
-        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.MediaSentLibrary"), item.Name));
+        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.MediaSentLibrary"),
+            item.Name));
         ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MediaSent"), item.Name));
 
         await _playerServer.PublishMediaAsync(header, bytes);
@@ -1342,26 +1417,33 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         RefreshCalendarViews();
     }
 
-    private static MediaLibraryEntryDto ToMediaLibraryEntryDto(MediaLibraryItemViewModel i) => new()
+    private static MediaLibraryEntryDto ToMediaLibraryEntryDto(MediaLibraryItemViewModel i)
     {
-        Id = i.Id,
-        Name = i.Name,
-        Path = i.LocalPath,
-        Kind = i.Kind.ToString(),
-        MimeType = i.MimeType,
-        Loop = i.Loop,
-        TagIds = i.TagIds.ToList()
-    };
+        return new MediaLibraryEntryDto
+        {
+            Id = i.Id,
+            Name = i.Name,
+            Path = i.LocalPath,
+            Kind = i.Kind.ToString(),
+            MimeType = i.MimeType,
+            Loop = i.Loop,
+            TagIds = i.TagIds.ToList()
+        };
+    }
 
-    /// <summary>Splits MediaLibrary by Scope: Shared items round-trip through the always-present
+    /// <summary>
+    ///     Splits MediaLibrary by Scope: Shared items round-trip through the always-present
     ///     ThemeSettingsService store, exactly as before Sessions existed; SessionLocal items
     ///     (only possible while a session is open) round-trip through that session's own
     ///     session-library.json instead, leaving the other session-local library sections in that
-    ///     file untouched.</summary>
-    private void SaveMediaLibrarySettings() =>
+    ///     file untouched.
+    /// </summary>
+    private void SaveMediaLibrarySettings()
+    {
         SaveLibrarySettings(MediaLibrary, i => i.Scope, ToMediaLibraryEntryDto,
             (settings, list) => settings.MediaLibrary = list,
             (sessionLibrary, list) => sessionLibrary.MediaLibrary = list);
+    }
 
     private void SetCurrentMediaStatus(MediaKind kind, string localPath, string fileName, bool isOwnedCache)
     {
@@ -1505,9 +1587,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _ = _playerServer.PublishRetractAsync(item.MediaId);
     }
 
-    /// <summary>"Stop showing" for a Media Library item sent from e.g. a Scene bundle row -
+    /// <summary>
+    ///     "Stop showing" for a Media Library item sent from e.g. a Scene bundle row -
     ///     retracts every gallery entry that was sent from this library item (see
-    ///     SentMediaItemViewModel.SourceItem). A no-op if none is currently shown.</summary>
+    ///     SentMediaItemViewModel.SourceItem). A no-op if none is currently shown.
+    /// </summary>
     [RelayCommand]
     private void StopShowingImage(MediaLibraryItemViewModel item)
     {
@@ -1547,18 +1631,20 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             NetworkServerPort = port;
             var announcedName = string.IsNullOrWhiteSpace(ServerName) ? "RpgTimeTracker" : ServerName.Trim();
             if (announcedName.Length > 60) announcedName = announcedName[..60];
-            _playerServer.Start(port, announcedName, enableDiscovery: !Program.DisableNetworkDiscovery);
+            _playerServer.Start(port, announcedName, !Program.DisableNetworkDiscovery);
             IsNetworkServerRunning = true;
             OnPropertyChanged(nameof(CanToggleDisplayFullscreen));
             NetworkServerAddress = PlayerMdnsAnnouncer.GetBestLocalIPv4()?.ToString();
-            NetworkServerStatus = string.Format(LocalizationService.Get("MainWindowViewModel.Network.ServerActiveOnPort"), port);
+            NetworkServerStatus =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Network.ServerActiveOnPort"), port);
             OnPropertyChanged(nameof(ToggleNetworkServerLabel));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Network server could not be started on port {Port}", NetworkServerPort);
             IsNetworkServerRunning = false;
-            NetworkServerStatus = string.Format(LocalizationService.Get("MainWindowViewModel.Network.ServerStartFailed"), ex.Message);
+            NetworkServerStatus =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Network.ServerStartFailed"), ex.Message);
             OnPropertyChanged(nameof(ToggleNetworkServerLabel));
         }
     }
@@ -1599,7 +1685,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         Log.Information("Game time manually set: {OldTime} -> {NewTime}", _clock.CurrentTime, parsed);
         _clock.SetTime(parsed);
         PushJump(delta);
-        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.GameTimeManuallySet"), FormatGameTime(parsed)));
+        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.GameTimeManuallySet"),
+            FormatGameTime(parsed)));
     }
 
 
@@ -1629,5 +1716,4 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         return candidates.Count == 0 ? null : candidates.Min();
     }
-
 }

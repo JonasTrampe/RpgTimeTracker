@@ -4,11 +4,13 @@ using Avalonia.Controls;
 
 namespace RpgTimeTracker.Views.Controls;
 
-/// <summary>Icon-button pair ("move to Shared" / "move to this Session") shared by the Media,
+/// <summary>
+///     Icon-button pair ("move to Shared" / "move to this Session") shared by the Media,
 ///     Sound, and Music library tiles - see MainWindowViewModel.MoveLibraryItemToScope's doc
 ///     comment for the ViewModel-side counterpart this binds to. Map and Characters use a
 ///     MenuItem pair instead (their per-item actions already live inside a MenuFlyout), so
-///     those two stay inline in MainWindow.axaml rather than reusing this control.</summary>
+///     those two stay inline in MainWindow.axaml rather than reusing this control.
+/// </summary>
 public partial class MoveToScopeButtons : UserControl
 {
     public static readonly StyledProperty<bool> IsSessionLocalProperty =

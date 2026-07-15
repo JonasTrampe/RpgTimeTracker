@@ -31,19 +31,22 @@
                                  HorizontalAlignment="Left" />
                     <CheckBox Name="FogBlurEnabledCheckBox" Grid.Row="0" Grid.Column="1"
                               Content="{DynamicResource MainWindow.Settings.FogBlurEnabledLabel}" />
-                    <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="8">
                         <TextBlock Grid.Column="0" Text="{DynamicResource MainWindow.Settings.FogOpacityLabel}"
                                    VerticalAlignment="Center" />
                         <Slider Name="FogOpacitySlider" Grid.Column="1" Minimum="0" Maximum="100" />
                         <TextBlock Grid.Column="2" Text="{Binding #FogOpacitySlider.Value, StringFormat='{}{0:0}%'}"
                                    VerticalAlignment="Center" />
                     </Grid>
-                    <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="8">
                         <TextBlock Grid.Column="0" Text="{DynamicResource MainWindow.Settings.FogBlurLabel}"
                                    VerticalAlignment="Center" />
                         <Slider Name="FogBlurRadiusSlider" Grid.Column="1" Minimum="0" Maximum="60"
                                 TickFrequency="1" IsSnapToTickEnabled="True" />
-                        <TextBlock Grid.Column="2" Text="{Binding #FogBlurRadiusSlider.Value, StringFormat='{}{0:0}px'}"
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding #FogBlurRadiusSlider.Value, StringFormat='{}{0:0}px'}"
                                    VerticalAlignment="Center" />
                     </Grid>
                 </Grid>
@@ -51,7 +54,7 @@
                     <TextBlock Grid.Column="0" Text="{DynamicResource MapPrepareWindow.CellSizeLabel}"
                                VerticalAlignment="Center" />
                     <NumericUpDown Name="CellSizeUpDown" Grid.Column="1" Minimum="2" Maximum="256"
-                                    Increment="2" HorizontalAlignment="Left" Width="120" />
+                                   Increment="2" HorizontalAlignment="Left" Width="120" />
                     <TextBlock Name="CellSizeWarningLabel" Grid.Column="2" Classes="muted"
                                Text="{DynamicResource MapPrepareWindow.CellSizeWarning}"
                                IsVisible="False"

@@ -25,8 +25,10 @@ public sealed class MediaHeaderDto
     /// </summary>
     public const string LayerMusic = "Music";
 
-    /// <summary>A sound effect - see Layer. Also the default (empty Layer is treated the same as
-    ///     LayerSound) for back-compat with any header that predates the Layer field.</summary>
+    /// <summary>
+    ///     A sound effect - see Layer. Also the default (empty Layer is treated the same as
+    ///     LayerSound) for back-compat with any header that predates the Layer field.
+    /// </summary>
     public const string LayerSound = "Sound";
 
     public string MediaId { get; set; } = string.Empty;
@@ -88,9 +90,11 @@ public sealed class MediaHeaderDto
     /// </summary>
     public long SeekToMs { get; set; }
 
-    /// <summary>Shallow copy with a different SeekToMs - used when resending an in-progress
+    /// <summary>
+    ///     Shallow copy with a different SeekToMs - used when resending an in-progress
     ///     track/sound to one specific client (music catch-up/re-enable, sound re-enable) without
-    ///     mutating the shared cached original, so each resend gets its own accurate estimate.</summary>
+    ///     mutating the shared cached original, so each resend gets its own accurate estimate.
+    /// </summary>
     public MediaHeaderDto CloneWithSeek(long seekToMs)
     {
         return new MediaHeaderDto

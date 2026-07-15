@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
+using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Services.Localization;
 using Serilog;
 
@@ -14,6 +15,16 @@ namespace RpgTimeTracker.ViewModels;
 
 public partial class MainWindowViewModel
 {
+    /// <summary>
+    ///     Phase 3 of the plan: the Scene whose own Timer/Alarm/IntervalEvent timeline is
+    ///     currently ticking. OnClockTick (MainWindowViewModel.Clock.cs) only advances
+    ///     ActiveScene's items, never any other Scene's - that omission IS the "paused while
+    ///     inactive" mechanism, there's no separate pause flag to maintain. Set by
+    ///     ActivateSceneAsync; cleared if the active Scene itself gets deleted.
+    /// </summary>
+    [ObservableProperty] private SceneLibraryItemViewModel? _activeScene;
+
+    [ObservableProperty] private SceneLibraryItemViewModel? _selectedScene;
     // ==================== Scenes library (Phase 2 of the Scenes/Tags/Calendars project) ====================
     // Own top-level library, not nested under anything - see SceneLibraryItemViewModel's doc
     // comment for why it doesn't derive from LibraryItemViewModelBase<TSelf> like Media/Sound.
@@ -22,18 +33,11 @@ public partial class MainWindowViewModel
 
     public bool HasNoScenes => SceneLibrary.Count == 0;
 
-    [ObservableProperty] private SceneLibraryItemViewModel? _selectedScene;
-
-    /// <summary>Phase 3 of the plan: the Scene whose own Timer/Alarm/IntervalEvent timeline is
-    ///     currently ticking. OnClockTick (MainWindowViewModel.Clock.cs) only advances
-    ///     ActiveScene's items, never any other Scene's - that omission IS the "paused while
-    ///     inactive" mechanism, there's no separate pause flag to maintain. Set by
-    ///     ActivateSceneAsync; cleared if the active Scene itself gets deleted.</summary>
-    [ObservableProperty] private SceneLibraryItemViewModel? _activeScene;
-
-    /// <summary>Keeps each Scene's own IsActive flag (purely local UI state) in sync with
+    /// <summary>
+    ///     Keeps each Scene's own IsActive flag (purely local UI state) in sync with
     ///     ActiveScene, so the Scenes list/editor can show which one is active without every
-    ///     binding having to compare against ActiveScene itself.</summary>
+    ///     binding having to compare against ActiveScene itself.
+    /// </summary>
     partial void OnActiveSceneChanged(SceneLibraryItemViewModel? oldValue, SceneLibraryItemViewModel? newValue)
     {
         if (oldValue is not null) oldValue.IsActive = false;
@@ -69,13 +73,15 @@ public partial class MainWindowViewModel
         SaveSceneLibrarySettings();
     }
 
-    /// <summary>Mirrors this Scene's own Timer/Alarm/IntervalEvent timeline into the shared
+    /// <summary>
+    ///     Mirrors this Scene's own Timer/Alarm/IntervalEvent timeline into the shared
     ///     TimelineItems collection (and the Scene's own TimelineDisplayItems, for the Scene
     ///     editor's identical-to-Elementliste display) so it shows up in the normal Elementliste
     ///     (with the same RemainingText/Progress/tag-filter UI as global items) alongside a label
     ///     identifying which Scene owns it. Deliberately never added to PlayerTimelineItems and
     ///     never wired to PublishItemState - a Scene's own timeline stays Host-local/non-networked,
-    ///     unlike the global timeline (see SceneLibraryItemViewModel's doc comment).</summary>
+    ///     unlike the global timeline (see SceneLibraryItemViewModel's doc comment).
+    /// </summary>
     private void RegisterSceneTimelineSync(SceneLibraryItemViewModel scene)
     {
         foreach (var timer in scene.Timers) AddSceneTimelineItem(scene, timer);
@@ -111,14 +117,20 @@ public partial class MainWindowViewModel
         };
     }
 
-    private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, TimerItemViewModel vm) =>
+    private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, TimerItemViewModel vm)
+    {
         AddSceneTimelineItem(scene, new TimelineDisplayItemViewModel(vm) { OwningScene = scene });
+    }
 
-    private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, AlarmItemViewModel vm) =>
+    private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, AlarmItemViewModel vm)
+    {
         AddSceneTimelineItem(scene, new TimelineDisplayItemViewModel(vm) { OwningScene = scene });
+    }
 
-    private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, IntervalEventItemViewModel vm) =>
+    private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, IntervalEventItemViewModel vm)
+    {
         AddSceneTimelineItem(scene, new TimelineDisplayItemViewModel(vm) { OwningScene = scene });
+    }
 
     private void AddSceneTimelineItem(SceneLibraryItemViewModel scene, TimelineDisplayItemViewModel item)
     {
@@ -126,10 +138,13 @@ public partial class MainWindowViewModel
         scene.TimelineDisplayItems.Add(item);
     }
 
-    /// <summary>Removes the Scene-owned wrapper matching predicate from both TimelineItems and the
+    /// <summary>
+    ///     Removes the Scene-owned wrapper matching predicate from both TimelineItems and the
     ///     Scene's own TimelineDisplayItems - the two must always stay in lock-step (see
-    ///     AddSceneTimelineItem).</summary>
-    private void RemoveSceneTimelineItem(SceneLibraryItemViewModel scene, Func<TimelineDisplayItemViewModel, bool> predicate)
+    ///     AddSceneTimelineItem).
+    /// </summary>
+    private void RemoveSceneTimelineItem(SceneLibraryItemViewModel scene,
+        Func<TimelineDisplayItemViewModel, bool> predicate)
     {
         var item = scene.TimelineDisplayItems.FirstOrDefault(predicate);
         if (item is null) return;
@@ -138,29 +153,42 @@ public partial class MainWindowViewModel
         TimelineItems.Remove(item);
     }
 
-    private void OnSceneLibraryItemChanged(SceneLibraryItemViewModel scene) => SaveSceneLibrarySettings();
+    private void OnSceneLibraryItemChanged(SceneLibraryItemViewModel scene)
+    {
+        SaveSceneLibrarySettings();
+    }
 
-    /// <summary>See MoveNpcLibraryItemToScope's doc comment - Scenes own no files either, so
-    ///     moving scope is just a Scope flip + re-save, no file to relocate.</summary>
-    public void MoveSceneLibraryItemToScope(SceneLibraryItemViewModel scene, LibraryScope targetScope) =>
+    /// <summary>
+    ///     See MoveNpcLibraryItemToScope's doc comment - Scenes own no files either, so
+    ///     moving scope is just a Scope flip + re-save, no file to relocate.
+    /// </summary>
+    public void MoveSceneLibraryItemToScope(SceneLibraryItemViewModel scene, LibraryScope targetScope)
+    {
         MoveLibraryItemToScope(scene.Scope, targetScope, "Scene", scene.Name, () =>
         {
             scene.Scope = targetScope;
             SaveSceneLibrarySettings();
         });
+    }
 
     [RelayCommand]
-    private void MoveSceneLibraryItemToShared(SceneLibraryItemViewModel scene) =>
+    private void MoveSceneLibraryItemToShared(SceneLibraryItemViewModel scene)
+    {
         MoveSceneLibraryItemToScope(scene, LibraryScope.Shared);
+    }
 
     [RelayCommand]
-    private void MoveSceneLibraryItemToSession(SceneLibraryItemViewModel scene) =>
+    private void MoveSceneLibraryItemToSession(SceneLibraryItemViewModel scene)
+    {
         MoveSceneLibraryItemToScope(scene, LibraryScope.SessionLocal);
+    }
 
-    /// <summary>Who references a Media/Sound/Map Library item by Id from any Scene's bundle -
+    /// <summary>
+    ///     Who references a Media/Sound/Map Library item by Id from any Scene's bundle -
     ///     registered into _usageRegistry so deleting that item goes through the same 3-way
     ///     confirm-delete flow as any other in-use item. Playlists aren't Library items in this
-    ///     registry's sense (see RemovePlaylist's own direct cleanup instead).</summary>
+    ///     registry's sense (see RemovePlaylist's own direct cleanup instead).
+    /// </summary>
     private IEnumerable<string> FindSceneUsagesById(Guid id)
     {
         foreach (var scene in SceneLibrary)
@@ -179,29 +207,34 @@ public partial class MainWindowViewModel
         }
     }
 
-    private static SceneLibraryEntryDto ToSceneLibraryEntryDto(SceneLibraryItemViewModel scene) => new()
+    private static SceneLibraryEntryDto ToSceneLibraryEntryDto(SceneLibraryItemViewModel scene)
     {
-        Id = scene.Id,
-        Name = scene.Name,
-        DescriptionMarkdown = scene.DescriptionMarkdown,
-        StartDateSeconds = scene.StartDate?.TotalSeconds,
-        ImageIds = scene.Images.Select(i => i.Id).ToList(),
-        MapIds = scene.Maps.Select(m => m.Id).ToList(),
-        SoundIds = scene.Sounds.Select(s => s.Id).ToList(),
-        PlaylistIds = scene.Playlists.Select(p => p.Id).ToList(),
-        TagIds = scene.TagIds.ToList(),
-        Timers = scene.Timers.Select(t => t.ToDto()).ToList(),
-        Alarms = scene.Alarms.Select(a => a.ToDto()).ToList(),
-        IntervalEvents = scene.IntervalEvents.Select(i => i.ToDto()).ToList()
-    };
+        return new SceneLibraryEntryDto
+        {
+            Id = scene.Id,
+            Name = scene.Name,
+            DescriptionMarkdown = scene.DescriptionMarkdown,
+            StartDateSeconds = scene.StartDate?.TotalSeconds,
+            ImageIds = scene.Images.Select(i => i.Id).ToList(),
+            MapIds = scene.Maps.Select(m => m.Id).ToList(),
+            SoundIds = scene.Sounds.Select(s => s.Id).ToList(),
+            PlaylistIds = scene.Playlists.Select(p => p.Id).ToList(),
+            TagIds = scene.TagIds.ToList(),
+            Timers = scene.Timers.Select(t => t.ToDto()).ToList(),
+            Alarms = scene.Alarms.Select(a => a.ToDto()).ToList(),
+            IntervalEvents = scene.IntervalEvents.Select(i => i.ToDto()).ToList()
+        };
+    }
 
-    /// <summary>Wrapped in BeginBulkLoad/EndBulkLoad - see NpcLibraryItemViewModel's identical
+    /// <summary>
+    ///     Wrapped in BeginBulkLoad/EndBulkLoad - see NpcLibraryItemViewModel's identical
     ///     concern: this Scene isn't in the SceneLibrary collection yet while this method builds
     ///     it, so every property-set below would otherwise fire a save that serializes SceneLibrary
-    ///     as it stood before this (and any later) entry was added.</summary>
+    ///     as it stood before this (and any later) entry was added.
+    /// </summary>
     private SceneLibraryItemViewModel FromSceneLibraryEntryDto(SceneLibraryEntryDto entry, LibraryScope scope)
     {
-        var startDate = entry.StartDateSeconds is { } seconds ? new Shared.Models.GameInstant(seconds) : (Shared.Models.GameInstant?)null;
+        var startDate = entry.StartDateSeconds is { } seconds ? new GameInstant(seconds) : (GameInstant?)null;
         var scene = new SceneLibraryItemViewModel(entry.Id, entry.Name,
             startDate, RemoveScene, OnSceneLibraryItemChanged, scope,
             entry.TagIds);
@@ -234,7 +267,8 @@ public partial class MainWindowViewModel
                 if (playlist is not null) scene.Playlists.Add(playlist);
             }
 
-            foreach (var timerDto in entry.Timers) scene.Timers.Add(TimerItemViewModel.FromDto(timerDto, scene.RemoveTimer));
+            foreach (var timerDto in entry.Timers)
+                scene.Timers.Add(TimerItemViewModel.FromDto(timerDto, scene.RemoveTimer));
             foreach (var alarmDto in entry.Alarms)
                 scene.Alarms.Add(AlarmItemViewModel.FromDto(alarmDto, scene.StartDate ?? default, scene.RemoveAlarm));
             foreach (var intervalDto in entry.IntervalEvents)
@@ -251,10 +285,12 @@ public partial class MainWindowViewModel
     }
 
     /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
-    private void SaveSceneLibrarySettings() =>
+    private void SaveSceneLibrarySettings()
+    {
         SaveLibrarySettings(SceneLibrary, s => s.Scope, ToSceneLibraryEntryDto,
             (settings, list) => settings.SceneLibrary = list,
             (sessionLibrary, list) => sessionLibrary.SceneLibrary = list);
+    }
 
     /// <summary>
     ///     "Activate Scene" (Phase 2 of the plan, reworked): deliberately does NOT auto-push the
@@ -274,13 +310,16 @@ public partial class MainWindowViewModel
         // IntervalEvent timeline - see ActiveScene's doc comment and OnClockTick.
         ActiveScene = scene;
 
-        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.SceneActivated"), scene.Name));
+        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.SceneActivated"),
+            scene.Name));
         Log.Information("Scene activated: {SceneName}", scene.Name);
     }
 
-    /// <summary>Phase 4 hook: resolves a Timer/Alarm/IntervalEvent/CalendarEntry's optional
+    /// <summary>
+    ///     Phase 4 hook: resolves a Timer/Alarm/IntervalEvent/CalendarEntry's optional
     ///     TargetSceneId and activates that Scene - a no-op if the field is unset or no longer
-    ///     resolves to an existing Scene (e.g. it was deleted after being targeted).</summary>
+    ///     resolves to an existing Scene (e.g. it was deleted after being targeted).
+    /// </summary>
     private void ActivateSceneById(Guid? sceneId)
     {
         if (sceneId is not { } id) return;

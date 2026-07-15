@@ -32,9 +32,11 @@ public static class ThemeSettingsService
 
     public static string SoundLibraryDirectory => Path.Combine(SettingsDirectory, "SoundLibrary");
 
-    /// <summary>Separate from SoundLibraryDirectory on purpose - music tracks are a distinct
+    /// <summary>
+    ///     Separate from SoundLibraryDirectory on purpose - music tracks are a distinct
     ///     library from sound effects (see issue tracking the Music Library/playlist feature),
-    ///     and will later be referenced by Scenes.</summary>
+    ///     and will later be referenced by Scenes.
+    /// </summary>
     public static string MusicLibraryDirectory => Path.Combine(SettingsDirectory, "MusicLibrary");
 
     public static string MapLibraryDirectory => Path.Combine(SettingsDirectory, "MapLibrary");
@@ -105,9 +107,11 @@ public static class ThemeSettingsService
         SaveSettings(settings);
     }
 
-    /// <summary>Last chosen calendar name (see CalendarDefinitionLoader.Resolve) - resolved against
+    /// <summary>
+    ///     Last chosen calendar name (see CalendarDefinitionLoader.Resolve) - resolved against
     ///     the bundled + custom calendars on startup, falling back to Gregorian if not found (e.g.
-    ///     a custom calendar file was since deleted).</summary>
+    ///     a custom calendar file was since deleted).
+    /// </summary>
     public static string? LoadLastCalendarName()
     {
         return LoadSettings().LastCalendarName;
@@ -128,19 +132,23 @@ public static class ThemeSettingsService
         SaveSettings(settings);
     }
 
-    /// <summary>Looks up a remembered Music/Sound/Image/Video/Map routing preference by ClientId -
+    /// <summary>
+    ///     Looks up a remembered Music/Sound/Image/Video/Map routing preference by ClientId -
     ///     returns null if this client has never been seen before (caller should then default to
-    ///     enabled).</summary>
+    ///     enabled).
+    /// </summary>
     public static ClientRoutingPreferenceDto? LoadClientRoutingPreference(string clientId)
     {
         if (string.IsNullOrEmpty(clientId)) return null;
         return LoadSettings().ClientAudioPreferences.Find(p => p.ClientId == clientId);
     }
 
-    /// <summary>Upserts this client's Music/Sound/Image/Video/Map routing preference (see
+    /// <summary>
+    ///     Upserts this client's Music/Sound/Image/Video/Map routing preference (see
     ///     TcpPlayerServerService.SetClientMusicEnabled/SetClientSoundEnabled/SetClientImageEnabled/
     ///     SetClientVideoEnabled/SetClientMapEnabled) - a no-op if clientId is empty (an older
-    ///     client build that doesn't send one yet).</summary>
+    ///     client build that doesn't send one yet).
+    /// </summary>
     public static void SaveClientRoutingPreference(string clientId, bool musicEnabled, bool soundEnabled,
         bool imageEnabled, bool videoEnabled, bool mapEnabled)
     {
@@ -184,10 +192,12 @@ public static class ThemeSettingsService
     // RpgTimeTracker.Models.Persistence.LibraryEntryDtos.cs - both this Shared-library store and
     // the new session-local store (SessionService) need the same shapes.
 
-    /// <summary>Remembered Music/Sound/Image/Video/Map routing preference for one player window,
+    /// <summary>
+    ///     Remembered Music/Sound/Image/Video/Map routing preference for one player window,
     ///     keyed by its stable ClientId (see SessionHelloParams.ClientId) rather than its ephemeral
     ///     RemoteEndpoint - so a reconnecting window gets its previous routing back instead of
-    ///     resetting to enabled every time (see TcpPlayerServerService.PerformHandshakeAsync).</summary>
+    ///     resetting to enabled every time (see TcpPlayerServerService.PerformHandshakeAsync).
+    /// </summary>
     public sealed class ClientRoutingPreferenceDto
     {
         public string ClientId { get; set; } = string.Empty;
@@ -239,7 +249,10 @@ public static class ThemeSettingsService
         /// <summary>Auto-loads LastSaveFilePath on startup instead of starting with a blank state.</summary>
         public bool AutoLoadOnStartupEnabled { get; set; }
 
-        /// <summary>UI language (see LocalizationService.SupportedLanguages) - separate from the PlayerClient, see ClientSettingsService.</summary>
+        /// <summary>
+        ///     UI language (see LocalizationService.SupportedLanguages) - separate from the PlayerClient, see
+        ///     ClientSettingsService.
+        /// </summary>
         public string Language { get; set; } = "en";
 
         /// <summary>Only read for the one-time migration - see CustomSoundDto comment.</summary>
@@ -259,15 +272,20 @@ public static class ThemeSettingsService
         public List<NpcLibraryEntryDto> NpcLibrary { get; set; } = [];
         public List<SceneLibraryEntryDto> SceneLibrary { get; set; } = [];
 
-        /// <summary>Freeform labels a GM can attach to any library item (see Tag/TagIds on each
+        /// <summary>
+        ///     Freeform labels a GM can attach to any library item (see Tag/TagIds on each
         ///     library item view model) - a single flat, campaign-wide list, not
-        ///     Shared-vs-SessionLocal like the libraries they tag (see Tag's doc comment).</summary>
+        ///     Shared-vs-SessionLocal like the libraries they tag (see Tag's doc comment).
+        /// </summary>
         public List<Tag> Tags { get; set; } = [];
 
-        /// <summary>Timer-specific Tags (see TimerItemViewModel/AlarmItemViewModel/
+        /// <summary>
+        ///     Timer-specific Tags (see TimerItemViewModel/AlarmItemViewModel/
         ///     IntervalEventItemViewModel.TagIds) - a separate flat list from the library-wide
-        ///     Tags above, so filtering the Elementliste isn't cluttered with Media/Sound tags.</summary>
+        ///     Tags above, so filtering the Elementliste isn't cluttered with Media/Sound tags.
+        /// </summary>
         public List<Tag> TimerTags { get; set; } = [];
+
         // Property name kept as "ClientAudioPreferences" (not renamed to match the DTO type)
         // purely for JSON backward-compat - System.Text.Json round-trips by property name, so
         // renaming this would silently drop every existing user's saved Music/Sound routing

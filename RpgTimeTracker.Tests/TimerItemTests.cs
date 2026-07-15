@@ -94,7 +94,7 @@ public class TimerItemTests
     {
         var timer = new TimerItem { Duration = TimeSpan.FromMinutes(10) };
 
-        timer.Restore(TimeSpan.FromMinutes(999), isRunning: true);
+        timer.Restore(TimeSpan.FromMinutes(999), true);
 
         Assert.Equal(TimeSpan.FromMinutes(10), timer.Elapsed);
         Assert.True(timer.IsCompleted);
@@ -106,7 +106,7 @@ public class TimerItemTests
     {
         var timer = new TimerItem { Duration = TimeSpan.FromMinutes(10) };
 
-        timer.Restore(-TimeSpan.FromMinutes(1), isRunning: false);
+        timer.Restore(-TimeSpan.FromMinutes(1), false);
 
         Assert.Equal(TimeSpan.Zero, timer.Elapsed);
         Assert.False(timer.IsCompleted);

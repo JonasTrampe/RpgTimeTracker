@@ -1,35 +1,18 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Input;
-using Avalonia;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LibVLCSharp.Shared;
-using RpgTimeTracker.Models;
-using RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Network;
-using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Network;
-using RpgTimeTracker.Shared.Models.Rpc;
-using RpgTimeTracker.Shared.Models.Theming;
 using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
-using RpgTimeTracker.Shared.Services.Theming;
 using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.Shared.ViewModels;
 using Serilog;
@@ -53,7 +36,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         Log.Information(
             "Event medium triggered: {Path} (Loop={Loop}, Fullscreen={Fullscreen}, PauseClock={PauseClock})",
             path, config.Loop, config.Fullscreen, config.PauseClockDuringVideo);
-        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.EventMediumTriggered"), config.FileName));
+        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.EventMediumTriggered"),
+            config.FileName));
 
         byte[] bytes;
         try
@@ -63,7 +47,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         catch (Exception ex)
         {
             Log.Error(ex, "Event medium could not be read ({Path})", path);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.EventMediumCouldNotBeSent"), ex.Message);
+            MediaErrorMessage =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Errors.EventMediumCouldNotBeSent"),
+                    ex.Message);
             return;
         }
 
@@ -140,18 +126,21 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _ = UpdateActiveSoundDurationAsync(header.MediaId, localPath);
     }
 
-    /// <summary>Resolves this sound's duration (async VLC parse, same helper used for the video
+    /// <summary>
+    ///     Resolves this sound's duration (async VLC parse, same helper used for the video
     ///     fallback-timeout estimate) and records it in _activeSoundData - needed to decide
     ///     whether a resend (re-enabling Sound routing for a client) is worth an estimated seek
     ///     (see ResendActiveSoundsToClient/SoundSeekThresholdMs). A no-op if the sound already
-    ///     ended (and was removed) before the parse resolves.</summary>
+    ///     ended (and was removed) before the parse resolves.
+    /// </summary>
     private async Task UpdateActiveSoundDurationAsync(string mediaId, string localPath)
     {
         var duration = await TryGetMediaDurationAsync(localPath);
         if (duration is null) return;
         if (!_activeSoundData.TryGetValue(mediaId, out var data)) return;
 
-        _activeSoundData[mediaId] = (data.Header, data.FileBytes, data.StartedAtUtc, (long)duration.Value.TotalMilliseconds);
+        _activeSoundData[mediaId] = (data.Header, data.FileBytes, data.StartedAtUtc,
+            (long)duration.Value.TotalMilliseconds);
     }
 
     /// <summary>
@@ -214,9 +203,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var sound in ActivePlayingSounds.ToList()) StopSound(sound.MediaId);
     }
 
-    /// <summary>"Stop showing" for a Sound Library item sent from e.g. a Scene bundle row - stops
+    /// <summary>
+    ///     "Stop showing" for a Sound Library item sent from e.g. a Scene bundle row - stops
     ///     every currently-active sound that was sent from this library item (see
-    ///     ActiveSoundViewModel.SourceItem). A no-op if none is currently playing.</summary>
+    ///     ActiveSoundViewModel.SourceItem). A no-op if none is currently playing.
+    /// </summary>
     [RelayCommand]
     private void StopShowingSound(SoundLibraryItemViewModel item)
     {
@@ -224,17 +215,20 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             StopSound(active.MediaId);
     }
 
-    /// <summary>Stops every currently-active sound on exactly one client window (its Sound
+    /// <summary>
+    ///     Stops every currently-active sound on exactly one client window (its Sound
     ///     routing was just turned off) - unlike StopSound, this must NOT touch the Host's own
     ///     local preview or the ActivePlayingSounds panel, since the sound keeps playing for
-    ///     every other still-enabled window.</summary>
+    ///     every other still-enabled window.
+    /// </summary>
     private void StopAllSoundsForClient(string remoteEndpoint)
     {
         foreach (var sound in ActivePlayingSounds)
             _ = _playerServer.PublishStopSoundToClientAsync(sound.MediaId, remoteEndpoint);
     }
 
-    /// <summary>Resends every currently-active sound to exactly one client window (its Sound
+    /// <summary>
+    ///     Resends every currently-active sound to exactly one client window (its Sound
     ///     routing was just turned back on) - the mirror image of StopAllSoundsForClient, using
     ///     the header+bytes cached in _activeSoundData since this service doesn't keep the file
     ///     bytes around after the original send. Sounds longer than SoundSeekThresholdMs get an
@@ -242,7 +236,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     ///     into its own trimmed duration so a looping/repeating sound seeks within its current
     ///     cycle rather than some multiple of it) - short one-off effects just restart from 0,
     ///     since seeking into them isn't meaningful and the duration may not even be known yet
-    ///     (see UpdateActiveSoundDurationAsync).</summary>
+    ///     (see UpdateActiveSoundDurationAsync).
+    /// </summary>
     private void ResendActiveSoundsToClient(string remoteEndpoint)
     {
         var thresholdMs = SoundSeekThresholdMs;
@@ -264,9 +259,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    /// <summary>Stops the Host's own local sound preview players only (see OnPlaySoundLocallyChanged) -
+    /// <summary>
+    ///     Stops the Host's own local sound preview players only (see OnPlaySoundLocallyChanged) -
     ///     unlike StopSound, this must NOT touch remote clients or the ActivePlayingSounds panel,
-    ///     since the sound keeps playing for every connected player regardless.</summary>
+    ///     since the sound keeps playing for every connected player regardless.
+    /// </summary>
     private void StopLocalSoundPreviewOnly()
     {
         foreach (var (mediaId, player) in _activeLocalSoundPlayers.ToList())
@@ -531,7 +528,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private static string FormatGameTime(GameInstant time)
     {
         var date = CalendarService.Active.ToCalendarDate(time);
-        return $"{date.WeekdayName}, {date.Day:00}.{date.MonthIndex + 1:00}.{date.Year:0000} — {date.Hour:00}:{date.Minute:00}:{date.Second:00}";
+        return
+            $"{date.WeekdayName}, {date.Day:00}.{date.MonthIndex + 1:00}.{date.Year:0000} — {date.Hour:00}:{date.Minute:00}:{date.Second:00}";
     }
-
 }

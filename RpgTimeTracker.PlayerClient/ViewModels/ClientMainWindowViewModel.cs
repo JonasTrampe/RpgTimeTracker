@@ -16,7 +16,6 @@ using RpgTimeTracker.PlayerClient.Services;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Models.Rpc;
-using RpgTimeTracker.Shared.Models.Theming;
 using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Theming;
@@ -35,18 +34,12 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
     private readonly Dictionary<string, MediaPlayer> _activeSoundPlayers = new();
 
-    // ==================== Music: independent playback channel, one track at a time ====================
-    // Separate from _activeSoundPlayers (sound effects) and MediaPlayer (video/current-medium) -
-    // music is driven by the Host's playlist sequencer, never by this client, so it only ever
-    // plays/stops/reports end for whatever single track the Host currently sent.
-    private MediaPlayer? _musicPlayer;
-    private string? _musicTempPath;
-
     private readonly List<CalendarEntryDefinition> _calendarEntries = new();
     private readonly PlayerTcpClientService _client = new();
     private readonly MdnsDiscoveryService _discovery = new();
 
     private readonly Dictionary<Guid, RemoteTimelineEntry> _entries = new();
+    private readonly Dictionary<Guid, FogMask> _floorStartingFogs = new();
 
     private readonly List<GalleryEntry> _gallery = new();
 
@@ -57,13 +50,24 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     /// </summary>
     private readonly GameClockService _localClock = new(CalendarService.Active.FromCalendarDate(1, 0, 1, 12, 0, 0));
 
+    // ==================== Map display (fog of war) ====================
+    // Replaces the gallery/current-medium display while open (mutually exclusive, matching how
+    // event-trigger media temporarily takes over). Rendering/floor-navigation logic lives in the
+    // shared MapDisplayViewModel (also used by the Host's local player-window preview,
+    // MainWindowViewModel.MapDisplay) - only the network-specific plumbing (temp image paths,
+    // base64 fog decoding) stays here.
+
+    private readonly Dictionary<Guid, string> _pendingFloorImagePaths = new();
+
     /// <summary>
     ///     Remaining plays per MediaId (-1 = endless/loop, otherwise counts down on each
     ///     natural end - see OnSoundEndReached).
     /// </summary>
     private readonly Dictionary<string, int> _soundRepeatsRemaining = new();
 
-    [ObservableProperty] private string _connectionStatus = LocalizationService.Get("PlayerTcpClientService.Status.NotConnected");
+    [ObservableProperty]
+    private string _connectionStatus = LocalizationService.Get("PlayerTcpClientService.Status.NotConnected");
+
     private int _currentGalleryIndex = -1;
     [ObservableProperty] private string _currentGameTimeText = "—";
     [ObservableProperty] private Bitmap? _currentMediaBitmap;
@@ -78,33 +82,47 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     [ObservableProperty] private string _host = "127.0.0.1";
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _isDiscovering;
-
-    /// <summary>Whether the GM has turned Music/Sound/Image/Video/Map routing off for this window
-    ///     (see RpcMethods.AudioRoutingChanged) - purely informational, shown as a small indicator
-    ///     so the player understands why they hear/see nothing instead of assuming something is
-    ///     broken.</summary>
-    [ObservableProperty] private bool _isMusicMuted;
-
-    [ObservableProperty] private bool _isSoundMuted;
     [ObservableProperty] private bool _isImageMuted;
-    [ObservableProperty] private bool _isVideoMuted;
     [ObservableProperty] private bool _isMapMuted;
 
+    /// <summary>
+    ///     Whether the GM has turned Music/Sound/Image/Video/Map routing off for this window
+    ///     (see RpcMethods.AudioRoutingChanged) - purely informational, shown as a small indicator
+    ///     so the player understands why they hear/see nothing instead of assuming something is
+    ///     broken.
+    /// </summary>
+    [ObservableProperty] private bool _isMusicMuted;
+
     private bool _isShowingEventMedia;
+
+    [ObservableProperty] private bool _isSoundMuted;
+    [ObservableProperty] private bool _isVideoMuted;
     [ObservableProperty] private string? _mediaErrorMessage;
     [ObservableProperty] private bool _mediaFullscreen;
     [ObservableProperty] private MediaPlayer? _mediaPlayer;
+
+    // ==================== Music: independent playback channel, one track at a time ====================
+    // Separate from _activeSoundPlayers (sound effects) and MediaPlayer (video/current-medium) -
+    // music is driven by the Host's playlist sequencer, never by this client, so it only ever
+    // plays/stops/reports end for whatever single track the Host currently sent.
+    private MediaPlayer? _musicPlayer;
+    private string? _musicTempPath;
     [ObservableProperty] private string _pin = string.Empty;
     private bool _playbackStartedReported;
     [ObservableProperty] private GameInstant _playerCalendarMonth;
     [ObservableProperty] private string _playerCalendarMonthLabel = string.Empty;
     [ObservableProperty] private GameInstant _playerCalendarSelectedDate;
     [ObservableProperty] private string _playerCalendarSelectedDateLabel = string.Empty;
-    [ObservableProperty] private string _playerHeaderSubtitle = LocalizationService.Get("ClientMainWindowViewModel.Defaults.PlayerHeaderSubtitle");
-    [ObservableProperty] private string _playerHeaderTitle = LocalizationService.Get("MainWindowViewModel.Defaults.PlayerHeaderTitle");
+
+    [ObservableProperty] private string _playerHeaderSubtitle =
+        LocalizationService.Get("ClientMainWindowViewModel.Defaults.PlayerHeaderSubtitle");
+
+    [ObservableProperty] private string _playerHeaderTitle =
+        LocalizationService.Get("MainWindowViewModel.Defaults.PlayerHeaderTitle");
+
     [ObservableProperty] private int _port = 48550;
-    [ObservableProperty] private DiscoveredRpgTimeTrackerServer? _selectedServer;
     [ObservableProperty] private string _selectedLanguageOption = "English";
+    [ObservableProperty] private DiscoveredRpgTimeTrackerServer? _selectedServer;
     [ObservableProperty] private bool _showConnectionSettings = true;
     [ObservableProperty] private bool _showPlayerCalendarView;
     private DispatcherTimer? _slideshowTimer;
@@ -216,17 +234,70 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     public bool HasImageMedia => CurrentMediaKind == MediaKind.Image;
     public bool HasVideoMedia => CurrentMediaKind == MediaKind.Video;
 
-    // ==================== Map display (fog of war) ====================
-    // Replaces the gallery/current-medium display while open (mutually exclusive, matching how
-    // event-trigger media temporarily takes over). Rendering/floor-navigation logic lives in the
-    // shared MapDisplayViewModel (also used by the Host's local player-window preview,
-    // MainWindowViewModel.MapDisplay) - only the network-specific plumbing (temp image paths,
-    // base64 fog decoding) stays here.
-
-    private readonly Dictionary<Guid, string> _pendingFloorImagePaths = new();
-    private readonly Dictionary<Guid, FogMask> _floorStartingFogs = new();
-
     public MapDisplayViewModel MapDisplay { get; } = new();
+
+    public ObservableCollection<RemoteTimelineItemViewModel> Items { get; } = new();
+    public ObservableCollection<PlayerCalendarDayViewModel> PlayerCalendarDays { get; } = new();
+    public ObservableCollection<PlayerCalendarEntryViewModel> PlayerCalendarEntries { get; } = new();
+
+    public ObservableCollection<DiscoveredRpgTimeTrackerServer> DiscoveredServers { get; } = new();
+
+    public string ConnectionToggleLabel => ShowConnectionSettings
+        ? LocalizationService.Get("ClientMainWindowViewModel.Connection.HideButton")
+        : LocalizationService.Get("ClientMainWindowViewModel.Connection.ShowButton");
+
+    public bool HasDiscoveredServers => DiscoveredServers.Count > 0;
+    public bool HasNoDiscoveredServers => DiscoveredServers.Count == 0;
+
+    public string MediaFullscreenLabel => MediaFullscreen
+        ? LocalizationService.Get("ClientMainWindowViewModel.Media.FullscreenOff")
+        : LocalizationService.Get("ClientMainWindowViewModel.Media.FullscreenOn");
+
+    /// <summary>
+    ///     Display names for the language ComboBox; native names on purpose, not translated by LocalizationService
+    ///     itself.
+    /// </summary>
+    public ObservableCollection<string> LanguageOptions { get; } = ["English", "Deutsch"];
+
+    /// <summary>Whether there is anything to clean up at all when the app closes - only then is asking worthwhile.</summary>
+    public bool HasTempFilesToClean => _gallery.Count > 0 || _currentVideoTempPath is not null;
+
+    public void Dispose()
+    {
+        _client.Dispose();
+        _localClock.Dispose();
+        StopVideo();
+        if (MediaPlayer is not null)
+        {
+            MediaPlayer.LengthChanged -= OnVlcLengthChanged;
+            MediaPlayer.EndReached -= OnVlcEndReached;
+            MediaPlayer.Dispose();
+        }
+    }
+
+    public bool HasPlayerVisibleCalendarEntries => _calendarEntries.Count > 0;
+    public bool HasPlayerCalendarEntriesForSelectedDate => PlayerCalendarEntries.Count > 0;
+    ICommand IPlayerDisplayContext.ShowPlayerTimelineCommand => ShowPlayerTimelineCommand;
+
+    ICommand IPlayerDisplayContext.ShowPlayerCalendarCommand => ShowPlayerCalendarCommand;
+
+    ICommand IPlayerDisplayContext.PreviousPlayerCalendarMonthCommand => PreviousPlayerCalendarMonthCommand;
+
+    ICommand IPlayerDisplayContext.NextPlayerCalendarMonthCommand => NextPlayerCalendarMonthCommand;
+
+    public bool ShowPlayerTimelineView => !ShowPlayerCalendarView;
+
+    /// <summary>
+    ///     For PlayerTimelineListView (Shared) - the same collection instance, no copy, so live updates are
+    ///     preserved.
+    /// </summary>
+    IEnumerable IPlayerDisplayContext.TimelineEntries => Items;
+
+    IEnumerable IPlayerDisplayContext.CalendarMonthDays => PlayerCalendarDays;
+    IEnumerable IPlayerDisplayContext.CalendarEntries => PlayerCalendarEntries;
+
+    public string SpeedLabel =>
+        string.Format(LocalizationService.Get("PlayerHeaderView.SpeedLabel"), SpeedMultiplierDisplay);
 
     private void OnMapFloorImageReceived(Guid floorId, string tempPath)
     {
@@ -313,65 +384,6 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         MediaWindowShouldHide?.Invoke();
         Log.Information("Map hidden");
     }
-
-    public ObservableCollection<RemoteTimelineItemViewModel> Items { get; } = new();
-    public ObservableCollection<PlayerCalendarDayViewModel> PlayerCalendarDays { get; } = new();
-    public ObservableCollection<PlayerCalendarEntryViewModel> PlayerCalendarEntries { get; } = new();
-
-    public ObservableCollection<DiscoveredRpgTimeTrackerServer> DiscoveredServers { get; } = new();
-
-    public string ConnectionToggleLabel => ShowConnectionSettings
-        ? LocalizationService.Get("ClientMainWindowViewModel.Connection.HideButton")
-        : LocalizationService.Get("ClientMainWindowViewModel.Connection.ShowButton");
-
-    public bool HasDiscoveredServers => DiscoveredServers.Count > 0;
-    public bool HasNoDiscoveredServers => DiscoveredServers.Count == 0;
-
-    public string MediaFullscreenLabel => MediaFullscreen
-        ? LocalizationService.Get("ClientMainWindowViewModel.Media.FullscreenOff")
-        : LocalizationService.Get("ClientMainWindowViewModel.Media.FullscreenOn");
-
-    /// <summary>Display names for the language ComboBox; native names on purpose, not translated by LocalizationService itself.</summary>
-    public ObservableCollection<string> LanguageOptions { get; } = ["English", "Deutsch"];
-
-    /// <summary>Whether there is anything to clean up at all when the app closes - only then is asking worthwhile.</summary>
-    public bool HasTempFilesToClean => _gallery.Count > 0 || _currentVideoTempPath is not null;
-
-    public void Dispose()
-    {
-        _client.Dispose();
-        _localClock.Dispose();
-        StopVideo();
-        if (MediaPlayer is not null)
-        {
-            MediaPlayer.LengthChanged -= OnVlcLengthChanged;
-            MediaPlayer.EndReached -= OnVlcEndReached;
-            MediaPlayer.Dispose();
-        }
-    }
-
-    public bool HasPlayerVisibleCalendarEntries => _calendarEntries.Count > 0;
-    public bool HasPlayerCalendarEntriesForSelectedDate => PlayerCalendarEntries.Count > 0;
-    ICommand IPlayerDisplayContext.ShowPlayerTimelineCommand => ShowPlayerTimelineCommand;
-
-    ICommand IPlayerDisplayContext.ShowPlayerCalendarCommand => ShowPlayerCalendarCommand;
-
-    ICommand IPlayerDisplayContext.PreviousPlayerCalendarMonthCommand => PreviousPlayerCalendarMonthCommand;
-
-    ICommand IPlayerDisplayContext.NextPlayerCalendarMonthCommand => NextPlayerCalendarMonthCommand;
-
-    public bool ShowPlayerTimelineView => !ShowPlayerCalendarView;
-
-    /// <summary>
-    ///     For PlayerTimelineListView (Shared) - the same collection instance, no copy, so live updates are
-    ///     preserved.
-    /// </summary>
-    IEnumerable IPlayerDisplayContext.TimelineEntries => Items;
-
-    IEnumerable IPlayerDisplayContext.CalendarMonthDays => PlayerCalendarDays;
-    IEnumerable IPlayerDisplayContext.CalendarEntries => PlayerCalendarEntries;
-
-    public string SpeedLabel => string.Format(LocalizationService.Get("PlayerHeaderView.SpeedLabel"), SpeedMultiplierDisplay);
 
     partial void OnSpeedMultiplierDisplayChanged(string value)
     {
@@ -490,7 +502,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             Log.Information("Server search completed: {ServerCount} found", servers.Count);
             ConnectionStatus = servers.Count == 0
                 ? LocalizationService.Get("ClientMainWindowViewModel.Connection.NoServerFound")
-                : string.Format(LocalizationService.Get("ClientMainWindowViewModel.Connection.ServersFound"), servers.Count);
+                : string.Format(LocalizationService.Get("ClientMainWindowViewModel.Connection.ServersFound"),
+                    servers.Count);
         }
         catch (Exception ex)
         {
@@ -695,7 +708,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
         PlayerCalendarDays.Clear();
         var weekLength = calendar.Weekdays.Count > 0 ? calendar.Weekdays.Count : 7;
-        var gridStart = PlayerCalendarMonth.Add(TimeSpan.FromSeconds(-(double)monthDate.WeekdayIndex * calendar.SecondsPerDay));
+        var gridStart =
+            PlayerCalendarMonth.Add(TimeSpan.FromSeconds(-(double)monthDate.WeekdayIndex * calendar.SecondsPerDay));
         var selectedDayNumber = calendar.ToDayNumber(PlayerCalendarSelectedDate);
         var todayDayNumber = calendar.ToDayNumber(_localClock.CurrentTime);
         for (var index = 0; index < weekLength * 6; index++)
@@ -826,18 +840,22 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             vm.ColorHex = Limit(interval.ColorHex, 24);
             vm.KindLabel = LocalizationService.Get("TimelineDisplayItem.KindInterval");
             vm.PrimaryValue = interval.IsActive
-                ? string.Format(LocalizationService.Get("IntervalEvent.RemainingActiveFormat"), FormatTimeSpan(interval.Remaining))
-                : string.Format(LocalizationService.Get("IntervalEvent.RemainingNextFormat"), FormatTimeSpan(interval.Remaining));
+                ? string.Format(LocalizationService.Get("IntervalEvent.RemainingActiveFormat"),
+                    FormatTimeSpan(interval.Remaining))
+                : string.Format(LocalizationService.Get("IntervalEvent.RemainingNextFormat"),
+                    FormatTimeSpan(interval.Remaining));
             var repeatDisplay = interval.MaxRepeats is > 0
                 ? $"{interval.CurrentRepeatNumber}/{interval.MaxRepeats}"
                 : $"{interval.CurrentRepeatNumber}/∞";
             vm.DetailText = string.Format(LocalizationService.Get("ClientMainWindowViewModel.Interval.DetailFormat"),
                 FormatTimeSpan(interval.Interval), FormatTimeSpan(interval.ActiveDuration), repeatDisplay);
-            vm.StatusText = interval.IsCompleted ? LocalizationService.Get("IntervalEvent.StatusDone") :
-                interval.IsActive ? LocalizationService.Get("TimelineDisplayItem.StatusActive") :
-                interval.IsRunning
-                    ? LocalizationService.Get("TimelineDisplayItem.StatusRunning")
-                    : LocalizationService.Get("TimelineDisplayItem.StatusPaused");
+            vm.StatusText = interval.IsCompleted
+                ? LocalizationService.Get("IntervalEvent.StatusDone")
+                : interval.IsActive
+                    ? LocalizationService.Get("TimelineDisplayItem.StatusActive")
+                    : interval.IsRunning
+                        ? LocalizationService.Get("TimelineDisplayItem.StatusRunning")
+                        : LocalizationService.Get("TimelineDisplayItem.StatusPaused");
             vm.IsActive = interval.IsActive;
             vm.IsCompleted = interval.IsCompleted;
             vm.HasProgress = true;
@@ -1436,7 +1454,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     private static string FormatGameTime(GameInstant time)
     {
         var date = CalendarService.Active.ToCalendarDate(time);
-        return $"{date.WeekdayName}, {date.Day:00}.{date.MonthIndex + 1:00}.{date.Year:0000} — {date.Hour:00}:{date.Minute:00}:{date.Second:00}";
+        return
+            $"{date.WeekdayName}, {date.Day:00}.{date.MonthIndex + 1:00}.{date.Year:0000} — {date.Hour:00}:{date.Minute:00}:{date.Second:00}";
     }
 
     private static string FormatTimeSpan(TimeSpan ts)

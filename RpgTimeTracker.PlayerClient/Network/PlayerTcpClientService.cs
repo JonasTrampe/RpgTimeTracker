@@ -15,7 +15,8 @@ using Serilog;
 namespace RpgTimeTracker.PlayerClient.Network;
 
 /// <summary>
-///     Client for the JSON-RPC delta protocol (see RpgTimeTracker.Shared.Models.Rpc/RpgTimeTracker.Shared.Services.Rpc): receives a
+///     Client for the JSON-RPC delta protocol (see RpgTimeTracker.Shared.Models.Rpc/RpgTimeTracker.Shared.Services.Rpc):
+///     receives a
 ///     full session.snapshot on connect, only targeted events after that. Media arrives
 ///     chunked (media.begin + N binary frames) and is written progressively into a temp
 ///     file, so playback can start before the transfer is finished.
@@ -133,10 +134,12 @@ public sealed class PlayerTcpClientService : IDisposable
     /// <summary>GM adjusts the volume of the currently playing music track live (0-100).</summary>
     public event Action<int>? MusicVolumeChangeRequested;
 
-    /// <summary>This window's current Music/Sound/Image/Video/Map routing state, sent right after
+    /// <summary>
+    ///     This window's current Music/Sound/Image/Video/Map routing state, sent right after
     ///     handshake and again whenever the GM changes it live (see
     ///     RpcMethods.AudioRoutingChanged). Args: musicEnabled, soundEnabled, imageEnabled,
-    ///     videoEnabled, mapEnabled.</summary>
+    ///     videoEnabled, mapEnabled.
+    /// </summary>
     public event Action<bool, bool, bool, bool, bool>? AudioRoutingChanged;
 
     public event Action<string>? StatusChanged;
@@ -168,7 +171,8 @@ public sealed class PlayerTcpClientService : IDisposable
             NoDelay = true
         };
 
-        StatusChanged?.Invoke(string.Format(LocalizationService.Get("PlayerTcpClientService.Status.Connecting"), host, port));
+        StatusChanged?.Invoke(string.Format(LocalizationService.Get("PlayerTcpClientService.Status.Connecting"), host,
+            port));
         Log.Information("Connection attempt to {Host}:{Port}", host, port);
 
         // Otherwise a wrong/unreachable manual host can hang for minutes without any
@@ -192,7 +196,8 @@ public sealed class PlayerTcpClientService : IDisposable
             throw;
         }
 
-        StatusChanged?.Invoke(string.Format(LocalizationService.Get("PlayerTcpClientService.Status.Connected"), host, port));
+        StatusChanged?.Invoke(string.Format(LocalizationService.Get("PlayerTcpClientService.Status.Connected"), host,
+            port));
         ConnectionStateChanged?.Invoke(true);
         Log.Information("Connected to {Host}:{Port}", host, port);
 
@@ -275,8 +280,10 @@ public sealed class PlayerTcpClientService : IDisposable
         return SendRpcAsync(RpcMethods.MediaPlaybackEnded, new MediaPlaybackEndedParams { MediaId = mediaId });
     }
 
-    /// <summary>Reports to the host that the currently playing music track has ended, so the
-    ///     Host's playlist sequencer can advance to the next track.</summary>
+    /// <summary>
+    ///     Reports to the host that the currently playing music track has ended, so the
+    ///     Host's playlist sequencer can advance to the next track.
+    /// </summary>
     public Task SendMusicTrackEndedAsync(string mediaId)
     {
         return SendRpcAsync(RpcMethods.MusicTrackEnded, new MusicTrackEndedParams { MediaId = mediaId });
@@ -466,7 +473,9 @@ public sealed class PlayerTcpClientService : IDisposable
             {
                 case RpcMethods.SessionHelloRejected:
                     var rejected = raw.GetParams<SessionHelloRejectedParams>();
-                    var reason = rejected?.Reason ?? LocalizationService.Get("PlayerTcpClientService.Status.ConnectionRejectedDefaultReason");
+                    var reason = rejected?.Reason ??
+                                 LocalizationService.Get(
+                                     "PlayerTcpClientService.Status.ConnectionRejectedDefaultReason");
                     Log.Warning("Connection rejected by host: {Reason}", reason);
                     StatusChanged?.Invoke(string.Format(
                         LocalizationService.Get("PlayerTcpClientService.Status.ConnectionRejected"), reason));

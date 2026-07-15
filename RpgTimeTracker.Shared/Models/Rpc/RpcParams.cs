@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using RpgTimeTracker.Shared.Models;
 
 namespace RpgTimeTracker.Shared.Models.Rpc;
 
@@ -10,9 +9,11 @@ public sealed class SessionHelloParams
     public int ProtocolVersion { get; set; }
     public string Pin { get; set; } = string.Empty;
 
-    /// <summary>Stable per-installation identifier (see ClientSettingsService.GetOrCreateClientId),
+    /// <summary>
+    ///     Stable per-installation identifier (see ClientSettingsService.GetOrCreateClientId),
     ///     generated once and persisted locally - lets the Host remember this window's Music/Sound
-    ///     routing preference across reconnects instead of resetting it to enabled every time.</summary>
+    ///     routing preference across reconnects instead of resetting it to enabled every time.
+    /// </summary>
     public string ClientId { get; set; } = string.Empty;
 }
 
@@ -24,8 +25,10 @@ public sealed class SessionHelloRejectedParams
 
 public sealed class SessionSnapshotParams
 {
-    /// <summary>Elapsed seconds of the calendar-agnostic GameInstant (see GameClockService) -
-    ///     not a wall-clock DateTime, since game time isn't locked to the Gregorian calendar.</summary>
+    /// <summary>
+    ///     Elapsed seconds of the calendar-agnostic GameInstant (see GameClockService) -
+    ///     not a wall-clock DateTime, since game time isn't locked to the Gregorian calendar.
+    /// </summary>
     public long CurrentGameTimeSeconds { get; set; }
 
     public double SpeedMultiplier { get; set; } = 1.0;
@@ -36,9 +39,11 @@ public sealed class SessionSnapshotParams
     public List<TimelineItemSnapshotDto> Items { get; set; } = new();
     public List<CalendarEntryDefinition> CalendarEntries { get; set; } = new();
 
-    /// <summary>The campaign's active calendar, sent once at connect (not re-sent per tick) so
+    /// <summary>
+    ///     The campaign's active calendar, sent once at connect (not re-sent per tick) so
     ///     PlayerClient can format dates without duplicating calendar-selection logic - see
-    ///     CalendarService.Active.</summary>
+    ///     CalendarService.Active.
+    /// </summary>
     public CalendarDefinition ActiveCalendar { get; set; } = CalendarDefinition.CreateGregorian();
 
     /// <summary>Player-side fog render style, current at connect time - see MapRenderStyleChangedParams.</summary>
@@ -159,8 +164,10 @@ public sealed class MapFloorShowDto
     public int GridWidth { get; set; }
     public int GridHeight { get; set; }
 
-    /// <summary>Binary FogMask format (see FogMaskSerializer), base64-encoded - already a
-    ///     "whole grid" transfer conceptually identical to the at-rest format.</summary>
+    /// <summary>
+    ///     Binary FogMask format (see FogMaskSerializer), base64-encoded - already a
+    ///     "whole grid" transfer conceptually identical to the at-rest format.
+    /// </summary>
     public string StartingFogBase64 { get; set; } = string.Empty;
 
     public string CurrentFogBase64 { get; set; } = string.Empty;
@@ -201,16 +208,20 @@ public sealed class MusicSetVolumeParams
     public int Volume { get; set; } = 100;
 }
 
-/// <summary>Client-to-server: the currently playing music track (identified by MediaId, matching
-///     the MediaHeaderDto.MediaId it was sent with) has actually ended.</summary>
+/// <summary>
+///     Client-to-server: the currently playing music track (identified by MediaId, matching
+///     the MediaHeaderDto.MediaId it was sent with) has actually ended.
+/// </summary>
 public sealed class MusicTrackEndedParams
 {
     public string MediaId { get; set; } = string.Empty;
 }
 
-/// <summary>Server-to-client: this window's current Music/Sound/Image/Video/Map routing state (see
+/// <summary>
+///     Server-to-client: this window's current Music/Sound/Image/Video/Map routing state (see
 ///     RpcMethods.AudioRoutingChanged - kept its name despite now carrying more flags, to avoid
-///     unnecessary wire-protocol churn).</summary>
+///     unnecessary wire-protocol churn).
+/// </summary>
 public sealed class DataRoutingChangedParams
 {
     public bool MusicEnabled { get; set; } = true;

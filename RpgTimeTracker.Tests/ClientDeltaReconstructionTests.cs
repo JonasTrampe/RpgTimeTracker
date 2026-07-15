@@ -18,31 +18,6 @@ public class ClientDeltaReconstructionTests
 {
     private static readonly GameInstant Start = new(1_000_000);
 
-    private sealed class Session
-    {
-        public GameClockService Clock { get; }
-        public TimerItem Timer { get; } = new() { Duration = TimeSpan.FromMinutes(30) };
-        public AlarmItem Alarm { get; } = new() { TriggerAt = Start.Add(TimeSpan.FromHours(4)) };
-        public IntervalEventItem Interval { get; } = new()
-        {
-            Interval = TimeSpan.FromMinutes(15),
-            ActiveDuration = TimeSpan.FromMinutes(2)
-        };
-
-        public Session()
-        {
-            Clock = new GameClockService(Start);
-            Clock.Tick += (newTime, delta) =>
-            {
-                Timer.Advance(delta);
-                Alarm.SyncToTime(newTime);
-                Interval.Advance(delta);
-            };
-            Timer.Start();
-            Interval.Start();
-        }
-    }
-
     [Fact]
     public void Host_and_client_end_up_in_identical_state_after_the_same_sequence_of_jumps()
     {
@@ -97,5 +72,31 @@ public class ClientDeltaReconstructionTests
         Assert.Equal(host.Timer.IsCompleted, client.Timer.IsCompleted);
         Assert.Equal(host.Interval.Remaining, client.Interval.Remaining);
         Assert.Equal(host.Interval.CurrentRepeatNumber, client.Interval.CurrentRepeatNumber);
+    }
+
+    private sealed class Session
+    {
+        public Session()
+        {
+            Clock = new GameClockService(Start);
+            Clock.Tick += (newTime, delta) =>
+            {
+                Timer.Advance(delta);
+                Alarm.SyncToTime(newTime);
+                Interval.Advance(delta);
+            };
+            Timer.Start();
+            Interval.Start();
+        }
+
+        public GameClockService Clock { get; }
+        public TimerItem Timer { get; } = new() { Duration = TimeSpan.FromMinutes(30) };
+        public AlarmItem Alarm { get; } = new() { TriggerAt = Start.Add(TimeSpan.FromHours(4)) };
+
+        public IntervalEventItem Interval { get; } = new()
+        {
+            Interval = TimeSpan.FromMinutes(15),
+            ActiveDuration = TimeSpan.FromMinutes(2)
+        };
     }
 }

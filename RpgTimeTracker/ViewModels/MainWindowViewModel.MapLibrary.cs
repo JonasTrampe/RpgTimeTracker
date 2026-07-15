@@ -1,35 +1,23 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Input;
-using Avalonia;
-using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LibVLCSharp.Shared;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Network;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
-using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Models.Rpc;
-using RpgTimeTracker.Shared.Models.Theming;
 using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
-using RpgTimeTracker.Shared.Services.Theming;
 using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.Shared.ViewModels;
 using Serilog;
@@ -38,17 +26,84 @@ namespace RpgTimeTracker.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayContext
 {
+    /// <summary>
+    ///     Default grid cell size for a newly added floor - configurable per floor later
+    ///     (e.g. via the SL Map Editor Window in a later milestone), not yet exposed in this UI.
+    /// </summary>
+    private const int DefaultMapCellSizePx = 8;
+
+    private readonly Dictionary<Guid, FogMask> _liveFog = new();
+
+    /// <summary>
+    ///     Maps that currently have at least one MapPrepareWindow open (see
+    ///     NotifyMapPrepareWindowOpened/Closed) - while a map is being prepared, it must not be
+    ///     streamable (see IsSelectedMapBeingPrepared/OpenMapToPlayersAsync), so editing the
+    ///     prepare mask (including a CellSizePx rescale) can never coincide with an active
+    ///     broadcast of that same mask.
+    /// </summary>
+    private readonly HashSet<Guid> _mapsBeingPrepared = [];
+
+    /// <summary>
+    ///     In-memory cache for MapPrepareWindow, mirroring _liveFog exactly but seeded and
+    ///     saved independently - both lazily read the same on-disk floor.FogPath the first time a
+    ///     floor is touched, but afterward diverge: this one is only ever written back to
+    ///     floor.FogPath (see SavePrepareFogAsync), never broadcast or shown locally, while
+    ///     _liveFog is only ever changed via MapLiveWindow's direct edits or an explicit
+    ///     Reset-to-Prepared (see ResetFloorFogToStartingAsync). Editing/saving Prepare does NOT
+    ///     auto-update an already-cached Live instance - that's intentional, not a bug to "fix".
+    /// </summary>
+    private readonly Dictionary<Guid, FogMask> _prepareFog = new();
+
+    [ObservableProperty] private MapFloorItemViewModel? _editingFloor;
+    [ObservableProperty] private bool _isMapOpenToPlayers;
+
+    // ==================== Map display (open to players, live fog editing) ====================
+    // "Starting" fog lives on disk per floor (MapFloorItemViewModel.FogPath, the library
+    // template); "current/live" fog is session-only, kept here in memory (not written back to
+    // FogPath) and initialized from the starting fog the first time a floor is touched.
+
+    [ObservableProperty] private MapItemViewModel? _openMap;
+
+    [ObservableProperty] private MapItemViewModel? _selectedMap;
+
+    private MapItemViewModel? _selectedMapForFloorsWatch;
     // ==================== Map library (fog-of-war maps, multiple floors each) ====================
 
     public ObservableCollection<MapItemViewModel> MapLibrary { get; } = [];
 
     public bool HasNoMaps => MapLibrary.Count == 0;
 
-    [ObservableProperty] private MapItemViewModel? _selectedMap;
+    /// <summary>
+    ///     Whether SelectedMap specifically (not just any map) is currently open to players -
+    ///     drives the "Shown to players" indicator next to the Maps tab's "Show" button.
+    /// </summary>
+    public bool IsSelectedMapOpenToPlayers => IsMapOpenToPlayers && ReferenceEquals(OpenMap, SelectedMap);
 
-    /// <summary>Default grid cell size for a newly added floor - configurable per floor later
-    ///     (e.g. via the SL Map Editor Window in a later milestone), not yet exposed in this UI.</summary>
-    private const int DefaultMapCellSizePx = 8;
+    public bool IsSelectedMapBeingPrepared => SelectedMap is not null && _mapsBeingPrepared.Contains(SelectedMap.Id);
+
+    /// <summary>
+    ///     Whether the Maps tab's "Show" button should be enabled for SelectedMap - has
+    ///     floors, and isn't currently being prepared (see IsSelectedMapBeingPrepared).
+    /// </summary>
+    public bool CanShowSelectedMap => SelectedMap is { HasNoFloors: false } && !IsSelectedMapBeingPrepared;
+
+    /// <summary>
+    ///     Shared "what a player currently sees" display, reused for the local player-window
+    ///     preview (PlayerWindow.axaml, see ShouldShowMapLocally) - the exact same component the
+    ///     real PlayerClient uses (RpgTimeTracker.Shared.ViewModels.MapDisplayViewModel). Since
+    ///     both this and GetLiveFog live in the same process, the Host feeds it the SAME FogMask
+    ///     instances it paints into (see MapEditorWindow) rather than a serialized copy, and only
+    ///     needs to say "something changed" (NotifyFogChanged) instead of resending cell data.
+    /// </summary>
+    public MapDisplayViewModel MapDisplay { get; } = new();
+
+    /// <summary>
+    ///     The local player window is open - shown regardless of connected clients, same
+    ///     as ShouldShowMediaLocally.
+    /// </summary>
+    public bool ShouldShowMapLocally => MapDisplay.IsShowingMap && IsPlayerWindowOpen;
+
+    public bool HasNoFloorsInEditor => EditingFloor is null;
 
     [RelayCommand]
     private async Task AddMapAsync()
@@ -62,26 +117,40 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         SaveMapLibrarySettings();
     }
 
-    /// <summary>Root folder a map's own subfolder (named by its Id) lives under - the Shared
-    ///     AppData directory, or the open session's own maps/ folder for a SessionLocal map.</summary>
-    private string GetMapLibraryBaseDirectory(LibraryScope scope) => scope == LibraryScope.SessionLocal
-        ? _sessionService.MapDirectory
-        : ThemeSettingsService.MapLibraryDirectory;
+    /// <summary>
+    ///     Root folder a map's own subfolder (named by its Id) lives under - the Shared
+    ///     AppData directory, or the open session's own maps/ folder for a SessionLocal map.
+    /// </summary>
+    private string GetMapLibraryBaseDirectory(LibraryScope scope)
+    {
+        return scope == LibraryScope.SessionLocal
+            ? _sessionService.MapDirectory
+            : ThemeSettingsService.MapLibraryDirectory;
+    }
 
     /// <summary>See GetMapLibraryBaseDirectory's doc comment - same purpose for Media.</summary>
-    private string GetMediaLibraryBaseDirectory(LibraryScope scope) => scope == LibraryScope.SessionLocal
-        ? _sessionService.MediaDirectory
-        : ThemeSettingsService.MediaLibraryDirectory;
+    private string GetMediaLibraryBaseDirectory(LibraryScope scope)
+    {
+        return scope == LibraryScope.SessionLocal
+            ? _sessionService.MediaDirectory
+            : ThemeSettingsService.MediaLibraryDirectory;
+    }
 
     /// <summary>See GetMapLibraryBaseDirectory's doc comment - same purpose for Sound.</summary>
-    private string GetSoundLibraryBaseDirectory(LibraryScope scope) => scope == LibraryScope.SessionLocal
-        ? _sessionService.SoundDirectory
-        : ThemeSettingsService.SoundLibraryDirectory;
+    private string GetSoundLibraryBaseDirectory(LibraryScope scope)
+    {
+        return scope == LibraryScope.SessionLocal
+            ? _sessionService.SoundDirectory
+            : ThemeSettingsService.SoundLibraryDirectory;
+    }
 
     /// <summary>See GetMapLibraryBaseDirectory's doc comment - same purpose for Music.</summary>
-    private string GetMusicLibraryBaseDirectory(LibraryScope scope) => scope == LibraryScope.SessionLocal
-        ? _sessionService.MusicDirectory
-        : ThemeSettingsService.MusicLibraryDirectory;
+    private string GetMusicLibraryBaseDirectory(LibraryScope scope)
+    {
+        return scope == LibraryScope.SessionLocal
+            ? _sessionService.MusicDirectory
+            : ThemeSettingsService.MusicLibraryDirectory;
+    }
 
     private void RemoveMap(MapItemViewModel map)
     {
@@ -91,7 +160,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         try
         {
             var mapDirectory = Path.Combine(GetMapLibraryBaseDirectory(map.Scope), map.Id.ToString("N"));
-            if (Directory.Exists(mapDirectory)) Directory.Delete(mapDirectory, recursive: true);
+            if (Directory.Exists(mapDirectory)) Directory.Delete(mapDirectory, true);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -101,11 +170,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         SaveMapLibrarySettings();
     }
 
-    /// <summary>See MoveMediaLibraryItemToScope's doc comment - same move/flip-Scope/re-save
+    /// <summary>
+    ///     See MoveMediaLibraryItemToScope's doc comment - same move/flip-Scope/re-save
     ///     pattern, except a map moves its whole per-map directory (all floors' image+fog files)
     ///     in one step instead of a single file, since that Id-named folder is already the
-    ///     natural on-disk unit here (see GetMapLibraryBaseDirectory).</summary>
-    public void MoveMapLibraryItemToScope(MapItemViewModel map, LibraryScope targetScope) =>
+    ///     natural on-disk unit here (see GetMapLibraryBaseDirectory).
+    /// </summary>
+    public void MoveMapLibraryItemToScope(MapItemViewModel map, LibraryScope targetScope)
+    {
         MoveLibraryItemToScope(map.Scope, targetScope, "Map", map.Name, () =>
         {
             var targetBaseDirectory = GetMapLibraryBaseDirectory(targetScope);
@@ -115,24 +187,27 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             if (Directory.Exists(sourceMapDirectory)) Directory.Move(sourceMapDirectory, targetMapDirectory);
 
             foreach (var floor in map.Floors)
-            {
                 floor.UpdatePaths(
                     Path.Combine(targetMapDirectory, Path.GetFileName(floor.ImagePath)),
                     Path.Combine(targetMapDirectory, Path.GetFileName(floor.FogPath)));
-            }
 
             map.Scope = targetScope;
             SaveMapLibrarySettings();
         });
+    }
 
     /// <summary>See MoveMediaLibraryItemToShared/ToSession's doc comment - same wrapping for Maps.</summary>
     [RelayCommand]
-    private void MoveMapLibraryItemToShared(MapItemViewModel map) =>
+    private void MoveMapLibraryItemToShared(MapItemViewModel map)
+    {
         MoveMapLibraryItemToScope(map, LibraryScope.Shared);
+    }
 
     [RelayCommand]
-    private void MoveMapLibraryItemToSession(MapItemViewModel map) =>
+    private void MoveMapLibraryItemToSession(MapItemViewModel map)
+    {
         MoveMapLibraryItemToScope(map, LibraryScope.SessionLocal);
+    }
 
     public async Task AddFloorToMapAsync(MapItemViewModel map, string sourcePath)
     {
@@ -182,12 +257,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SaveMapLibrarySettings();
             Log.Information("Floor added to map {MapName}: {FloorName} ({GridWidth}x{GridHeight} cells)",
                 map.Name, floor.Name, gridWidth, gridHeight);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedFloorToMap"), floor.Name, map.Name));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AddedFloorToMap"),
+                floor.Name, map.Name));
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Floor could not be added to map {MapName} ({SourcePath})", map.Name, sourcePath);
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MediaCouldNotBeAddedToLibrary"), ex.Message);
+            MediaErrorMessage =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Errors.MediaCouldNotBeAddedToLibrary"),
+                    ex.Message);
         }
     }
 
@@ -222,44 +300,51 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
-    /// <summary>Shared onChanged callback for MapItemViewModel (name rename, fog-style override
+    /// <summary>
+    ///     Shared onChanged callback for MapItemViewModel (name rename, fog-style override
     ///     change) - persists the library and, if this map is currently open to players, also
-    ///     re-applies/re-broadcasts its (possibly just-changed) effective fog style live.</summary>
+    ///     re-applies/re-broadcasts its (possibly just-changed) effective fog style live.
+    /// </summary>
     private void OnMapLibraryItemChanged(MapItemViewModel map)
     {
         SaveMapLibrarySettings();
         if (ReferenceEquals(map, OpenMap)) ApplyAndBroadcastEffectiveFogStyleForOpenMap();
     }
 
-    private static MapLibraryEntryDto ToMapLibraryEntryDto(MapItemViewModel map) => new()
+    private static MapLibraryEntryDto ToMapLibraryEntryDto(MapItemViewModel map)
     {
-        Id = map.Id,
-        Name = map.Name,
-        FogColorHex = map.FogColorHex,
-        FogOpacityPercent = map.FogOpacityPercent,
-        FogBlurRadius = map.FogBlurRadius,
-        FogBlurEnabled = map.FogBlurEnabled,
-        DefaultCellSizePx = map.DefaultCellSizePx,
-        FormatVersion = map.FormatVersion,
-        TagIds = map.TagIds.ToList(),
-        Floors = map.Floors.Select((floor, index) => new MapFloorEntryDto
+        return new MapLibraryEntryDto
         {
-            Id = floor.Id,
-            Name = floor.Name,
-            ImagePath = floor.ImagePath,
-            FogPath = floor.FogPath,
-            CellSizePx = floor.CellSizePx,
-            GridWidth = floor.GridWidth,
-            GridHeight = floor.GridHeight,
-            Order = index
-        }).ToList()
-    };
+            Id = map.Id,
+            Name = map.Name,
+            FogColorHex = map.FogColorHex,
+            FogOpacityPercent = map.FogOpacityPercent,
+            FogBlurRadius = map.FogBlurRadius,
+            FogBlurEnabled = map.FogBlurEnabled,
+            DefaultCellSizePx = map.DefaultCellSizePx,
+            FormatVersion = map.FormatVersion,
+            TagIds = map.TagIds.ToList(),
+            Floors = map.Floors.Select((floor, index) => new MapFloorEntryDto
+            {
+                Id = floor.Id,
+                Name = floor.Name,
+                ImagePath = floor.ImagePath,
+                FogPath = floor.FogPath,
+                CellSizePx = floor.CellSizePx,
+                GridWidth = floor.GridWidth,
+                GridHeight = floor.GridHeight,
+                Order = index
+            }).ToList()
+        };
+    }
 
     /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
-    /// <summary>Shared by every library's Save*LibrarySettings method: split items by Scope, write
+    /// <summary>
+    ///     Shared by every library's Save*LibrarySettings method: split items by Scope, write
     ///     the Shared-scoped ones into the always-present Shared settings file, and (only if a
     ///     session is open) the SessionLocal-scoped ones into that session's library file - only
-    ///     the DTO shape and which list on each settings object to assign differ per library.</summary>
+    ///     the DTO shape and which list on each settings object to assign differ per library.
+    /// </summary>
     private void SaveLibrarySettings<TItem, TDto>(
         IEnumerable<TItem> items,
         Func<TItem, LibraryScope> getScope,
@@ -276,41 +361,18 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         if (_sessionService.IsSessionOpen)
         {
             var sessionLibrary = _sessionService.LoadLibrary();
-            setSessionLocal(sessionLibrary, itemList.Where(i => getScope(i) == LibraryScope.SessionLocal).Select(toDto).ToList());
+            setSessionLocal(sessionLibrary,
+                itemList.Where(i => getScope(i) == LibraryScope.SessionLocal).Select(toDto).ToList());
             _sessionService.SaveLibrary(sessionLibrary);
         }
     }
 
-    private void SaveMapLibrarySettings() =>
+    private void SaveMapLibrarySettings()
+    {
         SaveLibrarySettings(MapLibrary, map => map.Scope, ToMapLibraryEntryDto,
             (settings, list) => settings.MapLibrary = list,
             (sessionLibrary, list) => sessionLibrary.MapLibrary = list);
-
-    // ==================== Map display (open to players, live fog editing) ====================
-    // "Starting" fog lives on disk per floor (MapFloorItemViewModel.FogPath, the library
-    // template); "current/live" fog is session-only, kept here in memory (not written back to
-    // FogPath) and initialized from the starting fog the first time a floor is touched.
-
-    [ObservableProperty] private MapItemViewModel? _openMap;
-    [ObservableProperty] private MapFloorItemViewModel? _editingFloor;
-    [ObservableProperty] private bool _isMapOpenToPlayers;
-
-    /// <summary>Whether SelectedMap specifically (not just any map) is currently open to players -
-    ///     drives the "Shown to players" indicator next to the Maps tab's "Show" button.</summary>
-    public bool IsSelectedMapOpenToPlayers => IsMapOpenToPlayers && ReferenceEquals(OpenMap, SelectedMap);
-
-    /// <summary>Maps that currently have at least one MapPrepareWindow open (see
-    ///     NotifyMapPrepareWindowOpened/Closed) - while a map is being prepared, it must not be
-    ///     streamable (see IsSelectedMapBeingPrepared/OpenMapToPlayersAsync), so editing the
-    ///     prepare mask (including a CellSizePx rescale) can never coincide with an active
-    ///     broadcast of that same mask.</summary>
-    private readonly HashSet<Guid> _mapsBeingPrepared = [];
-
-    public bool IsSelectedMapBeingPrepared => SelectedMap is not null && _mapsBeingPrepared.Contains(SelectedMap.Id);
-
-    /// <summary>Whether the Maps tab's "Show" button should be enabled for SelectedMap - has
-    ///     floors, and isn't currently being prepared (see IsSelectedMapBeingPrepared).</summary>
-    public bool CanShowSelectedMap => SelectedMap is { HasNoFloors: false } && !IsSelectedMapBeingPrepared;
+    }
 
     public void NotifyMapPrepareWindowOpened(Guid mapId)
     {
@@ -336,8 +398,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         OnPropertyChanged(nameof(IsSelectedMapOpenToPlayers));
     }
 
-    private MapItemViewModel? _selectedMapForFloorsWatch;
-
     partial void OnSelectedMapChanged(MapItemViewModel? value)
     {
         OnPropertyChanged(nameof(IsSelectedMapOpenToPlayers));
@@ -356,39 +416,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         if (e.PropertyName == nameof(MapItemViewModel.HasNoFloors)) OnPropertyChanged(nameof(CanShowSelectedMap));
     }
 
-    private readonly Dictionary<Guid, FogMask> _liveFog = new();
-
-    /// <summary>In-memory cache for MapPrepareWindow, mirroring _liveFog exactly but seeded and
-    ///     saved independently - both lazily read the same on-disk floor.FogPath the first time a
-    ///     floor is touched, but afterward diverge: this one is only ever written back to
-    ///     floor.FogPath (see SavePrepareFogAsync), never broadcast or shown locally, while
-    ///     _liveFog is only ever changed via MapLiveWindow's direct edits or an explicit
-    ///     Reset-to-Prepared (see ResetFloorFogToStartingAsync). Editing/saving Prepare does NOT
-    ///     auto-update an already-cached Live instance - that's intentional, not a bug to "fix".</summary>
-    private readonly Dictionary<Guid, FogMask> _prepareFog = new();
-
     /// <summary>
-    ///     Shared "what a player currently sees" display, reused for the local player-window
-    ///     preview (PlayerWindow.axaml, see ShouldShowMapLocally) - the exact same component the
-    ///     real PlayerClient uses (RpgTimeTracker.Shared.ViewModels.MapDisplayViewModel). Since
-    ///     both this and GetLiveFog live in the same process, the Host feeds it the SAME FogMask
-    ///     instances it paints into (see MapEditorWindow) rather than a serialized copy, and only
-    ///     needs to say "something changed" (NotifyFogChanged) instead of resending cell data.
-    /// </summary>
-    public MapDisplayViewModel MapDisplay { get; } = new();
-
-    /// <summary>The local player window is open - shown regardless of connected clients, same
-    ///     as ShouldShowMediaLocally.</summary>
-    public bool ShouldShowMapLocally => MapDisplay.IsShowingMap && IsPlayerWindowOpen;
-
-    public bool HasNoFloorsInEditor => EditingFloor is null;
-
-    /// <summary>Resolves a map's effective fog render style: its own per-map override where set,
+    ///     Resolves a map's effective fog render style: its own per-map override where set,
     ///     falling back to the global Settings-tab values otherwise (see
     ///     MapLibraryEntryDto's fog-style fields). Public so MapPrepareWindow/
     ///     MapLiveWindow can render their own local preview with the same effective style used for
-    ///     the real broadcast.</summary>
-    public (string ColorHex, int OpacityPercent, double BlurRadius, bool BlurEnabled) GetEffectiveFogStyle(MapItemViewModel map)
+    ///     the real broadcast.
+    /// </summary>
+    public (string ColorHex, int OpacityPercent, double BlurRadius, bool BlurEnabled) GetEffectiveFogStyle(
+        MapItemViewModel map)
     {
         return (map.FogColorHex ?? FogColorHex,
             map.FogOpacityPercent ?? FogOpacityPercent,
@@ -396,9 +432,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             map.FogBlurEnabled ?? FogBlurEnabled);
     }
 
-    /// <summary>Re-applies/re-broadcasts the currently open map's effective fog style - called
+    /// <summary>
+    ///     Re-applies/re-broadcasts the currently open map's effective fog style - called
     ///     both when the global fallback changes (ApplyAndBroadcastFogStyle) and when a map's own
-    ///     override changes (MapItemViewModel.OnFog*Changed via OnMapLibraryItemChanged).</summary>
+    ///     override changes (MapItemViewModel.OnFog*Changed via OnMapLibraryItemChanged).
+    /// </summary>
     private void ApplyAndBroadcastEffectiveFogStyleForOpenMap()
     {
         if (OpenMap is not { } map) return;
@@ -442,8 +480,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         ApplyAndBroadcastFogStyle();
     }
 
-    /// <summary>The live (current) fog for a floor - loaded from its starting template on first
-    ///     access, then mutated in place as the GM paints.</summary>
+    /// <summary>
+    ///     The live (current) fog for a floor - loaded from its starting template on first
+    ///     access, then mutated in place as the GM paints.
+    /// </summary>
     public FogMask GetLiveFog(MapFloorItemViewModel floor)
     {
         if (_liveFog.TryGetValue(floor.Id, out var fog)) return fog;
@@ -455,9 +495,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         return fog;
     }
 
-    /// <summary>The in-memory prepare-mode fog for a floor, edited by MapPrepareWindow - loaded
+    /// <summary>
+    ///     The in-memory prepare-mode fog for a floor, edited by MapPrepareWindow - loaded
     ///     from the same on-disk starting template as GetLiveFog, but cached and saved
-    ///     independently (see _prepareFog).</summary>
+    ///     independently (see _prepareFog).
+    /// </summary>
     public FogMask GetPrepareFog(MapFloorItemViewModel floor)
     {
         if (_prepareFog.TryGetValue(floor.Id, out var fog)) return fog;
@@ -469,9 +511,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         return fog;
     }
 
-    /// <summary>Persists the current in-memory prepare-mode fog back to the floor's starting
+    /// <summary>
+    ///     Persists the current in-memory prepare-mode fog back to the floor's starting
     ///     template file - called debounced from MapPrepareWindow as the GM paints, so a crash or
-    ///     forced close doesn't silently lose prep work.</summary>
+    ///     forced close doesn't silently lose prep work.
+    /// </summary>
     public async Task SavePrepareFogAsync(MapFloorItemViewModel floor)
     {
         await File.WriteAllBytesAsync(floor.FogPath, FogMaskSerializer.Serialize(GetPrepareFog(floor)));
@@ -517,11 +561,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         SaveMapLibrarySettings();
 
         if (liveWasOpen)
-        {
             // Coordinates shifted for every cell - a full resync, not an incremental
             // BroadcastFogCellsAsync, is the only way to keep clients correct.
             await OpenMapToPlayersAsync(map);
-        }
     }
 
     [RelayCommand]
@@ -622,13 +664,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         MapDisplay.NotifyFogChanged(floor.Id);
     }
 
-    /// <summary>Exports a single map (its floors' images + starting fog) as a self-contained
+    /// <summary>
+    ///     Exports a single map (its floors' images + starting fog) as a self-contained
     ///     <c>.rtt-map</c> zip - one map per file, unlike the whole-folder Media/Sound library
-    ///     export/import (a map is a single unit a GM shares/backs up, not a batch of many).</summary>
+    ///     export/import (a map is a single unit a GM shares/backs up, not a batch of many).
+    /// </summary>
     public byte[] ExportMapToZipBytes(MapItemViewModel map)
     {
         using var stream = new MemoryStream();
-        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
         {
             var manifest = new MapManifestDto { Name = map.Name, FormatVersion = map.FormatVersion };
             var order = 0;
@@ -679,7 +723,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             MapManifestDto? manifest;
             using (var manifestStream = manifestEntry.Open())
             using (var reader = new StreamReader(manifestStream))
+            {
                 manifest = JsonSerializer.Deserialize<MapManifestDto>(reader.ReadToEnd());
+            }
 
             if (manifest is null)
             {
@@ -704,10 +750,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 var fogPath = Path.Combine(mapDirectory, $"{floorId:N}.fog");
                 using (var entryStream = imageEntry.Open())
                 using (var target = File.Create(imagePath))
+                {
                     entryStream.CopyTo(target);
+                }
+
                 using (var entryStream = fogEntry.Open())
                 using (var target = File.Create(fogPath))
+                {
                     entryStream.CopyTo(target);
+                }
 
                 map.Floors.Add(new MapFloorItemViewModel(
                     floorId, floorEntry.Name, imagePath, fogPath,
@@ -719,7 +770,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             MapLibrary.Add(map);
             SaveMapLibrarySettings();
             Log.Information("Map imported: {MapName} ({FloorCount} floors)", map.Name, map.Floors.Count);
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MapImported"), map.Name));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MapImported"),
+                map.Name));
         }
         catch (InvalidDataException)
         {
@@ -728,8 +780,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         catch (Exception ex)
         {
             Log.Error(ex, "Map import failed");
-            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+            MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"),
+                ex.Message);
         }
     }
-
 }

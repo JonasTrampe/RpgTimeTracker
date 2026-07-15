@@ -15,11 +15,13 @@ namespace RpgTimeTracker.Services;
 /// </summary>
 public sealed class LibraryUsageRegistry
 {
-    private readonly List<Func<Guid, IEnumerable<string>>> _finders = [];
     private readonly List<Action<Guid>> _clearActions = [];
+    private readonly List<Func<Guid, IEnumerable<string>>> _finders = [];
 
-    /// <summary>Registers a finder returning a display label per place that currently references
-    ///     the given library item Id (empty if none).</summary>
+    /// <summary>
+    ///     Registers a finder returning a display label per place that currently references
+    ///     the given library item Id (empty if none).
+    /// </summary>
     public void Register(Func<Guid, IEnumerable<string>> findUsages)
     {
         _finders.Add(findUsages);

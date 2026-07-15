@@ -13,11 +13,11 @@ namespace RpgTimeTracker.ViewModels;
 /// </summary>
 public partial class TagViewModel : ObservableObject
 {
-    private readonly Action<TagViewModel> _onDeleteRequested;
     private readonly Action<TagViewModel>? _onChanged;
+    private readonly Action<TagViewModel> _onDeleteRequested;
+    [ObservableProperty] private string _colorHex;
 
     [ObservableProperty] private string _name;
-    [ObservableProperty] private string _colorHex;
 
     public TagViewModel(Guid id, string name, string colorHex, Action<TagViewModel> onDeleteRequested,
         Action<TagViewModel>? onChanged = null)
@@ -50,9 +50,14 @@ public partial class TagViewModel : ObservableObject
         _onDeleteRequested(this);
     }
 
-    public Tag ToModel() => new() { Id = Id, Name = Name, ColorHex = ColorHex };
+    public Tag ToModel()
+    {
+        return new Tag { Id = Id, Name = Name, ColorHex = ColorHex };
+    }
 
     public static TagViewModel FromModel(Tag tag, Action<TagViewModel> onDeleteRequested,
-        Action<TagViewModel>? onChanged = null) =>
-        new(tag.Id, tag.Name, tag.ColorHex, onDeleteRequested, onChanged);
+        Action<TagViewModel>? onChanged = null)
+    {
+        return new TagViewModel(tag.Id, tag.Name, tag.ColorHex, onDeleteRequested, onChanged);
+    }
 }

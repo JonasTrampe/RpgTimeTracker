@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia.Media;
@@ -37,6 +36,12 @@ public partial class TimerItemViewModel : ObservableObject, ITaggable
 
     [ObservableProperty] private int _soundRepeatCount;
 
+    /// <summary>
+    ///     Phase 4 of the Scenes/Tags/Calendars project: if set, firing this Timer also
+    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.
+    /// </summary>
+    [ObservableProperty] private Guid? _targetSceneId;
+
     public TimerItemViewModel(TimerItem model, Action<TimerItemViewModel> onDeleteRequested)
     {
         _model = model;
@@ -59,14 +64,6 @@ public partial class TimerItemViewModel : ObservableObject, ITaggable
     /// <summary>Optional image/video that is automatically distributed when this timer expires.</summary>
     public TriggerMediaConfig TriggerMedia { get; } = new();
 
-    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this Timer also
-    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.</summary>
-    [ObservableProperty] private Guid? _targetSceneId;
-
-    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate tag list from the library-wide
-    ///     Tags, used to filter the Elementliste.</summary>
-    public ObservableCollection<Guid> TagIds { get; } = [];
-
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
 
@@ -79,11 +76,13 @@ public partial class TimerItemViewModel : ObservableObject, ITaggable
     public bool IsCompleted => _model.IsCompleted;
     public bool CanEditDuration => true;
 
-    public string StartPauseLabel => _model.IsCompleted ? LocalizationService.Get("TimelineDisplayItem.StatusExpired") :
-        _model.IsRunning ? LocalizationService.Get("IntervalEvent.StatusPause") :
-        _model.Elapsed > TimeSpan.Zero
-            ? LocalizationService.Get("IntervalEvent.StatusContinue")
-            : LocalizationService.Get("IntervalEvent.StatusStart");
+    public string StartPauseLabel => _model.IsCompleted
+        ? LocalizationService.Get("TimelineDisplayItem.StatusExpired")
+        : _model.IsRunning
+            ? LocalizationService.Get("IntervalEvent.StatusPause")
+            : _model.Elapsed > TimeSpan.Zero
+                ? LocalizationService.Get("IntervalEvent.StatusContinue")
+                : LocalizationService.Get("IntervalEvent.StatusStart");
 
     public IBrush? ItemBorderBrush => IsBlinkActive
         ? VisualItemHelper.TryBrush(ColorHex) ?? Brushes.Gold
@@ -95,7 +94,16 @@ public partial class TimerItemViewModel : ObservableObject, ITaggable
     public string SoundToPlay => _model.Sound;
     public int SoundRepeatCountToPlay => _model.SoundRepeatCount;
 
-    /// <summary>Called by MainWindowViewModel on LocalizationService.LanguageChanged (see LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).</summary>
+    /// <summary>
+    ///     Timer-specific Tag Ids (see TimerTag) - a separate tag list from the library-wide
+    ///     Tags, used to filter the Elementliste.
+    /// </summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
+
+    /// <summary>
+    ///     Called by MainWindowViewModel on LocalizationService.LanguageChanged (see
+    ///     LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).
+    /// </summary>
     public void RefreshLocalizedText()
     {
         OnPropertyChanged(string.Empty);

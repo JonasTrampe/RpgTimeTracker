@@ -15,29 +15,39 @@ public sealed class NpcLibraryEntryDto
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Shared across all variants (see NpcGmInfoBlockDto) - private GM reference notes
-    ///     (motivation, secrets, stat block) don't change with the NPC's mood/variant.</summary>
+    /// <summary>
+    ///     Shared across all variants (see NpcGmInfoBlockDto) - private GM reference notes
+    ///     (motivation, secrets, stat block) don't change with the NPC's mood/variant.
+    /// </summary>
     public List<NpcGmInfoBlockDto> GmInfoBlocks { get; set; } = [];
 
-    /// <summary>C# name renamed from "State(s)" to "Variant(s)" (see NpcVariantEntryDto), but the
+    /// <summary>
+    ///     C# name renamed from "State(s)" to "Variant(s)" (see NpcVariantEntryDto), but the
     ///     JSON key stays "States" so settings.json/session-library.json files saved before this
-    ///     rename keep loading their characters' variants instead of silently losing them.</summary>
+    ///     rename keep loading their characters' variants instead of silently losing them.
+    /// </summary>
     [JsonPropertyName("States")]
     public List<NpcVariantEntryDto> Variants { get; set; } = [];
 
-    /// <summary>Which variant is currently "true" for this NPC - must match one of Variants' Id.
-    ///     JSON key kept as "ActiveStateId" - see Variants' doc comment.</summary>
+    /// <summary>
+    ///     Which variant is currently "true" for this NPC - must match one of Variants' Id.
+    ///     JSON key kept as "ActiveStateId" - see Variants' doc comment.
+    /// </summary>
     [JsonPropertyName("ActiveStateId")]
     public Guid ActiveVariantId { get; set; }
 
-    /// <summary>Freeform Tag Ids attached to this character (see Tag) - shared across all
-    ///     variants, same as GmInfoBlocks.</summary>
+    /// <summary>
+    ///     Freeform Tag Ids attached to this character (see Tag) - shared across all
+    ///     variants, same as GmInfoBlocks.
+    /// </summary>
     public List<Guid> TagIds { get; set; } = [];
 }
 
-/// <summary>A GM-named, ordered markdown section (e.g. "Motivation", "Secrets", "Combat stats") -
+/// <summary>
+///     A GM-named, ordered markdown section (e.g. "Motivation", "Secrets", "Combat stats") -
 ///     rendered via the same ClassIsland.Markdown.Avalonia control already used for the About
-///     screen.</summary>
+///     screen.
+/// </summary>
 public sealed class NpcGmInfoBlockDto
 {
     public string Title { get; set; } = string.Empty;
@@ -61,18 +71,24 @@ public sealed class NpcVariantEntryDto
 
     public Guid? ImageId { get; set; }
 
-    /// <summary>Token resolution chain: TokenImageId (explicit token image) -> TokenIcon (a
+    /// <summary>
+    ///     Token resolution chain: TokenImageId (explicit token image) -> TokenIcon (a
     ///     Bootstrap icon, see VisualItemHelper) -> initials derived from the NPC's Name - see
-    ///     NpcLibraryItemViewModel.GetEffectiveTokenImage/GetEffectiveTokenIcon/ResolvedTokenInitials.</summary>
+    ///     NpcLibraryItemViewModel.GetEffectiveTokenImage/GetEffectiveTokenIcon/ResolvedTokenInitials.
+    /// </summary>
     public Guid? TokenImageId { get; set; }
 
     public string? TokenIcon { get; set; }
 
-    /// <summary>GM-only in this pass - not yet transmitted to players over the network (see the
-    ///     design conversation this feature was built from: "model now, wire later").</summary>
+    /// <summary>
+    ///     GM-only in this pass - not yet transmitted to players over the network (see the
+    ///     design conversation this feature was built from: "model now, wire later").
+    /// </summary>
     public string? PlayerInfo { get; set; }
 
-    /// <summary>Null/absent = inherit the Default variant's sounds; present (even as an empty list)
-    ///     = an explicit override, including "no sounds at all" for this variant.</summary>
+    /// <summary>
+    ///     Null/absent = inherit the Default variant's sounds; present (even as an empty list)
+    ///     = an explicit override, including "no sounds at all" for this variant.
+    /// </summary>
     public List<Guid>? SoundIds { get; set; }
 }

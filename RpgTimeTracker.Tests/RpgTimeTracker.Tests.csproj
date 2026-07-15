@@ -1,45 +1,45 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
-    <!-- Only needed by MapFogIntegrationTests.cs: those tests spin up a real
-         TcpPlayerServerService, whose new-connection catch-up and heartbeat loop post work
-         through Avalonia's UI-thread dispatcher (see TcpPlayerServerService.SendCatchUpAsync/
-         HeartbeatLoopAsync). Without an actual Avalonia app pumping that dispatcher, those posted
-         jobs would simply never run, so reconnect/resync could never be observed. Avalonia.Headless
-         provides a real (but windowless) dispatcher loop for exactly this; [AvaloniaFact]/
-         [AvaloniaTheory] replace [Fact]/[Theory] only in that one test file - every other test
-         here is plain logic and doesn't need it. -->
-    <!-- Not Avalonia.Headless.XUnit: that package depends on xunit.v3, which conflicts with the
-         classic xunit v2 packages already used by every other test here. HeadlessDispatch.cs
-         wraps Avalonia.Headless's own HeadlessUnitTestSession (the same primitive
-         Avalonia.Headless.XUnit's [AvaloniaFact] uses internally) directly, so plain [Fact]/
-         [Theory] keep working unchanged. -->
-    <PackageReference Include="Avalonia.Headless" Version="12.0.5" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" Version="6.0.4"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
+        <PackageReference Include="xunit" Version="2.9.3"/>
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"/>
+        <!-- Only needed by MapFogIntegrationTests.cs: those tests spin up a real
+             TcpPlayerServerService, whose new-connection catch-up and heartbeat loop post work
+             through Avalonia's UI-thread dispatcher (see TcpPlayerServerService.SendCatchUpAsync/
+             HeartbeatLoopAsync). Without an actual Avalonia app pumping that dispatcher, those posted
+             jobs would simply never run, so reconnect/resync could never be observed. Avalonia.Headless
+             provides a real (but windowless) dispatcher loop for exactly this; [AvaloniaFact]/
+             [AvaloniaTheory] replace [Fact]/[Theory] only in that one test file - every other test
+             here is plain logic and doesn't need it. -->
+        <!-- Not Avalonia.Headless.XUnit: that package depends on xunit.v3, which conflicts with the
+             classic xunit v2 packages already used by every other test here. HeadlessDispatch.cs
+             wraps Avalonia.Headless's own HeadlessUnitTestSession (the same primitive
+             Avalonia.Headless.XUnit's [AvaloniaFact] uses internally) directly, so plain [Fact]/
+             [Theory] keep working unchanged. -->
+        <PackageReference Include="Avalonia.Headless" Version="12.0.5"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Using Include="Xunit" />
-  </ItemGroup>
+    <ItemGroup>
+        <Using Include="Xunit"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\RpgTimeTracker.Shared\RpgTimeTracker.Shared.csproj" />
-    <!-- Deliberately reference the real Host/PlayerClient network services (not test doubles) -
-         MapFogIntegrationTests.cs exercises the actual production wire glue, since that's exactly
-         where the map-floor TotalLength truncation bug lived; a mock would never have caught it. -->
-    <ProjectReference Include="..\RpgTimeTracker\RpgTimeTracker.csproj" />
-    <ProjectReference Include="..\RpgTimeTracker.PlayerClient\RpgTimeTracker.PlayerClient.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\RpgTimeTracker.Shared\RpgTimeTracker.Shared.csproj"/>
+        <!-- Deliberately reference the real Host/PlayerClient network services (not test doubles) -
+             MapFogIntegrationTests.cs exercises the actual production wire glue, since that's exactly
+             where the map-floor TotalLength truncation bug lived; a mock would never have caught it. -->
+        <ProjectReference Include="..\RpgTimeTracker\RpgTimeTracker.csproj"/>
+        <ProjectReference Include="..\RpgTimeTracker.PlayerClient\RpgTimeTracker.PlayerClient.csproj"/>
+    </ItemGroup>
 
 </Project>

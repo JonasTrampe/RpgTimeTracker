@@ -11,7 +11,6 @@ using Avalonia.Platform.Storage;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
-using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.ViewModels;
 
@@ -24,64 +23,82 @@ public partial class MainWindow : Window
     ///     ImportStateFromZipOrJson). A distinct extension (rather than keeping .json now that the
     ///     content is a zip) was chosen specifically to avoid confusion with other data.
     /// </summary>
-    private static readonly FilePickerFileType RttSaveFileType = new(LocalizationService.Get("MainWindow.FileTypes.GameState"))
-    {
-        Patterns = ["*.rtt-save"]
-    };
+    private static readonly FilePickerFileType RttSaveFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.GameState"))
+        {
+            Patterns = ["*.rtt-save"]
+        };
 
-    /// <summary>Old plain-JSON save format, kept only so Load still finds pre-.rtt-save files - see
-    ///     MainWindowViewModel.ImportStateFromZipOrJson for the upgrade path.</summary>
-    private static readonly FilePickerFileType JsonFileType = new(LocalizationService.Get("MainWindow.FileTypes.GameStateLegacyJson"))
-    {
-        Patterns = ["*.json"]
-    };
+    /// <summary>
+    ///     Old plain-JSON save format, kept only so Load still finds pre-.rtt-save files - see
+    ///     MainWindowViewModel.ImportStateFromZipOrJson for the upgrade path.
+    /// </summary>
+    private static readonly FilePickerFileType JsonFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.GameStateLegacyJson"))
+        {
+            Patterns = ["*.json"]
+        };
 
-    private static readonly FilePickerFileType CalendarJsonFileType = new(LocalizationService.Get("MainWindow.FileTypes.Calendar"))
-    {
-        Patterns = ["*.json"]
-    };
+    private static readonly FilePickerFileType CalendarJsonFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.Calendar"))
+        {
+            Patterns = ["*.json"]
+        };
 
-    internal static readonly FilePickerFileType AudioFileType = new(LocalizationService.Get("MainWindow.FileTypes.SoundFile"))
-    {
-        Patterns = ["*.wav", "*.mp3", "*.ogg", "*.flac", "*.aiff", "*.aif", "*.m4a", "*.aac"]
-    };
+    internal static readonly FilePickerFileType AudioFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.SoundFile"))
+        {
+            Patterns = ["*.wav", "*.mp3", "*.ogg", "*.flac", "*.aiff", "*.aif", "*.m4a", "*.aac"]
+        };
 
-    internal static readonly FilePickerFileType MediaFileType = new(LocalizationService.Get("MainWindow.FileTypes.ImageOrVideo"))
-    {
-        Patterns =
-        [
-            "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp",
-            "*.mp4", "*.m4v", "*.webm", "*.mkv", "*.mov", "*.avi"
-        ]
-    };
+    internal static readonly FilePickerFileType MediaFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.ImageOrVideo"))
+        {
+            Patterns =
+            [
+                "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp",
+                "*.mp4", "*.m4v", "*.webm", "*.mkv", "*.mov", "*.avi"
+            ]
+        };
 
-    /// <summary>Map floors are image-only for now - see MapItemViewModel/AddFloorToMapAsync.
-    ///     Looping video as a floor background is a deferred follow-up (issue #16).</summary>
-    private static readonly FilePickerFileType MapFloorImageFileType = new(LocalizationService.Get("MainWindow.FileTypes.MapFloorImage"))
-    {
-        Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"]
-    };
+    /// <summary>
+    ///     Map floors are image-only for now - see MapItemViewModel/AddFloorToMapAsync.
+    ///     Looping video as a floor background is a deferred follow-up (issue #16).
+    /// </summary>
+    private static readonly FilePickerFileType MapFloorImageFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.MapFloorImage"))
+        {
+            Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"]
+        };
 
-    /// <summary>A single exported map (image + starting fog per floor) as a self-contained zip -
-    ///     see MainWindowViewModel.ExportMapToZipBytes/ImportMapFromZipBytes.</summary>
+    /// <summary>
+    ///     A single exported map (image + starting fog per floor) as a self-contained zip -
+    ///     see MainWindowViewModel.ExportMapToZipBytes/ImportMapFromZipBytes.
+    /// </summary>
     private static readonly FilePickerFileType MapFileType = new(LocalizationService.Get("MainWindow.FileTypes.Map"))
     {
         Patterns = ["*.rtt-map"]
     };
 
-    /// <summary>Bundles game state + all three libraries into one file - see
-    ///     MainWindowViewModel.ExportFullSessionToZipBytes/ImportFullSessionFromZipBytes.</summary>
-    private static readonly FilePickerFileType FullSessionFileType = new(LocalizationService.Get("MainWindow.FileTypes.FullSession"))
-    {
-        Patterns = ["*.rtt-session"]
-    };
+    /// <summary>
+    ///     Bundles game state + all three libraries into one file - see
+    ///     MainWindowViewModel.ExportFullSessionToZipBytes/ImportFullSessionFromZipBytes.
+    /// </summary>
+    private static readonly FilePickerFileType FullSessionFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.FullSession"))
+        {
+            Patterns = ["*.rtt-session"]
+        };
 
-    private static readonly FilePickerFileType TextFileType = new(LocalizationService.Get("MainWindow.FileTypes.TextFile"))
-    {
-        Patterns = ["*.txt", "*.md"]
-    };
+    private static readonly FilePickerFileType TextFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.TextFile"))
+        {
+            Patterns = ["*.txt", "*.md"]
+        };
 
     private MainWindowViewModel? _attachedViewModel;
+
+    private MapLiveWindow? _openMapLiveWindow;
 
     private PlayerWindow? _playerWindow;
 
@@ -242,8 +259,6 @@ public partial class MainWindow : Window
             await vmForFloor.AddFloorToMapAsync(map, localPath);
     }
 
-    private MapLiveWindow? _openMapLiveWindow;
-
     private void OnEditSelectedFloorClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map || map.Floors.Count == 0) return;
@@ -321,11 +336,13 @@ public partial class MainWindow : Window
             await using var stream = await file.OpenWriteAsync();
             stream.SetLength(0);
             await stream.WriteAsync(zipBytes);
-            vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MapExported"), map.Name));
+            vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MapExported"),
+                map.Name));
         }
         catch (Exception ex)
         {
-            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"),
+                ex.Message);
         }
     }
 
@@ -381,7 +398,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"),
+                ex.Message);
         }
     }
 
@@ -435,7 +453,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"),
+                ex.Message);
         }
     }
 
@@ -468,7 +487,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.MediaCouldNotBeSent"), ex.Message);
+            vm.MediaErrorMessage =
+                string.Format(LocalizationService.Get("MainWindow.Errors.MediaCouldNotBeSent"), ex.Message);
         }
     }
 
@@ -501,7 +521,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.SoundCouldNotBeSent"), ex.Message);
+            vm.MediaErrorMessage =
+                string.Format(LocalizationService.Get("MainWindow.Errors.SoundCouldNotBeSent"), ex.Message);
         }
     }
 
@@ -658,7 +679,8 @@ public partial class MainWindow : Window
         if (localPath is null) return;
 
         vm.CreateSession(localPath);
-        vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindow.Status.SessionCreated"), vm.CurrentSessionName));
+        vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindow.Status.SessionCreated"),
+            vm.CurrentSessionName));
     }
 
     private async void OnOpenSessionClick(object? sender, RoutedEventArgs e)
@@ -679,7 +701,8 @@ public partial class MainWindow : Window
         if (localPath is null) return;
 
         vm.OpenSession(localPath);
-        vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindow.Status.SessionOpened"), vm.CurrentSessionName));
+        vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindow.Status.SessionOpened"),
+            vm.CurrentSessionName));
     }
 
     private void OnCloseSessionClick(object? sender, RoutedEventArgs e)
@@ -785,7 +808,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.LogExportFailed"), ex.Message);
+            vm.ClockErrorMessage =
+                string.Format(LocalizationService.Get("MainWindow.Errors.LogExportFailed"), ex.Message);
         }
     }
 
@@ -815,7 +839,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarExportFailed"), ex.Message);
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarExportFailed"),
+                ex.Message);
         }
     }
 
@@ -843,7 +868,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarImportFailed"), ex.Message);
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarImportFailed"),
+                ex.Message);
         }
     }
 
@@ -877,7 +903,9 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.CalendarDefinitionImportFailed"), ex.Message);
+            vm.ClockErrorMessage =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Errors.CalendarDefinitionImportFailed"),
+                    ex.Message);
         }
     }
 }

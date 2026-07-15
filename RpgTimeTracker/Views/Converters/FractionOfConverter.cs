@@ -17,7 +17,8 @@ public sealed class FractionOfConverter : IValueConverter
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not double amount) return value;
-        if (parameter is not string s || !double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var fraction))
+        if (parameter is not string s ||
+            !double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var fraction))
             return amount;
 
         return amount * fraction;

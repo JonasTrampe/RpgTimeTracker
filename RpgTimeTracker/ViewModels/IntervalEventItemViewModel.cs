@@ -40,6 +40,12 @@ public partial class IntervalEventItemViewModel : ObservableObject, ITaggable
 
     [ObservableProperty] private int _soundRepeatCount;
 
+    /// <summary>
+    ///     Phase 4 of the Scenes/Tags/Calendars project: if set, firing this interval also
+    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.
+    /// </summary>
+    [ObservableProperty] private Guid? _targetSceneId;
+
     public IntervalEventItemViewModel(IntervalEventItem model, Action<IntervalEventItemViewModel> onDeleteRequested)
     {
         _model = model;
@@ -65,14 +71,6 @@ public partial class IntervalEventItemViewModel : ObservableObject, ITaggable
     /// <summary>Optional image/video that is automatically distributed when this interval becomes active.</summary>
     public TriggerMediaConfig TriggerMedia { get; } = new();
 
-    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate tag list from the library-wide
-    ///     Tags, used to filter the Elementliste.</summary>
-    public ObservableCollection<Guid> TagIds { get; } = [];
-
-    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this interval also
-    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.</summary>
-    [ObservableProperty] private Guid? _targetSceneId;
-
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
 
@@ -85,10 +83,12 @@ public partial class IntervalEventItemViewModel : ObservableObject, ITaggable
 
     public string StartPauseLabel => _model.IsCompleted ? LocalizationService.Get("IntervalEvent.StatusDone") :
         _model.IsRunning ? LocalizationService.Get("IntervalEvent.StatusPause") :
-        _model.Elapsed > TimeSpan.Zero ? LocalizationService.Get("IntervalEvent.StatusContinue") : LocalizationService.Get("IntervalEvent.StatusStart");
+        _model.Elapsed > TimeSpan.Zero ? LocalizationService.Get("IntervalEvent.StatusContinue") :
+        LocalizationService.Get("IntervalEvent.StatusStart");
 
     public string RemainingText => _model.IsActive
-        ? string.Format(LocalizationService.Get("IntervalEvent.RemainingActiveFormat"), FormatTimeSpan(_model.Remaining))
+        ? string.Format(LocalizationService.Get("IntervalEvent.RemainingActiveFormat"),
+            FormatTimeSpan(_model.Remaining))
         : string.Format(LocalizationService.Get("IntervalEvent.RemainingNextFormat"), FormatTimeSpan(_model.Remaining));
 
     public string RepeatDisplay => _model.MaxRepeats.HasValue && _model.MaxRepeats.Value > 0
@@ -108,7 +108,16 @@ public partial class IntervalEventItemViewModel : ObservableObject, ITaggable
     public int SoundRepeatCountToPlay => _model.SoundRepeatCount;
     public TimeSpan? TimeUntilNextEvent => _model.IsRunning && !_model.IsCompleted ? _model.Remaining : null;
 
-    /// <summary>Called by MainWindowViewModel on LocalizationService.LanguageChanged (see LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).</summary>
+    /// <summary>
+    ///     Timer-specific Tag Ids (see TimerTag) - a separate tag list from the library-wide
+    ///     Tags, used to filter the Elementliste.
+    /// </summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
+
+    /// <summary>
+    ///     Called by MainWindowViewModel on LocalizationService.LanguageChanged (see
+    ///     LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).
+    /// </summary>
     public void RefreshLocalizedText()
     {
         OnPropertyChanged(string.Empty);

@@ -21,9 +21,10 @@ public partial class LibraryPanelView : UserControl
     public static readonly StyledProperty<ObservableCollection<TagViewModel>?> AllTagsProperty =
         AvaloniaProperty.Register<LibraryPanelView, ObservableCollection<TagViewModel>?>(nameof(AllTags));
 
-    public static readonly DirectProperty<LibraryPanelView, ObservableCollection<TagFilterOptionViewModel>> FilterOptionsProperty =
-        AvaloniaProperty.RegisterDirect<LibraryPanelView, ObservableCollection<TagFilterOptionViewModel>>(
-            nameof(FilterOptions), o => o.FilterOptions);
+    public static readonly DirectProperty<LibraryPanelView, ObservableCollection<TagFilterOptionViewModel>>
+        FilterOptionsProperty =
+            AvaloniaProperty.RegisterDirect<LibraryPanelView, ObservableCollection<TagFilterOptionViewModel>>(
+                nameof(FilterOptions), o => o.FilterOptions);
 
     public static readonly DirectProperty<LibraryPanelView, IEnumerable> FilteredItemsSourceProperty =
         AvaloniaProperty.RegisterDirect<LibraryPanelView, IEnumerable>(
@@ -32,29 +33,6 @@ public partial class LibraryPanelView : UserControl
     public static readonly DirectProperty<LibraryPanelView, bool> HasNoFilterTagsProperty =
         AvaloniaProperty.RegisterDirect<LibraryPanelView, bool>(nameof(HasNoFilterTags), o => o.HasNoFilterTags);
 
-    private readonly ObservableCollection<TagFilterOptionViewModel> _filterOptions = [];
-    private readonly ObservableCollection<object> _filteredItems = [];
-    private readonly HashSet<Guid> _selectedFilterTagIds = [];
-    private readonly List<ITaggable> _subscribedItems = [];
-    private bool _hasNoFilterTags = true;
-    private INotifyCollectionChanged? _subscribedSource;
-
-    public ObservableCollection<TagViewModel>? AllTags
-    {
-        get => GetValue(AllTagsProperty);
-        set => SetValue(AllTagsProperty, value);
-    }
-
-    public ObservableCollection<TagFilterOptionViewModel> FilterOptions => _filterOptions;
-
-    public IEnumerable FilteredItemsSource => _filteredItems;
-
-    public bool HasNoFilterTags
-    {
-        get => _hasNoFilterTags;
-        private set => SetAndRaise(HasNoFilterTagsProperty, ref _hasNoFilterTags, value);
-    }
-
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<LibraryPanelView, string?>(nameof(Title));
 
@@ -62,7 +40,8 @@ public partial class LibraryPanelView : UserControl
         AvaloniaProperty.Register<LibraryPanelView, string?>(nameof(Description));
 
     public static readonly StyledProperty<string?> AddButtonLabelProperty =
-        AvaloniaProperty.Register<LibraryPanelView, string?>(nameof(AddButtonLabel), LocalizationService.Get("LibraryPanel.AddButtonLabel"));
+        AvaloniaProperty.Register<LibraryPanelView, string?>(nameof(AddButtonLabel),
+            LocalizationService.Get("LibraryPanel.AddButtonLabel"));
 
     public static readonly StyledProperty<string?> EmptyStateTextProperty =
         AvaloniaProperty.Register<LibraryPanelView, string?>(nameof(EmptyStateText));
@@ -79,6 +58,13 @@ public partial class LibraryPanelView : UserControl
     public static readonly StyledProperty<IDataTemplate?> ItemTemplateProperty =
         AvaloniaProperty.Register<LibraryPanelView, IDataTemplate?>(nameof(ItemTemplate));
 
+    private readonly ObservableCollection<object> _filteredItems = [];
+
+    private readonly HashSet<Guid> _selectedFilterTagIds = [];
+    private readonly List<ITaggable> _subscribedItems = [];
+    private bool _hasNoFilterTags = true;
+    private INotifyCollectionChanged? _subscribedSource;
+
     public LibraryPanelView()
     {
         InitializeComponent();
@@ -86,76 +72,20 @@ public partial class LibraryPanelView : UserControl
         ItemsSourceProperty.Changed.AddClassHandler<LibraryPanelView>((c, _) => c.ResubscribeItemsAndFilter());
     }
 
-    protected override void OnUnloaded(RoutedEventArgs e)
+    public ObservableCollection<TagViewModel>? AllTags
     {
-        base.OnUnloaded(e);
-        UnsubscribeAllItems();
+        get => GetValue(AllTagsProperty);
+        set => SetValue(AllTagsProperty, value);
     }
 
-    private void RebuildFilterOptions()
+    public ObservableCollection<TagFilterOptionViewModel> FilterOptions { get; } = [];
+
+    public IEnumerable FilteredItemsSource => _filteredItems;
+
+    public bool HasNoFilterTags
     {
-        _filterOptions.Clear();
-        _selectedFilterTagIds.Clear();
-        if (AllTags is not null)
-            foreach (var tag in AllTags)
-                _filterOptions.Add(new TagFilterOptionViewModel(tag, OnFilterTagToggled));
-
-        HasNoFilterTags = _filterOptions.Count == 0;
-        ApplyFilter();
-    }
-
-    private void OnFilterTagToggled(Guid tagId, bool isSelected)
-    {
-        if (isSelected) _selectedFilterTagIds.Add(tagId);
-        else _selectedFilterTagIds.Remove(tagId);
-        ApplyFilter();
-    }
-
-    private void ResubscribeItemsAndFilter()
-    {
-        UnsubscribeAllItems();
-
-        if (ItemsSource is INotifyCollectionChanged incc)
-        {
-            incc.CollectionChanged += OnSourceCollectionChanged;
-            _subscribedSource = incc;
-        }
-
-        if (ItemsSource is not null)
-            foreach (var item in ItemsSource)
-                if (item is ITaggable taggable)
-                {
-                    taggable.TagIds.CollectionChanged += OnItemTagIdsChanged;
-                    _subscribedItems.Add(taggable);
-                }
-
-        ApplyFilter();
-    }
-
-    private void UnsubscribeAllItems()
-    {
-        foreach (var item in _subscribedItems) item.TagIds.CollectionChanged -= OnItemTagIdsChanged;
-        _subscribedItems.Clear();
-
-        if (_subscribedSource is not null) _subscribedSource.CollectionChanged -= OnSourceCollectionChanged;
-        _subscribedSource = null;
-    }
-
-    private void OnSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => ResubscribeItemsAndFilter();
-
-    private void OnItemTagIdsChanged(object? sender, NotifyCollectionChangedEventArgs e) => ApplyFilter();
-
-    private void ApplyFilter()
-    {
-        _filteredItems.Clear();
-        if (ItemsSource is null) return;
-
-        foreach (var item in ItemsSource)
-        {
-            if (_selectedFilterTagIds.Count == 0 ||
-                (item is ITaggable taggable && taggable.TagIds.Any(_selectedFilterTagIds.Contains)))
-                _filteredItems.Add(item);
-        }
+        get => _hasNoFilterTags;
+        private set => SetAndRaise(HasNoFilterTagsProperty, ref _hasNoFilterTags, value);
     }
 
     public string? Title
@@ -211,10 +141,89 @@ public partial class LibraryPanelView : UserControl
     // for each library - both differ only in the file type filter and the
     // view model method that actually processes the chosen path.
     public string AddDialogTitle { get; set; } = LocalizationService.Get("LibraryPanel.AddDialogTitle");
-    public FilePickerFileType AddFileTypeFilter { get; set; } = new(LocalizationService.Get("LibraryPanel.AllFiles")) { Patterns = ["*.*"] };
+
+    public FilePickerFileType AddFileTypeFilter { get; set; } = new(LocalizationService.Get("LibraryPanel.AllFiles"))
+        { Patterns = ["*.*"] };
+
     public Func<string, Task>? AddItemAsync { get; set; }
     public Func<string, Task>? ExportAsync { get; set; }
     public Func<string, Task>? ImportAsync { get; set; }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        base.OnUnloaded(e);
+        UnsubscribeAllItems();
+    }
+
+    private void RebuildFilterOptions()
+    {
+        FilterOptions.Clear();
+        _selectedFilterTagIds.Clear();
+        if (AllTags is not null)
+            foreach (var tag in AllTags)
+                FilterOptions.Add(new TagFilterOptionViewModel(tag, OnFilterTagToggled));
+
+        HasNoFilterTags = FilterOptions.Count == 0;
+        ApplyFilter();
+    }
+
+    private void OnFilterTagToggled(Guid tagId, bool isSelected)
+    {
+        if (isSelected) _selectedFilterTagIds.Add(tagId);
+        else _selectedFilterTagIds.Remove(tagId);
+        ApplyFilter();
+    }
+
+    private void ResubscribeItemsAndFilter()
+    {
+        UnsubscribeAllItems();
+
+        if (ItemsSource is INotifyCollectionChanged incc)
+        {
+            incc.CollectionChanged += OnSourceCollectionChanged;
+            _subscribedSource = incc;
+        }
+
+        if (ItemsSource is not null)
+            foreach (var item in ItemsSource)
+                if (item is ITaggable taggable)
+                {
+                    taggable.TagIds.CollectionChanged += OnItemTagIdsChanged;
+                    _subscribedItems.Add(taggable);
+                }
+
+        ApplyFilter();
+    }
+
+    private void UnsubscribeAllItems()
+    {
+        foreach (var item in _subscribedItems) item.TagIds.CollectionChanged -= OnItemTagIdsChanged;
+        _subscribedItems.Clear();
+
+        if (_subscribedSource is not null) _subscribedSource.CollectionChanged -= OnSourceCollectionChanged;
+        _subscribedSource = null;
+    }
+
+    private void OnSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        ResubscribeItemsAndFilter();
+    }
+
+    private void OnItemTagIdsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        _filteredItems.Clear();
+        if (ItemsSource is null) return;
+
+        foreach (var item in ItemsSource)
+            if (_selectedFilterTagIds.Count == 0 ||
+                (item is ITaggable taggable && taggable.TagIds.Any(_selectedFilterTagIds.Contains)))
+                _filteredItems.Add(item);
+    }
 
     private async void OnAddClick(object? sender, RoutedEventArgs e)
     {
@@ -245,7 +254,8 @@ public partial class LibraryPanelView : UserControl
         }
         catch (Exception ex)
         {
-            ErrorMessage = string.Format(LocalizationService.Get("LibraryPanel.Errors.FileCouldNotBeAdded"), ex.Message);
+            ErrorMessage = string.Format(LocalizationService.Get("LibraryPanel.Errors.FileCouldNotBeAdded"),
+                ex.Message);
         }
     }
 

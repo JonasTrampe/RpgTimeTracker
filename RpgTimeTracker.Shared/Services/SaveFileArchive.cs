@@ -19,7 +19,7 @@ public static class SaveFileArchive
     public static byte[] Wrap(string stateJson)
     {
         using var stream = new MemoryStream();
-        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
         {
             var entry = zip.CreateEntry(StateEntryName, CompressionLevel.Optimal);
             using var entryStream = entry.Open();

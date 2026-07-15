@@ -20,7 +20,6 @@ namespace RpgTimeTracker.Shared.ViewModels;
 ///     in: the PlayerClient deserializes fog from the network, the Host shares the exact same
 ///     FogMask instance it's painting into (see NotifyFogChanged) - see ApplyFogCells vs
 ///     NotifyFogChanged below.
-///
 ///     Rendering model (see MapDisplayView.axaml): the sharp floor image is always shown;
 ///     hidden cells are cut out of a second, blurred copy of the *same* image plus a color-tint
 ///     layer, both clipped via MaskBrush (an opacity mask built from the live FogMask, see
@@ -32,11 +31,22 @@ public sealed partial class MapDisplayViewModel : ObservableObject
 {
     private readonly List<MapDisplayFloor> _floors = [];
 
-    [ObservableProperty] private bool _isShowingMap;
-    [ObservableProperty] private string _mapName = string.Empty;
-    [ObservableProperty] private int _currentFloorIndex;
+    /// <summary>
+    ///     Whether the blurred-image layer is used at all - independent of BlurRadius so
+    ///     toggling it off/on doesn't lose the configured strength. When false, only the flat
+    ///     tint layer obscures hidden cells (no image-content blur).
+    /// </summary>
+    [ObservableProperty] private bool _blurEnabled = true;
+
+    /// <summary>
+    ///     Blur radius (device-independent pixels) applied to the blurred map-image layer -
+    ///     bound directly to a BlurEffect in MapDisplayView.axaml, no bitmap rebuild needed. Kept
+    ///     even while BlurEnabled is false, so re-enabling restores the previous strength.
+    /// </summary>
+    [ObservableProperty] private double _blurRadius;
+
     [ObservableProperty] private Bitmap? _currentFloorImageBitmap;
-    [ObservableProperty] private IBrush? _maskBrush;
+    [ObservableProperty] private int _currentFloorIndex;
     [ObservableProperty] private string _currentFloorName = string.Empty;
 
     /// <summary>
@@ -49,27 +59,27 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     /// </summary>
     [ObservableProperty] private bool _hasFogMask;
 
-    /// <summary>Player-side fog render style (see issue #22) - one global GM preference, applied
+    /// <summary>
+    ///     Player-side fog render style (see issue #22) - one global GM preference, applied
     ///     via ApplyRenderStyle by both the Host (from its own settings) and the PlayerClient
-    ///     (from session.snapshot/map.renderStyleChanged).</summary>
+    ///     (from session.snapshot/map.renderStyleChanged).
+    /// </summary>
     [ObservableProperty] private Color _hiddenColor = FogOverlayRenderer.PlayerHiddenColor;
 
-    /// <summary>Blur radius (device-independent pixels) applied to the blurred map-image layer -
-    ///     bound directly to a BlurEffect in MapDisplayView.axaml, no bitmap rebuild needed. Kept
-    ///     even while BlurEnabled is false, so re-enabling restores the previous strength.</summary>
-    [ObservableProperty] private double _blurRadius;
-
-    /// <summary>Whether the blurred-image layer is used at all - independent of BlurRadius so
-    ///     toggling it off/on doesn't lose the configured strength. When false, only the flat
-    ///     tint layer obscures hidden cells (no image-content blur).</summary>
-    [ObservableProperty] private bool _blurEnabled = true;
+    [ObservableProperty] private bool _isShowingMap;
+    [ObservableProperty] private string _mapName = string.Empty;
+    [ObservableProperty] private IBrush? _maskBrush;
 
     /// <summary>Solid-color brush for the tint layer, kept in sync with HiddenColor.</summary>
     [ObservableProperty] private IBrush _tintBrush = new SolidColorBrush(FogOverlayRenderer.PlayerHiddenColor);
 
-    /// <summary>Bound to IsVisible on the blurred-image layer in MapDisplayView.axaml - shown only
-    ///     when there's a real fog mask to clip against AND blur is enabled.</summary>
+    /// <summary>
+    ///     Bound to IsVisible on the blurred-image layer in MapDisplayView.axaml - shown only
+    ///     when there's a real fog mask to clip against AND blur is enabled.
+    /// </summary>
     public bool ShowBlurLayer => HasFogMask && BlurEnabled;
+
+    public bool HasMultipleFloors => _floors.Count > 1;
 
     partial void OnHiddenColorChanged(Color value)
     {
@@ -92,8 +102,6 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         BlurRadius = blurRadius;
         BlurEnabled = blurEnabled;
     }
-
-    public bool HasMultipleFloors => _floors.Count > 1;
 
     [RelayCommand]
     private void PreviousFloor()
@@ -226,8 +234,10 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     }
 }
 
-/// <summary>One floor's data as shown by MapDisplayViewModel (not the editing/authoring shape -
-///     see MapFloorItemViewModel on the Host for that).</summary>
+/// <summary>
+///     One floor's data as shown by MapDisplayViewModel (not the editing/authoring shape -
+///     see MapFloorItemViewModel on the Host for that).
+/// </summary>
 public sealed class MapDisplayFloor
 {
     public Guid FloorId { get; init; }

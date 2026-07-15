@@ -11,6 +11,13 @@ public partial class ChooseLibraryScopeWindow : Window
         InitializeComponent();
     }
 
-    private void OnSharedClick(object? sender, RoutedEventArgs e) => Close(LibraryScope.Shared);
-    private void OnSessionClick(object? sender, RoutedEventArgs e) => Close(LibraryScope.SessionLocal);
+    private void OnSharedClick(object? sender, RoutedEventArgs e)
+    {
+        Close(LibraryScope.Shared);
+    }
+
+    private void OnSessionClick(object? sender, RoutedEventArgs e)
+    {
+        Close(LibraryScope.SessionLocal);
+    }
 }

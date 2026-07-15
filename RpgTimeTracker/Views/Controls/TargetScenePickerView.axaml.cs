@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Interactivity;
 using RpgTimeTracker.ViewModels;
 
@@ -19,10 +20,12 @@ namespace RpgTimeTracker.Views.Controls;
 public partial class TargetScenePickerView : UserControl
 {
     public static readonly StyledProperty<ObservableCollection<SceneLibraryItemViewModel>?> SceneLibraryProperty =
-        AvaloniaProperty.Register<TargetScenePickerView, ObservableCollection<SceneLibraryItemViewModel>?>(nameof(SceneLibrary));
+        AvaloniaProperty.Register<TargetScenePickerView, ObservableCollection<SceneLibraryItemViewModel>?>(
+            nameof(SceneLibrary));
 
     public static readonly StyledProperty<Guid?> TargetSceneIdProperty =
-        AvaloniaProperty.Register<TargetScenePickerView, Guid?>(nameof(TargetSceneId), defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+        AvaloniaProperty.Register<TargetScenePickerView, Guid?>(nameof(TargetSceneId),
+            defaultBindingMode: BindingMode.TwoWay);
 
     public TargetScenePickerView()
     {

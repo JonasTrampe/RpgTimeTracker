@@ -1,35 +1,16 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Input;
-using Avalonia;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LibVLCSharp.Shared;
 using RpgTimeTracker.Models;
-using RpgTimeTracker.Models.Persistence;
-using RpgTimeTracker.Network;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Network;
-using RpgTimeTracker.Shared.Models.Rpc;
-using RpgTimeTracker.Shared.Models.Theming;
 using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
-using RpgTimeTracker.Shared.Services.Theming;
 using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.Shared.ViewModels;
 using Serilog;
@@ -296,7 +277,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             IsPlayerVisible = NewIntervalBasics.IsPlayerVisible
         };
 
-        var vm = new IntervalEventItemViewModel(model, RemoveIntervalEvent) { TargetSceneId = NewIntervalTargetSceneId };
+        var vm = new IntervalEventItemViewModel(model, RemoveIntervalEvent)
+            { TargetSceneId = NewIntervalTargetSceneId };
         NewIntervalTriggerMedia.CopyTo(vm.TriggerMedia);
         vm.StateChanged += () => PublishItemState(vm);
         vm.ResetRequested += () => StopInfiniteSoundLoop(vm.Id);
@@ -386,7 +368,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             Blink = NewAlarmBasics.Blink,
             IsPlayerVisible = NewAlarmBasics.IsPlayerVisible
         };
-        var vm = new AlarmItemViewModel(model, _clock.CurrentTime, RemoveAlarm) { TargetSceneId = NewAlarmTargetSceneId };
+        var vm = new AlarmItemViewModel(model, _clock.CurrentTime, RemoveAlarm)
+            { TargetSceneId = NewAlarmTargetSceneId };
         NewAlarmTriggerMedia.CopyTo(vm.TriggerMedia);
         vm.StateChanged += () => PublishItemState(vm);
         vm.ResetRequested += () => StopInfiniteSoundLoop(vm.Id);
@@ -435,7 +418,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 PlaySound(timer.Id, timer.SoundToPlay, timer.SoundRepeatCountToPlay);
                 TriggerEventMedia(timer.TriggerMedia);
                 ActivateSceneById(timer.TargetSceneId);
-                RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.TimerExpired"), timer.Name));
+                RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.TimerExpired"),
+                    timer.Name));
             }
 
             CheckHeadsUpWarning(timer.Id, timer.Name,
@@ -449,7 +433,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 PlaySound(alarm.Id, alarm.SoundToPlay, alarm.SoundRepeatCountToPlay);
                 TriggerEventMedia(alarm.TriggerMedia);
                 ActivateSceneById(alarm.TargetSceneId);
-                RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.AlarmTriggered"), alarm.Name));
+                RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.AlarmTriggered"),
+                    alarm.Name));
             }
 
             CheckHeadsUpWarning(alarm.Id, alarm.Name,
@@ -463,7 +448,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 PlaySound(intervalEvent.Id, intervalEvent.SoundToPlay, intervalEvent.SoundRepeatCountToPlay);
                 TriggerEventMedia(intervalEvent.TriggerMedia);
                 ActivateSceneById(intervalEvent.TargetSceneId);
-                RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.IntervalActive"), intervalEvent.Name));
+                RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.IntervalActive"),
+                    intervalEvent.Name));
             }
 
             CheckHeadsUpWarning(intervalEvent.Id, intervalEvent.Name,
@@ -478,29 +464,28 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         RefreshCalendarViews();
     }
 
-    /// <summary>Phase 3: only the currently ActiveScene's own Timer/Alarm/IntervalEvent
+    /// <summary>
+    ///     Phase 3: only the currently ActiveScene's own Timer/Alarm/IntervalEvent
     ///     collections are advanced here - every other Scene's items are simply never ticked,
     ///     which is the entire "paused while inactive" mechanism (see ActiveScene's doc comment).
     ///     Deliberately does not go through PlaySound/PublishItemState/TimelineItems - a Scene's
-    ///     own timeline is a Host-local authoring/scheduling tool, not networked to players.</summary>
+    ///     own timeline is a Host-local authoring/scheduling tool, not networked to players.
+    /// </summary>
     private void AdvanceActiveSceneTimeline(TimeSpan gameDelta, GameInstant newTime)
     {
         if (ActiveScene is not { } scene) return;
 
         foreach (var timer in scene.Timers)
-        {
-            if (timer.Advance(gameDelta)) ActivateSceneById(timer.TargetSceneId);
-        }
+            if (timer.Advance(gameDelta))
+                ActivateSceneById(timer.TargetSceneId);
 
         foreach (var alarm in scene.Alarms)
-        {
-            if (alarm.Sync(newTime)) ActivateSceneById(alarm.TargetSceneId);
-        }
+            if (alarm.Sync(newTime))
+                ActivateSceneById(alarm.TargetSceneId);
 
         foreach (var intervalEvent in scene.IntervalEvents)
-        {
-            if (intervalEvent.Advance(gameDelta)) ActivateSceneById(intervalEvent.TargetSceneId);
-        }
+            if (intervalEvent.Advance(gameDelta))
+                ActivateSceneById(intervalEvent.TargetSceneId);
     }
 
     private void TriggerCalendarEntries(GameInstant previousTime, GameInstant currentTime)
@@ -519,8 +504,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
             TriggerCalendarMedia(definition);
             ActivateSceneById(definition.TargetSceneId);
-            RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.CalendarEntryTriggered"), definition.Title));
-            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.CalendarEntry"), definition.Title));
+            RecordSessionEvent(string.Format(
+                LocalizationService.Get("MainWindowViewModel.Events.CalendarEntryTriggered"), definition.Title));
+            ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.CalendarEntry"),
+                definition.Title));
         }
     }
 
@@ -757,5 +744,4 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         if (ActionStatusMessage == message) ActionStatusMessage = null;
     }
-
 }

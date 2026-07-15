@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using RpgTimeTracker.Shared.Models;
 
 namespace RpgTimeTracker.Shared.Services;
@@ -13,28 +13,29 @@ namespace RpgTimeTracker.Shared.Services;
 ///     different (different field names/shapes for weekdays, leap years, moons, etc. - see this
 ///     class's mapping comments), so a Simple Calendar file is not directly usable by
 ///     CalendarDefinitionLoader without this conversion step.
-///
 ///     Known approximations (documented here rather than silently swallowed):
 ///     - Weekday-epoch alignment (which weekday GameInstant.Zero falls on) is inherently
-///       approximate: the two engines compute elapsed days from their epoch differently, so
-///       FirstWeekdayIndex is carried over as-is but is not guaranteed to reproduce the exact
-///       real-world weekday of any specific historical date from the source calendar.
+///     approximate: the two engines compute elapsed days from their epoch differently, so
+///     FirstWeekdayIndex is carried over as-is but is not guaranteed to reproduce the exact
+///     real-world weekday of any specific historical date from the source calendar.
 ///     - "none", "gregorian", and "custom" leap-year rules are all represented exactly (gregorian
-///       maps to CalendarLeapYearRuleKind.Gregorian - the real 4/100/400 rule, not an Interval(4)
-///       approximation); other named built-in rules (if present) fall back to "none" with a
-///       warning in the result.
+///     maps to CalendarLeapYearRuleKind.Gregorian - the real 4/100/400 rule, not an Interval(4)
+///     approximation); other named built-in rules (if present) fall back to "none" with a
+///     warning in the result.
 ///     - Some (not all) predefined-calendar exports bundle a sibling top-level "notes" array -
-///       holidays/festivals authored against that calendar, e.g. dsa-tde5e.json's 19 real
-///       Aventurian feast days. Only Yearly-repeating notes (Simple Calendar's NoteRepeat.Yearly,
-///       value 3) are imported into CalendarDefinition.DefaultEntries, since that's the only
-///       recurrence CalendarEventTemplate/BuildDefaultEntry supports; Never/Weekly/Monthly notes
-///       are skipped with a warning. HTML in a note's "content" is stripped to plain text (a rough
-///       tag-strip, not full HTML parsing) since our Description field is plain text.
+///     holidays/festivals authored against that calendar, e.g. dsa-tde5e.json's 19 real
+///     Aventurian feast days. Only Yearly-repeating notes (Simple Calendar's NoteRepeat.Yearly,
+///     value 3) are imported into CalendarDefinition.DefaultEntries, since that's the only
+///     recurrence CalendarEventTemplate/BuildDefaultEntry supports; Never/Weekly/Monthly notes
+///     are skipped with a warning. HTML in a note's "content" is stripped to plain text (a rough
+///     tag-strip, not full HTML parsing) since our Description field is plain text.
 /// </summary>
 public static class SimpleCalendarImporter
 {
-    /// <summary>True if the given JSON looks like a Simple Calendar export (has a top-level
-    ///     "calendar" object) rather than our own CalendarDefinition shape.</summary>
+    /// <summary>
+    ///     True if the given JSON looks like a Simple Calendar export (has a top-level
+    ///     "calendar" object) rather than our own CalendarDefinition shape.
+    /// </summary>
     public static bool LooksLikeSimpleCalendarFormat(string json)
     {
         try
@@ -49,8 +50,10 @@ public static class SimpleCalendarImporter
         }
     }
 
-    /// <summary>Attempts the conversion. On success, `warnings` lists any approximations applied
-    ///     (empty if the conversion was exact); on failure, `error` explains why.</summary>
+    /// <summary>
+    ///     Attempts the conversion. On success, `warnings` lists any approximations applied
+    ///     (empty if the conversion was exact); on failure, `error` explains why.
+    /// </summary>
     public static bool TryConvert(string json, string calendarName, out CalendarDefinition? definition,
         out List<string> warnings, out string? error)
     {
@@ -168,10 +171,12 @@ public static class SimpleCalendarImporter
         return true;
     }
 
-    /// <summary>Converts one Simple Calendar "note" (see NoteRepeat in their constants.ts - Never=0,
+    /// <summary>
+    ///     Converts one Simple Calendar "note" (see NoteRepeat in their constants.ts - Never=0,
     ///     Weekly=1, Monthly=2, Yearly=3) into a CalendarEventTemplate. Returns null if the note has
     ///     no usable start date; `isYearly` tells the caller whether to keep or skip it (only Yearly
-    ///     notes map onto CalendarEventTemplate's yearly-only recurrence).</summary>
+    ///     notes map onto CalendarEventTemplate's yearly-only recurrence).
+    /// </summary>
     private static CalendarEventTemplate? ConvertNote(JsonElement note, out bool isYearly)
     {
         isYearly = false;
@@ -201,8 +206,8 @@ public static class SimpleCalendarImporter
     {
         if (string.IsNullOrWhiteSpace(html)) return string.Empty;
 
-        var noTags = System.Text.RegularExpressions.Regex.Replace(html, "<[^>]+>", " ");
-        return System.Text.RegularExpressions.Regex.Replace(noTags, @"\s+", " ").Trim();
+        var noTags = Regex.Replace(html, "<[^>]+>", " ");
+        return Regex.Replace(noTags, @"\s+", " ").Trim();
     }
 
     private static CalendarLeapYearRule ConvertLeapYear(JsonElement cal, List<CalendarMonthDefinition> months,

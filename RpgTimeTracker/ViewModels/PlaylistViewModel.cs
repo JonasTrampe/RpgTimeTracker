@@ -15,13 +15,13 @@ namespace RpgTimeTracker.ViewModels;
 /// </summary>
 public sealed partial class PlaylistViewModel : ObservableObject
 {
-    private readonly Action<PlaylistViewModel> _onDeleteRequested;
     private readonly Action<PlaylistViewModel>? _onChanged;
-
-    [ObservableProperty] private string _name;
+    private readonly Action<PlaylistViewModel> _onDeleteRequested;
 
     /// <summary>Restart from the first track after the last one finishes, instead of stopping.</summary>
     [ObservableProperty] private bool _loopPlaylist = true;
+
+    [ObservableProperty] private string _name;
 
     /// <summary>Play tracks in random order instead of the list order below.</summary>
     [ObservableProperty] private bool _shuffle;
@@ -64,27 +64,33 @@ public sealed partial class PlaylistViewModel : ObservableObject
         _onChanged?.Invoke(this);
     }
 
-    /// <summary>Appends a reference to an existing Music Library track - see PlaylistTrackViewModel.
+    /// <summary>
+    ///     Appends a reference to an existing Music Library track - see PlaylistTrackViewModel.
     ///     Persists immediately via onChanged; for restoring a playlist from settings at startup
     ///     (where each track shouldn't trigger its own separate, premature save), use
-    ///     LoadTrack instead.</summary>
+    ///     LoadTrack instead.
+    /// </summary>
     public void AddTrack(MusicLibraryItemViewModel track)
     {
         LoadTrack(track);
         _onChanged?.Invoke(this);
     }
 
-    /// <summary>Adds a track reference WITHOUT persisting - only for reconstructing a playlist
+    /// <summary>
+    ///     Adds a track reference WITHOUT persisting - only for reconstructing a playlist
     ///     from ThemeSettingsService.PlaylistEntryDto at startup (see MainWindowViewModel's load
-    ///     loop), where the caller saves once after the whole playlist is rebuilt, not per track.</summary>
+    ///     loop), where the caller saves once after the whole playlist is rebuilt, not per track.
+    /// </summary>
     public void LoadTrack(MusicLibraryItemViewModel track)
     {
         Tracks.Add(new PlaylistTrackViewModel(track, RemoveTrack, MoveTrackUp, MoveTrackDown));
     }
 
-    /// <summary>Removes every reference to a track that was just deleted from the Music Library
+    /// <summary>
+    ///     Removes every reference to a track that was just deleted from the Music Library
     ///     entirely - called from MainWindowViewModel.RemoveMusicLibraryItem for every playlist,
-    ///     so a deleted track never lingers as a dangling reference.</summary>
+    ///     so a deleted track never lingers as a dangling reference.
+    /// </summary>
     public void RemoveTracksReferencing(MusicLibraryItemViewModel track)
     {
         var stale = Tracks.Where(t => t.Track == track).ToList();

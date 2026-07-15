@@ -52,11 +52,13 @@ public static class ClientSettingsService
         }
     }
 
-    /// <summary>Returns this installation's stable identifier, generating and persisting one on
+    /// <summary>
+    ///     Returns this installation's stable identifier, generating and persisting one on
     ///     first call (deliberately not a ClientSettingsDto property initializer default, which
     ///     would regenerate a fresh, never-persisted Guid every launch until something else
     ///     happened to call SaveSettings). Sent to the Host in session.hello so it can remember
-    ///     this window's Music/Sound routing preference across reconnects.</summary>
+    ///     this window's Music/Sound routing preference across reconnects.
+    /// </summary>
     public static string GetOrCreateClientId()
     {
         var settings = LoadSettings();

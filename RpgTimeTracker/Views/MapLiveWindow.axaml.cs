@@ -29,11 +29,11 @@ namespace RpgTimeTracker.Views;
 /// </summary>
 public partial class MapLiveWindow : Window
 {
-    private readonly MainWindowViewModel _vm;
+    private readonly DispatcherTimer _flushTimer;
     private readonly MapItemViewModel _map;
     private readonly List<FogCellDto> _pendingCells = [];
-    private readonly DispatcherTimer _flushTimer;
     private readonly MapDisplayViewModel _previewDisplay = new();
+    private readonly MainWindowViewModel _vm;
 
     public MapLiveWindow(MainWindowViewModel vm, MapItemViewModel map)
     {
@@ -51,7 +51,9 @@ public partial class MapLiveWindow : Window
         EditCanvas.CellsPainted += OnCellsPainted;
         EditCanvas.SetFloors(map.Floors, _vm.EditingFloor is not null && map.Floors.Contains(_vm.EditingFloor)
             ? _vm.EditingFloor
-            : map.Floors.Count > 0 ? map.Floors[0] : null);
+            : map.Floors.Count > 0
+                ? map.Floors[0]
+                : null);
 
         _flushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
         _flushTimer.Tick += (_, _) => _ = FlushPendingAsync();
@@ -73,9 +75,11 @@ public partial class MapLiveWindow : Window
         _previewDisplay.NotifyFogChanged(floor.Id);
     }
 
-    /// <summary>Rebuilds the preview's single-floor state for the newly selected floor - cheap
+    /// <summary>
+    ///     Rebuilds the preview's single-floor state for the newly selected floor - cheap
     ///     (one floor, only on floor switch/reset/rescale) and necessary since the FogMask instance
-    ///     for a floor can be replaced entirely (RescaleFloorCellSizeAsync), not just mutated.</summary>
+    ///     for a floor can be replaced entirely (RescaleFloorCellSizeAsync), not just mutated.
+    /// </summary>
     private void RefreshPreviewFloor(MapFloorItemViewModel? floor)
     {
         if (floor is null)
@@ -87,7 +91,8 @@ public partial class MapLiveWindow : Window
         using var stream = File.OpenRead(floor.ImagePath);
         var image = new Bitmap(stream);
         _previewDisplay.ShowMap(_map.Name, [
-            new MapDisplayFloor { FloorId = floor.Id, Name = floor.Name, Image = image, CurrentFog = _vm.GetLiveFog(floor) }
+            new MapDisplayFloor
+                { FloorId = floor.Id, Name = floor.Name, Image = image, CurrentFog = _vm.GetLiveFog(floor) }
         ]);
 
         var style = _vm.GetEffectiveFogStyle(_map);

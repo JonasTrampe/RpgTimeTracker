@@ -6,7 +6,6 @@
   "About.UnknownVersion": "unbekannt",
   "About.FileNotFound": "Konnte nicht geladen werden ({0} fehlt im Anwendungsverzeichnis).",
   "Settings.Language": "Sprache",
-
   "MainWindow.WindowTitle": "RPG Zeitverfolgung",
   "MainWindow.Header.ActiveGameTime": "Aktive Spielzeit",
   "MainWindow.Header.Status": "Status",
@@ -43,7 +42,6 @@
   "MainWindow.Clock.MarkerNextTooltip": "Nächstes Vorkommen",
   "MainWindow.Clock.MarkerNamePlaceholder": "Name",
   "MainWindow.Clock.MarkerAddButton": "+ Marke",
-
   "MainWindow.ItemsMedia.SectionTitle": "Elemente & Medien",
   "MainWindow.Tabs.CreateItem": "Element Anlegen",
   "MainWindow.Tabs.ItemList": "Elementliste",
@@ -55,7 +53,6 @@
   "MainWindow.Tabs.Scenes": "Szenen",
   "MainWindow.Tabs.Calendar": "Kalender",
   "MainWindow.Tabs.Settings": "Einstellungen",
-
   "MainWindow.CreateItem.TimerTab": "+ Timer",
   "MainWindow.CreateItem.AlarmTab": "+ Wecker",
   "MainWindow.CreateItem.IntervalTab": "+ OnTime",
@@ -63,7 +60,6 @@
   "MainWindow.CreateItem.AddAlarmButton": "+ Wecker anlegen",
   "MainWindow.CreateItem.AddIntervalButton": "+ OnTime anlegen",
   "MainWindow.CreateItem.ActiveForLabel": "Aktiv für",
-
   "MainWindow.Common.Duration": "Dauer",
   "MainWindow.Common.TargetTime": "Zielzeit",
   "MainWindow.Common.Repeat": "Wiederholung",
@@ -80,7 +76,6 @@
   "MainWindow.Common.RemoveFromLibraryTooltip": "Aus Bibliothek entfernen",
   "MainWindow.Common.MoveToSharedTooltip": "In geteilte Bibliothek verschieben",
   "MainWindow.Common.MoveToSessionTooltip": "In diese Sitzung verschieben",
-
   "MainWindow.TriggerMedia.TimerDescription": "Event-Medium (optional, wird bei Ablauf automatisch an Spieler gesendet)",
   "MainWindow.TriggerMedia.TriggerDescription": "Event-Medium (optional, wird bei Auslösung automatisch an Spieler gesendet)",
   "MainWindow.TriggerMedia.IntervalDescription": "Event-Medium (optional, wird bei Aktivierung automatisch an Spieler gesendet)",
@@ -92,7 +87,6 @@
   "MainWindow.Common.ClearSelectionTooltip": "Leeren",
   "MainWindow.TriggerMedia.FullscreenCheckbox": "⛶ Vollbild bei Auslösung",
   "MainWindow.TriggerMedia.PauseClockCheckbox": "⏸ Spielzeit während Video pausieren",
-
   "MainWindow.ItemList.SharedTimelineHeader": "Gemeinsame Zeitliste",
   "MainWindow.ItemList.SlOnlyLabel": "SL-only",
   "MainWindow.ItemList.SceneOwnedFormat": "Szene: {0}",
@@ -107,7 +101,6 @@
   "MainWindow.ItemList.MouseWheelHint": "Mausrad auf jedem Feld",
   "MainWindow.ItemList.ActiveForLabelLower": "aktiv für",
   "MainWindow.ItemList.ApplyChangesButton": "Änderungen übernehmen",
-
   "MainWindow.Library.MediaLibraryTitle": "Medienbibliothek",
   "MainWindow.Library.MediaLibraryDescription": "Vorausgewählte Bilder/Videos.",
   "MainWindow.Library.MediaLibraryEmptyState": "Noch keine Medien in der Bibliothek.",
@@ -125,7 +118,6 @@
   "MainWindow.Library.TagsTooltip": "Tags zuweisen",
   "MainWindow.Library.TagsLabel": "Tags",
   "MainWindow.Library.NoTagsAvailable": "Noch keine Tags - lege welche in den Einstellungen an.",
-
   "MainWindow.Sounds.LibraryTitle": "Sound-Bibliothek",
   "MainWindow.Sounds.LibraryDescription": "Vorausgewählte Sounds",
   "MainWindow.Sounds.LibraryEmptyState": "Noch keine Sounds in der Bibliothek.",
@@ -178,7 +170,6 @@
   "MainWindow.Sounds.LoopLabel": "🔁 Loop",
   "MainWindow.Sounds.StopTooltip": "Diesen Sound stoppen",
   "MainWindow.Sounds.VolumeLiveTooltip": "Lautstärke live anpassen",
-
   "MainWindow.Maps.MapsTitle": "🗺 Karten",
   "MainWindow.Maps.MapsDescription": "Mehrstöckige Karten mit Nebel des Krieges.",
   "MainWindow.Maps.AddMapButton": "+ Karte hinzufügen",
@@ -199,7 +190,6 @@
   "MainWindow.Maps.EditDisabledWhileShownTooltip": "Schließe das Anzeigen-Fenster, bevor du diese Ebene bearbeitest.",
   "MainWindow.Maps.MoveUpTooltip": "Ebene nach oben verschieben",
   "MainWindow.Maps.MoveDownTooltip": "Ebene nach unten verschieben",
-
   "MainWindow.Characters.Title": "Charaktere",
   "MainWindow.Characters.Description": "NSCs und SCs mit Portrait, Marker und GM-Notizen.",
   "MainWindow.Characters.AddButton": "Charakter hinzufügen",
@@ -247,7 +237,6 @@
   "MainWindow.Scenes.AddTimerButton": "+ Timer",
   "MainWindow.Scenes.AddAlarmButton": "+ Wecker",
   "MainWindow.Scenes.AddIntervalButton": "+ Intervall",
-
   "MapEditor.RevealToolButton": "👁 Aufdecken",
   "MapEditor.BrushSizeLabel": "Pinselgröße",
   "MapEditor.PreviewTitle": "Vorschau (Spieleransicht)",
@@ -255,7 +244,6 @@
   "MapEditor.ZoomInTooltip": "Vergrößern",
   "MapEditor.ZoomFitButton": "Einpassen",
   "MapEditor.OpenToPlayersButton": "Spielern zeigen",
-
   "MapPrepareWindow.Title": "Vorbereiten - {0}",
   "MapPrepareWindow.OpenStatusShown": "Wird gerade Spielern gezeigt",
   "MapPrepareWindow.OpenStatusHidden": "Wird gerade nicht Spielern gezeigt",
@@ -263,10 +251,8 @@
   "MapPrepareWindow.UseGlobalDefaultButton": "Globalen Standard verwenden",
   "MapPrepareWindow.CellSizeLabel": "Zellgröße (px)",
   "MapPrepareWindow.CellSizeWarning": "Sehr kleine Werte erhöhen Netzwerk- und Rendering-Kosten.",
-
   "MapLiveWindow.Title": "Anzeigen - {0}",
   "MapLiveWindow.ResetToPreparedButton": "Auf Vorbereitung zurücksetzen",
-
   "MainWindow.Calendar.Title": "Kalender",
   "MainWindow.Calendar.Description": "Monatsansicht mit Tagesliste. Im Spielerfenster erscheint die Umschaltung nur, wenn spielersichtbare Einträge existieren.",
   "MainWindow.Calendar.AddEntryButton": "+ Eintrag",
@@ -294,7 +280,6 @@
   "MainWindow.Calendar.FullscreenCheckbox": "⛶ Vollbild",
   "MainWindow.Calendar.PauseClockCheckbox": "⏸ Spielzeit pausieren",
   "MainWindow.Calendar.DeleteEntryButton": "Eintrag löschen",
-
   "MainWindow.Settings.AppearanceHeader": "🎨 Darstellung",
   "MainWindow.Settings.StyleLabel": "Stil",
   "MainWindow.Settings.AmbienceAutomationCheckbox": "Ambiente-Automatik (Hintergrund nach Tageszeit wechseln)",
@@ -352,7 +337,6 @@
   "MainWindow.Settings.NewTagPlaceholder": "Neuer Tag-Name",
   "MainWindow.Settings.AddTagButton": "Hinzufügen",
   "MainWindow.Settings.NoTags": "Noch keine Tags.",
-
   "MainWindow.StatusBar.PreviousGalleryTooltip": "Vorheriges Galerie-Element hervorheben",
   "MainWindow.StatusBar.NextGalleryTooltip": "Nächstes Galerie-Element hervorheben",
   "MainWindow.StatusBar.CloseMediaTooltip": "Medium schließen",
@@ -363,7 +347,6 @@
   "MainWindow.StatusBar.NewSessionTooltip": "Neue Session…",
   "MainWindow.StatusBar.OpenSessionTooltip": "Session öffnen…",
   "MainWindow.StatusBar.CloseSessionTooltip": "Session schließen",
-
   "MainWindow.FileTypes.GameState": "Spielstand (.rtt-save)",
   "MainWindow.FileTypes.GameStateLegacyJson": "Spielstand (alte JSON-Datei)",
   "MainWindow.FileTypes.Calendar": "Kalender (JSON)",
@@ -374,7 +357,6 @@
   "MainWindow.FileTypes.FullSession": "Vollständiger Sitzungsexport (.rtt-session)",
   "MainWindow.FileTypes.Audio": "Audio",
   "MainWindow.FileTypes.TextFile": "Textdatei",
-
   "MainWindow.Dialogs.AddMediaToLibrary": "Bild oder Video zur Bibliothek hinzufügen",
   "MainWindow.Dialogs.AddSoundToLibrary": "Sound zur Bibliothek hinzufügen",
   "MainWindow.Dialogs.AddMusicToLibrary": "Musik zur Bibliothek hinzufügen",
@@ -394,7 +376,6 @@
   "MainWindow.Dialogs.ImportCalendarDefinition": "Kalenderdefinition importieren",
   "MainWindow.Dialogs.NewSessionFolder": "Ordner für die neue Session wählen",
   "MainWindow.Dialogs.OpenSessionFolder": "Session-Ordner öffnen",
-
   "MainWindow.Errors.MediaNoLocalFilePath": "Medium konnte nicht gesendet werden: kein lokaler Dateipfad verfügbar.",
   "MainWindow.Errors.MediaCouldNotBeSent": "Medium konnte nicht gesendet werden: {0}",
   "MainWindow.Errors.SoundNoLocalFilePath": "Sound konnte nicht gesendet werden: kein lokaler Dateipfad verfügbar.",
@@ -404,7 +385,6 @@
   "MainWindow.Errors.LogExportFailed": "Protokoll-Export fehlgeschlagen: {0}",
   "MainWindow.Errors.CalendarExportFailed": "Kalender-Export fehlgeschlagen: {0}",
   "MainWindow.Errors.CalendarImportFailed": "Kalender-Import fehlgeschlagen: {0}",
-
   "MainWindow.Status.GameStateSaved": "Spielstand gespeichert",
   "MainWindow.Status.SessionExported": "Sitzung exportiert",
   "MainWindow.Status.GameStateLoaded": "Spielstand geladen",
@@ -413,7 +393,6 @@
   "MainWindow.Status.SessionClosed": "Session geschlossen",
   "MainWindow.Status.CalendarExported": "Kalender exportiert",
   "MainWindow.Status.CalendarImported": "Kalender importiert",
-
   "MainWindowViewModel.Network.ServerOff": "Netzwerkserver aus",
   "MainWindowViewModel.Network.StopServer": "Server stoppen",
   "MainWindowViewModel.Network.StartServer": "Server starten",
@@ -535,7 +514,6 @@
   "MainWindowViewModel.Labels.KindTimer": "Timer",
   "MainWindowViewModel.Labels.KindAlarm": "Wecker",
   "MainWindowViewModel.Labels.KindOnTime": "OnTime",
-
   "ClientMainWindow.WindowTitle": "RPG Zeitverfolgung — Remote Spieleranzeige",
   "ClientMainWindow.Toolbar.MediaFullscreenTooltip": "Ob das Medien-Fenster (Bild/Video) im Vollbild oder als normales Fenster geöffnet wird",
   "ClientMainWindow.Toolbar.DisconnectButton": "Trennen",
@@ -560,7 +538,6 @@
   "ClientMainWindow.Status.MusicMutedTooltip": "Der Spielleiter hat Musik für dieses Fenster deaktiviert",
   "ClientMainWindow.Status.SoundMuted": "🔇 Sound vom Spielleiter stummgeschaltet",
   "ClientMainWindow.Status.SoundMutedTooltip": "Der Spielleiter hat Sound für dieses Fenster deaktiviert",
-
   "ClientMainWindowViewModel.Connection.NoServerFound": "Kein Server gefunden. Prüfe: Server gestartet, gleiche LAN/VPN, Firewall für TCP 48550 und UDP 48551/5353.",
   "ClientMainWindowViewModel.Connection.ServersFound": "{0} Server gefunden",
   "ClientMainWindowViewModel.Connection.HideButton": "Verbindung ausblenden",
@@ -572,7 +549,6 @@
   "ClientMainWindowViewModel.Timer.DetailFormat": "Rest: {0} · Dauer: {1}",
   "ClientMainWindowViewModel.Alarm.DetailFormat": "{0} · Wdh.: {1}",
   "ClientMainWindowViewModel.Interval.DetailFormat": "alle {0} für {1} · {2}",
-
   "PlayerTcpClientService.Status.Connecting": "Verbinde zu {0}:{1} ...",
   "PlayerTcpClientService.Status.Connected": "Verbunden mit {0}:{1}",
   "PlayerTcpClientService.Status.ConnectionEnded": "Verbindung beendet: {0}",
@@ -581,7 +557,6 @@
   "PlayerTcpClientService.Status.ConnectionRejected": "Verbindung abgelehnt: {0}",
   "PlayerTcpClientService.Status.ConnectionRejectedDefaultReason": "Verbindung abgelehnt.",
   "PlayerTcpClientService.Errors.NoResponseTimeout": "Keine Antwort von {0}:{1} innerhalb von 5 Sekunden.",
-
   "PlayerTimeline.Header.Calendar": "Kalender",
   "PlayerTimeline.Header.Timeline": "Zeitliste",
   "PlayerTimeline.Toggle.Timeline": "Zeitliste",
@@ -594,7 +569,6 @@
   "PlayerTimeline.Weekday.Sat": "Sa",
   "PlayerTimeline.Weekday.Sun": "So",
   "PlayerTimeline.Calendar.NoEntries": "Keine Einträge.",
-
   "Calendar.RecurrenceNone": "Keine",
   "Calendar.RecurrenceDaily": "Täglich",
   "Calendar.RecurrenceWeekly": "Wöchentlich",
@@ -606,7 +580,6 @@
   "Calendar.MediaKind.Video": "Video",
   "Calendar.MediaKind.Audio": "Sound",
   "Calendar.MediaKind.None": "Kein Medium",
-
   "ConfirmTriggerMediaDelete.WindowTitle": "RPG Zeitverfolgung",
   "ConfirmTriggerMediaDelete.Header": "Medium ist noch zugewiesen",
   "ConfirmTriggerMediaDelete.Description": "Soll die Zuweisung bei diesen Elementen entfernt und die Datei gelöscht werden, oder soll die Datei erhalten bleiben, damit die Elemente ihr Event-Medium behalten (dann bleibt sie aber nicht mehr in der Bibliothek verwaltbar)?",
@@ -614,13 +587,11 @@
   "ConfirmTriggerMediaDelete.KeepButton": "Datei behalten",
   "ConfirmTriggerMediaDelete.RemoveAndDeleteButton": "Aus Elementen entfernen + löschen",
   "ConfirmTriggerMediaDelete.UsageTextFormat": "\"{0}\" wird aktuell als Event-Medium verwendet von: {1}.",
-
   "ChooseLibraryScope.WindowTitle": "RPG Zeitverfolgung",
   "ChooseLibraryScope.Header": "Wohin damit?",
   "ChooseLibraryScope.Description": "Eine Session ist geöffnet. Zur Gemeinsamen Bibliothek hinzufügen (wiederverwendbar in jeder Kampagne), oder nur in dieser Session behalten?",
   "ChooseLibraryScope.SharedButton": "Gemeinsame Bibliothek",
   "ChooseLibraryScope.SessionButton": "Nur diese Session",
-
   "NewItemBasics.IconComboTooltip": "Doppelklick: Bootstrap Icon suchen",
   "NewItemBasics.ChooseIconTooltip": "Bootstrap Icon suchen",
   "NewItemBasics.NamePlaceholder": "Name",
@@ -631,21 +602,17 @@
   "NewItemBasics.BlinkTooltip": "Blinkt in der Zeitliste, sobald das Element ausgelöst/aktiv ist",
   "NewItemBasics.PlayerVisibleCheckbox": "👁 Spieler sichtbar",
   "NewItemBasics.PlayerVisibleTooltip": "Ob dieses Element in der Spieler-Zeitliste erscheint (sonst nur beim SL)",
-
   "ConfirmCleanup.Title": "Temporäre Dateien löschen?",
   "ConfirmCleanup.Message": "Diese Sitzung hat vom Host empfangene Bilder/Videos lokal zwischengespeichert. Sollen diese Dateien jetzt gelöscht werden, bevor die App geschlossen wird?",
   "ConfirmCleanup.No": "Nicht löschen",
   "ConfirmCleanup.Yes": "Löschen",
-
   "MediaWindow.PanelTooltip": "Klick: nächstes Bild/Video (Galerie) - Pfeiltasten funktionieren auch",
   "MediaWindow.MinimizeTooltip": "Fenster minimieren",
   "MediaWindow.CloseTooltip": "Medium schließen",
-
   "AlarmItem.RepeatOnce": "einmalig",
   "AlarmItem.NowLabel": "Jetzt!",
   "AlarmItem.ErrorInvalidDate": "Ungültiges Datum (Format JJJJ-MM-TT HH:mm:ss)",
   "AlarmItem.ErrorInvalidRepeatInterval": "Ungültiges Wiederhol-Intervall",
-
   "IntervalEvent.StatusDone": "Fertig",
   "IntervalEvent.StatusPause": "Pause",
   "IntervalEvent.StatusContinue": "Weiter",
@@ -657,9 +624,7 @@
   "IntervalEvent.ErrorActiveDurationExceedsInterval": "Aktiv-Dauer sollte nicht größer als Intervall sein.",
   "IntervalEvent.ErrorInvalidMaxRepeats": "Max. Wiederholungen: 0/leer = unbegrenzt",
   "IntervalEvent.DetailFormat": "alle {0} für {1}",
-
   "JumpMarkerItem.ErrorInvalidTime": "Ungültige Uhrzeit (Format hh:mm)",
-
   "TimelineDisplayItem.KindTimer": "Timer",
   "TimelineDisplayItem.KindAlarm": "Wecker",
   "TimelineDisplayItem.KindInterval": "OnTime",
@@ -669,15 +634,12 @@
   "TimelineDisplayItem.StatusTriggered": "Ausgelöst",
   "TimelineDisplayItem.StatusReady": "Bereit",
   "TimelineDisplayItem.StatusActive": "Aktiv",
-
   "TimerItem.ErrorInvalidDuration": "Ungültige Dauer (Format hh:mm:ss)",
   "TimerItem.ErrorInvalidDurationLong": "Ungültige Dauer (Format dd.hh:mm:ss)",
-
   "IconPicker.WindowTitle": "Bootstrap Icon auswählen",
   "IconPicker.Title": "Bootstrap Icons durchsuchen",
   "IconPicker.Description": "Doppelklick auf ein Icon übernimmt es für das Element.",
   "IconPicker.SearchPlaceholder": "Suche, z.B. clock, fire, warning...",
-
   "MediaLibraryPicker.WindowTitle": "Bild/Video aus Bibliothek wählen",
   "MediaLibraryPicker.Title": "Medienbibliothek",
   "MediaLibraryPicker.Description": "Doppelklick übernimmt das Bild/Video als Event-Medium. Event-Medien kommen nur noch aus der Bibliothek - dort zuerst hinzufügen, falls es fehlt.",
@@ -686,17 +648,14 @@
   "SoundLibraryPicker.Title": "Sound-Bibliothek",
   "SoundLibraryPicker.Description": "Doppelklick fügt den Sound zu diesem Charakter-Zustand hinzu.",
   "SoundLibraryPicker.EmptyState": "Die Sound-Bibliothek ist leer.",
-
   "PlayerWindow.WindowTitle": "RPG Zeitverfolgung — Spieleranzeige",
   "PlayerWindow.ExitFullscreenButton": "Vollbild beenden (Esc)",
   "PlayerWindow.ExitFullscreenTooltip": "Beendet nur lokal das Vollbild dieses Fensters",
-
   "LibraryPanel.AddButtonLabel": "+ Zur Bibliothek hinzufügen",
   "LibraryPanel.AddDialogTitle": "Datei hinzufügen",
   "LibraryPanel.AllFiles": "Alle Dateien",
   "LibraryPanel.Errors.NoLocalFilePath": "Datei konnte nicht hinzugefügt werden: kein lokaler Dateipfad verfügbar.",
   "LibraryPanel.Errors.FileCouldNotBeAdded": "Datei konnte nicht hinzugefügt werden: {0}",
-
   "SampleTheme.alien.PickerLabel": "Alien",
   "SampleTheme.eldritchhorror.PickerLabel": "Eldritch Horror",
   "SampleTheme.gothicvampire.PickerLabel": "Gothic Vampire",
@@ -705,7 +664,6 @@
   "SampleTheme.shadowrun.PickerLabel": "Shadowrun / Cyberpunk",
   "SampleTheme.steampunk.PickerLabel": "Steampunk",
   "SampleTheme.warhammer40k.PickerLabel": "Warhammer 40k",
-
   "Sound.None": "Kein Ton",
   "Sound.Pling": "Pling",
   "Sound.Bell": "Glocke",

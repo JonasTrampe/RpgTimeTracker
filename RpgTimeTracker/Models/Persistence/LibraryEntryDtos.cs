@@ -20,8 +20,10 @@ public sealed class MediaLibraryEntryDto
     public string MimeType { get; set; } = string.Empty;
     public bool Loop { get; set; }
 
-    /// <summary>Freeform Tag Ids attached to this item (see Tag) - separate from Scene
-    ///     membership, a different, explicit mechanism.</summary>
+    /// <summary>
+    ///     Freeform Tag Ids attached to this item (see Tag) - separate from Scene
+    ///     membership, a different, explicit mechanism.
+    /// </summary>
     public List<Guid> TagIds { get; set; } = [];
 }
 
@@ -77,9 +79,11 @@ public sealed class PlaylistEntryDto
     public bool Shuffle { get; set; }
 }
 
-/// <summary>One floor image of a map, plus its "starting" fog template (see FogMask/FogMaskSerializer) -
+/// <summary>
+///     One floor image of a map, plus its "starting" fog template (see FogMask/FogMaskSerializer) -
 ///     the GM-authored initial reveal state, as opposed to the session-specific "current" fog
-///     that lives in the save file (AppStateDto.MapProgress, added in a later milestone).</summary>
+///     that lives in the save file (AppStateDto.MapProgress, added in a later milestone).
+/// </summary>
 public sealed class MapFloorEntryDto
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -90,9 +94,11 @@ public sealed class MapFloorEntryDto
     public int GridWidth { get; set; }
     public int GridHeight { get; set; }
 
-    /// <summary>Explicit floor/layer order (0-based), saved on every write so the GM's
+    /// <summary>
+    ///     Explicit floor/layer order (0-based), saved on every write so the GM's
     ///     up/down-reordered floor sequence survives a save/load round-trip rather than
-    ///     relying on implicit list order - see MapItemViewModel.MoveFloorUp/MoveFloorDown.</summary>
+    ///     relying on implicit list order - see MapItemViewModel.MoveFloorUp/MoveFloorDown.
+    /// </summary>
     public int Order { get; set; }
 }
 
@@ -102,23 +108,30 @@ public sealed class MapLibraryEntryDto
     public string Name { get; set; } = string.Empty;
     public List<MapFloorEntryDto> Floors { get; set; } = [];
 
-    /// <summary>See MapItemViewModel.CurrentFormatVersion/FormatVersion - lets a future
-    ///     format change detect an older map on load and apply an upgrade step.</summary>
+    /// <summary>
+    ///     See MapItemViewModel.CurrentFormatVersion/FormatVersion - lets a future
+    ///     format change detect an older map on load and apply an upgrade step.
+    /// </summary>
     public int FormatVersion { get; set; } = 1;
 
-    /// <summary>Per-map fog render style override, falling back to the global
+    /// <summary>
+    ///     Per-map fog render style override, falling back to the global
     ///     ThemeSettingsDto.FogColorHex/etc. when null (see
     ///     MainWindowViewModel.GetEffectiveFogStyle) - unset by default so existing maps keep
-    ///     using the global style until the GM explicitly overrides one from MapPrepareWindow.</summary>
+    ///     using the global style until the GM explicitly overrides one from MapPrepareWindow.
+    /// </summary>
     public string? FogColorHex { get; set; }
+
     public int? FogOpacityPercent { get; set; }
     public double? FogBlurRadius { get; set; }
     public bool? FogBlurEnabled { get; set; }
 
-    /// <summary>Per-map default CellSizePx for newly added floors, seeded from the current
+    /// <summary>
+    ///     Per-map default CellSizePx for newly added floors, seeded from the current
     ///     global DefaultMapCellSizePx constant at map-creation time (not a live reference to
     ///     it), so a later change to that constant never retroactively affects this map's
-    ///     future floors.</summary>
+    ///     future floors.
+    /// </summary>
     public int DefaultCellSizePx { get; set; } = 8;
 
     public List<Guid> TagIds { get; set; } = [];

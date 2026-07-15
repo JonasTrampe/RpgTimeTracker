@@ -33,6 +33,7 @@ public sealed class SoundDisplayNameConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotSupportedException("Sound display names are one-way only - SelectedItem binds directly to the underlying identifier.");
+        throw new NotSupportedException(
+            "Sound display names are one-way only - SelectedItem binds directly to the underlying identifier.");
     }
 }

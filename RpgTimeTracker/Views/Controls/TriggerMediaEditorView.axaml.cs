@@ -12,7 +12,7 @@ namespace RpgTimeTracker.Views.Controls;
 ///     choose/filename/clear row + fullscreen/pause-clock checkboxes previously duplicated four
 ///     times (new-Timer/new-Alarm/new-Interval "Element Anlegen" forms and the Elementliste's
 ///     per-item edit panel), each only differing in the description text above it and which
-///     <see cref="TriggerMediaConfig"/> instance it edits (the control's own DataContext).
+///     <see cref="TriggerMediaConfig" /> instance it edits (the control's own DataContext).
 /// </summary>
 public partial class TriggerMediaEditorView : UserControl
 {
@@ -20,7 +20,8 @@ public partial class TriggerMediaEditorView : UserControl
         AvaloniaProperty.Register<TriggerMediaEditorView, string?>(nameof(Description));
 
     public static readonly StyledProperty<IEnumerable<MediaLibraryItemViewModel>?> MediaLibraryProperty =
-        AvaloniaProperty.Register<TriggerMediaEditorView, IEnumerable<MediaLibraryItemViewModel>?>(nameof(MediaLibrary));
+        AvaloniaProperty
+            .Register<TriggerMediaEditorView, IEnumerable<MediaLibraryItemViewModel>?>(nameof(MediaLibrary));
 
     public TriggerMediaEditorView()
     {
@@ -39,9 +40,11 @@ public partial class TriggerMediaEditorView : UserControl
         set => SetValue(MediaLibraryProperty, value);
     }
 
-    /// <summary>Image/video for an event medium comes exclusively from the Media Library (no
+    /// <summary>
+    ///     Image/video for an event medium comes exclusively from the Media Library (no
     ///     file dialog) - this ensures every event medium image/video also exists as a library
-    ///     entry, so the delete warning (RemoveMediaLibraryItem) can reliably detect it.</summary>
+    ///     entry, so the delete warning (RemoveMediaLibraryItem) can reliably detect it.
+    /// </summary>
     private void OnChooseFromLibraryClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TriggerMediaConfig target || MediaLibrary is null) return;

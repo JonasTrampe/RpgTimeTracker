@@ -1,4 +1,3 @@
-using System.Linq;
 using RpgTimeTracker.Shared.Services;
 
 namespace RpgTimeTracker.Tests;

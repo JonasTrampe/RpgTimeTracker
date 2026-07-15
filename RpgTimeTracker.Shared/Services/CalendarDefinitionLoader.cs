@@ -57,9 +57,11 @@ public static class CalendarDefinitionLoader
         }
     }
 
-    /// <summary>Loads and validates a single calendar JSON file - used both by LoadAll's directory
+    /// <summary>
+    ///     Loads and validates a single calendar JSON file - used both by LoadAll's directory
     ///     scan and by the GM's "import calendar" file picker (so an invalid file is rejected with
-    ///     the same rules either way).</summary>
+    ///     the same rules either way).
+    /// </summary>
     public static LoadedCalendar? TryLoad(string jsonPath, bool isBundled)
     {
         try
@@ -87,8 +89,10 @@ public static class CalendarDefinitionLoader
         }
     }
 
-    /// <summary>Resolves a stored/network-received calendar name against LoadAll() - case-insensitive.
-    ///     Returns null if nothing matches (caller decides the fallback, e.g. Gregorian).</summary>
+    /// <summary>
+    ///     Resolves a stored/network-received calendar name against LoadAll() - case-insensitive.
+    ///     Returns null if nothing matches (caller decides the fallback, e.g. Gregorian).
+    /// </summary>
     public static LoadedCalendar? Resolve(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
