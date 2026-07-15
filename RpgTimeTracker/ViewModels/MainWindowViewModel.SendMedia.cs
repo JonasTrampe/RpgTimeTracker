@@ -1569,7 +1569,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [RelayCommand]
     private void ApplyManualDateTime()
     {
-        if (!DateTime.TryParse(ManualDateTimeText, out var parsed))
+        if (!CalendarService.Active.TryParseDateTimeText(ManualDateTimeText, out var parsed))
         {
             ClockErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.InvalidDateTime");
             return;

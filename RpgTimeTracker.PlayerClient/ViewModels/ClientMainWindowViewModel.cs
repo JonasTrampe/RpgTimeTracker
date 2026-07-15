@@ -55,7 +55,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     ///     in between this instance ticks on its own with the last known speed
     ///     - identical derivation logic as on the host, see RpgTimeTracker.Shared.Services.
     /// </summary>
-    private readonly GameClockService _localClock = new(DateTime.Now);
+    private readonly GameClockService _localClock = new(CalendarService.Active.FromCalendarDate(1, 0, 1, 12, 0, 0));
 
     /// <summary>
     ///     Remaining plays per MediaId (-1 = endless/loop, otherwise counts down on each
@@ -96,9 +96,9 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     [ObservableProperty] private MediaPlayer? _mediaPlayer;
     [ObservableProperty] private string _pin = string.Empty;
     private bool _playbackStartedReported;
-    [ObservableProperty] private DateTime _playerCalendarMonth = DateTime.Today;
+    [ObservableProperty] private GameInstant _playerCalendarMonth;
     [ObservableProperty] private string _playerCalendarMonthLabel = string.Empty;
-    [ObservableProperty] private DateTime _playerCalendarSelectedDate = DateTime.Today;
+    [ObservableProperty] private GameInstant _playerCalendarSelectedDate;
     [ObservableProperty] private string _playerCalendarSelectedDateLabel = string.Empty;
     [ObservableProperty] private string _playerHeaderSubtitle = LocalizationService.Get("ClientMainWindowViewModel.Defaults.PlayerHeaderSubtitle");
     [ObservableProperty] private string _playerHeaderTitle = LocalizationService.Get("MainWindowViewModel.Defaults.PlayerHeaderTitle");
@@ -528,7 +528,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     private void OnSessionSnapshot(SessionSnapshotParams snapshot)
     {
         Log.Information("session.snapshot processed: {ItemCount} items, clock running={IsRunning}, time={GameTime}",
-            snapshot.Items.Count, snapshot.IsClockRunning, snapshot.CurrentGameTime);
+            snapshot.Items.Count, snapshot.IsClockRunning, snapshot.CurrentGameTimeSeconds);
         PlayerHeaderTitle = Limit(snapshot.PlayerHeaderTitle, 120);
         PlayerHeaderSubtitle = Limit(snapshot.PlayerHeaderSubtitle, 180);
         ApplyTheme(snapshot.Theme);
@@ -536,8 +536,9 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             FogOverlayRenderer.BuildHiddenColor(snapshot.FogColorHex, snapshot.FogOpacityPercent),
             snapshot.FogBlurRadius, snapshot.FogBlurEnabled);
 
+        CalendarService.Active = snapshot.ActiveCalendar;
         _localClock.SpeedMultiplier = snapshot.SpeedMultiplier <= 0 ? 1.0 : snapshot.SpeedMultiplier;
-        _localClock.SetTime(snapshot.CurrentGameTime);
+        _localClock.SetTime(new GameInstant(snapshot.CurrentGameTimeSeconds));
         if (snapshot.IsClockRunning) _localClock.Start();
         else _localClock.Pause();
         SpeedMultiplierDisplay = _localClock.SpeedMultiplier.ToString("0.0", LocalizationService.Culture) + "×";
@@ -552,8 +553,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         if (_calendarEntries.Count == 0)
             ShowPlayerCalendarView = false;
 
-        PlayerCalendarMonth = new DateTime(_localClock.CurrentTime.Year, _localClock.CurrentTime.Month, 1);
-        PlayerCalendarSelectedDate = _localClock.CurrentTime.Date;
+        PlayerCalendarMonth = CalendarMonthStart(_localClock.CurrentTime);
+        PlayerCalendarSelectedDate = CalendarService.Active.DayStart(_localClock.CurrentTime);
         RefreshPlayerCalendar();
         OnPropertyChanged(nameof(HasPlayerVisibleCalendarEntries));
     }
@@ -562,7 +563,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     ///     Periodic drift correction of the locally derived clock + self-healing, in case a
     ///     clock.* delta was discarded due to skipIfBusy (media transfer was in progress).
     /// </summary>
-    private void OnClockHeartbeat(DateTime gameTime, double speedMultiplier, bool isRunning)
+    private void OnClockHeartbeat(GameInstant gameTime, double speedMultiplier, bool isRunning)
     {
         _localClock.SpeedMultiplier = speedMultiplier <= 0 ? 1.0 : speedMultiplier;
         SpeedMultiplierDisplay = _localClock.SpeedMultiplier.ToString("0.0", LocalizationService.Culture) + "×";
@@ -616,7 +617,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
                 entry.Alarm.ColorHex = dto.ColorHex;
                 entry.Alarm.Blink = dto.Blink;
                 entry.Alarm.IsPlayerVisible = dto.IsPlayerVisible;
-                entry.Alarm.TriggerAt = dto.TriggerAt;
+                entry.Alarm.TriggerAt = new GameInstant(dto.TriggerAtSeconds);
                 entry.Alarm.RepeatInterval = dto.RepeatIntervalTicks.HasValue
                     ? TimeSpan.FromTicks(dto.RepeatIntervalTicks.Value)
                     : null;
@@ -660,7 +661,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         if (_entries.Remove(id, out var entry)) Items.Remove(entry.ViewModel);
     }
 
-    private void OnLocalClockTick(DateTime newTime, TimeSpan gameDelta)
+    private void OnLocalClockTick(GameInstant newTime, TimeSpan gameDelta)
     {
         CurrentGameTimeText = FormatGameTime(newTime);
 
@@ -672,28 +673,41 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             RefreshEntryDisplay(entry);
         }
 
-        RefreshPlayerCalendarDayStates(newTime.Date);
+        RefreshPlayerCalendarDayStates(CalendarService.Active.DayStart(newTime));
+    }
+
+    private static GameInstant CalendarMonthStart(GameInstant instant)
+    {
+        var calendar = CalendarService.Active;
+        var date = calendar.ToCalendarDate(instant);
+        return calendar.FromCalendarDate(date.Year, date.MonthIndex, 1, 0, 0, 0);
     }
 
     private void RefreshPlayerCalendar()
     {
-        PlayerCalendarMonthLabel = PlayerCalendarMonth.ToString("MMMM yyyy", LocalizationService.Culture);
+        var calendar = CalendarService.Active;
+        var monthDate = calendar.ToCalendarDate(PlayerCalendarMonth);
+        PlayerCalendarMonthLabel = $"{monthDate.MonthName} {monthDate.Year:0000}";
+
+        var selectedDate = calendar.ToCalendarDate(PlayerCalendarSelectedDate);
         PlayerCalendarSelectedDateLabel =
-            PlayerCalendarSelectedDate.ToString("dddd, dd.MM.yyyy", LocalizationService.Culture);
+            $"{selectedDate.WeekdayName}, {selectedDate.Day:00}.{selectedDate.MonthIndex + 1:00}.{selectedDate.Year:0000}";
 
         PlayerCalendarDays.Clear();
-        var firstOfMonth = new DateTime(PlayerCalendarMonth.Year, PlayerCalendarMonth.Month, 1);
-        var offset = ((int)firstOfMonth.DayOfWeek + 6) % 7;
-        var gridStart = firstOfMonth.AddDays(-offset);
-        for (var index = 0; index < 42; index++)
+        var weekLength = calendar.Weekdays.Count > 0 ? calendar.Weekdays.Count : 7;
+        var gridStart = PlayerCalendarMonth.Add(TimeSpan.FromSeconds(-(double)monthDate.WeekdayIndex * calendar.SecondsPerDay));
+        var selectedDayNumber = calendar.ToDayNumber(PlayerCalendarSelectedDate);
+        var todayDayNumber = calendar.ToDayNumber(_localClock.CurrentTime);
+        for (var index = 0; index < weekLength * 6; index++)
         {
-            var day = gridStart.AddDays(index);
-            var vm = new PlayerCalendarDayViewModel(day, SelectPlayerCalendarDate)
+            var day = gridStart.Add(TimeSpan.FromSeconds((double)index * calendar.SecondsPerDay));
+            var dayDate = calendar.ToCalendarDate(day);
+            var vm = new PlayerCalendarDayViewModel(day, dayDate.Day.ToString(), SelectPlayerCalendarDate)
             {
-                IsCurrentMonth = day.Month == PlayerCalendarMonth.Month,
-                IsSelected = day.Date == PlayerCalendarSelectedDate.Date,
-                IsToday = day.Date == _localClock.CurrentTime.Date,
-                HasEntries = _calendarEntries.Any(entry => entry.TryGetOccurrenceOn(day, out _))
+                IsCurrentMonth = dayDate.MonthIndex == monthDate.MonthIndex && dayDate.Year == monthDate.Year,
+                IsSelected = calendar.ToDayNumber(day) == selectedDayNumber,
+                IsToday = calendar.ToDayNumber(day) == todayDayNumber,
+                HasEntries = _calendarEntries.Any(entry => entry.TryGetOccurrenceOn(calendar, day, out _))
             };
             PlayerCalendarDays.Add(vm);
         }
@@ -703,41 +717,52 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
                      .Select(entry => new
                      {
                          Entry = entry,
-                         Occurs = entry.TryGetOccurrenceOn(PlayerCalendarSelectedDate, out var occurrence),
+                         Occurs = entry.TryGetOccurrenceOn(calendar, PlayerCalendarSelectedDate, out var occurrence),
                          Occurrence = occurrence
                      })
                      .Where(x => x.Occurs)
                      .OrderBy(x => x.Occurrence))
+        {
+            var occurrenceDate = calendar.ToCalendarDate(item.Occurrence);
             PlayerCalendarEntries.Add(new PlayerCalendarEntryViewModel
             {
                 Title = Limit(item.Entry.Title, 120),
                 Description = Limit(item.Entry.Description, 220),
                 Icon = VisualItemHelper.NormalizeIcon(item.Entry.Icon),
                 ColorHex = item.Entry.ColorHex,
-                TimeText = item.Occurrence.ToString("HH:mm")
+                TimeText = $"{occurrenceDate.Hour:00}:{occurrenceDate.Minute:00}"
             });
+        }
 
         OnPropertyChanged(nameof(HasPlayerCalendarEntriesForSelectedDate));
     }
 
-    private void RefreshPlayerCalendarDayStates(DateTime today)
+    private void RefreshPlayerCalendarDayStates(GameInstant today)
     {
+        var calendar = CalendarService.Active;
+        var todayDayNumber = calendar.ToDayNumber(today);
+        var selectedDayNumber = calendar.ToDayNumber(PlayerCalendarSelectedDate);
         foreach (var day in PlayerCalendarDays)
         {
-            day.IsToday = day.Date == today.Date;
-            day.IsSelected = day.Date == PlayerCalendarSelectedDate.Date;
-            day.HasEntries = _calendarEntries.Any(entry => entry.TryGetOccurrenceOn(day.Date, out _));
+            var dayNumber = calendar.ToDayNumber(day.Date);
+            day.IsToday = dayNumber == todayDayNumber;
+            day.IsSelected = dayNumber == selectedDayNumber;
+            day.HasEntries = _calendarEntries.Any(entry => entry.TryGetOccurrenceOn(calendar, day.Date, out _));
         }
 
+        var selectedDate = calendar.ToCalendarDate(PlayerCalendarSelectedDate);
         PlayerCalendarSelectedDateLabel =
-            PlayerCalendarSelectedDate.ToString("dddd, dd.MM.yyyy", LocalizationService.Culture);
+            $"{selectedDate.WeekdayName}, {selectedDate.Day:00}.{selectedDate.MonthIndex + 1:00}.{selectedDate.Year:0000}";
     }
 
-    private void SelectPlayerCalendarDate(DateTime date)
+    private void SelectPlayerCalendarDate(GameInstant date)
     {
-        PlayerCalendarSelectedDate = date.Date;
-        if (PlayerCalendarMonth.Month != date.Month || PlayerCalendarMonth.Year != date.Year)
-            PlayerCalendarMonth = new DateTime(date.Year, date.Month, 1);
+        var calendar = CalendarService.Active;
+        PlayerCalendarSelectedDate = calendar.DayStart(date);
+        var dayDate = calendar.ToCalendarDate(date);
+        var monthDate = calendar.ToCalendarDate(PlayerCalendarMonth);
+        if (dayDate.MonthIndex != monthDate.MonthIndex || dayDate.Year != monthDate.Year)
+            PlayerCalendarMonth = CalendarMonthStart(date);
 
         RefreshPlayerCalendar();
     }
@@ -1408,9 +1433,10 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         return value.Length <= maxLength ? value : value[..maxLength];
     }
 
-    private static string FormatGameTime(DateTime time)
+    private static string FormatGameTime(GameInstant time)
     {
-        return time.ToString("dddd, dd.MM.yyyy — HH:mm:ss", LocalizationService.Culture);
+        var date = CalendarService.Active.ToCalendarDate(time);
+        return $"{date.WeekdayName}, {date.Day:00}.{date.MonthIndex + 1:00}.{date.Year:0000} — {date.Hour:00}:{date.Minute:00}:{date.Second:00}";
     }
 
     private static string FormatTimeSpan(TimeSpan ts)
@@ -1438,15 +1464,41 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     [RelayCommand]
     private void PreviousPlayerCalendarMonth()
     {
-        PlayerCalendarMonth = PlayerCalendarMonth.AddMonths(-1);
+        PlayerCalendarMonth = AddCalendarMonths(PlayerCalendarMonth, -1);
         RefreshPlayerCalendar();
     }
 
     [RelayCommand]
     private void NextPlayerCalendarMonth()
     {
-        PlayerCalendarMonth = PlayerCalendarMonth.AddMonths(1);
+        PlayerCalendarMonth = AddCalendarMonths(PlayerCalendarMonth, 1);
         RefreshPlayerCalendar();
+    }
+
+    private static GameInstant AddCalendarMonths(GameInstant instant, int delta)
+    {
+        var calendar = CalendarService.Active;
+        var date = calendar.ToCalendarDate(instant);
+        var monthCount = calendar.Months.Count > 0 ? calendar.Months.Count : 12;
+        var absoluteMonth = date.Year * monthCount + date.MonthIndex + delta;
+        var year = FloorDivInt(absoluteMonth, monthCount);
+        var monthIndex = ModInt(absoluteMonth, monthCount);
+        return calendar.FromCalendarDate(year, monthIndex, 1, 0, 0, 0);
+    }
+
+    private static int FloorDivInt(int a, int b)
+    {
+        var q = a / b;
+        var r = a % b;
+        if (r != 0 && r < 0 != b < 0) q--;
+        return q;
+    }
+
+    private static int ModInt(int a, int b)
+    {
+        var r = a % b;
+        if (r != 0 && r < 0 != b < 0) r += b;
+        return r;
     }
 
     // ==================== Gallery: session-own list of sent images/videos ====================

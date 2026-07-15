@@ -3,6 +3,13 @@ using RpgTimeTracker.Shared.Services.Visuals;
 
 namespace RpgTimeTracker.Shared.Models;
 
+/// <summary>
+///     A GM calendar entry with optional recurrence. Recurrence is computed against a
+///     CalendarDefinition (passed in by the caller, since an entry doesn't own a copy of the
+///     campaign's active calendar) rather than assuming Gregorian rules - see
+///     CalendarDefinition.ToCalendarDate/FromCalendarDate for the month/day/leap-year math this
+///     class builds on.
+/// </summary>
 public sealed class CalendarEntryDefinition
 {
     public Guid Id { get; set; }
@@ -10,9 +17,9 @@ public sealed class CalendarEntryDefinition
     public string Description { get; set; } = string.Empty;
     public string Icon { get; set; } = VisualItemHelper.IconCalendar;
     public string ColorHex { get; set; } = string.Empty;
-    public DateTime Start { get; set; }
+    public GameInstant Start { get; set; }
     public CalendarRecurrenceKind RecurrenceKind { get; set; }
-    public DateTime? RepeatUntil { get; set; }
+    public GameInstant? RepeatUntil { get; set; }
     public bool IsPlayerVisible { get; set; }
     public string? TriggerPath { get; set; }
     public string? TriggerFileName { get; set; }
@@ -23,161 +30,214 @@ public sealed class CalendarEntryDefinition
 
     public bool HasTrigger => TriggerKind != MediaKind.None && !string.IsNullOrWhiteSpace(TriggerPath);
 
-    public bool TryGetOccurrenceOn(DateTime date, out DateTime occurrence)
+    public bool TryGetOccurrenceOn(CalendarDefinition calendar, GameInstant date, out GameInstant occurrence)
     {
-        var targetDate = date.Date;
-        occurrence = targetDate.Add(Start.TimeOfDay);
+        var targetDayNumber = calendar.ToDayNumber(date);
+        var startDayNumber = calendar.ToDayNumber(Start);
+        var startDayStart = calendar.DayStart(Start);
+        var timeOfDaySeconds = Start.TotalSeconds - startDayStart.TotalSeconds;
+        occurrence = new GameInstant(calendar.DayStart(date).TotalSeconds + timeOfDaySeconds);
 
-        if (targetDate < Start.Date)
+        if (targetDayNumber < startDayNumber)
             return false;
 
-        if (RepeatUntil.HasValue && targetDate > RepeatUntil.Value.Date)
+        if (RepeatUntil.HasValue && targetDayNumber > calendar.ToDayNumber(RepeatUntil.Value))
             return false;
 
         switch (RecurrenceKind)
         {
             case CalendarRecurrenceKind.None:
-                return targetDate == Start.Date;
+                return targetDayNumber == startDayNumber;
 
             case CalendarRecurrenceKind.Daily:
                 return true;
 
             case CalendarRecurrenceKind.Weekly:
-                return (targetDate - Start.Date).Days % 7 == 0;
+                var weekLength = calendar.Weekdays.Count > 0 ? calendar.Weekdays.Count : 7;
+                return Mod(targetDayNumber - startDayNumber, weekLength) == 0;
 
             case CalendarRecurrenceKind.Monthly:
-                if (targetDate.Day != Start.Day)
+            {
+                var targetDate = calendar.ToCalendarDate(date);
+                var startDate = calendar.ToCalendarDate(Start);
+                if (targetDate.Day != startDate.Day)
                     return false;
 
-                var monthDistance = (targetDate.Year - Start.Year) * 12 + targetDate.Month - Start.Month;
+                var monthCount = calendar.Months.Count;
+                var monthDistance = ToAbsoluteMonth(targetDate.Year, targetDate.MonthIndex, monthCount) -
+                                     ToAbsoluteMonth(startDate.Year, startDate.MonthIndex, monthCount);
                 return monthDistance >= 0;
+            }
 
             case CalendarRecurrenceKind.Yearly:
-                return targetDate.Month == Start.Month && targetDate.Day == Start.Day;
+            {
+                var targetDate = calendar.ToCalendarDate(date);
+                var startDate = calendar.ToCalendarDate(Start);
+                return targetDate.MonthIndex == startDate.MonthIndex && targetDate.Day == startDate.Day;
+            }
 
             default:
                 return false;
         }
     }
 
-    public bool HasOccurrenceInMonth(DateTime month)
+    public bool HasOccurrenceInMonth(CalendarDefinition calendar, GameInstant month)
     {
-        var first = new DateTime(month.Year, month.Month, 1);
-        var days = DateTime.DaysInMonth(month.Year, month.Month);
+        var monthDate = calendar.ToCalendarDate(month);
+        var internalYear = monthDate.Year - calendar.YearZeroOffset;
+        var days = calendar.DaysInMonth(internalYear, monthDate.MonthIndex);
+        var first = calendar.FromCalendarDate(monthDate.Year, monthDate.MonthIndex, 1, 0, 0, 0);
+
         for (var day = 0; day < days; day++)
-            if (TryGetOccurrenceOn(first.AddDays(day), out _))
+            if (TryGetOccurrenceOn(calendar, first.Add(TimeSpan.FromSeconds((double)day * calendar.SecondsPerDay)), out _))
                 return true;
 
         return false;
     }
 
-    public DateTime? GetNextOccurrenceAtOrAfter(DateTime from)
+    public GameInstant? GetNextOccurrenceAtOrAfter(CalendarDefinition calendar, GameInstant from)
     {
-        if (RepeatUntil.HasValue && from.Date > RepeatUntil.Value.Date)
+        if (RepeatUntil.HasValue && calendar.ToDayNumber(from) > calendar.ToDayNumber(RepeatUntil.Value))
             return null;
 
-        switch (RecurrenceKind)
+        return RecurrenceKind switch
         {
-            case CalendarRecurrenceKind.None:
-                return Start >= from ? Start : null;
-
-            case CalendarRecurrenceKind.Daily:
-                return ClampToEnd(NextDaily(from));
-
-            case CalendarRecurrenceKind.Weekly:
-                return ClampToEnd(NextWeekly(from));
-
-            case CalendarRecurrenceKind.Monthly:
-                return ClampToEnd(NextMonthly(from));
-
-            case CalendarRecurrenceKind.Yearly:
-                return ClampToEnd(NextYearly(from));
-
-            default:
-                return null;
-        }
+            CalendarRecurrenceKind.None => Start >= from ? Start : null,
+            CalendarRecurrenceKind.Daily => ClampToEnd(calendar, NextDaily(calendar, from)),
+            CalendarRecurrenceKind.Weekly => ClampToEnd(calendar, NextWeekly(calendar, from)),
+            CalendarRecurrenceKind.Monthly => ClampToEnd(calendar, NextMonthly(calendar, from)),
+            CalendarRecurrenceKind.Yearly => ClampToEnd(calendar, NextYearly(calendar, from)),
+            _ => null
+        };
     }
 
-    private DateTime? ClampToEnd(DateTime? candidate)
+    private GameInstant? ClampToEnd(CalendarDefinition calendar, GameInstant? candidate)
     {
         if (candidate is null)
             return null;
 
-        if (RepeatUntil.HasValue && candidate.Value.Date > RepeatUntil.Value.Date)
+        if (RepeatUntil.HasValue && calendar.ToDayNumber(candidate.Value) > calendar.ToDayNumber(RepeatUntil.Value))
             return null;
 
         return candidate;
     }
 
-    private DateTime NextDaily(DateTime from)
+    private GameInstant NextDaily(CalendarDefinition calendar, GameInstant from)
     {
         if (from <= Start)
             return Start;
 
-        var days = (from.Date - Start.Date).Days;
-        var candidate = Start.AddDays(days);
-        return candidate >= from ? candidate : candidate.AddDays(1);
+        var days = calendar.ToDayNumber(from) - calendar.ToDayNumber(Start);
+        var candidate = Start.Add(TimeSpan.FromSeconds((double)days * calendar.SecondsPerDay));
+        return candidate >= from ? candidate : candidate.Add(TimeSpan.FromSeconds(calendar.SecondsPerDay));
     }
 
-    private DateTime NextWeekly(DateTime from)
+    private GameInstant NextWeekly(CalendarDefinition calendar, GameInstant from)
     {
         if (from <= Start)
             return Start;
 
-        var totalDays = (from.Date - Start.Date).Days;
-        var weeks = Math.Max(0, totalDays / 7);
-        var candidate = Start.AddDays(weeks * 7);
+        var weekLength = calendar.Weekdays.Count > 0 ? calendar.Weekdays.Count : 7;
+        var totalDays = calendar.ToDayNumber(from) - calendar.ToDayNumber(Start);
+        var weeks = Math.Max(0, totalDays / weekLength);
+        var candidate = Start.Add(TimeSpan.FromSeconds((double)weeks * weekLength * calendar.SecondsPerDay));
         while (candidate < from)
-            candidate = candidate.AddDays(7);
+            candidate = candidate.Add(TimeSpan.FromSeconds((double)weekLength * calendar.SecondsPerDay));
 
         return candidate;
     }
 
-    private DateTime? NextMonthly(DateTime from)
+    private GameInstant? NextMonthly(CalendarDefinition calendar, GameInstant from)
     {
         if (from <= Start)
             return Start;
 
-        var monthCursor = new DateTime(from.Year, from.Month, 1);
+        var startDate = calendar.ToCalendarDate(Start);
+        var fromDate = calendar.ToCalendarDate(from);
+        var monthCount = calendar.Months.Count;
+        var startAbsoluteMonth = ToAbsoluteMonth(startDate.Year, startDate.MonthIndex, monthCount);
+        var monthCursor = Math.Max(ToAbsoluteMonth(fromDate.Year, fromDate.MonthIndex, monthCount), startAbsoluteMonth);
+
         while (true)
         {
-            if (monthCursor < new DateTime(Start.Year, Start.Month, 1))
-                monthCursor = new DateTime(Start.Year, Start.Month, 1);
-
-            var daysInMonth = DateTime.DaysInMonth(monthCursor.Year, monthCursor.Month);
-            if (Start.Day <= daysInMonth)
+            var (year, monthIndex) = FromAbsoluteMonth(monthCursor, monthCount);
+            var internalYear = year - calendar.YearZeroOffset;
+            var daysInMonth = calendar.DaysInMonth(internalYear, monthIndex);
+            if (startDate.Day <= daysInMonth)
             {
-                var candidate = new DateTime(monthCursor.Year, monthCursor.Month, Start.Day,
-                    Start.Hour, Start.Minute, Start.Second);
+                var candidate = calendar.FromCalendarDate(year, monthIndex, startDate.Day, startDate.Hour,
+                    startDate.Minute, startDate.Second);
                 if (candidate >= from)
                     return candidate;
             }
 
-            monthCursor = monthCursor.AddMonths(1);
-            if (RepeatUntil.HasValue && monthCursor.Date > RepeatUntil.Value.Date)
-                return null;
+            monthCursor++;
+            if (RepeatUntil.HasValue)
+            {
+                var (nextYear, nextMonthIndex) = FromAbsoluteMonth(monthCursor, monthCount);
+                var probe = calendar.FromCalendarDate(nextYear, nextMonthIndex, 1, 0, 0, 0);
+                if (calendar.ToDayNumber(probe) > calendar.ToDayNumber(RepeatUntil.Value))
+                    return null;
+            }
         }
     }
 
-    private DateTime? NextYearly(DateTime from)
+    private GameInstant? NextYearly(CalendarDefinition calendar, GameInstant from)
     {
         if (from <= Start)
             return Start;
 
-        for (var year = from.Year; year <= from.Year + 200; year++)
+        var startDate = calendar.ToCalendarDate(Start);
+        var fromDate = calendar.ToCalendarDate(from);
+
+        for (var year = fromDate.Year; year <= fromDate.Year + 200; year++)
         {
-            if (Start.Month == 2 && Start.Day == 29 && !DateTime.IsLeapYear(year))
+            var internalYear = year - calendar.YearZeroOffset;
+            var daysInMonth = calendar.DaysInMonth(internalYear, startDate.MonthIndex);
+            if (startDate.Day > daysInMonth)
                 continue;
 
-            var candidate = new DateTime(year, Start.Month, Start.Day, Start.Hour, Start.Minute, Start.Second);
+            var candidate = calendar.FromCalendarDate(year, startDate.MonthIndex, startDate.Day, startDate.Hour,
+                startDate.Minute, startDate.Second);
             if (candidate < Start)
                 continue;
             if (candidate >= from)
                 return candidate;
-            if (RepeatUntil.HasValue && candidate.Date > RepeatUntil.Value.Date)
+            if (RepeatUntil.HasValue && calendar.ToDayNumber(candidate) > calendar.ToDayNumber(RepeatUntil.Value))
                 return null;
         }
 
         return null;
+    }
+
+    private static int ToAbsoluteMonth(int year, int monthIndex, int monthCount) => year * monthCount + monthIndex;
+
+    private static (int Year, int MonthIndex) FromAbsoluteMonth(int absoluteMonth, int monthCount)
+    {
+        var year = FloorDiv(absoluteMonth, monthCount);
+        var monthIndex = Mod(absoluteMonth, monthCount);
+        return (year, monthIndex);
+    }
+
+    private static long Mod(long a, long b)
+    {
+        var r = a % b;
+        if (r != 0 && r < 0 != b < 0) r += b;
+        return r;
+    }
+
+    private static int FloorDiv(int a, int b)
+    {
+        var q = a / b;
+        var r = a % b;
+        if (r != 0 && r < 0 != b < 0) q--;
+        return q;
+    }
+
+    private static int Mod(int a, int b)
+    {
+        var r = a % b;
+        if (r != 0 && r < 0 != b < 0) r += b;
+        return r;
     }
 }

@@ -220,6 +220,26 @@ method list, media streaming) can be found in [`docs/protocol.md`](docs/protocol
   additionally exportable/importable separately as JSON; changes are
   automatically sent to all connected players, and newly connected clients
   receive the full calendar upon connecting.
+- **Custom calendars (Settings tab)**: game time is calendar-agnostic
+  (`GameInstant`, elapsed seconds), so any campaign can pick a different
+  calendar - arbitrary month names/lengths, weekday names, a leap-year rule,
+  hours/minutes/seconds per day, seasons, and moons. Four calendars ship
+  bundled (Gregorian, a Forgotten Realms-style Harptos, a Das Schwarze
+  Auge-style Aventurian calendar, and Voidreach, a fictional sci-fi
+  calendar), each with a "Import calendar's default events" button that adds
+  its real holidays (Harptos's five festivals, DSA's Namenlose Tage, ...) as
+  recurring calendar entries. Switching calendars only changes how dates are
+  displayed - the underlying elapsed time is unaffected.
+  - **More calendars**: [Foundry VTT's Simple Calendar module](https://github.com/vigoren/foundryvtt-simple-calendar/tree/main/src/predefined-calendars)
+    ships several dozen more predefined calendars (Dark Sun, Eberron,
+    Exandria, Golarion, Greyhawk, Warhammer, ...). Its JSON schema differs
+    from ours, so those files aren't usable as-is - use Settings' "Import
+    calendar file..." button, which auto-detects a Simple Calendar export and
+    converts it (see `RpgTimeTracker.Shared/Services/SimpleCalendarImporter.cs`
+    for the exact field mapping and its documented approximations, mainly
+    around weekday-epoch alignment). GM-authored calendar JSON (our own
+    schema) can also be dropped directly into
+    `%AppData%/RpgTimeTracker/Calendars` (Linux/macOS: `~/.config/RpgTimeTracker/Calendars`).
 - **About dialog (host and client, "ℹ" button)**: title/description from an
   app-specific Markdown file (`About/AboutContent.md`, rendered via
   ClassIsland.Markdown.Avalonia), version number, as well as the app's own
@@ -354,8 +374,6 @@ More detailed technical documentation lives in [`docs/`](docs/):
 ## Possible extensions
 
 - Sound/popup notification when a timer expires or an alarm triggers
-- Custom fantasy calendar (different month lengths, weekdays, holidays)
-  instead of the standard `DateTime`
 - Auto-save on closing the app / remember the last-used file
 - Video chunking with progressive playback already during transfer
 - Characters: drag a token onto a map (with fog-linked visibility), send

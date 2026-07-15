@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
+using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Visuals;
 
@@ -20,7 +21,7 @@ public partial class AlarmItemViewModel : ObservableObject
 
     [ObservableProperty] private string _colorHex;
 
-    private DateTime _currentGameTime;
+    private GameInstant _currentGameTime;
 
     [ObservableProperty] private string? _errorMessage;
 
@@ -40,7 +41,7 @@ public partial class AlarmItemViewModel : ObservableObject
 
     [ObservableProperty] private string _triggerAtDateTimeTextEdit;
 
-    public AlarmItemViewModel(AlarmItem model, DateTime currentGameTime, Action<AlarmItemViewModel> onDeleteRequested)
+    public AlarmItemViewModel(AlarmItem model, GameInstant currentGameTime, Action<AlarmItemViewModel> onDeleteRequested)
     {
         _model = model;
         _onDeleteRequested = onDeleteRequested;
@@ -53,7 +54,7 @@ public partial class AlarmItemViewModel : ObservableObject
         _colorHex = model.ColorHex;
         _blink = model.Blink;
         _isPlayerVisible = model.IsPlayerVisible;
-        _triggerAtDateTimeTextEdit = model.TriggerAt.ToString("yyyy-MM-dd HH:mm:ss");
+        _triggerAtDateTimeTextEdit = CalendarService.Active.FormatDateTimeText(model.TriggerAt);
         _repeatIntervalTextEdit =
             model.RepeatInterval.HasValue ? FormatTimeSpan(model.RepeatInterval.Value) : string.Empty;
         _isRepeating = model.RepeatInterval.HasValue;
@@ -70,7 +71,14 @@ public partial class AlarmItemViewModel : ObservableObject
 
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);
 
-    public string TriggerAtText => _model.TriggerAt.ToString("dddd, dd.MM.yyyy HH:mm", LocalizationService.Culture);
+    public string TriggerAtText
+    {
+        get
+        {
+            var date = CalendarService.Active.ToCalendarDate(_model.TriggerAt);
+            return $"{date.WeekdayName}, {date.Day:00}.{date.MonthIndex + 1:00}.{date.Year:0000} {date.Hour:00}:{date.Minute:00}";
+        }
+    }
 
     public string RepeatIntervalDisplay => _model.RepeatInterval.HasValue
         ? FormatTimeSpan(_model.RepeatInterval.Value)
@@ -162,7 +170,7 @@ public partial class AlarmItemViewModel : ObservableObject
     [RelayCommand]
     private void ApplyEdits()
     {
-        if (!DateTime.TryParse(TriggerAtDateTimeTextEdit, out var triggerAt))
+        if (!CalendarService.Active.TryParseDateTimeText(TriggerAtDateTimeTextEdit, out var triggerAt))
         {
             ErrorMessage = LocalizationService.Get("AlarmItem.ErrorInvalidDate");
             return;
@@ -207,7 +215,7 @@ public partial class AlarmItemViewModel : ObservableObject
         _onDeleteRequested(this);
     }
 
-    public bool Sync(DateTime currentGameTime)
+    public bool Sync(GameInstant currentGameTime)
     {
         _currentGameTime = currentGameTime;
         var triggeredNow = _model.SyncToTime(currentGameTime);
@@ -226,7 +234,7 @@ public partial class AlarmItemViewModel : ObservableObject
             ColorHex = _model.ColorHex,
             Blink = _model.Blink,
             IsPlayerVisible = _model.IsPlayerVisible,
-            TriggerAt = _model.TriggerAt,
+            TriggerAtSeconds = _model.TriggerAt.TotalSeconds,
             RepeatIntervalTicks = _model.RepeatInterval?.Ticks,
             IsTriggered = _model.IsTriggered,
             TriggerMediaPath = TriggerMedia.Path,
@@ -238,7 +246,7 @@ public partial class AlarmItemViewModel : ObservableObject
         };
     }
 
-    public static AlarmItemViewModel FromDto(AlarmDto dto, DateTime currentGameTime,
+    public static AlarmItemViewModel FromDto(AlarmDto dto, GameInstant currentGameTime,
         Action<AlarmItemViewModel> onDeleteRequested)
     {
         var model = new AlarmItem
@@ -250,7 +258,7 @@ public partial class AlarmItemViewModel : ObservableObject
             ColorHex = dto.ColorHex ?? string.Empty,
             Blink = dto.Blink,
             IsPlayerVisible = dto.IsPlayerVisible,
-            TriggerAt = dto.TriggerAt,
+            TriggerAt = new GameInstant(dto.TriggerAtSeconds),
             RepeatInterval = dto.RepeatIntervalTicks.HasValue ? TimeSpan.FromTicks(dto.RepeatIntervalTicks.Value) : null
         };
         model.Restore(dto.IsTriggered);

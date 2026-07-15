@@ -6,6 +6,7 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Shared.Models;
+using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Visuals;
 
@@ -24,7 +25,6 @@ public partial class CalendarEntryViewModel : ObservableObject
     public static string RecurrenceMonthly => LocalizationService.Get("Calendar.RecurrenceMonthly");
     public static string RecurrenceYearly => LocalizationService.Get("Calendar.RecurrenceYearly");
 
-    private static readonly string[] DateTimeFormats = ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm"];
     private readonly Action<CalendarEntryViewModel> _onChanged;
     private readonly Action<CalendarEntryViewModel> _onDeleteRequested;
 
@@ -45,7 +45,11 @@ public partial class CalendarEntryViewModel : ObservableObject
         Id = Guid.NewGuid();
         _onChanged = onChanged;
         _onDeleteRequested = onDeleteRequested;
-        _startDateTimeText = DateTime.Now.ToString("yyyy-MM-dd 12:00:00", CultureInfo.InvariantCulture);
+        // Was DateTime.Now (real wall-clock "today") as a convenience default - that no longer
+        // has meaning under an arbitrary game-calendar epoch, so this defaults to a fixed
+        // placeholder (Year 1, Jan 1, noon) instead; the GM edits it before saving anyway.
+        _startDateTimeText = CalendarService.Active.FormatDateTimeText(
+            CalendarService.Active.FromCalendarDate(1, 0, 1, 12, 0, 0));
         TriggerMedia.PropertyChanged += (_, _) => NotifyChanged();
         Validate();
     }
@@ -153,7 +157,7 @@ public partial class CalendarEntryViewModel : ObservableObject
             return false;
         }
 
-        if (repeatUntil.HasValue && repeatUntil.Value.Date < start.Date)
+        if (repeatUntil.HasValue && CalendarService.Active.ToDayNumber(repeatUntil.Value) < CalendarService.Active.ToDayNumber(start))
         {
             ValidationMessage = "Enddatum darf nicht vor dem Start liegen.";
             return false;
@@ -193,10 +197,11 @@ public partial class CalendarEntryViewModel : ObservableObject
         vm.Description = definition.Description;
         vm.Icon = VisualItemHelper.NormalizeIcon(definition.Icon);
         vm.ColorHex = definition.ColorHex;
-        vm.StartDateTimeText = definition.Start.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+        vm.StartDateTimeText = CalendarService.Active.FormatDateTimeText(definition.Start);
         vm.Recurrence = FromRecurrenceKind(definition.RecurrenceKind);
-        vm.RepeatUntilText = definition.RepeatUntil?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ??
-                             string.Empty;
+        vm.RepeatUntilText = definition.RepeatUntil.HasValue
+            ? CalendarService.Active.FormatDateText(definition.RepeatUntil.Value)
+            : string.Empty;
         vm.IsPlayerVisible = definition.IsPlayerVisible;
         vm.TriggerMedia.Path = definition.TriggerPath;
         vm.TriggerMedia.FileName = definition.TriggerFileName;
@@ -237,13 +242,12 @@ public partial class CalendarEntryViewModel : ObservableObject
         ValidationMessage = null;
     }
 
-    private bool TryParseStart(out DateTime start)
+    private bool TryParseStart(out GameInstant start)
     {
-        return DateTime.TryParseExact((string?)StartDateTimeText?.Trim(), DateTimeFormats, CultureInfo.InvariantCulture,
-            DateTimeStyles.None, out start);
+        return CalendarService.Active.TryParseDateTimeText(StartDateTimeText?.Trim(), out start);
     }
 
-    private bool TryParseRepeatUntil(out DateTime? repeatUntil)
+    private bool TryParseRepeatUntil(out GameInstant? repeatUntil)
     {
         if (string.IsNullOrWhiteSpace(RepeatUntilText))
         {
@@ -251,10 +255,9 @@ public partial class CalendarEntryViewModel : ObservableObject
             return true;
         }
 
-        if (DateTime.TryParseExact((string?)RepeatUntilText.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture,
-                DateTimeStyles.None, out var parsed))
+        if (CalendarService.Active.TryParseDateText(RepeatUntilText.Trim(), out var parsed))
         {
-            repeatUntil = parsed.Date;
+            repeatUntil = parsed;
             return true;
         }
 

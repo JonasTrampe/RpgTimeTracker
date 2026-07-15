@@ -702,15 +702,49 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [RelayCommand]
     private void PreviousPlayerCalendarMonth()
     {
-        CalendarMonth = CalendarMonth.AddMonths(-1);
+        CalendarMonth = AddCalendarMonths(CalendarMonth, -1);
         RefreshCalendarViews();
     }
 
     [RelayCommand]
     private void NextPlayerCalendarMonth()
     {
-        CalendarMonth = CalendarMonth.AddMonths(1);
+        CalendarMonth = AddCalendarMonths(CalendarMonth, 1);
         RefreshCalendarViews();
+    }
+
+    /// <summary>The instant at 00:00 on the 1st of the month this instant falls in.</summary>
+    private static GameInstant CalendarMonthStart(GameInstant instant)
+    {
+        var calendar = CalendarService.Active;
+        var date = calendar.ToCalendarDate(instant);
+        return calendar.FromCalendarDate(date.Year, date.MonthIndex, 1, 0, 0, 0);
+    }
+
+    private static GameInstant AddCalendarMonths(GameInstant instant, int delta)
+    {
+        var calendar = CalendarService.Active;
+        var date = calendar.ToCalendarDate(instant);
+        var monthCount = calendar.Months.Count > 0 ? calendar.Months.Count : 12;
+        var absoluteMonth = date.Year * monthCount + date.MonthIndex + delta;
+        var year = CalendarFloorDivInt(absoluteMonth, monthCount);
+        var monthIndex = CalendarModInt(absoluteMonth, monthCount);
+        return calendar.FromCalendarDate(year, monthIndex, 1, 0, 0, 0);
+    }
+
+    private static int CalendarFloorDivInt(int a, int b)
+    {
+        var q = a / b;
+        var r = a % b;
+        if (r != 0 && r < 0 != b < 0) q--;
+        return q;
+    }
+
+    private static int CalendarModInt(int a, int b)
+    {
+        var r = a % b;
+        if (r != 0 && r < 0 != b < 0) r += b;
+        return r;
     }
 
     /// <summary>
@@ -900,10 +934,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [RelayCommand]
     private void AddCalendarEntry()
     {
+        var selectedDate = CalendarService.Active.ToCalendarDate(CalendarSelectedDate);
         var entry = new CalendarEntryViewModel(OnCalendarEntryChanged, RemoveCalendarEntry)
         {
-            StartDateTimeText = CalendarSelectedDate.Date.AddHours(12)
-                .ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+            StartDateTimeText = CalendarService.Active.FormatDateTimeText(
+                CalendarService.Active.FromCalendarDate(selectedDate.Year, selectedDate.MonthIndex, selectedDate.Day,
+                    12, 0, 0))
         };
         CalendarEntries.Add(entry);
         SelectedCalendarEntry = entry;
@@ -932,8 +968,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SelectedCalendarEntry ??= entry;
             if (ReferenceEquals(SelectedCalendarEntry, entry) || CalendarEntries.Count == 1)
             {
-                CalendarSelectedDate = definition.Start.Date;
-                CalendarMonth = new DateTime(definition.Start.Year, definition.Start.Month, 1);
+                CalendarSelectedDate = CalendarService.Active.DayStart(definition.Start);
+                CalendarMonth = CalendarMonthStart(definition.Start);
             }
         }
 
@@ -943,10 +979,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private void RefreshCalendarViews()
     {
-        CalendarMonth = new DateTime(CalendarMonth.Year, CalendarMonth.Month, 1);
-        PlayerCalendarMonthLabel = CalendarMonth.ToString("MMMM yyyy", LocalizationService.Culture);
+        var calendar = CalendarService.Active;
+        CalendarMonth = CalendarMonthStart(CalendarMonth);
+        var monthDate = calendar.ToCalendarDate(CalendarMonth);
+        PlayerCalendarMonthLabel = $"{monthDate.MonthName} {monthDate.Year:0000}";
+
+        var selectedDate = calendar.ToCalendarDate(CalendarSelectedDate);
         PlayerCalendarSelectedDateLabel =
-            CalendarSelectedDate.ToString("dddd, dd.MM.yyyy", LocalizationService.Culture);
+            $"{selectedDate.WeekdayName}, {selectedDate.Day:00}.{selectedDate.MonthIndex + 1:00}.{selectedDate.Year:0000}";
 
         var validDefinitions = CalendarEntries
             .Select(item =>
@@ -959,10 +999,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         CalendarEntriesForSelectedDate.Clear();
         foreach (var entry in validDefinitions
-                     .Where(item => item.Definition.TryGetOccurrenceOn(CalendarSelectedDate, out _))
+                     .Where(item => item.Definition.TryGetOccurrenceOn(calendar, CalendarSelectedDate, out _))
                      .OrderBy(item =>
                      {
-                         item.Definition.TryGetOccurrenceOn(CalendarSelectedDate, out var occurrence);
+                         item.Definition.TryGetOccurrenceOn(calendar, CalendarSelectedDate, out var occurrence);
                          return occurrence;
                      }))
             CalendarEntriesForSelectedDate.Add(entry.Item);
@@ -973,18 +1013,20 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SelectedCalendarEntry = CalendarEntriesForSelectedDate.FirstOrDefault();
 
         PlayerCalendarDays.Clear();
-        var firstOfMonth = new DateTime(CalendarMonth.Year, CalendarMonth.Month, 1);
-        var offset = ((int)firstOfMonth.DayOfWeek + 6) % 7;
-        var gridStart = firstOfMonth.AddDays(-offset);
-        for (var index = 0; index < 42; index++)
+        var weekLength = calendar.Weekdays.Count > 0 ? calendar.Weekdays.Count : 7;
+        var gridStart = CalendarMonth.Add(TimeSpan.FromSeconds(-(double)monthDate.WeekdayIndex * calendar.SecondsPerDay));
+        var selectedDayNumber = calendar.ToDayNumber(CalendarSelectedDate);
+        var todayDayNumber = calendar.ToDayNumber(_clock.CurrentTime);
+        for (var index = 0; index < weekLength * 6; index++)
         {
-            var day = gridStart.AddDays(index);
-            var dayVm = new PlayerCalendarDayViewModel(day, SelectCalendarDate)
+            var day = gridStart.Add(TimeSpan.FromSeconds((double)index * calendar.SecondsPerDay));
+            var dayDate = calendar.ToCalendarDate(day);
+            var dayVm = new PlayerCalendarDayViewModel(day, dayDate.Day.ToString(), SelectCalendarDate)
             {
-                IsCurrentMonth = day.Month == CalendarMonth.Month,
-                IsSelected = day.Date == CalendarSelectedDate.Date,
-                IsToday = day.Date == _clock.CurrentTime.Date,
-                HasEntries = validDefinitions.Any(item => item.Definition.TryGetOccurrenceOn(day, out _))
+                IsCurrentMonth = dayDate.MonthIndex == monthDate.MonthIndex && dayDate.Year == monthDate.Year,
+                IsSelected = calendar.ToDayNumber(day) == selectedDayNumber,
+                IsToday = calendar.ToDayNumber(day) == todayDayNumber,
+                HasEntries = validDefinitions.Any(item => item.Definition.TryGetOccurrenceOn(calendar, day, out _))
             };
             PlayerCalendarDays.Add(dayVm);
         }
@@ -993,21 +1035,22 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var definition in validDefinitions
                      .Select(item => item.Definition)
                      .Where(definition => definition.IsPlayerVisible)
-                     .Where(definition => definition.TryGetOccurrenceOn(CalendarSelectedDate, out _))
+                     .Where(definition => definition.TryGetOccurrenceOn(calendar, CalendarSelectedDate, out _))
                      .OrderBy(definition =>
                      {
-                         definition.TryGetOccurrenceOn(CalendarSelectedDate, out var occurrence);
+                         definition.TryGetOccurrenceOn(calendar, CalendarSelectedDate, out var occurrence);
                          return occurrence;
                      }))
         {
-            definition.TryGetOccurrenceOn(CalendarSelectedDate, out var occurrence);
+            definition.TryGetOccurrenceOn(calendar, CalendarSelectedDate, out var occurrence);
+            var occurrenceDate = calendar.ToCalendarDate(occurrence);
             PlayerCalendarEntries.Add(new PlayerCalendarEntryViewModel
             {
                 Title = definition.Title,
                 Description = definition.Description,
                 Icon = definition.Icon,
                 ColorHex = definition.ColorHex,
-                TimeText = occurrence.ToString("HH:mm")
+                TimeText = $"{occurrenceDate.Hour:00}:{occurrenceDate.Minute:00}"
             });
         }
 
@@ -1024,11 +1067,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         OnPropertyChanged(nameof(SelectedCalendarTriggerSoundItem));
     }
 
-    private void SelectCalendarDate(DateTime date)
+    private void SelectCalendarDate(GameInstant date)
     {
-        CalendarSelectedDate = date.Date;
-        if (CalendarMonth.Month != date.Month || CalendarMonth.Year != date.Year)
-            CalendarMonth = new DateTime(date.Year, date.Month, 1);
+        var calendar = CalendarService.Active;
+        CalendarSelectedDate = calendar.DayStart(date);
+        var dayDate = calendar.ToCalendarDate(date);
+        var monthDate = calendar.ToCalendarDate(CalendarMonth);
+        if (dayDate.MonthIndex != monthDate.MonthIndex || dayDate.Year != monthDate.Year)
+            CalendarMonth = CalendarMonthStart(date);
 
         RefreshCalendarViews();
     }
@@ -1090,6 +1136,160 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         return _themesByDisplayName.TryGetValue(SelectedThemeOption, out var loaded) ? loaded.Definition.Id : "shadowrun";
     }
 
+    partial void OnSelectedCalendarOptionChanged(string value)
+    {
+        if (!_calendarsByName.TryGetValue(value, out var loaded)) return;
+
+        CalendarService.Active = loaded.Definition;
+        ThemeSettingsService.SaveLastCalendarName(loaded.Definition.Name);
+
+        CurrentGameTimeText = FormatGameTime(_clock.CurrentTime);
+        ManualDateTimeText = CalendarService.Active.FormatDateTimeText(_clock.CurrentTime);
+        CalendarMonth = CalendarMonthStart(_clock.CurrentTime);
+        CalendarSelectedDate = CalendarService.Active.DayStart(_clock.CurrentTime);
+        RefreshCalendarViews();
+
+        // These VMs already re-derive their calendar-formatted display text live from
+        // CalendarService.Active (see AlarmItemViewModel.TriggerAtText/CalendarEntryViewModel) -
+        // RefreshLocalizedText() (also used for a UI-language switch) just forces their bindings
+        // to re-read it.
+        foreach (var timer in Timers) timer.RefreshLocalizedText();
+        foreach (var alarm in Alarms) alarm.RefreshLocalizedText();
+        foreach (var interval in IntervalEvents) interval.RefreshLocalizedText();
+        foreach (var item in TimelineItems) item.RefreshLocalizedText();
+        foreach (var entry in CalendarEntries) entry.RefreshLocalizedText();
+
+        // The active calendar is part of session.snapshot (sent once at connect, not re-sent per
+        // tick) - a full resync is needed so connected clients re-render every date under the new
+        // calendar immediately instead of waiting for the next unrelated delta.
+        _ = _playerServer.PublishFullResyncAsync(BuildSessionSnapshot());
+    }
+
+    /// <summary>
+    ///     Adds the active calendar's bundled DefaultEntries (e.g. Harptos's five festivals) as
+    ///     real, yearly-recurring CalendarEntryDefinitions anchored to the current game year - opt-in
+    ///     (a Settings button, not automatic on every calendar switch) so re-picking a calendar never
+    ///     silently duplicates entries the GM may have already edited or removed.
+    /// </summary>
+    [RelayCommand]
+    private void ImportCalendarDefaultEntries()
+    {
+        var calendar = CalendarService.Active;
+        if (calendar.DefaultEntries.Count == 0)
+        {
+            ShowActionStatus(LocalizationService.Get("MainWindowViewModel.Status.NoDefaultCalendarEvents"));
+            return;
+        }
+
+        var year = calendar.ToCalendarDate(_clock.CurrentTime).Year;
+        var existingTitles = CalendarEntries.Select(e => e.Title).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var added = 0;
+        foreach (var template in calendar.DefaultEntries)
+        {
+            if (existingTitles.Contains(template.Title)) continue;
+
+            var definition = calendar.BuildDefaultEntry(template, year);
+            CalendarEntries.Add(CalendarEntryViewModel.FromDefinition(definition, OnCalendarEntryChanged, RemoveCalendarEntry));
+            added++;
+        }
+
+        OnPropertyChanged(nameof(HasCalendarEntries));
+        OnPropertyChanged(nameof(HasNoCalendarEntries));
+        RefreshCalendarViews();
+        QueueCalendarFullResync();
+        ShowActionStatus(added > 0
+            ? string.Format(LocalizationService.Get("MainWindowViewModel.Status.DefaultCalendarEventsImported"), added)
+            : LocalizationService.Get("MainWindowViewModel.Status.DefaultCalendarEventsAlreadyPresent"));
+    }
+
+    /// <summary>(Re-)populates CalendarOptions/_calendarsByName from CalendarDefinitionLoader.LoadAll()
+    ///     and returns the display label matching the currently active calendar (or empty if none
+    ///     match) - shared by the constructor's initial load and ImportCalendarDefinitionFile's
+    ///     refresh after adding a new custom calendar.</summary>
+    private string PopulateCalendarOptions()
+    {
+        CalendarOptions.Clear();
+        _calendarsByName.Clear();
+        foreach (var loadedCalendar in CalendarDefinitionLoader.LoadAll())
+        {
+            var label = loadedCalendar.IsBundled
+                ? loadedCalendar.Definition.Name
+                : $"{loadedCalendar.Definition.Name} (custom calendar)";
+            CalendarOptions.Add(label);
+            _calendarsByName[label] = loadedCalendar;
+        }
+
+        return _calendarsByName.FirstOrDefault(kv => kv.Value.Definition.Name == CalendarService.Active.Name).Key
+               ?? string.Empty;
+    }
+
+    /// <summary>
+    ///     Imports a calendar definition file picked by the GM - either our own CalendarDefinition
+    ///     JSON schema, or a Foundry VTT Simple Calendar predefined-calendar export (auto-detected
+    ///     and converted via SimpleCalendarImporter - see its doc comment for known approximations).
+    ///     Writes the result into CalendarDefinitionLoader.CustomCalendarsDirectory, refreshes
+    ///     CalendarOptions, and switches to the newly imported calendar.
+    /// </summary>
+    public void ImportCalendarDefinitionFile(string json, string suggestedFileName)
+    {
+        CalendarDefinition? definition;
+        var warnings = new List<string>();
+
+        if (SimpleCalendarImporter.LooksLikeSimpleCalendarFormat(json))
+        {
+            var name = Path.GetFileNameWithoutExtension(suggestedFileName);
+            if (!SimpleCalendarImporter.TryConvert(json, name, out definition, out warnings, out var conversionError))
+            {
+                ClockErrorMessage = string.Format(
+                    LocalizationService.Get("MainWindowViewModel.Errors.CalendarDefinitionImportFailed"), conversionError);
+                return;
+            }
+        }
+        else
+        {
+            try
+            {
+                definition = JsonSerializer.Deserialize<CalendarDefinition>(json, JsonOptions);
+            }
+            catch (Exception ex)
+            {
+                ClockErrorMessage = string.Format(
+                    LocalizationService.Get("MainWindowViewModel.Errors.CalendarDefinitionImportFailed"), ex.Message);
+                return;
+            }
+        }
+
+        if (definition is null || string.IsNullOrWhiteSpace(definition.Name) || definition.Months.Count == 0)
+        {
+            ClockErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.NoValidCalendarDefinition");
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(CalendarDefinitionLoader.CustomCalendarsDirectory);
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var safeName = new string(definition.Name.Select(c => invalidChars.Contains(c) ? '_' : c).ToArray());
+            var path = Path.Combine(CalendarDefinitionLoader.CustomCalendarsDirectory, safeName + ".json");
+            File.WriteAllText(path, JsonSerializer.Serialize(definition, JsonOptions));
+        }
+        catch (Exception ex)
+        {
+            ClockErrorMessage = string.Format(
+                LocalizationService.Get("MainWindowViewModel.Errors.CalendarDefinitionImportFailed"), ex.Message);
+            return;
+        }
+
+        PopulateCalendarOptions();
+        SelectedCalendarOption = _calendarsByName
+            .FirstOrDefault(kv => kv.Value.Definition.Name == definition.Name).Key ?? SelectedCalendarOption;
+        ClockErrorMessage = null;
+        ShowActionStatus(warnings.Count > 0
+            ? string.Format(LocalizationService.Get("MainWindowViewModel.Status.CalendarDefinitionImportedWithWarnings"),
+                definition.Name, string.Join(" ", warnings))
+            : string.Format(LocalizationService.Get("MainWindowViewModel.Status.CalendarDefinitionImported"), definition.Name));
+    }
+
     /// <summary>
     ///     Switches WindowBackgroundImageBrush between the first and last named background
     ///     of the currently active theme, depending on whether it is currently day (06-18) or
@@ -1103,7 +1303,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         if (!_themesById.TryGetValue(CurrentThemeId, out var loaded)) return;
         if (loaded.Definition.Backgrounds.Count < 2) return;
 
-        var isDaytime = _clock.CurrentTime.Hour is >= 6 and < 18;
+        var isDaytime = CalendarService.Active.ToCalendarDate(_clock.CurrentTime).Hour is >= 6 and < 18;
         var background = isDaytime ? loaded.Definition.Backgrounds[0] : loaded.Definition.Backgrounds[^1];
         if (background.FileName == _ambienceCurrentFileName) return;
 

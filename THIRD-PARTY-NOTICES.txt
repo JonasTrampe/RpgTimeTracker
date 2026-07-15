@@ -88,6 +88,20 @@ Overview of included components
    License:  MIT (see "MIT License" text below)
    Copyright (c) 2019-2024 The Bootstrap Authors
 
+10. Bundled predefined calendars (gregorian.json, harptos.json,
+    voidreach.json, dsa.json - see
+    RpgTimeTracker.Shared/PredefinedCalendars/CALENDARS_NOTICE.txt)
+    Schema inspired by:  Foundry VTT Simple Calendar
+                         (https://github.com/vigoren/foundryvtt-simple-calendar)
+    Note: only the JSON schema/concept was used as inspiration, not copied;
+    all calendar data was authored independently. harptos.json and
+    dsa.json reproduce only the public calendar facts (month names/
+    lengths, intercalary days, week names) of the Forgotten Realms
+    (Wizards of the Coast) and Das Schwarze Auge/DSA (Ulisses Spiele)
+    settings respectively - no copyrighted text is reproduced, and this
+    project is not affiliated with, endorsed by, or sponsored by either
+    rights holder.
+
 --------------------------------------------------------------------------
 
 Full license texts

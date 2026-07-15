@@ -16,13 +16,13 @@ namespace RpgTimeTracker.Tests;
 /// </summary>
 public class ClientDeltaReconstructionTests
 {
-    private static readonly DateTime Start = new(2026, 1, 1, 8, 0, 0);
+    private static readonly GameInstant Start = new(1_000_000);
 
     private sealed class Session
     {
         public GameClockService Clock { get; }
         public TimerItem Timer { get; } = new() { Duration = TimeSpan.FromMinutes(30) };
-        public AlarmItem Alarm { get; } = new() { TriggerAt = Start + TimeSpan.FromHours(4) };
+        public AlarmItem Alarm { get; } = new() { TriggerAt = Start.Add(TimeSpan.FromHours(4)) };
         public IntervalEventItem Interval { get; } = new()
         {
             Interval = TimeSpan.FromMinutes(15),

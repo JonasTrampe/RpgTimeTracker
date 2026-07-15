@@ -1,10 +1,11 @@
+using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Services;
 
 namespace RpgTimeTracker.Tests;
 
 public class GameClockServiceTests
 {
-    private static readonly DateTime Start = new(2026, 1, 1, 8, 0, 0);
+    private static readonly GameInstant Start = new(1_000_000);
 
     [Fact]
     public void Jump_forward_advances_current_time()
@@ -13,7 +14,7 @@ public class GameClockServiceTests
 
         clock.Jump(TimeSpan.FromHours(8));
 
-        Assert.Equal(Start + TimeSpan.FromHours(8), clock.CurrentTime);
+        Assert.Equal(Start.Add(TimeSpan.FromHours(8)), clock.CurrentTime);
     }
 
     [Fact]
@@ -23,7 +24,7 @@ public class GameClockServiceTests
 
         clock.Jump(-TimeSpan.FromDays(1));
 
-        Assert.Equal(Start - TimeSpan.FromDays(1), clock.CurrentTime);
+        Assert.Equal(Start.Add(-TimeSpan.FromDays(1)), clock.CurrentTime);
     }
 
     [Fact]
@@ -46,9 +47,9 @@ public class GameClockServiceTests
     public void Jump_raises_Tick_with_new_time_and_delta_and_raises_Jumped()
     {
         using var clock = new GameClockService(Start);
-        DateTime? tickTime = null;
+        GameInstant? tickTime = null;
         TimeSpan? tickDelta = null;
-        DateTime? jumpedTime = null;
+        GameInstant? jumpedTime = null;
         clock.Tick += (time, delta) =>
         {
             tickTime = time;
@@ -59,9 +60,9 @@ public class GameClockServiceTests
         var delta = TimeSpan.FromHours(3);
         clock.Jump(delta);
 
-        Assert.Equal(Start + delta, tickTime);
+        Assert.Equal(Start.Add(delta), tickTime);
         Assert.Equal(delta, tickDelta);
-        Assert.Equal(Start + delta, jumpedTime);
+        Assert.Equal(Start.Add(delta), jumpedTime);
     }
 
     [Fact]
@@ -71,7 +72,7 @@ public class GameClockServiceTests
         TimeSpan? tickDelta = null;
         clock.Tick += (_, delta) => tickDelta = delta;
 
-        var target = Start.AddDays(2).AddHours(-1);
+        var target = Start.Add(TimeSpan.FromDays(2)).Add(TimeSpan.FromHours(-1));
         clock.SetTime(target);
 
         Assert.Equal(target, clock.CurrentTime);

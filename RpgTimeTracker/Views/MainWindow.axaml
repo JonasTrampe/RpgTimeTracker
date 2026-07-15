@@ -473,7 +473,7 @@
                                         <StackPanel Spacing="8">
                                             <TextBlock Classes="h2"
                                                        Text="{DynamicResource MainWindow.Clock.SetDateTimeHeader}" />
-                                            <controls:DateTimeInput Text="{Binding ManualDateTimeText, Mode=TwoWay}" />
+                                            <controls:CalendarDateInput Text="{Binding ManualDateTimeText, Mode=TwoWay}" />
                                             <Button Content="{DynamicResource MainWindow.Clock.ApplyButton}"
                                                     Command="{Binding ApplyManualDateTimeCommand}"
                                                     HorizontalAlignment="Center" />
@@ -730,7 +730,7 @@
                                                                     <StackPanel Grid.Column="1"
                                                                             Orientation="Horizontal"
                                                                             Spacing="8">
-                                                                        <controls:DateTimeInput
+                                                                        <controls:CalendarDateInput
                                                                             Text="{Binding NewAlarmDateTime, Mode=TwoWay}" />
                                                                     </StackPanel>
                                                                 </Grid>
@@ -1117,13 +1117,9 @@
                                                                                             Text="{DynamicResource MainWindow.Common.TargetTime}"
                                                                                             VerticalAlignment="Center"
                                                                                             Margin="0,0,10,0" />
-                                                                                        <controls:DateTimeInput
+                                                                                        <controls:CalendarDateInput
                                                                                             Grid.Column="1"
-                                                                                            Text="{Binding TriggerAtDateTimeText, Mode=TwoWay}"
-                                                                                            MinYear="1" MaxYear="9999"
-                                                                                            LimitHours="23"
-                                                                                            LimitMinutes="59"
-                                                                                            LimitSeconds="59" />
+                                                                                            Text="{Binding TriggerAtDateTimeText, Mode=TwoWay}" />
                                                                                         <TextBlock Grid.Column="2"
                                                                                             Classes="muted"
                                                                                             Text="{DynamicResource MainWindow.ItemList.MouseWheelHint}"
@@ -2489,15 +2485,14 @@
                                                                     <StackPanel Grid.Column="0" Spacing="4">
                                                                         <TextBlock Classes="muted"
                                                                                 Text="{DynamicResource MainWindow.Calendar.StartLabel}" />
-                                                                        <controls:DateTimeInput
+                                                                        <controls:CalendarDateInput
                                                                             Text="{Binding SelectedCalendarEntry.StartDateTimeText, Mode=TwoWay}" />
                                                                     </StackPanel>
                                                                     <StackPanel Grid.Column="1" Spacing="4">
                                                                         <TextBlock Classes="muted"
                                                                                 Text="{DynamicResource MainWindow.Calendar.EndDateLabel}" />
-                                                                        <TextBox
-                                                                            Text="{Binding SelectedCalendarEntry.RepeatUntilText, Mode=TwoWay}"
-                                                                            PlaceholderText="YYYY-MM-DD" />
+                                                                        <controls:CalendarDateInput ShowTime="False"
+                                                                            Text="{Binding SelectedCalendarEntry.RepeatUntilText, Mode=TwoWay}" />
                                                                     </StackPanel>
                                                                 </Grid>
 
@@ -2610,6 +2605,25 @@
                                                                 <ComboBox ItemsSource="{Binding LanguageOptions}"
                                                                           SelectedItem="{Binding SelectedLanguageOption}"
                                                                           HorizontalAlignment="Stretch" />
+                                                            </StackPanel>
+                                                            <Separator Background="{DynamicResource BorderBrush}" />
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Settings.CalendarLabel}" />
+                                                                <ComboBox ItemsSource="{Binding CalendarOptions}"
+                                                                          SelectedItem="{Binding SelectedCalendarOption}"
+                                                                          HorizontalAlignment="Stretch" />
+                                                                <TextBlock Classes="muted" FontSize="11"
+                                                                           TextWrapping="Wrap"
+                                                                           Text="{DynamicResource MainWindow.Settings.CalendarHint}" />
+                                                                <Button Content="{DynamicResource MainWindow.Settings.ImportCalendarEventsButton}"
+                                                                        Command="{Binding ImportCalendarDefaultEntriesCommand}"
+                                                                        HorizontalAlignment="Left"
+                                                                        ToolTip.Tip="{DynamicResource MainWindow.Settings.ImportCalendarEventsTooltip}" />
+                                                                <Button Content="{DynamicResource MainWindow.Settings.ImportCalendarDefinitionButton}"
+                                                                        Click="OnImportCalendarDefinitionClick"
+                                                                        HorizontalAlignment="Left"
+                                                                        ToolTip.Tip="{DynamicResource MainWindow.Settings.ImportCalendarDefinitionTooltip}" />
                                                             </StackPanel>
                                                             <Separator Background="{DynamicResource BorderBrush}" />
                                                             <StackPanel Spacing="4">

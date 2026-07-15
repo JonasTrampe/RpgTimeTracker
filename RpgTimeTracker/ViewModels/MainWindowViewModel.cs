@@ -83,6 +83,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private readonly Dictionary<string, ThemeDefinitionLoader.LoadedTheme> _themesById = new();
 
+    /// <summary>All available calendars (bundled PredefinedCalendars + GM's own, see
+    ///     CalendarDefinitionLoader), keyed by their Name (a calendar has no separate id, unlike a
+    ///     theme) - used both for the Settings picker and to persist/apply the GM's choice.</summary>
+    private readonly Dictionary<string, CalendarDefinitionLoader.LoadedCalendar> _calendarsByName = new();
+
     /// <summary>Items whose currently running occurrence has already been warned about.</summary>
     private readonly HashSet<Guid> _headsUpFired = [];
 
@@ -164,8 +169,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// </summary>
     private string? _ambienceCurrentFileName;
 
-    [ObservableProperty] private DateTime _calendarMonth;
-    [ObservableProperty] private DateTime _calendarSelectedDate;
+    [ObservableProperty] private GameInstant _calendarMonth;
+    [ObservableProperty] private GameInstant _calendarSelectedDate;
     private CancellationTokenSource? _calendarSyncCts;
 
     [ObservableProperty] private bool _canUndoJump;
@@ -364,6 +369,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [ObservableProperty] private CalendarEntryViewModel? _selectedCalendarEntry;
 
     [ObservableProperty] private string _selectedThemeOption;
+
+    [ObservableProperty] private string _selectedCalendarOption = string.Empty;
 
     /// <summary>Whether an ad-hoc sent video (not from the library) should loop at the end.</summary>
     [ObservableProperty] private bool _sendMediaLoop;
@@ -652,8 +659,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _usageRegistry.Register(FindNpcUsagesById);
         _usageRegistry.RegisterClearAction(ClearNpcReferencesById);
 
-        // Reasonable fantasy start time, can be changed immediately.
-        var start = DateTime.Now;
+        // Restore the GM's last chosen calendar before anything else touches CalendarService.Active,
+        // since the "start" default below and every date display already depend on it.
+        var initialCalendar = CalendarDefinitionLoader.Resolve(ThemeSettingsService.LoadLastCalendarName())
+                               ?? CalendarDefinitionLoader.Resolve("Gregorian");
+        if (initialCalendar is { } resolvedInitialCalendar) CalendarService.Active = resolvedInitialCalendar.Definition;
+
+        // Reasonable fantasy start time, can be changed immediately - real wall-clock "now" has no
+        // meaning under an arbitrary game-calendar epoch (see CalendarEntryViewModel's identical default).
+        var start = CalendarService.Active.FromCalendarDate(1, 0, 1, 12, 0, 0);
         _clock = new GameClockService(start);
         _clock.Tick += OnClockTick;
         _playerServer = new TcpPlayerServerService(BuildSessionSnapshot, BuildClockHeartbeat, () => ConnectionPin);
@@ -695,9 +709,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _blinkTimer.Tick += (_, _) => RefreshBlinkStates();
         _blinkTimer.Start();
         _headsUpLeadMinutes = 2;
-        _manualDateTimeText = start.ToString("yyyy-MM-dd HH:mm:ss");
-        var defaultAlarm = start.AddHours(8);
-        _newAlarmDateTime = defaultAlarm.ToString("yyyy-MM-dd HH:mm:ss");
+        _manualDateTimeText = CalendarService.Active.FormatDateTimeText(start);
+        var defaultAlarm = start.Add(TimeSpan.FromHours(8));
+        _newAlarmDateTime = CalendarService.Active.FormatDateTimeText(defaultAlarm);
         CurrentGameTimeText = FormatGameTime(start);
 
         var settings = ThemeSettingsService.LoadSettings();
@@ -868,6 +882,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             _selectedThemeOption = string.Empty;
         }
 
+        _selectedCalendarOption = PopulateCalendarOptions();
+
         _ambienceAutomationEnabled = settings.AmbienceAutomationEnabled;
         _selectedLanguageOption = LanguageDisplayName(settings.Language);
 
@@ -876,8 +892,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         AddDefaultMarker(LocalizationService.Get("MainWindowViewModel.Defaults.MarkerEvening"), new TimeSpan(18, 0, 0));
         AddDefaultMarker(LocalizationService.Get("MainWindowViewModel.Defaults.MarkerMidnight"), TimeSpan.Zero);
 
-        _calendarMonth = new DateTime(start.Year, start.Month, 1);
-        _calendarSelectedDate = start.Date;
+        _calendarMonth = CalendarMonthStart(start);
+        _calendarSelectedDate = CalendarService.Active.DayStart(start);
         RefreshCalendarViews();
 
         LocalizationService.LanguageChanged += OnLanguageChanged;
@@ -933,6 +949,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     /// <summary>Display names for the language ComboBox; native names on purpose, not translated by LocalizationService itself.</summary>
     public ObservableCollection<string> LanguageOptions { get; } = ["English", "Deutsch"];
+
+    // Display names of the calendars for the ComboBox; populated in the constructor from
+    // CalendarDefinitionLoader.LoadAll() (see _calendarsByName).
+    public ObservableCollection<string> CalendarOptions { get; } = [];
 
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;

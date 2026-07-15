@@ -9,6 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Bundled calendars can now seed their real holidays as recurring calendar
+  entries (`CalendarDefinition.DefaultEntries` + a "Import calendar's
+  default events" button in Settings) - Harptos's five festivals
+  (Midwinter, Greengrass, Midsummer, Highharvestide, Feast of the Moon) and
+  DSA's Namenlose Tage plus 19 real Aventurian feast days imported directly
+  from Simple Calendar's own bundled DSA notes (Sommersonnenwende,
+  Wintersonnenwende, Tag des Phex, ...). Opt-in and idempotent (matched by
+  title), not applied automatically on every calendar switch.
+- "Import calendar file..." button in Settings + `SimpleCalendarImporter`:
+  imports a custom calendar either in our own schema or as a Foundry VTT
+  Simple Calendar predefined-calendar export (auto-detected and converted -
+  see the README's "More calendars" section for where to find more of
+  those). Some Simple Calendar exports also bundle a "notes" array of
+  real holidays/festivals (not all - it's per-calendar-author) - Yearly-
+  recurring notes are imported as `CalendarDefinition.DefaultEntries` too,
+  with HTML in their descriptions stripped to plain text. Documented
+  approximations (e.g. weekday-epoch alignment, non-yearly notes skipped)
+  are surfaced back to the GM as a status message.
+- Custom calendar engine (Phase 0 of the Scenes/Tags/Calendars project): game
+  time is now represented by a calendar-agnostic `GameInstant` (elapsed
+  seconds) instead of `DateTime`, converted to/from a human date by a
+  pluggable `CalendarDefinition` (month/weekday names and lengths, leap-year
+  rule, hours/day, minutes/hour, seconds/minute, seasons, moons) - matching
+  Foundry VTT Simple Calendar's predefined-calendar schema closely enough
+  to adapt its calendars. Four calendars are bundled (Gregorian, a
+  Harptos-style fantasy calendar with tendays and intercalary festivals,
+  Voidreach - a 10-month/8-day-week/20-hour-day sci-fi calendar, and an
+  Aventurian/Das Schwarze Auge-style calendar with the Twelve Gods' months
+  and the five Namenlose Tage), selectable from Settings and persisted per
+  campaign; GMs can also drop their own
+  calendar JSON into `%AppData%/RpgTimeTracker/Calendars`. A new
+  `CalendarDateInput` control (Y/M/D/H/M/S box grid, replacing the old
+  Gregorian-only `DateTimeInput`) reads its bounds from the active calendar
+  everywhere a date is entered (alarms, calendar entries, jump-to-date).
+  **Breaking, unmigrated save-format change**: saves from before this
+  update (`AppStateDto.Version < 5`) are rejected on load with a clear
+  error instead of silently corrupting game time.
+- Unit test guard (`SaveFormatVersionGuardTests`) that fails if
+  `AppStateDto`'s serialized shape changes anywhere in its object graph
+  without a matching bump to `AppStateDto.Version` - forces a deliberate
+  decision about whether a data-model change needs a save-format version
+  bump, the same way the RPC protocol-version CI check does for the wire
+  format.
 - CI check (`RPC Protocol Version` workflow) that fails a PR if
   `RpcMethods.cs`/`RpcParams.cs` change by more than whitespace without
   `ProtocolInfo.Version` also being increased - catches wire-format changes

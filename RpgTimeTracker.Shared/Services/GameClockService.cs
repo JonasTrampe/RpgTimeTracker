@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using Avalonia.Threading;
+using RpgTimeTracker.Shared.Models;
 
 namespace RpgTimeTracker.Shared.Services;
 
@@ -13,6 +14,10 @@ namespace RpgTimeTracker.Shared.Services;
 ///     (driven by RPC events, see RemoteClockSync) - both sides must use
 ///     the same derivation logic so that remaining time/progress is calculated locally
 ///     identically to the server, without every tick having to be sent over the network.
+///     Game time itself is a calendar-agnostic GameInstant (elapsed seconds since an arbitrary
+///     epoch) - this class does all its arithmetic in real SI seconds via TimeSpan deltas and
+///     never needs to know about months/years/calendars; only display code and
+///     CalendarEntryDefinition's recurrence matching consult a CalendarDefinition.
 /// </summary>
 public class GameClockService : IDisposable
 {
@@ -20,7 +25,7 @@ public class GameClockService : IDisposable
     private readonly DispatcherTimer _timer;
     private TimeSpan _lastElapsed = TimeSpan.Zero;
 
-    public GameClockService(DateTime startTime)
+    public GameClockService(GameInstant startTime)
     {
         CurrentTime = startTime;
         _timer = new DispatcherTimer
@@ -30,7 +35,7 @@ public class GameClockService : IDisposable
         _timer.Tick += OnTimerTick;
     }
 
-    public DateTime CurrentTime { get; private set; }
+    public GameInstant CurrentTime { get; private set; }
     public bool IsRunning { get; private set; }
 
     /// <summary>
@@ -46,14 +51,14 @@ public class GameClockService : IDisposable
     }
 
     /// <summary>Raised on every tick with the new point in time and the game-time delta.</summary>
-    public event Action<DateTime, TimeSpan>? Tick;
+    public event Action<GameInstant, TimeSpan>? Tick;
 
     /// <summary>
     ///     Raised ONLY on an explicit jump (Jump/SetTime), not on normal
     ///     progression via OnTimerTick. The GM host uses this to send clock.timeJumped over the
     ///     network only for real jumps instead of on every tick.
     /// </summary>
-    public event Action<DateTime>? Jumped;
+    public event Action<GameInstant>? Jumped;
 
     public void Start()
     {
@@ -77,7 +82,7 @@ public class GameClockService : IDisposable
     ///     entered date). Internally just a jump by the difference to the
     ///     current time - timers/alarms therefore react identically to Jump().
     /// </summary>
-    public void SetTime(DateTime newTime)
+    public void SetTime(GameInstant newTime)
     {
         Jump(newTime - CurrentTime);
     }

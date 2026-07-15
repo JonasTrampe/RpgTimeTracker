@@ -1876,3 +1876,76 @@ backward-incompatible way, a load/import path can check this field and
 apply an explicit upgrade step, instead of the far worse alternative of
 having to guess a version for every already-exported map that predates
 the concept of versioning at all.
+
+## Custom calendar engine (`GameInstant`/`CalendarDefinition`), a breaking save-format change
+
+Game time used to be a plain `DateTime`, hardcoding the Gregorian calendar
+into every layer that touched it (save format, RPC wire format, alarm/
+calendar-entry recurrence math, the month-grid display, the Y/M/D/H/M/S
+entry control). Since a GM wants Scenes with start dates on a fully custom,
+exchangeable calendar (arbitrary month/weekday names and lengths, leap
+rules, hours/day, seasons, moons - matching Foundry VTT Simple Calendar's
+predefined-calendar format), this had to go all the way rather than bolting
+custom-calendar display on top of a `DateTime`-shaped core.
+
+`GameInstant` is a minimal `readonly struct` wrapping `long TotalSeconds`
+(elapsed since an arbitrary epoch) - deliberately kept this thin so
+`GameClockService`'s tick/speed/jump math (still real SI seconds via
+`TimeSpan`/`Stopwatch`) didn't need to change at all, only the type it
+stores. `CalendarDefinition` owns all the actual calendar math
+(`ToCalendarDate`/`FromCalendarDate`, leap-year rules, weekday cycling,
+moon-phase calculation) and is looked up through a `CalendarService.Active`
+static holder - the same convention already used by `LocalizationService`/
+`SoundService`/`VisualItemHelper` - so ViewModels can format/parse dates
+without threading a `CalendarDefinition` through every constructor.
+`CalendarEntryDefinition`'s recurrence logic (`TryGetOccurrenceOn`,
+`GetNextOccurrenceAtOrAfter`, etc.) now takes the active calendar as an
+explicit parameter instead of assuming `DateTime.DaysInMonth`/`IsLeapYear`.
+
+**This is a breaking, unmigrated save-format change** (`AppStateDto.Version`
+bumped from 4 to 5): a pre-rework save's `CurrentGameTime` field doesn't
+exist in the new schema, so without an explicit `Version < 5` guard in
+`ImportStateFromJson` it would silently deserialize `CurrentGameTimeSeconds`
+as `0` instead of failing loudly. Unlike the earlier plain-JSON-to-`.rtt-save`
+zip upgrade, there is deliberately no auto-upgrade path here - old saves on
+this build must simply stay on an older build. The same reasoning produced
+`SaveFormatVersionGuardTests`: a reflection-based test that fails if
+`AppStateDto`'s object graph shape changes anywhere without a matching
+`Version` bump, so this class of bug (a schema change nobody remembered to
+version-guard) can't silently recur.
+
+`Views/Controls/DateTimeInput.axaml`(`.cs`) (a Gregorian-only Y/M/D/H/M/S
+entry control) was replaced outright by `CalendarDateInput`, which reads its
+Y/M/D/H/M/S bounds (month count, days-in-month, hours/day, minutes/hour,
+seconds/minute) from `CalendarService.Active` instead of
+`DateTime.DaysInMonth`/hardcoded limits - since every call site was migrated
+in the same change, the old control was deleted rather than kept alongside
+as dead code.
+
+Four calendars ship bundled (`RpgTimeTracker.Shared/PredefinedCalendars/*.json`,
+loaded via `CalendarDefinitionLoader` following the exact
+`ThemeDefinitionLoader` bundled-vs-custom split): `Gregorian` (today's exact
+prior behavior, the default), `Harptos` (a Forgotten-Realms-style calendar
+with 30-day months, five single-day intercalary festivals, tendays instead
+of 7-day weeks, and a Shieldmeet leap day), `Aventurian (DSA)` (a Das
+Schwarze Auge-style calendar - 12 months named for the Twelve Gods plus
+five Namenlose Tage after Rahja, no leap rule) and `Voidreach` (a fictional
+sci-fi colony calendar - 10 months of 36 days, an 8-day week, and a metric
+20-hour/100-minute/100-second day) - the latter exists specifically to
+exercise "genuinely different month count/length and week length" rather
+than being a verbatim reproduction of any one external source; `Harptos`/
+`Aventurian (DSA)` reproduce only the public calendar facts (month names/
+lengths, intercalary days, week names) of their respective settings, not
+any copyrighted text - see `PredefinedCalendars/CALENDARS_NOTICE.txt` and
+`THIRD-PARTY-NOTICES.txt` for the attribution/trademark disclaimer. A GM
+can also drop a hand-authored calendar JSON into
+`%AppData%/RpgTimeTracker/Calendars`, resolved the same way as the bundled
+ones. The choice is a `MainWindowViewModel.SelectedCalendarOption` ComboBox
+in Settings, persisted as `ThemeSettingsDto.LastCalendarName` and restored
+before `GameClockService`'s own default start time is computed (so the
+"reasonable fantasy start" default itself is already expressed in the
+right calendar). Switching calendars re-renders every displayed date for
+the *same* `GameInstant` under the new rules (nothing about the underlying
+elapsed time changes) and pushes a full session resync, since
+`SessionSnapshotParams.ActiveCalendar` is only sent once at connect, not
+per tick.

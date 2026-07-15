@@ -1,0 +1,30 @@
+Bundled predefined calendars
+
+This project bundles a handful of predefined CalendarDefinition JSON files
+(gregorian.json, harptos.json, voidreach.json, dsa.json - see
+CalendarDefinitionLoader) so a fresh campaign has ready-to-use calendars
+beyond the default Gregorian one. The JSON schema itself (month/weekday
+lists, leap-year rule, hours/minutes/seconds per day, seasons, moons) was
+inspired by Foundry VTT's Simple Calendar module predefined-calendar
+format (https://github.com/vigoren/foundryvtt-simple-calendar) for
+compatibility of concept, not copied - every bundled calendar's data was
+authored independently for this project.
+
+- gregorian.json and voidreach.json are original content (voidreach.json
+  is a wholly fictional sci-fi setting created for this project).
+- harptos.json reproduces only the well-known public calendar facts of the
+  Forgotten Realms setting (month names/lengths, the five intercalary
+  festival days, the tenday week) - a Wizards of the Coast property. No
+  copyrighted text is reproduced; the month names are descriptive facts
+  about that calendar's public structure, used here purely so the bundled
+  calendar is recognizable to players of that setting.
+- dsa.json likewise reproduces only the public calendar facts of the
+  Aventurian/Bosparano calendar used in Das Schwarze Auge (DSA), a Ulisses
+  Spiele property (month names tied to the Twelve Gods, the five Namenlose
+  Tage, the seven-day week names).
+
+"Forgotten Realms" and "Das Schwarze Auge"/"DSA" are trademarks of their
+respective owners. This project is not affiliated with, endorsed by, or
+sponsored by Wizards of the Coast or Ulisses Spiele; the calendars are
+included solely as convenience presets for GMs running campaigns in those
+settings.

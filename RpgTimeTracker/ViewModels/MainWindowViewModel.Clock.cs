@@ -336,10 +336,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         // Unlike Timer/IntervalEvent's duration fields, an unset/unparseable target time has no
         // single obvious numeric default - falls back to "1 hour from now" rather than blocking
         // the add, matching Timer/IntervalEvent's "always succeeds via a sensible default" behavior.
-        if (!DateTime.TryParse(NewAlarmDateTime, out var triggerAt))
+        if (!CalendarService.Active.TryParseDateTimeText(NewAlarmDateTime, out var triggerAt))
         {
-            triggerAt = _clock.CurrentTime.AddHours(1);
-            NewAlarmDateTime = triggerAt.ToString("yyyy-MM-dd HH:mm:ss");
+            triggerAt = _clock.CurrentTime.Add(TimeSpan.FromHours(1));
+            NewAlarmDateTime = CalendarService.Active.FormatDateTimeText(triggerAt);
         }
 
         // A zero/blank repeat interval is never a genuine user error - it just means "one-time
@@ -394,8 +394,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         Log.Information("Alarm created: {Name} (target time {TriggerAt}, Id={Id})", vm.Name, triggerAt, vm.Id);
         ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AlarmCreated"), vm.Name));
 
-        var nextAlarm = _clock.CurrentTime.AddHours(8);
-        NewAlarmDateTime = nextAlarm.ToString("yyyy-MM-dd HH:mm:ss");
+        var nextAlarm = _clock.CurrentTime.Add(TimeSpan.FromHours(8));
+        NewAlarmDateTime = CalendarService.Active.FormatDateTimeText(nextAlarm);
         NewAlarmRepeatHours = 0;
         NewAlarmRepeatMinutes = 0;
         NewAlarmRepeatSeconds = 0;
@@ -414,12 +414,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     // ==================== Clock tick (normal & time jump) ====================
 
-    private void OnClockTick(DateTime newTime, TimeSpan gameDelta)
+    private void OnClockTick(GameInstant newTime, TimeSpan gameDelta)
     {
-        var previousTime = newTime - gameDelta;
+        var previousTime = newTime.Add(-gameDelta);
         CurrentGameTimeText = FormatGameTime(newTime);
         OnPropertyChanged(nameof(NextEventJumpLabel));
-        ManualDateTimeText = newTime.ToString("yyyy-MM-dd HH:mm:ss");
+        ManualDateTimeText = CalendarService.Active.FormatDateTimeText(newTime);
         UpdateAmbience();
 
         // gameDelta can also be negative here (backward jump) - timers
@@ -470,7 +470,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         RefreshCalendarViews();
     }
 
-    private void TriggerCalendarEntries(DateTime previousTime, DateTime currentTime)
+    private void TriggerCalendarEntries(GameInstant previousTime, GameInstant currentTime)
     {
         if (currentTime < previousTime)
             return;
@@ -480,7 +480,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             if (!entry.TryBuildDefinition(out var definition))
                 continue;
 
-            var nextOccurrence = definition.GetNextOccurrenceAtOrAfter(previousTime);
+            var nextOccurrence = definition.GetNextOccurrenceAtOrAfter(CalendarService.Active, previousTime);
             if (nextOccurrence is null || nextOccurrence > currentTime)
                 continue;
 

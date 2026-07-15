@@ -224,9 +224,10 @@ public sealed class TcpPlayerServerService : IDisposable
             new ClockSpeedChangedParams { SpeedMultiplier = speedMultiplier });
     }
 
-    public Task PublishClockTimeJumpedAsync(DateTime newGameTime)
+    public Task PublishClockTimeJumpedAsync(GameInstant newGameTime)
     {
-        return BroadcastRpcAsync(RpcMethods.ClockTimeJumped, new ClockTimeJumpedParams { NewGameTime = newGameTime });
+        return BroadcastRpcAsync(RpcMethods.ClockTimeJumped,
+            new ClockTimeJumpedParams { NewGameTimeSeconds = newGameTime.TotalSeconds });
     }
 
     public Task PublishHeaderChangedAsync(string title, string subtitle)

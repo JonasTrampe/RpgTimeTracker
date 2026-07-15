@@ -26,6 +26,9 @@
              and Client output directories (see ThemeDefinitionLoader.SampleThemesDirectory, which
              looks relative to AppContext.BaseDirectory - works the same way for both apps). -->
         <Content Include="SampleThemes\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+        <!-- Bundled predefined calendars (see CalendarDefinitionLoader.BundledCalendarsDirectory) -
+             same content propagation pattern as SampleThemes above. -->
+        <Content Include="PredefinedCalendars\*.json" CopyToOutputDirectory="PreserveNewest" />
         <!-- UI language files (see LocalizationService) - the same content propagation as
              SampleThemes above, so both apps use the same en.json/de.json. -->
         <Content Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />

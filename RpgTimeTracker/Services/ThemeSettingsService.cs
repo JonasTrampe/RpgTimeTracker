@@ -104,6 +104,21 @@ public static class ThemeSettingsService
         SaveSettings(settings);
     }
 
+    /// <summary>Last chosen calendar name (see CalendarDefinitionLoader.Resolve) - resolved against
+    ///     the bundled + custom calendars on startup, falling back to Gregorian if not found (e.g.
+    ///     a custom calendar file was since deleted).</summary>
+    public static string? LoadLastCalendarName()
+    {
+        return LoadSettings().LastCalendarName;
+    }
+
+    public static void SaveLastCalendarName(string name)
+    {
+        var settings = LoadSettings();
+        settings.LastCalendarName = name;
+        SaveSettings(settings);
+    }
+
     /// <summary>Records the file path of the last successful manual save/load (see LastSaveFilePath).</summary>
     public static void SaveLastSaveFilePath(string path)
     {
@@ -185,6 +200,7 @@ public static class ThemeSettingsService
     public sealed class ThemeSettingsDto
     {
         public string? LastTheme { get; set; }
+        public string? LastCalendarName { get; set; }
         public string PlayerHeaderTitle { get; set; } = string.Empty;
         public string PlayerHeaderSubtitle { get; set; } = string.Empty;
         public bool HeadsUpWarningEnabled { get; set; }
