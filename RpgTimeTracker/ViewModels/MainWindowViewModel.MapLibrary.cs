@@ -324,6 +324,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             DefaultCellSizePx = map.DefaultCellSizePx,
             FormatVersion = map.FormatVersion,
             TagIds = map.TagIds.ToList(),
+            Tokens = map.Tokens.Select(ToMapTokenDto).ToList(),
             Floors = map.Floors.Select((floor, index) => new MapFloorEntryDto
             {
                 Id = floor.Id,
@@ -336,6 +337,88 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 Order = index
             }).ToList()
         };
+    }
+
+    private static MapTokenDto ToMapTokenDto(MapTokenViewModel token)
+    {
+        return new MapTokenDto
+        {
+            Id = token.Id,
+            FloorId = token.FloorId,
+            X = token.X,
+            Y = token.Y,
+            LinkKind = token.LinkKind,
+            LinkedId = token.LinkedId,
+            LinkedVariantId = token.LinkedVariantId,
+            Name = token.Name,
+            Description = token.Description,
+            IconImageId = token.IconImage?.Id,
+            IconGlyph = token.IconGlyph,
+            RevealMode = token.RevealMode,
+            PlayerVisibleName = token.PlayerVisibleName,
+            PlayerVisiblePortrait = token.PlayerVisiblePortrait,
+            PlayerVisibleDetail = token.PlayerVisibleDetail
+        };
+    }
+
+    /// <summary>
+    ///     Reconstructs a Map's Tokens from their saved DTOs - called after a map's Floors are
+    ///     populated (so FloorId references already resolve to something meaningful) but this has
+    ///     no actual dependency on Floors being present; separated out only because every map
+    ///     construction call site (Shared settings load, session load, full-session/session-only
+    ///     import) needs the exact same reconstruction.
+    /// </summary>
+    private void LoadTokensIntoMap(MapItemViewModel map, IEnumerable<MapTokenDto> tokenDtos)
+    {
+        foreach (var dto in tokenDtos)
+        {
+            var token = new MapTokenViewModel(dto.Id, dto.FloorId, dto.X, dto.Y, dto.LinkKind, dto.LinkedId,
+                map.RemoveToken, _ => SaveMapLibrarySettings())
+            {
+                LinkedVariantId = dto.LinkedVariantId,
+                Name = dto.Name,
+                Description = dto.Description,
+                IconImage = dto.IconImageId is { } imageId ? MediaLibrary.FirstOrDefault(m => m.Id == imageId) : null,
+                IconGlyph = dto.IconGlyph,
+                RevealMode = dto.RevealMode,
+                PlayerVisibleName = dto.PlayerVisibleName,
+                PlayerVisiblePortrait = dto.PlayerVisiblePortrait,
+                PlayerVisibleDetail = dto.PlayerVisibleDetail
+            };
+            map.Tokens.Add(token);
+        }
+    }
+
+    /// <summary>
+    ///     Who references a Media Library item (a freeform token's IconImage), a Character, or a
+    ///     Point of Interest via a map token - registered into _usageRegistry so deleting any of
+    ///     those goes through the same 3-way confirm-delete flow as any other in-use item. The
+    ///     same id could only ever match one of IconImage/LinkedId at a time in practice (they're
+    ///     different Guid spaces), so checking both per token is safe.
+    /// </summary>
+    private IEnumerable<string> FindMapTokenUsagesById(Guid id)
+    {
+        foreach (var map in MapLibrary)
+        foreach (var token in map.Tokens)
+            if (token.IconImage?.Id == id || token.LinkedId == id)
+                yield return string.Format(LocalizationService.Get("MainWindowViewModel.Labels.MapTokenUsage"),
+                    map.Name);
+    }
+
+    /// <summary>
+    ///     A freeform token's IconImage reference is cleared like any other icon reference (see
+    ///     ClearNpcReferencesById). A linked token whose Character/PointOfInterest was deleted has
+    ///     nothing left to display (unlike a freeform token, it carries no Name/Description of its
+    ///     own - see MapTokenViewModel's doc comment), so the token itself is removed instead of
+    ///     left dangling with a link to nothing.
+    /// </summary>
+    private void ClearMapTokenReferencesById(Guid id)
+    {
+        foreach (var map in MapLibrary)
+        {
+            foreach (var token in map.Tokens.Where(t => t.IconImage?.Id == id).ToList()) token.IconImage = null;
+            foreach (var token in map.Tokens.Where(t => t.LinkedId == id).ToList()) map.RemoveToken(token);
+        }
     }
 
     /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
