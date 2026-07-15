@@ -2233,14 +2233,16 @@ purely triggered by player action (walking into a room) or by another
 trigger's "activate Scene" hook (Phase 4's `TargetSceneId`), with no
 "when" to speak of.
 
-**How this shows up**: `Images`/`Maps` are `ObservableCollection`s instead
-of single nullable references; `Music` was replaced with a single
-`Playlist` reference (sent via the existing playlist sequencer,
+**How this shows up**: `Images`/`Maps`/`Playlists` are `ObservableCollection`s
+instead of single nullable references; `Music` was replaced with
+`Playlists` (each sent via the existing playlist sequencer,
 `PlayPlaylistAsync`, instead of a one-off single-track send) since a
-Scene's soundtrack is much more naturally "a Playlist that already
-exists" than "one specific track"; `StartDate` became `GameInstant?`,
-with blank `CalendarDateInput` text mapping to `null` rather than being
-coerced to some default. A Playlist referenced by a Scene is unset
-silently (no confirm-delete prompt) if that Playlist is deleted, the same
-"carries no content of its own" reasoning already applied to Tag
-assignments elsewhere.
+Scene's soundtrack is much more naturally "a set of Playlists that already
+exist" than "one specific track" - and, like Images/Maps, a Scene can
+legitimately need more than one (e.g. separate combat/exploration
+soundtracks). `StartDate` became `GameInstant?`, with blank
+`CalendarDateInput` text mapping to `null` rather than being coerced to
+some default. A Playlist referenced by a Scene is unset silently (no
+confirm-delete prompt) if that Playlist is deleted, the same "carries no
+content of its own" reasoning already applied to Tag assignments
+elsewhere.

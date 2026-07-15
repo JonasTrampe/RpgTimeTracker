@@ -188,7 +188,7 @@ public partial class MainWindowViewModel
         ImageIds = scene.Images.Select(i => i.Id).ToList(),
         MapIds = scene.Maps.Select(m => m.Id).ToList(),
         SoundIds = scene.Sounds.Select(s => s.Id).ToList(),
-        PlaylistId = scene.Playlist?.Id,
+        PlaylistIds = scene.Playlists.Select(p => p.Id).ToList(),
         TagIds = scene.TagIds.ToList(),
         Timers = scene.Timers.Select(t => t.ToDto()).ToList(),
         Alarms = scene.Alarms.Select(a => a.ToDto()).ToList(),
@@ -228,9 +228,11 @@ public partial class MainWindowViewModel
                 if (sound is not null) scene.Sounds.Add(sound);
             }
 
-            scene.Playlist = entry.PlaylistId is { } playlistId
-                ? Playlists.FirstOrDefault(p => p.Id == playlistId)
-                : null;
+            foreach (var playlistId in entry.PlaylistIds)
+            {
+                var playlist = Playlists.FirstOrDefault(p => p.Id == playlistId);
+                if (playlist is not null) scene.Playlists.Add(playlist);
+            }
 
             foreach (var timerDto in entry.Timers) scene.Timers.Add(TimerItemViewModel.FromDto(timerDto, scene.RemoveTimer));
             foreach (var alarmDto in entry.Alarms)

@@ -2644,10 +2644,45 @@
                                                                 <StackPanel Spacing="4">
                                                                     <TextBlock Classes="muted"
                                                                                Text="{DynamicResource MainWindow.Scenes.PlaylistLabel}" />
-                                                                    <Grid ColumnDefinitions="*,Auto,Auto">
+                                                                    <ItemsControl ItemsSource="{Binding Playlists}">
+                                                                        <ItemsControl.ItemTemplate>
+                                                                            <DataTemplate x:DataType="vm:PlaylistViewModel">
+                                                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2">
+                                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                                               VerticalAlignment="Center" />
+                                                                                    <Button Grid.Column="1" Classes="iconsquare"
+                                                                                            Content="&#9654;" Width="22" Height="22"
+                                                                                            FontSize="10"
+                                                                                            Command="{Binding $parent[TabItem].DataContext.PlayPlaylistCommand}"
+                                                                                            CommandParameter="{Binding}"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Scenes.SendTooltip}" />
+                                                                                    <Button Grid.Column="2" Classes="iconsquare"
+                                                                                            Content="&#9724;" Width="22" Height="22"
+                                                                                            FontSize="10"
+                                                                                            Command="{Binding $parent[TabItem].DataContext.StopPlaylistCommand}"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Scenes.StopPlaylistTooltip}">
+                                                                                        <Button.IsVisible>
+                                                                                            <MultiBinding Converter="{x:Static conv:ReferenceEqualsNonNullConverter.Instance}">
+                                                                                                <Binding />
+                                                                                                <Binding Path="$parent[TabItem].DataContext.CurrentPlaylist" />
+                                                                                            </MultiBinding>
+                                                                                        </Button.IsVisible>
+                                                                                    </Button>
+                                                                                    <Button Grid.Column="3" Classes="iconsquare"
+                                                                                            Content="&#10005;" Width="22" Height="22"
+                                                                                            FontSize="10"
+                                                                                            Margin="16,0,0,0"
+                                                                                            Command="{Binding $parent[ItemsControl].DataContext.RemovePlaylistFromBundleCommand}"
+                                                                                            CommandParameter="{Binding}"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
+                                                                                </Grid>
+                                                                            </DataTemplate>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                    </ItemsControl>
+                                                                    <Grid ColumnDefinitions="*,Auto">
                                                                         <ComboBox Grid.Column="0"
                                                                                   ItemsSource="{Binding $parent[TabItem].DataContext.Playlists}"
-                                                                                  SelectedItem="{Binding Playlist, Mode=TwoWay}"
+                                                                                  SelectedItem="{Binding PendingPlaylistToAdd, Mode=TwoWay}"
                                                                                   PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
                                                                                   HorizontalAlignment="Stretch">
                                                                             <ComboBox.ItemTemplate>
@@ -2656,27 +2691,10 @@
                                                                                 </DataTemplate>
                                                                             </ComboBox.ItemTemplate>
                                                                         </ComboBox>
-                                                                        <Button Grid.Column="1" Classes="iconsquare"
-                                                                                Content="&#9654;" Width="22" Height="22"
-                                                                                FontSize="10"
-                                                                                IsVisible="{Binding Playlist, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                                                                Command="{Binding $parent[TabItem].DataContext.PlayPlaylistCommand}"
-                                                                                CommandParameter="{Binding Playlist}"
-                                                                                ToolTip.Tip="{DynamicResource MainWindow.Scenes.SendTooltip}"
+                                                                        <Button Grid.Column="1"
+                                                                                Content="{DynamicResource MainWindow.Common.AddButton}"
+                                                                                Command="{Binding AddPendingPlaylistCommand}"
                                                                                 Margin="4,0,0,0" />
-                                                                        <Button Grid.Column="2" Classes="iconsquare"
-                                                                                Content="&#9724;" Width="22" Height="22"
-                                                                                FontSize="10"
-                                                                                Command="{Binding $parent[TabItem].DataContext.StopPlaylistCommand}"
-                                                                                ToolTip.Tip="{DynamicResource MainWindow.Scenes.StopPlaylistTooltip}"
-                                                                                Margin="4,0,0,0">
-                                                                            <Button.IsVisible>
-                                                                                <MultiBinding Converter="{x:Static conv:ReferenceEqualsNonNullConverter.Instance}">
-                                                                                    <Binding Path="Playlist" />
-                                                                                    <Binding Path="$parent[TabItem].DataContext.CurrentPlaylist" />
-                                                                                </MultiBinding>
-                                                                            </Button.IsVisible>
-                                                                        </Button>
                                                                     </Grid>
                                                                 </StackPanel>
 

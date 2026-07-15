@@ -61,7 +61,6 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
     /// <summary>Optional - not every Scene is timebound, see this class's doc comment.</summary>
     [ObservableProperty] private GameInstant? _startDate;
     [ObservableProperty] private LibraryScope _scope;
-    [ObservableProperty] private PlaylistViewModel? _playlist;
 
     public Guid Id { get; }
 
@@ -79,14 +78,19 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
 
     public ObservableCollection<SoundLibraryItemViewModel> Sounds { get; } = [];
 
+    public ObservableCollection<PlaylistViewModel> Playlists { get; } = [];
+
     /// <summary>Purely local UI state (not persisted) - the ComboBox selection in each "add" row
-    ///     resets to null once picked (see AddPendingSound/AddPendingImage/AddPendingMap), so it
-    ///     reads as a one-shot picker rather than a second "currently selected item" concept.</summary>
+    ///     resets to null once picked (see AddPendingSound/AddPendingImage/AddPendingMap/
+    ///     AddPendingPlaylist), so it reads as a one-shot picker rather than a second
+    ///     "currently selected item" concept.</summary>
     [ObservableProperty] private SoundLibraryItemViewModel? _pendingSoundToAdd;
 
     [ObservableProperty] private MediaLibraryItemViewModel? _pendingImageToAdd;
 
     [ObservableProperty] private MapItemViewModel? _pendingMapToAdd;
+
+    [ObservableProperty] private PlaylistViewModel? _pendingPlaylistToAdd;
 
     /// <summary>Freeform Tag Ids attached to this Scene - separate from Scene membership on other
     ///     library items, a different, explicit mechanism (see Tag's doc comment).</summary>
@@ -136,6 +140,7 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
         Images.CollectionChanged += (_, _) => NotifyChanged();
         Maps.CollectionChanged += (_, _) => NotifyChanged();
         Sounds.CollectionChanged += (_, _) => NotifyChanged();
+        Playlists.CollectionChanged += (_, _) => NotifyChanged();
         Timers.CollectionChanged += (_, _) => NotifyChanged();
         Alarms.CollectionChanged += (_, _) => NotifyChanged();
         IntervalEvents.CollectionChanged += (_, _) => NotifyChanged();
@@ -176,8 +181,6 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
         if (StartDateText != formatted) StartDateText = formatted;
         NotifyChanged();
     }
-
-    partial void OnPlaylistChanged(PlaylistViewModel? value) => NotifyChanged();
 
     partial void OnScopeChanged(LibraryScope value)
     {
@@ -231,6 +234,21 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
     {
         if (PendingMapToAdd is { } map) AddMap(map);
         PendingMapToAdd = null;
+    }
+
+    public void AddPlaylist(PlaylistViewModel playlist)
+    {
+        if (!Playlists.Contains(playlist)) Playlists.Add(playlist);
+    }
+
+    [RelayCommand]
+    private void RemovePlaylistFromBundle(PlaylistViewModel playlist) => Playlists.Remove(playlist);
+
+    [RelayCommand]
+    private void AddPendingPlaylist()
+    {
+        if (PendingPlaylistToAdd is { } playlist) AddPlaylist(playlist);
+        PendingPlaylistToAdd = null;
     }
 
     /// <summary>Creates a new Timer directly owned by this Scene, with the same sensible

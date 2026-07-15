@@ -35,6 +35,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Scene bundles can now hold *multiple* Playlists, not just one - the same
+  "a Scene can legitimately need several" reasoning already applied to
+  Images/Maps. `SceneLibraryItemViewModel.Playlist` became a `Playlists`
+  collection with its own add/remove row, matching the Images/Maps/Sounds
+  bundle rows exactly (including a per-row Stop button that only shows
+  while that specific playlist is playing). `SceneLibraryEntryDto.PlaylistId`
+  became `PlaylistIds` - a Scene saved under the old shape loses its
+  Playlist reference on next load (no migration step), since this feature
+  hasn't shipped in a released version yet.
 - Scene editor: a "⏹ Stop showing" button next to a bundled map's send
   button, visible only while that specific map is the one currently shown
   to players (`IsCurrentlyOpenMapConverter`) - previously the only way to

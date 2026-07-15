@@ -33,9 +33,10 @@ public sealed class SceneLibraryEntryDto
     public List<Guid> MapIds { get; set; } = [];
     public List<Guid> SoundIds { get; set; } = [];
 
-    /// <summary>References a Playlist (from the Music tab) by Id, sent via the existing
-    ///     playlist-playback sequencer (PlayPlaylistAsync) rather than a one-off single track.</summary>
-    public Guid? PlaylistId { get; set; }
+    /// <summary>References Playlists (from the Music tab) by Id, each sent via the existing
+    ///     playlist-playback sequencer (PlayPlaylistAsync) rather than a one-off single track. A
+    ///     Scene can bundle several Playlists, same as Images/Maps/Sounds above.</summary>
+    public List<Guid> PlaylistIds { get; set; } = [];
 
     /// <summary>Freeform Tag Ids attached to this Scene (see Tag) - separate from Scene
     ///     membership on other library items, a different, explicit mechanism.</summary>
