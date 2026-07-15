@@ -2,13 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:RpgTimeTracker.ViewModels"
              x:Class="RpgTimeTracker.Views.Controls.MapTokenPanelView">
-    <StackPanel Spacing="8">
-        <TextBlock Classes="settingsGroupTitle" Text="{DynamicResource MapEditor.TokensTitle}" />
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+        <TextBlock Grid.Row="0" Classes="settingsGroupTitle" Text="{DynamicResource MapEditor.TokensTitle}"
+                   Margin="0,0,0,8" />
 
-        <Button Content="{DynamicResource MapEditor.AddFreeformTokenButton}" HorizontalAlignment="Stretch"
-                Click="OnAddFreeformClick" />
+        <Button Grid.Row="1" Content="{DynamicResource MapEditor.AddFreeformTokenButton}"
+                HorizontalAlignment="Stretch" Margin="0,0,0,6" Click="OnAddFreeformClick" />
 
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,0,0,6">
             <ComboBox Name="CharacterPicker" Grid.Column="0" HorizontalAlignment="Stretch"
                       PlaceholderText="{DynamicResource MapEditor.CharacterPickerPlaceholder}">
                 <ComboBox.ItemTemplate>
@@ -20,7 +21,7 @@
             <Button Grid.Column="1" Content="+" Width="32" Click="OnAddCharacterTokenClick" />
         </Grid>
 
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,0,0,8">
             <ComboBox Name="PoiPicker" Grid.Column="0" HorizontalAlignment="Stretch"
                       PlaceholderText="{DynamicResource MapEditor.PoiPickerPlaceholder}">
                 <ComboBox.ItemTemplate>
@@ -32,9 +33,12 @@
             <Button Grid.Column="1" Content="+" Width="32" Click="OnAddPoiTokenClick" />
         </Grid>
 
-        <TextBlock Name="EmptyStateLabel" Classes="muted" FontStyle="Italic"
-                   Text="{DynamicResource MapEditor.NoTokensText}" />
-
-        <StackPanel Name="TokenList" Spacing="4" />
-    </StackPanel>
+        <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto" MinHeight="120">
+            <StackPanel Spacing="4">
+                <TextBlock Name="EmptyStateLabel" Classes="muted" FontStyle="Italic"
+                           Text="{DynamicResource MapEditor.NoTokensText}" />
+                <StackPanel Name="TokenList" Spacing="4" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </UserControl>
