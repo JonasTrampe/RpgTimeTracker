@@ -28,6 +28,12 @@ public sealed class CalendarEntryDefinition
     public bool TriggerPauseClockDuringVideo { get; set; }
     public bool TriggerLoop { get; set; }
 
+    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, this entry occurring also
+    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById. Purely a Host-side
+    ///     concern; PlayerClient never reads this field even though CalendarEntryDefinition itself
+    ///     is sent over the wire as-is.</summary>
+    public Guid? TargetSceneId { get; set; }
+
     public bool HasTrigger => TriggerKind != MediaKind.None && !string.IsNullOrWhiteSpace(TriggerPath);
 
     public bool TryGetOccurrenceOn(CalendarDefinition calendar, GameInstant date, out GameInstant occurrence)

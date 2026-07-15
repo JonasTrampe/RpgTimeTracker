@@ -48,7 +48,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Image/Map/Music/Sound references remapped to the freshly-imported
   copies' Ids the same way NPC references already are. This also fixed a
   pre-existing gap where the Music library itself wasn't part of session
-  export/import at all. A Scene-scoped timeline isn't built yet.
+  export/import at all.
+- Scene-scoped timeline (Phase 3 of the Scenes/Tags/Calendars project): a
+  Scene can now own its own Timers/Alarms/Intervals, reusing the exact
+  same view models as the app's global timeline, added/removed from a new
+  "Scene timeline" group in the Scene editor. They're paused whenever
+  their Scene isn't the currently active one - `MainWindowViewModel`
+  tracks a single `ActiveScene` (set by "▶ Activate") and only advances
+  that Scene's own items on each clock tick, so an inactive Scene's
+  Elapsed/Remaining state simply never moves; there's no separate pause
+  flag to maintain. These are Host-local scheduling helpers only, never
+  networked to players or shown in the global timeline list.
+- "Activate Scene on fire" (Phase 4 of the Scenes/Tags/Calendars project):
+  Timers, Alarms, Interval events, and Calendar entries can now carry an
+  optional target Scene; when they fire, they also activate that Scene
+  through the same orchestration as the Scenes tab's manual "▶ Activate"
+  button. The picker for choosing a target Scene on existing global
+  triggers isn't wired into the UI yet (the data model, persistence, and
+  firing logic are all in place) - a Scene can currently only be targeted
+  by a Scene's own timeline items triggering another Scene.
 - Tags (Phase 1 of the Scenes/Tags/Calendars project): a flat, campaign-wide
   list of freeform tags (name + color) manageable from a new "Tags" group in
   Settings. Media, Sound, Music, Map, and NPC library items each gained a

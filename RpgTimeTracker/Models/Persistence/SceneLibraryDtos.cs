@@ -34,4 +34,10 @@ public sealed class SceneLibraryEntryDto
     /// <summary>Freeform Tag Ids attached to this Scene (see Tag) - separate from Scene
     ///     membership on other library items, a different, explicit mechanism.</summary>
     public List<Guid> TagIds { get; set; } = [];
+
+    /// <summary>Phase 3's scene-scoped timeline - reuses the exact same TimerDto/AlarmDto/
+    ///     IntervalEventDto shapes the global lists already use (see AppStateDto.cs).</summary>
+    public List<TimerDto> Timers { get; set; } = [];
+    public List<AlarmDto> Alarms { get; set; } = [];
+    public List<IntervalEventDto> IntervalEvents { get; set; } = [];
 }
