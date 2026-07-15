@@ -26,6 +26,7 @@ public sealed partial class NpcLibraryItemViewModel : ObservableObject, ITaggabl
 
     [ObservableProperty] private string _name;
     [ObservableProperty] private LibraryScope _scope;
+    [ObservableProperty] private CharacterKind _kind = CharacterKind.Npc;
 
     /// <summary>
     ///     Set while MainWindowViewModel.FromNpcLibraryEntryDto is reconstructing this
@@ -111,6 +112,20 @@ public sealed partial class NpcLibraryItemViewModel : ObservableObject, ITaggabl
     {
         OnPropertyChanged(nameof(IsSessionLocal));
         NotifyChanged();
+    }
+
+    partial void OnKindChanged(CharacterKind value)
+    {
+        OnPropertyChanged(nameof(IsPc));
+        NotifyChanged();
+    }
+
+    /// <summary>Bool convenience wrapper around Kind for a simple ToggleButton in the Characters
+    ///     tab, rather than a two-item ComboBox for what's currently a binary choice.</summary>
+    public bool IsPc
+    {
+        get => Kind == CharacterKind.Pc;
+        set => Kind = value ? CharacterKind.Pc : CharacterKind.Npc;
     }
 
     partial void OnActiveVariantChanged(NpcVariantViewModel? value)

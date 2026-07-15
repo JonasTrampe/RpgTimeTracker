@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using RpgTimeTracker.Models;
 
 namespace RpgTimeTracker.Models.Persistence;
 
@@ -14,6 +15,10 @@ public sealed class NpcLibraryEntryDto
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Additive migration: absent on any entry saved before this field existed
+    ///     deserializes to the default (Npc), so existing Characters keep loading as NPCs.</summary>
+    public CharacterKind Kind { get; set; } = CharacterKind.Npc;
 
     /// <summary>
     ///     Shared across all variants (see NpcGmInfoBlockDto) - private GM reference notes
@@ -91,4 +96,19 @@ public sealed class NpcVariantEntryDto
     ///     = an explicit override, including "no sounds at all" for this variant.
     /// </summary>
     public List<Guid>? SoundIds { get; set; }
+
+    /// <summary>
+    ///     GM-visible-only freetext status/condition notes (e.g. "3 boxes Physical, 1 Stun") -
+    ///     per-Variant since a "Wounded" mood naturally wants different notes than "Neutral". Not
+    ///     sent to players; see StatusId for the separate map-token-visible status.
+    /// </summary>
+    public string? Health { get; set; }
+
+    /// <summary>
+    ///     References one of the active Theme's Statuses by Id (see StatusDefinitionDto) - not a
+    ///     fixed enum, since different game systems have different status vocabularies. Null = no
+    ///     status set. Resolved against whichever Theme happens to be active when read, so
+    ///     switching Themes can change what this Id means/displays as.
+    /// </summary>
+    public string? StatusId { get; set; }
 }

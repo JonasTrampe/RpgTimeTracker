@@ -1264,6 +1264,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         ThemeSettingsService.SaveLastThemeId(loaded.Definition.Id);
         CurrentThemeId = loaded.Definition.Id;
         OnPropertyChanged(nameof(HasAmbienceBackgrounds));
+        RefreshActiveStatusOptions();
 
         // Themes are pushed to clients via RPC as a plain theme id (see design-decisions.md) -
         // a client must have the same theme.json locally (bundled SampleThemes or the same

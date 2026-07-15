@@ -48,6 +48,39 @@ public sealed class ThemeDefinitionDto
     public string? OverlayImageFile { get; set; }
     public string? ButtonImageFile { get; set; }
     public string? PrimaryButtonImageFile { get; set; }
+
+    /// <summary>
+    ///     GM-configurable character status vocabulary for this game system (e.g. Shadowrun's
+    ///     Stun/Physical condition track looks nothing like a D&amp;D-style HP threshold) - see
+    ///     NpcVariantViewModel.StatusId and StatusDefinitionLoader.GetActiveStatuses, which falls
+    ///     back to a small built-in default list when a Theme doesn't define its own. Optional;
+    ///     omit entirely to just use the built-in defaults.
+    /// </summary>
+    public List<StatusDefinitionDto>? Statuses { get; set; }
+}
+
+/// <summary>
+///     One named character status/condition (e.g. "Wounded", "Dead") available for this Theme's
+///     game system - assigned per-Variant (NpcVariantViewModel.StatusId, matched by Id), and
+///     applied as a tint to a linked map token's icon. Not a fixed C# enum on purpose - see
+///     design-decisions.md's "Status is GM-configurable data tied to the active Theme" entry.
+/// </summary>
+public sealed class StatusDefinitionDto
+{
+    /// <summary>Stable key referenced by NpcVariantViewModel.StatusId - not shown to the GM.</summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>GM-facing label, e.g. "Wounded", "Unconscious", "Dead".</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Applied as a tint to a linked map token's rendered icon.</summary>
+    public string TintColorHex { get; set; } = "#FFFFFFFF";
+
+    /// <summary>
+    ///     Whether a participant with this Status is automatically skipped by the initiative
+    ///     tracker (e.g. "Dead" = true, "Wounded" = false).
+    /// </summary>
+    public bool SkipsInitiativeTurn { get; set; }
 }
 
 public sealed class ThemeGradientDto

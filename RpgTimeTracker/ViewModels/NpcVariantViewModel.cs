@@ -44,6 +44,12 @@ public partial class NpcVariantViewModel : ObservableObject
     [ObservableProperty] private string? _tokenIcon;
     [ObservableProperty] private MediaLibraryItemViewModel? _tokenImage;
 
+    /// <summary>GM-visible-only freetext status/condition notes - see NpcVariantEntryDto.Health.</summary>
+    [ObservableProperty] private string? _health;
+
+    /// <summary>References the active Theme's Statuses by Id - see NpcVariantEntryDto.StatusId.</summary>
+    [ObservableProperty] private string? _statusId;
+
     public NpcVariantViewModel(
         Guid id,
         string name,
@@ -98,6 +104,16 @@ public partial class NpcVariantViewModel : ObservableObject
     }
 
     partial void OnPlayerInfoChanged(string? value)
+    {
+        _onChanged?.Invoke(this);
+    }
+
+    partial void OnHealthChanged(string? value)
+    {
+        _onChanged?.Invoke(this);
+    }
+
+    partial void OnStatusIdChanged(string? value)
     {
         _onChanged?.Invoke(this);
     }
