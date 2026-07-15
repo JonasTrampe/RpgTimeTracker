@@ -2249,3 +2249,119 @@ some default. A Playlist referenced by a Scene is unset silently (no
 confirm-delete prompt) if that Playlist is deleted, the same "carries no
 content of its own" reasoning already applied to Tag assignments
 elsewhere.
+
+## Map tokens: no starting/live split, tokens belong to the Map not a floor
+
+**Decision**: unlike fog (which splits into an offline-edited "starting"
+template and a separate in-session "live" copy), a map token
+(`MapToken`, see issue #31) is a single always-live list owned by the
+Map, not by an individual floor. Each token carries a mutable `FloorId`
+(reassigning it is how a token "teleports" between floors, e.g. taking
+stairs), and there is exactly one token per linked Character/Point-of-
+Interest per map - placing an already-placed one moves the existing
+token instead of creating a duplicate.
+
+**Why**: fog's starting/live split exists because a GM wants to prepare
+fog offline (nothing painted there is ever visible to players) and reset
+back to that template during play. Tokens don't have the same "prepare
+in private, then go live" need - a GM places an NPC/PC token where it
+currently stands, not as a template to reset back to. Fully mirroring
+fog's split would have doubled the token state/sync logic (a template
+copy, a live copy, a reset action) for a workflow nobody asked for.
+Making tokens Map-scoped rather than per-floor avoids re-creating a
+token from scratch (losing its link, visibility settings, etc.) every
+time a character moves between floors of the same building.
+
+## Map tokens: link to a Character/Point-of-Interest instead of duplicating data onto the token
+
+**Decision**: a `MapToken` can link to a Character (+ specific Variant,
+since portrait/Health/Status are per-Variant), a Point of Interest (new
+library, issue #67), or stand alone as a freeform marker with its own
+Name/Description/Icon. A linked token has no local copies of
+Name/Portrait/Health - it reads them live from the source every time.
+
+**Why**: the whole point of the Characters/Points-of-Interest libraries
+is to be the single source of truth for that data. A token that copied
+Name/Portrait onto itself at placement time would silently go stale the
+moment the GM renamed the Character or changed its portrait mid-
+campaign - exactly the kind of duplicated-state bug the rest of this
+app's library system (Media/Sound/Music/Map/Character, all referenced by
+Id rather than copied) already avoids everywhere else. The freeform
+fallback exists only because not every marker deserves a library entry
+(a one-off scribble like "loose floorboard here").
+
+## Characters gain a Kind flag instead of a separate PC model
+
+**Decision**: player characters are represented by adding
+`CharacterKind { Npc, Pc }` to the existing `NpcLibraryItemViewModel`
+(issue #68), not a parallel `PlayerCharacterLibraryItemViewModel`.
+
+**Why**: a PC needs exactly the same things an NPC already has - a
+portrait, a map token image, named Variants/moods, attached sounds, tags,
+Shared-vs-Session scope. Building a separate model would duplicate all of
+that plumbing for a distinction that, from the app's point of view, is
+just a label. The Characters tab already isn't NPC-specific in spirit
+(the class name is a historical artifact); a filterable Kind flag gets PC
+support for the cost of one property and some UI filtering instead of a
+second parallel library.
+
+## Status is GM-configurable data tied to the active Theme, not a fixed enum
+
+**Decision**: a Character Variant's status (issue #69) is not a fixed
+`enum { Alive, Unconscious, Dead }`. Instead, the active Theme/Design
+(`theme.json`) optionally defines its own list of named statuses (each
+with a tint color and a "skips initiative turn" flag), and
+`NpcVariantViewModel.StatusId` references one of those by a stable
+string key. A small built-in default list covers Themes that don't
+define their own.
+
+**Why**: different game systems track "how hurt is this character" in
+genuinely different vocabularies (Shadowrun's Stun/Physical condition
+boxes bear no resemblance to a D&D-style HP threshold, and a GM running
+a homebrew system might want entirely different labels again). Since
+this app already lets a GM author their own Theme/Design as JSON to match
+their table's system, extending that same file to also describe status
+vocabulary (rather than inventing a separate hardcoded enum that would
+fit no system well) keeps the "the Theme describes how this game system
+looks and behaves" idea consistent, and the "skips initiative turn" flag
+is exactly the one behavioral hook the app actually needs regardless of
+what the status is called.
+
+## Initiative tracker: manual ordering and manual advancement, no auto-anything
+
+**Decision**: the initiative tracker (issue #70) has no numeric
+initiative score and no auto-advance timer - the GM manually drags
+participants into order and clicks "Next" to advance. The same
+participant can be added to the order more than once (for a creature
+with multiple turns per round) instead of a dedicated "turns per round"
+field. Reaching the end of the order loops back to the top and
+increments a Round counter automatically.
+
+**Why**: initiative order in most tabletop systems is either rolled
+outside any app (dice, cards, a house rule) or is itself part of the
+GM's table ritual - the app trying to compute or auto-sort it would be
+solving a problem the GM didn't have, and would need per-system rules
+knowledge the app has no business hardcoding. Manual list order is the
+one representation flexible enough to fit any system's actual initiative
+mechanic without the app taking a position on what that mechanic is.
+Letting a participant appear twice reuses the exact same "just add it
+again" mental model as the list ordering itself, instead of introducing
+a second, more structured way to express the same idea.
+
+## Initiative and the game clock: freeze or fixed-per-round advance, GM's choice
+
+**Decision**: while the initiative tracker is running, the game clock
+either freezes entirely or advances by a fixed number of game-seconds
+once per Round (not per individual turn) - a GM-configurable setting per
+campaign, not a single hardcoded behavior.
+
+**Why**: some tables treat combat as happening "outside" normal game
+time entirely (freeze); others want a Timer/Alarm that's ticking down
+mid-fight to actually keep advancing, using whatever real-time-per-round
+convention their system uses (e.g. "6 seconds a turn" translated to
+however many game-seconds a full round represents). Advancing per-Round
+rather than per-individual-turn was a deliberate simplification - a GM
+wanting finer-grained time advancement per turn can still end the
+round early or adjust manually, but per-turn advancement would have
+meant every single "Next" click needed its own time-math instead of one
+lump adjustment when the order wraps.
