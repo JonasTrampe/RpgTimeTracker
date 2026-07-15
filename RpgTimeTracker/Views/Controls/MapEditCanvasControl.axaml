@@ -47,6 +47,7 @@
                    PointerWheelChanged="OnCanvasPointerWheelChanged">
                 <Image Name="FloorImageControl" Stretch="Uniform" />
                 <Image Name="FogOverlayControl" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
+                <Canvas Name="TokenLayer" Background="Transparent" />
                 <Ellipse Name="BrushCursor"
                          IsHitTestVisible="False"
                          IsVisible="False"
