@@ -529,6 +529,7 @@
   "MainWindowViewModel.Labels.CalendarEntryUsage": "Kalendereintrag \"{0}\"",
   "MainWindowViewModel.Labels.PlaylistUsage": "Playlist \"{0}\"",
   "MainWindowViewModel.Labels.NpcUsage": "Charakter \"{0}\" (Variante \"{1}\")",
+  "MainWindowViewModel.Labels.MapTokenUsage": "Kartenmarker auf \"{0}\"",
   "MainWindowViewModel.Labels.KindTimer": "Timer",
   "MainWindowViewModel.Labels.KindAlarm": "Wecker",
   "MainWindowViewModel.Labels.KindOnTime": "OnTime",

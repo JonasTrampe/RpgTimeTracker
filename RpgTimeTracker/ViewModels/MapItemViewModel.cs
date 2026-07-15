@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models;
@@ -80,6 +81,11 @@ public sealed partial class MapItemViewModel : ObservableObject, ITaggable
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
         Floors.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoFloors));
+        Tokens.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasNoTokens));
+            _onChanged?.Invoke(this);
+        };
         if (tagIds is not null)
             foreach (var tagId in tagIds)
                 TagIds.Add(tagId);
@@ -101,6 +107,14 @@ public sealed partial class MapItemViewModel : ObservableObject, ITaggable
     public ObservableCollection<MapFloorItemViewModel> Floors { get; } = [];
 
     public bool HasNoFloors => Floors.Count == 0;
+
+    /// <summary>
+    ///     Tokens belong to the Map, not a Floor (see #31/MapTokenViewModel.FloorId) - one
+    ///     always-live list, no starting/live split unlike fog.
+    /// </summary>
+    public ObservableCollection<MapTokenViewModel> Tokens { get; } = [];
+
+    public bool HasNoTokens => Tokens.Count == 0;
 
     /// <summary>
     ///     Freeform Tag Ids attached to this map (see Tag) - separate from Scene
@@ -166,5 +180,38 @@ public sealed partial class MapItemViewModel : ObservableObject, ITaggable
 
         Floors.Move(index, index + 1);
         _onChanged?.Invoke(this);
+    }
+
+    /// <summary>
+    ///     Adds a new token, or - for a Character/PointOfInterest link - moves the existing
+    ///     token already linked to that same entry instead of creating a duplicate (see #31:
+    ///     "one token per linked Character/PointOfInterest per map"). Freeform tokens
+    ///     (linkKind == None) are never deduplicated this way, since linkedId is null for all of
+    ///     them - every call for a freeform token creates a new one.
+    /// </summary>
+    public MapTokenViewModel AddOrSelectToken(TokenLinkKind linkKind, Guid? linkedId, Guid floorId, double x,
+        double y, Action<MapTokenViewModel> onDeleteRequested, Action<MapTokenViewModel>? onChanged)
+    {
+        if (linkKind != TokenLinkKind.None && linkedId is { } id)
+        {
+            var existing = Tokens.FirstOrDefault(t => t.LinkKind == linkKind && t.LinkedId == id);
+            if (existing is not null)
+            {
+                existing.FloorId = floorId;
+                existing.X = x;
+                existing.Y = y;
+                return existing;
+            }
+        }
+
+        var token = new MapTokenViewModel(Guid.NewGuid(), floorId, x, y, linkKind, linkedId,
+            onDeleteRequested, onChanged);
+        Tokens.Add(token);
+        return token;
+    }
+
+    public void RemoveToken(MapTokenViewModel token)
+    {
+        Tokens.Remove(token);
     }
 }

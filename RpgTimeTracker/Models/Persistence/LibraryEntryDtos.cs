@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using RpgTimeTracker.Models;
 
 namespace RpgTimeTracker.Models.Persistence;
 
@@ -135,4 +136,36 @@ public sealed class MapLibraryEntryDto
     public int DefaultCellSizePx { get; set; } = 8;
 
     public List<Guid> TagIds { get; set; } = [];
+
+    /// <summary>See MapTokenDto's doc comment - belongs to the Map, not a Floor.</summary>
+    public List<MapTokenDto> Tokens { get; set; } = [];
+}
+
+/// <summary>
+///     Serializable shape of one MapTokenViewModel - see its doc comment for the "single source
+///     of truth" rule this DTO follows: only the link + position + visibility settings are
+///     persisted, never a linked Character/PointOfInterest's Name/Portrait/Health.
+/// </summary>
+public sealed class MapTokenDto
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FloorId { get; set; }
+    public double X { get; set; }
+    public double Y { get; set; }
+
+    public TokenLinkKind LinkKind { get; set; } = TokenLinkKind.None;
+    public Guid? LinkedId { get; set; }
+    public Guid? LinkedVariantId { get; set; }
+
+    /// <summary>Only meaningful when LinkKind == None - see MapTokenViewModel's doc comment.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
+    public Guid? IconImageId { get; set; }
+    public string? IconGlyph { get; set; }
+
+    public TokenRevealMode RevealMode { get; set; } = TokenRevealMode.AlwaysVisible;
+    public bool PlayerVisibleName { get; set; }
+    public bool PlayerVisiblePortrait { get; set; }
+    public bool PlayerVisibleDetail { get; set; }
 }

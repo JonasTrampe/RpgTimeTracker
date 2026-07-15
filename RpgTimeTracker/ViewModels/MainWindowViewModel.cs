@@ -486,6 +486,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _usageRegistry.RegisterClearAction(ClearSceneReferencesById);
         _usageRegistry.Register(FindPointOfInterestUsagesById);
         _usageRegistry.RegisterClearAction(ClearPointOfInterestReferencesById);
+        _usageRegistry.Register(FindMapTokenUsagesById);
+        _usageRegistry.RegisterClearAction(ClearMapTokenReferencesById);
         _usageRegistry.Register(FindTagUsagesById);
         _usageRegistry.RegisterClearAction(ClearTagReferencesById);
         _usageRegistry.Register(FindTimerTagUsagesById);
@@ -627,6 +629,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                     f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
             }
 
+            LoadTokensIntoMap(map, mapEntry.Tokens);
             MapLibrary.Add(map);
         }
 
@@ -1056,6 +1059,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                     f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
             }
 
+            LoadTokensIntoMap(map, mapEntry.Tokens);
             MapLibrary.Add(map);
         }
 
