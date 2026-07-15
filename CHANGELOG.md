@@ -43,8 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   layout, plus a "▶ Activate" button that pushes the Scene's bundled
   Image/Map/Music/Sounds to players atomically through the existing
   per-kind send paths (the same ones a Media Library double-click or a
-  Playlist already use). A Scene-scoped timeline and full-session
-  export/import wiring aren't built yet.
+  Playlist already use). Scenes are now also included in both the
+  full-session and per-session `.rtt-session` export/import, with their
+  Image/Map/Music/Sound references remapped to the freshly-imported
+  copies' Ids the same way NPC references already are. This also fixed a
+  pre-existing gap where the Music library itself wasn't part of session
+  export/import at all. A Scene-scoped timeline isn't built yet.
 - Tags (Phase 1 of the Scenes/Tags/Calendars project): a flat, campaign-wide
   list of freeform tags (name + color) manageable from a new "Tags" group in
   Settings. Media, Sound, Music, Map, and NPC library items each gained a
