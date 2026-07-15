@@ -19,6 +19,10 @@ public sealed class MediaLibraryEntryDto
     public string Kind { get; set; } = string.Empty;
     public string MimeType { get; set; } = string.Empty;
     public bool Loop { get; set; }
+
+    /// <summary>Freeform Tag Ids attached to this item (see Tag) - separate from Scene
+    ///     membership, a different, explicit mechanism.</summary>
+    public List<Guid> TagIds { get; set; } = [];
 }
 
 public sealed class SoundLibraryEntryDto
@@ -34,6 +38,7 @@ public sealed class SoundLibraryEntryDto
     public int RepeatCount { get; set; } = 1;
     public long TrimStartMs { get; set; }
     public long TrimEndMs { get; set; }
+    public List<Guid> TagIds { get; set; } = [];
 }
 
 /// <summary>
@@ -53,6 +58,8 @@ public sealed class MusicLibraryEntryDto
 
     /// <summary>Default volume (0-100) with which this track is played.</summary>
     public int Volume { get; set; } = 100;
+
+    public List<Guid> TagIds { get; set; } = [];
 }
 
 /// <summary>
@@ -113,4 +120,6 @@ public sealed class MapLibraryEntryDto
     ///     it), so a later change to that constant never retroactively affects this map's
     ///     future floors.</summary>
     public int DefaultCellSizePx { get; set; } = 8;
+
+    public List<Guid> TagIds { get; set; } = [];
 }

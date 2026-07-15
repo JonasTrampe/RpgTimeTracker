@@ -1,17 +1,60 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Shared.Services.Localization;
+using RpgTimeTracker.ViewModels;
 
 namespace RpgTimeTracker.Views.Controls;
 
 public partial class LibraryPanelView : UserControl
 {
+    public static readonly StyledProperty<ObservableCollection<TagViewModel>?> AllTagsProperty =
+        AvaloniaProperty.Register<LibraryPanelView, ObservableCollection<TagViewModel>?>(nameof(AllTags));
+
+    public static readonly DirectProperty<LibraryPanelView, ObservableCollection<TagFilterOptionViewModel>> FilterOptionsProperty =
+        AvaloniaProperty.RegisterDirect<LibraryPanelView, ObservableCollection<TagFilterOptionViewModel>>(
+            nameof(FilterOptions), o => o.FilterOptions);
+
+    public static readonly DirectProperty<LibraryPanelView, IEnumerable> FilteredItemsSourceProperty =
+        AvaloniaProperty.RegisterDirect<LibraryPanelView, IEnumerable>(
+            nameof(FilteredItemsSource), o => o.FilteredItemsSource);
+
+    public static readonly DirectProperty<LibraryPanelView, bool> HasNoFilterTagsProperty =
+        AvaloniaProperty.RegisterDirect<LibraryPanelView, bool>(nameof(HasNoFilterTags), o => o.HasNoFilterTags);
+
+    private readonly ObservableCollection<TagFilterOptionViewModel> _filterOptions = [];
+    private readonly ObservableCollection<object> _filteredItems = [];
+    private readonly HashSet<Guid> _selectedFilterTagIds = [];
+    private readonly List<ITaggable> _subscribedItems = [];
+    private bool _hasNoFilterTags = true;
+    private INotifyCollectionChanged? _subscribedSource;
+
+    public ObservableCollection<TagViewModel>? AllTags
+    {
+        get => GetValue(AllTagsProperty);
+        set => SetValue(AllTagsProperty, value);
+    }
+
+    public ObservableCollection<TagFilterOptionViewModel> FilterOptions => _filterOptions;
+
+    public IEnumerable FilteredItemsSource => _filteredItems;
+
+    public bool HasNoFilterTags
+    {
+        get => _hasNoFilterTags;
+        private set => SetAndRaise(HasNoFilterTagsProperty, ref _hasNoFilterTags, value);
+    }
+
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<LibraryPanelView, string?>(nameof(Title));
 
@@ -39,6 +82,80 @@ public partial class LibraryPanelView : UserControl
     public LibraryPanelView()
     {
         InitializeComponent();
+        AllTagsProperty.Changed.AddClassHandler<LibraryPanelView>((c, _) => c.RebuildFilterOptions());
+        ItemsSourceProperty.Changed.AddClassHandler<LibraryPanelView>((c, _) => c.ResubscribeItemsAndFilter());
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        base.OnUnloaded(e);
+        UnsubscribeAllItems();
+    }
+
+    private void RebuildFilterOptions()
+    {
+        _filterOptions.Clear();
+        _selectedFilterTagIds.Clear();
+        if (AllTags is not null)
+            foreach (var tag in AllTags)
+                _filterOptions.Add(new TagFilterOptionViewModel(tag, OnFilterTagToggled));
+
+        HasNoFilterTags = _filterOptions.Count == 0;
+        ApplyFilter();
+    }
+
+    private void OnFilterTagToggled(Guid tagId, bool isSelected)
+    {
+        if (isSelected) _selectedFilterTagIds.Add(tagId);
+        else _selectedFilterTagIds.Remove(tagId);
+        ApplyFilter();
+    }
+
+    private void ResubscribeItemsAndFilter()
+    {
+        UnsubscribeAllItems();
+
+        if (ItemsSource is INotifyCollectionChanged incc)
+        {
+            incc.CollectionChanged += OnSourceCollectionChanged;
+            _subscribedSource = incc;
+        }
+
+        if (ItemsSource is not null)
+            foreach (var item in ItemsSource)
+                if (item is ITaggable taggable)
+                {
+                    taggable.TagIds.CollectionChanged += OnItemTagIdsChanged;
+                    _subscribedItems.Add(taggable);
+                }
+
+        ApplyFilter();
+    }
+
+    private void UnsubscribeAllItems()
+    {
+        foreach (var item in _subscribedItems) item.TagIds.CollectionChanged -= OnItemTagIdsChanged;
+        _subscribedItems.Clear();
+
+        if (_subscribedSource is not null) _subscribedSource.CollectionChanged -= OnSourceCollectionChanged;
+        _subscribedSource = null;
+    }
+
+    private void OnSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => ResubscribeItemsAndFilter();
+
+    private void OnItemTagIdsChanged(object? sender, NotifyCollectionChangedEventArgs e) => ApplyFilter();
+
+    private void ApplyFilter()
+    {
+        _filteredItems.Clear();
+        if (ItemsSource is null) return;
+
+        foreach (var item in ItemsSource)
+        {
+            if (_selectedFilterTagIds.Count == 0 ||
+                (item is ITaggable taggable && taggable.TagIds.Any(_selectedFilterTagIds.Contains)))
+                _filteredItems.Add(item);
+        }
     }
 
     public string? Title

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
 using Serilog;
 
@@ -256,6 +257,11 @@ public static class ThemeSettingsService
         public List<PlaylistEntryDto> Playlists { get; set; } = [];
         public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
         public List<NpcLibraryEntryDto> NpcLibrary { get; set; } = [];
+
+        /// <summary>Freeform labels a GM can attach to any library item (see Tag/TagIds on each
+        ///     library item view model) - a single flat, campaign-wide list, not
+        ///     Shared-vs-SessionLocal like the libraries they tag (see Tag's doc comment).</summary>
+        public List<Tag> Tags { get; set; } = [];
         // Property name kept as "ClientAudioPreferences" (not renamed to match the DTO type)
         // purely for JSON backward-compat - System.Text.Json round-trips by property name, so
         // renaming this would silently drop every existing user's saved Music/Sound routing

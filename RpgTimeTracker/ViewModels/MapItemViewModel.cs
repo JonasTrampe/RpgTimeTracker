@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,7 +15,7 @@ namespace RpgTimeTracker.ViewModels;
 ///     map (a folder of several floor images, not one file). Rename/delete are
 ///     re-implemented directly here instead, following the same shape.
 /// </summary>
-public sealed partial class MapItemViewModel : ObservableObject
+public sealed partial class MapItemViewModel : ObservableObject, ITaggable
 {
     /// <summary>Persisted format version for this map's data (settings entry + exported
     ///     .rtt-map/.rtt-session manifest) - not used for any migration yet (there's only ever
@@ -50,7 +51,8 @@ public sealed partial class MapItemViewModel : ObservableObject
         double? fogBlurRadius = null,
         bool? fogBlurEnabled = null,
         int formatVersion = CurrentFormatVersion,
-        LibraryScope scope = LibraryScope.Shared)
+        LibraryScope scope = LibraryScope.Shared,
+        IEnumerable<Guid>? tagIds = null)
     {
         Id = id;
         _name = name;
@@ -64,9 +66,15 @@ public sealed partial class MapItemViewModel : ObservableObject
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
         Floors.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoFloors));
+        if (tagIds is not null) foreach (var tagId in tagIds) TagIds.Add(tagId);
+        TagIds.CollectionChanged += (_, _) => _onChanged?.Invoke(this);
     }
 
     public Guid Id { get; }
+
+    /// <summary>Freeform Tag Ids attached to this map (see Tag) - separate from Scene
+    ///     membership, a different, explicit mechanism.</summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
 
     /// <summary>Whether this map lives in the always-present Shared Library or inside the
     ///     currently open Session's own folder - see LibraryScope.</summary>

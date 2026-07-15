@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Tags (Phase 1 of the Scenes/Tags/Calendars project): a flat, campaign-wide
+  list of freeform tags (name + color) manageable from a new "Tags" group in
+  Settings. Media, Sound, Music, Map, and NPC library items each gained a
+  `TagIds` list and a new "🏷" button opening a `TagSelectorFlyout` to
+  toggle which tags are assigned. Deleting a tag clears it from every item
+  that had it via the existing `LibraryUsageRegistry` mechanism, with no
+  confirmation prompt (a tag carries no content of its own, unlike
+  deleting a media file). Each item's tag-assignment flyout also has an
+  inline "new tag" row (name field + Add button) so a GM doesn't have to
+  leave the flyout and go to Settings to define a tag before assigning it.
+  The Media/Sound/Music library panels now also
+  have a tag-filter bar: a row of toggleable chips (generated from the
+  campaign's tag list) above each library's items - select any number of
+  tags to show only items carrying at least one of them, deselect all to
+  show everything again. Map and NPC libraries use a simpler list UI
+  outside `LibraryPanelView` and aren't covered by this filter bar yet.
 - Bundled calendars can now seed their real holidays as recurring calendar
   entries (`CalendarDefinition.DefaultEntries` + a "Import calendar's
   default events" button in Settings) - Harptos's five festivals

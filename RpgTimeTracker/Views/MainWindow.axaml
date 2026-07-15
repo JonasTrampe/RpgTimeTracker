@@ -1280,7 +1280,8 @@
                                                                                EmptyStateText="{DynamicResource MainWindow.Library.MediaLibraryEmptyState}"
                                                                                HasNoItems="{Binding HasNoMediaLibraryItems}"
                                                                                ErrorMessage="{Binding MediaErrorMessage, Mode=TwoWay}"
-                                                                               ItemsSource="{Binding MediaLibrary}">
+                                                                               ItemsSource="{Binding MediaLibrary}"
+                                                                               AllTags="{Binding Tags}">
                                                         <controls:LibraryPanelView.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MediaLibraryItemViewModel">
                                                                 <Border Classes="item" Width="120"
@@ -1336,6 +1337,20 @@
                                                                                     MoveToSharedCommand="{Binding $parent[TabItem].DataContext.MoveMediaLibraryItemToSharedCommand}"
                                                                                     MoveToSessionCommand="{Binding $parent[TabItem].DataContext.MoveMediaLibraryItemToSessionCommand}"
                                                                                     Item="{Binding}" />
+                                                                                <Button Classes="iconsquare"
+                                                                                    Content="🏷" Width="22"
+                                                                                    Height="22"
+                                                                                    FontSize="11"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Library.TagsTooltip}">
+                                                                                    <Button.Flyout>
+                                                                                        <Flyout Placement="Bottom">
+                                                                                            <controls:TagSelectorFlyout
+                                                                                                AllTags="{Binding $parent[TabItem].DataContext.Tags}"
+                                                                                                AssignedTagIds="{Binding TagIds}"
+                                                                                                CreateTagCommand="{Binding $parent[TabItem].DataContext.CreateTagCommand}" />
+                                                                                        </Flyout>
+                                                                                    </Button.Flyout>
+                                                                                </Button>
                                                                                 <Button Classes="iconsquare"
                                                                                     Content="&#10005;"
                                                                                     Command="{Binding DeleteCommand}"
@@ -1472,7 +1487,8 @@
                                                                                EmptyStateText="{DynamicResource MainWindow.Sounds.LibraryEmptyState}"
                                                                                HasNoItems="{Binding HasNoSoundLibraryItems}"
                                                                                ErrorMessage="{Binding MediaErrorMessage, Mode=TwoWay}"
-                                                                               ItemsSource="{Binding SoundLibrary}">
+                                                                               ItemsSource="{Binding SoundLibrary}"
+                                                                               AllTags="{Binding Tags}">
                                                         <controls:LibraryPanelView.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:SoundLibraryItemViewModel">
                                                                 <Border Classes="item" Width="140"
@@ -1480,7 +1496,7 @@
                                                                         PointerPressed="OnSoundLibraryItemPointerPressed"
                                                                         ToolTip.Tip="{DynamicResource MainWindow.Sounds.ItemTooltip}">
                                                                     <StackPanel Spacing="10">
-                                                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                                                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
                                                                             <PathIcon Grid.Column="0"
                                                                                     Data="{Binding IconGeometry}"
                                                                                     Width="20" Height="20"
@@ -1585,6 +1601,21 @@
                                                                                     MoveToSessionCommand="{Binding $parent[TabItem].DataContext.MoveSoundLibraryItemToSessionCommand}"
                                                                                     Item="{Binding}" />
                                                                             <Button Grid.Column="4"
+                                                                                    Classes="iconsquare"
+                                                                                    Content="🏷" Width="22"
+                                                                                    Height="22"
+                                                                                    FontSize="11"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Library.TagsTooltip}">
+                                                                                <Button.Flyout>
+                                                                                    <Flyout Placement="Bottom">
+                                                                                        <controls:TagSelectorFlyout
+                                                                                            AllTags="{Binding $parent[TabItem].DataContext.Tags}"
+                                                                                            AssignedTagIds="{Binding TagIds}"
+                                                                                            CreateTagCommand="{Binding $parent[TabItem].DataContext.CreateTagCommand}" />
+                                                                                    </Flyout>
+                                                                                </Button.Flyout>
+                                                                            </Button>
+                                                                            <Button Grid.Column="5"
                                                                                     Classes="iconsquare"
                                                                                     Content="&#10005;"
                                                                                     Command="{Binding DeleteCommand}"
@@ -1747,7 +1778,8 @@
                                                                                EmptyStateText="{DynamicResource MainWindow.Music.LibraryEmptyState}"
                                                                                HasNoItems="{Binding HasNoMusicLibraryItems}"
                                                                                ErrorMessage="{Binding MediaErrorMessage, Mode=TwoWay}"
-                                                                               ItemsSource="{Binding MusicLibrary}">
+                                                                               ItemsSource="{Binding MusicLibrary}"
+                                                                               AllTags="{Binding Tags}">
                                                         <controls:LibraryPanelView.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MusicLibraryItemViewModel">
                                                                 <Border Classes="item" Width="140"
@@ -1755,7 +1787,7 @@
                                                                         PointerPressed="OnMusicLibraryItemPointerPressed"
                                                                         ToolTip.Tip="{DynamicResource MainWindow.Music.ItemTooltip}">
                                                                     <StackPanel Spacing="10">
-                                                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                                                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
                                                                             <PathIcon Grid.Column="0"
                                                                                     Data="{Binding IconGeometry}"
                                                                                     Width="20" Height="20"
@@ -1801,6 +1833,21 @@
                                                                                     MoveToSessionCommand="{Binding $parent[TabItem].DataContext.MoveMusicLibraryItemToSessionCommand}"
                                                                                     Item="{Binding}" />
                                                                             <Button Grid.Column="4"
+                                                                                    Classes="iconsquare"
+                                                                                    Content="🏷" Width="22"
+                                                                                    Height="22"
+                                                                                    FontSize="11"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Library.TagsTooltip}">
+                                                                                <Button.Flyout>
+                                                                                    <Flyout Placement="Bottom">
+                                                                                        <controls:TagSelectorFlyout
+                                                                                            AllTags="{Binding $parent[TabItem].DataContext.Tags}"
+                                                                                            AssignedTagIds="{Binding TagIds}"
+                                                                                            CreateTagCommand="{Binding $parent[TabItem].DataContext.CreateTagCommand}" />
+                                                                                    </Flyout>
+                                                                                </Button.Flyout>
+                                                                            </Button>
+                                                                            <Button Grid.Column="5"
                                                                                     Classes="iconsquare"
                                                                                     Content="&#10005;"
                                                                                     Command="{Binding DeleteCommand}"
@@ -1962,7 +2009,7 @@
                                                                  IsVisible="{Binding !HasNoMaps}">
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:MapItemViewModel">
-                                                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto"
                                                                           Margin="0,2">
                                                                         <TextBox Grid.Column="0"
                                                                                  Text="{Binding Name, Mode=TwoWay}" />
@@ -1971,6 +2018,19 @@
                                                                                    VerticalAlignment="Center"
                                                                                    Margin="8,0" />
                                                                         <Button Grid.Column="2" Classes="iconsquare"
+                                                                                Content="🏷" Width="22" Height="22"
+                                                                                FontSize="11"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Library.TagsTooltip}">
+                                                                            <Button.Flyout>
+                                                                                <Flyout Placement="Bottom">
+                                                                                    <controls:TagSelectorFlyout
+                                                                                        AllTags="{Binding $parent[TabItem].DataContext.Tags}"
+                                                                                        AssignedTagIds="{Binding TagIds}"
+                                                                                        CreateTagCommand="{Binding $parent[TabItem].DataContext.CreateTagCommand}" />
+                                                                                </Flyout>
+                                                                            </Button.Flyout>
+                                                                        </Button>
+                                                                        <Button Grid.Column="3" Classes="iconsquare"
                                                                                 Content="&#8942;" Width="36" Height="36"
                                                                                 ToolTip.Tip="{DynamicResource MainWindow.Maps.MoreActionsTooltip}">
                                                                             <Button.Flyout>
@@ -2107,7 +2167,7 @@
                                                                  IsVisible="{Binding !HasNoNpcLibraryItems}">
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:NpcLibraryItemViewModel">
-                                                                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,2">
+                                                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2">
                                                                         <TextBox Grid.Column="0"
                                                                                  Text="{Binding Name, Mode=TwoWay}" />
                                                                         <Button Grid.Column="1" Classes="iconsquare"
@@ -2129,6 +2189,19 @@
                                                                             </Button.Flyout>
                                                                         </Button>
                                                                         <Button Grid.Column="2" Classes="iconsquare"
+                                                                                Content="🏷" Width="22" Height="22"
+                                                                                FontSize="11"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Library.TagsTooltip}">
+                                                                            <Button.Flyout>
+                                                                                <Flyout Placement="Bottom">
+                                                                                    <controls:TagSelectorFlyout
+                                                                                        AllTags="{Binding $parent[TabItem].DataContext.Tags}"
+                                                                                        AssignedTagIds="{Binding TagIds}"
+                                                                                        CreateTagCommand="{Binding $parent[TabItem].DataContext.CreateTagCommand}" />
+                                                                                </Flyout>
+                                                                            </Button.Flyout>
+                                                                        </Button>
+                                                                        <Button Grid.Column="3" Classes="iconsquare"
                                                                                 Content="&#10005;" Width="22" Height="22"
                                                                                 FontSize="10"
                                                                                 Command="{Binding DeleteCommand}"
@@ -2960,6 +3033,48 @@
                                                                                VerticalAlignment="Center" />
                                                                 </Grid>
                                                             </Grid>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="settingsGroup" Width="520" Margin="0,0,14,14">
+                                                        <StackPanel Spacing="10">
+                                                            <TextBlock Classes="settingsGroupTitle"
+                                                                       Text="{DynamicResource MainWindow.Settings.TagsHeader}" />
+                                                            <TextBlock Classes="muted"
+                                                                       Text="{DynamicResource MainWindow.Settings.TagsDescription}"
+                                                                       TextWrapping="Wrap" />
+                                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                                <TextBox Grid.Column="0"
+                                                                         Text="{Binding NewTagName, Mode=TwoWay}"
+                                                                         PlaceholderText="{DynamicResource MainWindow.Settings.NewTagPlaceholder}" />
+                                                                <Button Grid.Column="1"
+                                                                        Content="{DynamicResource MainWindow.Settings.AddTagButton}"
+                                                                        Command="{Binding AddTagCommand}" />
+                                                            </Grid>
+                                                            <TextBlock Classes="muted"
+                                                                       Text="{DynamicResource MainWindow.Settings.NoTags}"
+                                                                       IsVisible="{Binding HasNoTags}" />
+                                                            <ItemsControl ItemsSource="{Binding Tags}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:TagViewModel">
+                                                                        <Grid ColumnDefinitions="16,*,90,Auto"
+                                                                              ColumnSpacing="8" Margin="0,2">
+                                                                            <Ellipse Grid.Column="0" Width="12" Height="12"
+                                                                                     Fill="{Binding ColorBrush}"
+                                                                                     Stroke="{DynamicResource BorderBrush}"
+                                                                                     StrokeThickness="1"
+                                                                                     VerticalAlignment="Center" />
+                                                                            <TextBox Grid.Column="1"
+                                                                                     Text="{Binding Name, Mode=TwoWay}" />
+                                                                            <TextBox Grid.Column="2"
+                                                                                     Text="{Binding ColorHex, Mode=TwoWay}"
+                                                                                     PlaceholderText="#RRGGBB" />
+                                                                            <Button Grid.Column="3"
+                                                                                    Content="✕"
+                                                                                    Command="{Binding DeleteCommand}" />
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
                                                         </StackPanel>
                                                     </Border>
                                             </WrapPanel>

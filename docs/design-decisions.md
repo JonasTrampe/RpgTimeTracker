@@ -1949,3 +1949,90 @@ the *same* `GameInstant` under the new rules (nothing about the underlying
 elapsed time changes) and pushes a full session resync, since
 `SessionSnapshotParams.ActiveCalendar` is only sent once at connect, not
 per tick.
+
+## Tags: a flat, campaign-wide list, not Shared-vs-SessionLocal like the libraries
+
+Every other library (Media/Sound/Music/Map/NPC) splits entries into Shared
+(campaign-wide) vs SessionLocal (this session only), because those entries
+carry real file content or session-specific detail worth scoping. Tags are
+different: a `Tag` is just an `Id`/`Name`/`ColorHex` triple with no content
+of its own, so per-session scoping would only add bookkeeping without
+buying anything - a single flat `ThemeSettingsDto.Tags` list, CRUD'd from a
+"Tags" group in Settings, is enough.
+
+Each library item ViewModel gained an `ObservableCollection<Guid> TagIds`,
+wired the same way as every other cross-referencing Id in this codebase:
+`CollectionChanged` calls the item's own existing change-notification path
+(`NotifyChanged()` on the `LibraryItemViewModelBase`-derived and NPC VMs,
+`_onChanged?.Invoke(this)` directly on `MapItemViewModel`, which predates
+that base class), so adding/removing a tag auto-persists via each item's
+already-existing `Save*LibrarySettings()` chain. Deleting a tag reuses
+`LibraryUsageRegistry.ClearReferencesTo` - the exact mechanism already used
+to unset dangling trigger-media/playlist/NPC references - and, unlike
+deleting an in-use Media/Sound/Map/NPC item, does **not** show a
+confirmation dialog first: untagging every item that had it is low-stakes
+since no content is lost, just an organizational label.
+
+Per-item tag assignment reuses one `TagSelectorFlyout` UserControl
+(`Views/Controls/TagSelectorFlyout.axaml`) embedded as a "🏷" button's
+Flyout content in each of the five item templates, rather than duplicating
+a checkbox list five times. It takes the campaign-wide `AllTags` list and
+the single item's `AssignedTagIds` collection, and on open builds a
+per-instance `TagOptionViewModel` list (Tag + IsAssigned) so each
+`CheckBox` toggle directly Adds/Removes the tag's `Guid` in the bound
+item - no two-way binding onto a `Guid` collection is needed, which
+Avalonia doesn't support cleanly for arbitrary membership toggling.
+
+`TagSelectorFlyout` also has an inline "new tag" row (a `TextBox` + Add
+`Button`, bound to a `CreateTagCommand` the flyout doesn't own the logic
+of) so a GM tagging an item doesn't have to close the flyout, go to
+Settings, define the tag there, then come back and reopen the flyout to
+actually assign it - a real point of friction reported directly. The
+command is `MainWindowViewModel.CreateTagCommand`, factored out of the
+existing `AddTag` (Settings "Add" button) so both call the same
+underlying `CreateTag(name)` rather than duplicating tag-construction
+logic. The newly created tag shows up unassigned in the flyout's list
+(via the existing `AllTags.CollectionChanged` subscription used for the
+Settings-tab case too) - the GM still checks its box once to assign it,
+rather than the flyout guessing that "just created" implies "assign to
+this item," which would be surprising for a tag meant for several items
+at once.
+
+A library filter bar (filtering `LibraryPanelView`'s displayed items by
+selected tag) is deliberately deferred to a later pass - it needs either a
+collection-view abstraction Avalonia doesn't ship out of the box, or
+duplicating a filtered-collection-per-library pattern five times, and is
+better scoped once it's clear which items actually need filtering in
+practice.
+
+## Tag filter bar: multi-select chips owned by `LibraryPanelView` itself, not the ViewModel
+
+The filter bar (a row of toggleable chips generated from the campaign's
+tag list, above each library's items) needed to support selecting several
+tags at once (any-of matching), not a single active filter. Rather than
+adding a `SelectedFilterTagIds` property + a filtered collection to
+`MainWindowViewModel` for each of Media/Sound/Music (tripling the
+plumbing), the whole feature lives inside `LibraryPanelView` itself:
+
+- A new `ITaggable` interface (`Models/ITaggable.cs`) exposes `TagIds` -
+  implemented by all five item view models - so the control can filter a
+  heterogeneous `ItemsSource` without knowing the concrete item type.
+- `LibraryPanelView` takes an `AllTags` binding (the campaign's tag list)
+  and builds one `TagFilterOptionViewModel` chip per tag; toggling a chip
+  adds/removes that tag's Id from an internal `HashSet<Guid>` and
+  recomputes an internal `FilteredItemsSource` (empty selection = show
+  everything, matching **any** selected tag = shown). The `ItemsControl`
+  that renders the actual tiles binds to `FilteredItemsSource` instead of
+  the raw `ItemsSource` now.
+- Because tags can be (un)assigned on an already-displayed item via the
+  per-item `TagSelectorFlyout` while the panel is open, `LibraryPanelView`
+  also subscribes to every item's `TagIds.CollectionChanged` (and to the
+  source collection's own `CollectionChanged`, to pick up added/removed
+  items) so the filtered view stays live without needing an explicit
+  refresh trigger from outside.
+
+This keeps `MainWindowViewModel` completely unaware that filtering exists
+- consistent with `LibraryPanelView` already owning Add/Export/Import UI
+  chrome the ViewModel doesn't know about either. Only the Media/Sound/
+  Music tabs use `LibraryPanelView`; Map and NPC use a simpler direct
+  `ListBox`, so the filter bar doesn't (yet) cover those two.

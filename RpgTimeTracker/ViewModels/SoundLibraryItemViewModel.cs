@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Shared.Services.Visuals;
 
 namespace RpgTimeTracker.ViewModels;
@@ -13,7 +15,7 @@ namespace RpgTimeTracker.ViewModels;
 ///     (and locally at the GM's side if applicable, see MainWindowViewModel.SendSoundAsync); "Test" plays it ONLY locally
 ///     at the GM's side, without sending it - to check the volume before actually sending it.
 /// </summary>
-public partial class SoundLibraryItemViewModel : LibraryItemViewModelBase<SoundLibraryItemViewModel>
+public partial class SoundLibraryItemViewModel : LibraryItemViewModelBase<SoundLibraryItemViewModel>, ITaggable
 {
     private readonly Action<SoundLibraryItemViewModel> _onPlayRequested;
     private readonly Action<SoundLibraryItemViewModel> _onTestRequested;
@@ -48,7 +50,8 @@ public partial class SoundLibraryItemViewModel : LibraryItemViewModelBase<SoundL
         Action<SoundLibraryItemViewModel> onDeleteRequested,
         Action<SoundLibraryItemViewModel> onPlayRequested,
         Action<SoundLibraryItemViewModel> onTestRequested,
-        Action<SoundLibraryItemViewModel>? onChanged = null)
+        Action<SoundLibraryItemViewModel>? onChanged = null,
+        IEnumerable<Guid>? tagIds = null)
         : base(id, name, localPath, mimeType, onDeleteRequested, onChanged)
     {
         _icon = VisualItemHelper.NormalizeIcon(icon);
@@ -59,7 +62,13 @@ public partial class SoundLibraryItemViewModel : LibraryItemViewModelBase<SoundL
         _trimEndSeconds = trimEndSeconds;
         _onPlayRequested = onPlayRequested;
         _onTestRequested = onTestRequested;
+        if (tagIds is not null) foreach (var tagId in tagIds) TagIds.Add(tagId);
+        TagIds.CollectionChanged += (_, _) => NotifyChanged();
     }
+
+    /// <summary>Freeform Tag Ids attached to this item (see Tag) - separate from Scene
+    ///     membership, a different, explicit mechanism.</summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
 
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);

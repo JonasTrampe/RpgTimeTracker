@@ -241,6 +241,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         FogBlurEnabled = map.FogBlurEnabled,
         DefaultCellSizePx = map.DefaultCellSizePx,
         FormatVersion = map.FormatVersion,
+        TagIds = map.TagIds.ToList(),
         Floors = map.Floors.Select((floor, index) => new MapFloorEntryDto
         {
             Id = floor.Id,

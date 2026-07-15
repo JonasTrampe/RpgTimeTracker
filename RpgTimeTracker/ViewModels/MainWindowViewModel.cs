@@ -573,7 +573,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
             MediaLibrary.Add(new MediaLibraryItemViewModel(
                 entry.Id, entry.Name, entry.Path, kind, entry.MimeType, entry.Loop,
-                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged)
+                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged, tagIds: entry.TagIds)
             {
                 Scope = LibraryScope.SessionLocal
             });
@@ -583,7 +583,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             if (!File.Exists(entry.Path)) continue;
             var item = CreateSoundLibraryItem(entry.Id, entry.Name, entry.Icon, entry.Path, entry.MimeType,
-                entry.Loop, entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0);
+                entry.Loop, entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0,
+                entry.TagIds);
             item.Scope = LibraryScope.SessionLocal;
             SoundLibrary.Add(item);
         }
@@ -592,7 +593,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             if (!File.Exists(entry.Path)) continue;
             var item = CreateMusicLibraryItem(entry.Id, entry.Name, entry.Icon, entry.Path, entry.MimeType,
-                entry.Volume);
+                entry.Volume, entry.TagIds);
             item.Scope = LibraryScope.SessionLocal;
             MusicLibrary.Add(item);
         }
@@ -601,7 +602,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             var map = new MapItemViewModel(mapEntry.Id, mapEntry.Name, mapEntry.DefaultCellSizePx, RemoveMap,
                 OnMapLibraryItemChanged, mapEntry.FogColorHex, mapEntry.FogOpacityPercent,
-                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled, mapEntry.FormatVersion, LibraryScope.SessionLocal);
+                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled, mapEntry.FormatVersion, LibraryScope.SessionLocal,
+                mapEntry.TagIds);
             foreach (var floorEntry in mapEntry.Floors.OrderBy(f => f.Order))
             {
                 if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
@@ -658,6 +660,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _usageRegistry.RegisterClearAction(ClearPlaylistReferencesById);
         _usageRegistry.Register(FindNpcUsagesById);
         _usageRegistry.RegisterClearAction(ClearNpcReferencesById);
+        _usageRegistry.Register(FindTagUsagesById);
+        _usageRegistry.RegisterClearAction(ClearTagReferencesById);
 
         // Restore the GM's last chosen calendar before anything else touches CalendarService.Active,
         // since the "start" default below and every date display already depend on it.
@@ -742,21 +746,21 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
             MediaLibrary.Add(new MediaLibraryItemViewModel(
                 entry.Id, entry.Name, entry.Path, kind, entry.MimeType, entry.Loop,
-                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged));
+                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged, tagIds: entry.TagIds));
         }
 
         foreach (var entry in settings.SoundLibrary)
         {
             if (!File.Exists(entry.Path)) continue;
             SoundLibrary.Add(CreateSoundLibraryItem(entry.Id, entry.Name, entry.Icon, entry.Path, entry.MimeType, entry.Loop,
-                entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0));
+                entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0, entry.TagIds));
         }
 
         foreach (var musicEntry in settings.MusicLibrary)
         {
             if (!File.Exists(musicEntry.Path)) continue;
             MusicLibrary.Add(CreateMusicLibraryItem(musicEntry.Id, musicEntry.Name, musicEntry.Icon,
-                musicEntry.Path, musicEntry.MimeType, musicEntry.Volume));
+                musicEntry.Path, musicEntry.MimeType, musicEntry.Volume, musicEntry.TagIds));
         }
 
         foreach (var playlistEntry in settings.Playlists)
@@ -780,7 +784,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             var map = new MapItemViewModel(mapEntry.Id, mapEntry.Name, mapEntry.DefaultCellSizePx, RemoveMap,
                 OnMapLibraryItemChanged, mapEntry.FogColorHex, mapEntry.FogOpacityPercent,
-                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled, mapEntry.FormatVersion);
+                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled, mapEntry.FormatVersion, tagIds: mapEntry.TagIds);
             foreach (var floorEntry in mapEntry.Floors.OrderBy(f => f.Order))
             {
                 if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
@@ -800,6 +804,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var npc = FromNpcLibraryEntryDto(npcEntry, LibraryScope.Shared);
             if (npc is not null) NpcLibrary.Add(npc);
         }
+
+        LoadTags(settings.Tags);
 
         // One-time migration of old data so that nothing is lost when switching to the separate
         // sound library: (a) sounds from the old "+ add sound" settings function,
