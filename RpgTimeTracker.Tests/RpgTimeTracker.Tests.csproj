@@ -26,7 +26,7 @@
              wraps Avalonia.Headless's own HeadlessUnitTestSession (the same primitive
              Avalonia.Headless.XUnit's [AvaloniaFact] uses internally) directly, so plain [Fact]/
              [Theory] keep working unchanged. -->
-        <PackageReference Include="Avalonia.Headless" Version="12.0.5"/>
+        <PackageReference Include="Avalonia.Headless" Version="12.1.0"/>
     </ItemGroup>
 
     <ItemGroup>
