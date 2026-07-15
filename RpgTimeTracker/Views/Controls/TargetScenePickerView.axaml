@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RpgTimeTracker.ViewModels"
+             x:Class="RpgTimeTracker.Views.Controls.TargetScenePickerView"
+             x:Name="Root">
+
+    <Border Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource InnerFrameBrush}"
+            BorderThickness="1" CornerRadius="6"
+            Padding="10">
+        <StackPanel Spacing="6">
+            <TextBlock Classes="muted"
+                       Text="{DynamicResource MainWindow.Common.TargetSceneDescription}"
+                       TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,Auto">
+                <ComboBox Grid.Column="0"
+                          Name="PART_Combo"
+                          x:DataType="vm:SceneLibraryItemViewModel"
+                          ItemsSource="{Binding #Root.SceneLibrary}"
+                          SelectedValue="{Binding #Root.TargetSceneId, Mode=TwoWay}"
+                          SelectedValueBinding="{Binding Id}"
+                          PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SceneLibraryItemViewModel">
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Grid.Column="1"
+                        Classes="iconsquare"
+                        Content="&#10005;"
+                        Margin="4,0,0,0"
+                        Click="OnClearClick"
+                        IsVisible="{Binding #Root.TargetSceneId, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        ToolTip.Tip="{DynamicResource MainWindow.Common.ClearSelectionTooltip}" />
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

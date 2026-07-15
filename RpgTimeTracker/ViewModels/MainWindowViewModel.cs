@@ -1008,15 +1008,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set when this new Timer is
     ///     created, its TargetSceneId is seeded from here (see AddTimer) - reset to null once
     ///     consumed, same one-shot-picker convention as PendingSoundToAdd et al.</summary>
-    [ObservableProperty] private SceneLibraryItemViewModel? _newTimerTargetScene;
+    [ObservableProperty] private Guid? _newTimerTargetSceneId;
 
     public NewItemBasicsViewModel NewAlarmBasics { get; } =
         new(LocalizationService.Get("MainWindowViewModel.Defaults.NewAlarmName"), VisualItemHelper.IconAlarm);
 
     public TriggerMediaConfig NewAlarmTriggerMedia { get; } = new();
 
-    /// <summary>See NewTimerTargetScene's doc comment - same purpose for a new Alarm.</summary>
-    [ObservableProperty] private SceneLibraryItemViewModel? _newAlarmTargetScene;
+    /// <summary>See NewTimerTargetSceneId's doc comment - same purpose for a new Alarm.</summary>
+    [ObservableProperty] private Guid? _newAlarmTargetSceneId;
 
     public NewItemBasicsViewModel NewIntervalBasics { get; } =
         new(LocalizationService.Get("MainWindowViewModel.Defaults.NewIntervalName"), VisualItemHelper.IconOnTime,
@@ -1024,17 +1024,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     public TriggerMediaConfig NewIntervalTriggerMedia { get; } = new();
 
-    /// <summary>See NewTimerTargetScene's doc comment - same purpose for a new IntervalEvent.</summary>
-    [ObservableProperty] private SceneLibraryItemViewModel? _newIntervalTargetScene;
-
-    [RelayCommand]
-    private void ClearNewTimerTargetScene() => NewTimerTargetScene = null;
-
-    [RelayCommand]
-    private void ClearNewAlarmTargetScene() => NewAlarmTargetScene = null;
-
-    [RelayCommand]
-    private void ClearNewIntervalTargetScene() => NewIntervalTargetScene = null;
+    /// <summary>See NewTimerTargetSceneId's doc comment - same purpose for a new IntervalEvent.</summary>
+    [ObservableProperty] private Guid? _newIntervalTargetSceneId;
 
     public ObservableCollection<ConnectedClientItemViewModel> ConnectedClientItems { get; } = [];
     public bool HasNoConnectedClients => ConnectedClientItems.Count == 0;

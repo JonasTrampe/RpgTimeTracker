@@ -206,7 +206,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             Blink = NewTimerBasics.Blink,
             IsPlayerVisible = NewTimerBasics.IsPlayerVisible
         };
-        var vm = new TimerItemViewModel(model, RemoveTimer) { TargetSceneId = NewTimerTargetScene?.Id };
+        var vm = new TimerItemViewModel(model, RemoveTimer) { TargetSceneId = NewTimerTargetSceneId };
         NewTimerTriggerMedia.CopyTo(vm.TriggerMedia);
         vm.StateChanged += () => PublishItemState(vm);
         vm.MediaResetRequested += () => StopMediaIfTriggeredBy(vm.TriggerMedia);
@@ -223,7 +223,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         NewTimerDurationMinutes = 10;
         NewTimerDurationSeconds = 0;
         NewTimerTriggerMedia.ClearCommand.Execute(null);
-        NewTimerTargetScene = null;
+        NewTimerTargetSceneId = null;
     }
 
     private void RemoveTimer(TimerItemViewModel vm)
@@ -296,7 +296,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             IsPlayerVisible = NewIntervalBasics.IsPlayerVisible
         };
 
-        var vm = new IntervalEventItemViewModel(model, RemoveIntervalEvent) { TargetSceneId = NewIntervalTargetScene?.Id };
+        var vm = new IntervalEventItemViewModel(model, RemoveIntervalEvent) { TargetSceneId = NewIntervalTargetSceneId };
         NewIntervalTriggerMedia.CopyTo(vm.TriggerMedia);
         vm.StateChanged += () => PublishItemState(vm);
         vm.ResetRequested += () => StopInfiniteSoundLoop(vm.Id);
@@ -318,7 +318,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         NewIntervalActiveSeconds = 0;
         NewIntervalMaxRepeats = string.Empty;
         NewIntervalTriggerMedia.ClearCommand.Execute(null);
-        NewIntervalTargetScene = null;
+        NewIntervalTargetSceneId = null;
     }
 
     private void RemoveIntervalEvent(IntervalEventItemViewModel vm)
@@ -386,7 +386,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             Blink = NewAlarmBasics.Blink,
             IsPlayerVisible = NewAlarmBasics.IsPlayerVisible
         };
-        var vm = new AlarmItemViewModel(model, _clock.CurrentTime, RemoveAlarm) { TargetSceneId = NewAlarmTargetScene?.Id };
+        var vm = new AlarmItemViewModel(model, _clock.CurrentTime, RemoveAlarm) { TargetSceneId = NewAlarmTargetSceneId };
         NewAlarmTriggerMedia.CopyTo(vm.TriggerMedia);
         vm.StateChanged += () => PublishItemState(vm);
         vm.ResetRequested += () => StopInfiniteSoundLoop(vm.Id);
@@ -403,7 +403,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         NewAlarmRepeatSeconds = 0;
         NewAlarmBasics.ResetToDefaults();
         NewAlarmTriggerMedia.ClearCommand.Execute(null);
-        NewAlarmTargetScene = null;
+        NewAlarmTargetSceneId = null;
     }
 
     private void RemoveAlarm(AlarmItemViewModel vm)

@@ -154,12 +154,6 @@ public partial class CalendarEntryViewModel : ObservableObject
         _onDeleteRequested(this);
     }
 
-    /// <summary>Clears TargetSceneId - the picker itself has no built-in "none" selection once a
-    ///     Scene is chosen (it's a plain ComboBox over a live SceneLibrary list, not a nullable
-    ///     enum), so this button is the only way back to "no target Scene".</summary>
-    [RelayCommand]
-    private void ClearTargetScene() => TargetSceneId = null;
-
     public bool TryBuildDefinition(out CalendarEntryDefinition definition)
     {
         definition = new CalendarEntryDefinition();

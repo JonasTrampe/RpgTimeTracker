@@ -76,16 +76,6 @@ public partial class MainWindow : Window
         Patterns = ["*.rtt-session"]
     };
 
-    // Event media (timer/alarm/interval) can still also be audio, but image/video
-    // now comes exclusively from the media library (see ChooseTriggerMediaFromLibrary) -
-    // only for audio does the direct file dialog remain, since there is no separate library concept
-    // for event media (the sound library is meant for the items' "sound" field,
-    // not for event media).
-    private static readonly FilePickerFileType TriggerAudioFileType = new(LocalizationService.Get("MainWindow.FileTypes.Audio"))
-    {
-        Patterns = ["*.mp3", "*.wav", "*.ogg", "*.flac", "*.aiff", "*.aif", "*.m4a", "*.aac"]
-    };
-
     private static readonly FilePickerFileType TextFileType = new(LocalizationService.Get("MainWindow.FileTypes.TextFile"))
     {
         Patterns = ["*.txt", "*.md"]
@@ -531,93 +521,6 @@ public partial class MainWindow : Window
     {
         if (sender is Control control && control.DataContext is SentMediaItemViewModel item)
             item.HighlightCommand.Execute(null);
-    }
-
-    // Event medium (timer/alarm/interval automatically trigger an image/video/audio): two
-    // click handlers each ("From library…" for image/video, "Audio…" for audio from disk) for the
-    // "Add" tab (DataContext = MainWindowViewModel, target one of the three staging configs)
-    // plus one each for an already existing item (DataContext = TimelineDisplayItemViewModel).
-    private void OnChooseTimerTriggerMediaClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) ChooseTriggerMediaFromLibrary(vm.MediaLibrary, vm.NewTimerTriggerMedia);
-    }
-
-    private async void OnChooseTimerTriggerAudioClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) await ChooseTriggerAudioAsync(vm.NewTimerTriggerMedia);
-    }
-
-    private void OnChooseAlarmTriggerMediaClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) ChooseTriggerMediaFromLibrary(vm.MediaLibrary, vm.NewAlarmTriggerMedia);
-    }
-
-    private async void OnChooseAlarmTriggerAudioClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) await ChooseTriggerAudioAsync(vm.NewAlarmTriggerMedia);
-    }
-
-    private void OnChooseIntervalTriggerMediaClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) ChooseTriggerMediaFromLibrary(vm.MediaLibrary, vm.NewIntervalTriggerMedia);
-    }
-
-    private async void OnChooseIntervalTriggerAudioClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) await ChooseTriggerAudioAsync(vm.NewIntervalTriggerMedia);
-    }
-
-    private void OnChooseItemTriggerMediaClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Control control || control.DataContext is not TimelineDisplayItemViewModel item) return;
-        if (DataContext is MainWindowViewModel vm) ChooseTriggerMediaFromLibrary(vm.MediaLibrary, item.TriggerMedia);
-    }
-
-    private async void OnChooseItemTriggerAudioClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Control control && control.DataContext is TimelineDisplayItemViewModel item)
-            await ChooseTriggerAudioAsync(item.TriggerMedia);
-    }
-
-    /// <summary>
-    ///     Image/video for an event medium comes exclusively from the media library (no more
-    ///     file dialog) - this ensures that every event medium image/video also
-    ///     exists as a library entry and the delete warning (RemoveMediaLibraryItem) can
-    ///     reliably detect it.
-    /// </summary>
-    private void ChooseTriggerMediaFromLibrary(IEnumerable<MediaLibraryItemViewModel> library, TriggerMediaConfig target)
-    {
-        var picker = new MediaLibraryPickerWindow(library, item =>
-        {
-            target.Path = item.LocalPath;
-            target.FileName = item.Name;
-            target.Kind = item.Kind;
-            target.Loop = item.Loop;
-        });
-        picker.Show(this);
-    }
-
-    private async Task ChooseTriggerAudioAsync(TriggerMediaConfig target)
-    {
-        var topLevel = GetTopLevel(this);
-        if (topLevel is null) return;
-
-        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = LocalizationService.Get("MainWindow.Dialogs.ChooseAudioForEventMedium"),
-            AllowMultiple = false,
-            FileTypeFilter = [TriggerAudioFileType]
-        });
-
-        if (files.Count == 0) return;
-
-        var localPath = files[0].TryGetLocalPath();
-        if (string.IsNullOrWhiteSpace(localPath)) return;
-        if (!MediaTypeHelper.TryGetKind(localPath, out var kind, out _) || kind != MediaKind.Audio) return;
-
-        target.Path = localPath;
-        target.FileName = Path.GetFileName(localPath);
-        target.Kind = kind;
     }
 
     private void OnMediaLibraryItemDoubleTapped(object? sender, TappedEventArgs e)

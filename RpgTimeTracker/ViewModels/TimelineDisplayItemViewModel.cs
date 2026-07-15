@@ -97,9 +97,6 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
         }
     }
 
-    [RelayCommand]
-    private void ClearTargetScene() => TargetSceneId = null;
-
     public bool IsTimer => _timer is not null;
     public bool IsAlarm => _alarm is not null;
     public bool IsInterval => _interval is not null;
