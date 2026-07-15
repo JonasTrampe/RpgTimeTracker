@@ -1,3 +1,4 @@
+using System.Reflection;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Services;
 
@@ -101,6 +102,37 @@ public class GameClockServiceTests
         clock.SpeedMultiplier = 60.0;
 
         Assert.Equal(60.0, clock.SpeedMultiplier);
+    }
+
+    /// <summary>Regression test for a real bug: the DispatcherTimer fires every 200ms, so each
+    ///     tick's real-time delta at 1x speed is well under a second. GameInstant.Add truncates a
+    ///     TimeSpan to whole seconds via a (long) cast, so applying each tick's delta directly
+    ///     silently discarded it every time - CurrentTime never advanced at all, while Timers/Alarms
+    ///     (which track elapsed time as a plain TimeSpan, not through GameInstant) kept working
+    ///     fine, making the bug look like "just the display is frozen." Fixed by accumulating the
+    ///     sub-second remainder across ticks instead of dropping it (see GameClockService's
+    ///     _carrySeconds field) - this drives the same private OnTimerTick the DispatcherTimer
+    ///     calls, since a DispatcherTimer needs a running Avalonia dispatcher to fire on its own,
+    ///     which a plain unit test doesn't have.</summary>
+    [Fact]
+    public void Repeated_sub_second_ticks_accumulate_instead_of_being_dropped()
+    {
+        using var clock = new GameClockService(Start);
+        clock.Start();
+
+        var onTimerTick = typeof(GameClockService).GetMethod("OnTimerTick", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+        // 25 ticks x ~50ms real each (well under 1s per tick, matching the DispatcherTimer's 200ms
+        // interval at 1x-4x speed) - without the fix, every single one truncates to zero and
+        // CurrentTime never moves, no matter how many ticks fire.
+        for (var i = 0; i < 25; i++)
+        {
+            Thread.Sleep(50);
+            onTimerTick.Invoke(clock, [null, EventArgs.Empty]);
+        }
+
+        Assert.True(clock.CurrentTime > Start,
+            "CurrentTime should have advanced from the accumulated sub-second ticks, not stayed frozen at Start.");
     }
 
     [Fact]

@@ -2162,3 +2162,47 @@ without any of `PlayPlaylistAsync`'s bookkeeping (`CurrentPlaylist`,
 to for a single Scene track, so building a throwaway one-track
 `PlaylistViewModel` just to reuse `PlayPlaylistAsync` would have added
 machinery instead of removing it.
+
+## Fix: sub-second clock ticks were silently discarded, freezing the displayed game time
+
+Reported as "the time in the Host/Player windows doesn't run anymore,"
+with a telling clue: Timers and Alarms kept working fine. That split is
+the key to the bug. `GameClockService`'s `DispatcherTimer` fires every
+200ms, and at 1x speed that's a real-time delta well under a second per
+tick. `GameInstant.Add` stores only whole seconds and applies a delta via
+`new(TotalSeconds + (long)delta.TotalSeconds)` - casting a sub-second
+`TimeSpan` (e.g. 0.2s) to `long` truncates it to zero. Every tick's delta
+was silently discarded before this fix, so `CurrentTime` only ever
+advanced when a single tick's delta happened to exceed a full second
+(e.g. after an unusually long UI stall) - to an observer, the clock looked
+completely frozen. Timers/Alarms were unaffected because they track
+elapsed time as a plain `TimeSpan` internally, never going through
+`GameInstant.Add`, so they kept counting down correctly the whole time -
+which is why the report specifically said "just the display," not "the
+whole engine."
+
+This was diagnosed, not guessed: a throttled temporary debug log (later
+removed) at the point where the display string is set showed
+`newTime.TotalSeconds` staying byte-for-byte identical across dozens of
+ticks with a nonzero `gameDelta` on every one - conclusive evidence the
+tick loop itself was firing and computing correctly, but its result
+never stuck. Actual log files from the running app (`%AppData%/
+RpgTimeTracker/logs`) were essential here; reasoning about the code in
+isolation had already (wrongly) pointed at exceptions in calendar
+formatting and DispatcherTimer starvation before the live diagnostic
+settled it.
+
+Fixed in `GameClockService` by accumulating the fractional game-seconds
+across ticks (`_carrySeconds`) and only applying whole seconds to
+`CurrentTime`, carrying the remainder to the next tick rather than
+dropping it - regardless of tick interval or `SpeedMultiplier`. The full-
+precision `gameDelta` `TimeSpan` is still passed to `Tick` subscribers
+unchanged, so Timers/Alarms keep their existing sub-second accuracy; only
+the `GameInstant` accumulation itself changed. This is a long-standing
+bug from the Phase 0 `GameInstant` migration (`GameClockService` itself
+was untouched by any later phase), not a regression from a specific
+recent change - it went unnoticed because nothing had exercised the
+`DispatcherTimer`-driven tick path in a unit test before (a plain xunit
+test has no running Avalonia dispatcher to pump it), only `Jump`/
+`SetTime`. The new regression test invokes the private tick handler
+directly with repeated real sub-second delays to close that gap.

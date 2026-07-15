@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Game time appeared frozen in both the Host and Player windows (Timers/
+  Alarms still worked, since they track elapsed time separately) -
+  `GameInstant.Add` truncates its `TimeSpan` argument to whole seconds via
+  a `(long)` cast, and the clock's `DispatcherTimer` fires every 200ms, so
+  each individual tick's real-time delta was well under a second and got
+  silently discarded every time; `CurrentTime` never advanced unless a
+  single tick happened to exceed a full second (e.g. after a long UI
+  stall). Fixed by accumulating the sub-second remainder across ticks in
+  `GameClockService` instead of dropping it, so whole seconds get applied
+  to `CurrentTime` once enough of them add up - regardless of tick
+  interval or speed multiplier. Added a regression test driving the
+  private tick handler directly with repeated sub-second real delays.
 - The bundled Gregorian calendar used a plain "every 4 years" leap rule,
   which wrongly marks century years like 1900/2100 as leap years (the
   real rule skips those unless also divisible by 400, e.g. 2000). Added
