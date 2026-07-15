@@ -87,6 +87,9 @@
   "MainWindow.TriggerMedia.ChooseFromLibrary": "Aus Bibliothek…",
   "MainWindow.TriggerMedia.ChooseTooltip": "Bild/Video aus der Medienbibliothek wählen",
   "MainWindow.TriggerMedia.ClearTooltip": "Event-Medium entfernen",
+  "MainWindow.Common.TargetSceneLabel": "Szene bei Auslösen aktivieren",
+  "MainWindow.Common.TargetSceneDescription": "Optional - aktiviert beim Auslösen zusätzlich die gewählte Szene, genau wie die Schaltfläche \"▶ Aktivieren\" im Szenen-Tab.",
+  "MainWindow.Common.ClearSelectionTooltip": "Leeren",
   "MainWindow.TriggerMedia.FullscreenCheckbox": "⛶ Vollbild bei Auslösung",
   "MainWindow.TriggerMedia.PauseClockCheckbox": "⏸ Spielzeit während Video pausieren",
 
