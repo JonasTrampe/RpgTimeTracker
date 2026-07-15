@@ -521,7 +521,7 @@ public sealed class TcpPlayerServerService : IDisposable
 
         lock (_mediaGate)
         {
-            _openMap = new OpenMapState(mapId, mapName, floors, tokens);
+            _openMap = new OpenMapState(mapId, mapName, floors, tokens.ToList());
         }
 
         ClientConnection[] clients;
@@ -927,17 +927,17 @@ public sealed class TcpPlayerServerService : IDisposable
 
         if (connection.MapEnabled)
         {
-            OpenMapState? openMap;
+            (OpenMapState State, List<MapTokenSnapshotDto> Tokens)? openMap;
             lock (_mediaGate)
             {
-                openMap = _openMap;
+                openMap = _openMap is { } state ? (state, state.Tokens.ToList()) : null;
             }
 
             // Full resync (all floor images + current fog), never an incremental replay - a
             // reconnecting client must never end up with a fog state that's partially stale.
-            if (openMap is not null)
-                await SendMapShowToClientAsync(connection, openMap.MapId, openMap.MapName, openMap.Floors,
-                        openMap.Tokens)
+            if (openMap is { } mapSnapshot)
+                await SendMapShowToClientAsync(connection, mapSnapshot.State.MapId, mapSnapshot.State.MapName,
+                        mapSnapshot.State.Floors, mapSnapshot.Tokens)
                     .ConfigureAwait(false);
         }
 
@@ -1207,15 +1207,15 @@ public sealed class TcpPlayerServerService : IDisposable
 
         if (enabled)
         {
-            OpenMapState? openMap;
+            (OpenMapState State, List<MapTokenSnapshotDto> Tokens)? openMap;
             lock (_mediaGate)
             {
-                openMap = _openMap;
+                openMap = _openMap is { } state ? (state, state.Tokens.ToList()) : null;
             }
 
-            if (openMap is not null)
-                _ = SendMapShowToClientAsync(target, openMap.MapId, openMap.MapName, openMap.Floors,
-                    openMap.Tokens);
+            if (openMap is { } mapSnapshot)
+                _ = SendMapShowToClientAsync(target, mapSnapshot.State.MapId, mapSnapshot.State.MapName,
+                    mapSnapshot.State.Floors, mapSnapshot.Tokens);
         }
         else
         {

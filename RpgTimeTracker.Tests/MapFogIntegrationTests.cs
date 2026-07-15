@@ -241,6 +241,40 @@ public sealed class MapFogIntegrationTests : IDisposable
     }
 
     [Fact]
+    public Task Reconnect_resyncs_the_latest_token_snapshot()
+    {
+        return HeadlessDispatch.RunAsync(async () =>
+        {
+            var client = await StartServerAndConnectedClientAsync();
+            var floorId = Guid.NewGuid();
+            var floor = CreateFloor(floorId, [1, 2, 3], FogMask.CreateFullyHidden(4, 4, 32));
+            var tokenId = Guid.NewGuid();
+
+            var firstMapShow =
+                WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
+            await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor],
+                [new MapTokenSnapshotDto { Id = tokenId, FloorId = floorId, Name = "Goblin" }]).ConfigureAwait(false);
+            await firstMapShow;
+
+            var upserted = WaitForEvent<MapTokenSnapshotDto>(h => client.MapTokenUpsertReceived += h,
+                h => client.MapTokenUpsertReceived -= h);
+            await _server.PublishMapTokenUpsertAsync(new MapTokenSnapshotDto
+                { Id = tokenId, FloorId = floorId, Name = "Goblin (wounded)" }).ConfigureAwait(false);
+            await upserted;
+
+            client.Disconnect();
+
+            var secondMapShow =
+                WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
+            await client.ConnectAsync("127.0.0.1", _port).ConfigureAwait(false);
+            var resynced = await secondMapShow;
+
+            Assert.Single(resynced.Tokens);
+            Assert.Equal("Goblin (wounded)", resynced.Tokens[0].Name);
+        });
+    }
+
+    [Fact]
     public Task Fog_reset_restores_the_starting_template()
     {
         return HeadlessDispatch.RunAsync(async () =>

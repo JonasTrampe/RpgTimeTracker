@@ -60,11 +60,24 @@
                                  static RenderTransform (half its own 32px size). -->
                             <Border Width="32" Height="32" CornerRadius="16" ClipToBounds="True"
                                     Background="Black" BorderBrush="White" BorderThickness="2"
-                                    RenderTransform="translate(-16px, -16px)"
-                                    ToolTip.Tip="{Binding Name}">
-                                <TextBlock Text="{Binding Name}" FontSize="10" Foreground="White"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis" MaxWidth="30" />
+                                    RenderTransform="translate(-16px, -16px)">
+                                <ToolTip.Tip>
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                   IsVisible="{Binding Name, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" MaxWidth="260"
+                                                   IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                    </StackPanel>
+                                </ToolTip.Tip>
+                                <Panel>
+                                    <TextBlock Text="{Binding IconGlyph}" FontSize="16" Foreground="White"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               IsVisible="{Binding IconGlyph, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                    <TextBlock Text="{Binding Name}" FontSize="10" Foreground="White"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="30"
+                                               IsVisible="{Binding IconGlyph, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+                                </Panel>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
