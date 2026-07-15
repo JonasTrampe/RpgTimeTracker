@@ -17,7 +17,7 @@ public partial class TimeSpanInput : UserControl
 
     public static readonly StyledProperty<int> LimitDaysProperty =
         AvaloniaProperty.Register<TimeSpanInput, int>(nameof(LimitDays), 120);
-    
+
     public static readonly StyledProperty<int> LimitHoursProperty =
         AvaloniaProperty.Register<TimeSpanInput, int>(nameof(LimitHours), 23);
 
@@ -57,7 +57,7 @@ public partial class TimeSpanInput : UserControl
         get => GetValue(AllowEmptyProperty);
         set => SetValue(AllowEmptyProperty, value);
     }
-    
+
     public int LimitDays
     {
         get => GetValue(LimitDaysProperty);
@@ -96,7 +96,7 @@ public partial class TimeSpanInput : UserControl
         // recomputing Text from those stale non-blank boxes here would permanently overwrite an
         // intentionally-empty bound value with "00:00:00".
         if ((change.Property == LimitDaysProperty ||
-                change.Property == LimitHoursProperty ||
+             change.Property == LimitHoursProperty ||
              change.Property == LimitMinutesProperty ||
              change.Property == LimitSecondsProperty) &&
             !_updating)
@@ -137,7 +137,7 @@ public partial class TimeSpanInput : UserControl
         _updating = true;
         try
         {
-            if (AllowEmpty  &&
+            if (AllowEmpty &&
                 string.IsNullOrWhiteSpace(DaysBox.Text) &&
                 string.IsNullOrWhiteSpace(HoursBox.Text) &&
                 string.IsNullOrWhiteSpace(MinutesBox.Text) &&
@@ -153,14 +153,9 @@ public partial class TimeSpanInput : UserControl
             var seconds = Math.Clamp(ParseNonNegative(SecondsBox.Text), 0, LimitSeconds);
 
             if (days > 0)
-            {
                 Text = $"{days}.{hours:00}:{minutes:00}:{seconds:00}";
-            }
             else
-            {
                 Text = $"{hours:00}:{minutes:00}:{seconds:00}";
-            }
-
         }
         finally
         {

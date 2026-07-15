@@ -72,9 +72,20 @@ public partial class CalendarDateInput : UserControl
         return count > 0 ? count : 12;
     }
 
-    private static int MaxHour() => Math.Max(0, CalendarService.Active.HoursPerDay - 1);
-    private static int MaxMinute() => Math.Max(0, CalendarService.Active.MinutesPerHour - 1);
-    private static int MaxSecond() => Math.Max(0, CalendarService.Active.SecondsPerMinute - 1);
+    private static int MaxHour()
+    {
+        return Math.Max(0, CalendarService.Active.HoursPerDay - 1);
+    }
+
+    private static int MaxMinute()
+    {
+        return Math.Max(0, CalendarService.Active.MinutesPerHour - 1);
+    }
+
+    private static int MaxSecond()
+    {
+        return Math.Max(0, CalendarService.Active.SecondsPerMinute - 1);
+    }
 
     private void UpdateBoxesFromText(string text)
     {

@@ -41,9 +41,16 @@ public partial class AlarmItemViewModel : ObservableObject, ITaggable
 
     [ObservableProperty] private int _soundRepeatCount;
 
+    /// <summary>
+    ///     Phase 4 of the Scenes/Tags/Calendars project: if set, firing this Alarm also
+    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.
+    /// </summary>
+    [ObservableProperty] private Guid? _targetSceneId;
+
     [ObservableProperty] private string _triggerAtDateTimeTextEdit;
 
-    public AlarmItemViewModel(AlarmItem model, GameInstant currentGameTime, Action<AlarmItemViewModel> onDeleteRequested)
+    public AlarmItemViewModel(AlarmItem model, GameInstant currentGameTime,
+        Action<AlarmItemViewModel> onDeleteRequested)
     {
         _model = model;
         _onDeleteRequested = onDeleteRequested;
@@ -69,14 +76,6 @@ public partial class AlarmItemViewModel : ObservableObject, ITaggable
     /// <summary>Optional image/video that is automatically distributed when this alarm triggers.</summary>
     public TriggerMediaConfig TriggerMedia { get; } = new();
 
-    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate tag list from the library-wide
-    ///     Tags, used to filter the Elementliste.</summary>
-    public ObservableCollection<Guid> TagIds { get; } = [];
-
-    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this Alarm also
-    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.</summary>
-    [ObservableProperty] private Guid? _targetSceneId;
-
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
 
@@ -87,7 +86,8 @@ public partial class AlarmItemViewModel : ObservableObject, ITaggable
         get
         {
             var date = CalendarService.Active.ToCalendarDate(_model.TriggerAt);
-            return $"{date.WeekdayName}, {date.Day:00}.{date.MonthIndex + 1:00}.{date.Year:0000} {date.Hour:00}:{date.Minute:00}";
+            return
+                $"{date.WeekdayName}, {date.Day:00}.{date.MonthIndex + 1:00}.{date.Year:0000} {date.Hour:00}:{date.Minute:00}";
         }
     }
 
@@ -117,7 +117,16 @@ public partial class AlarmItemViewModel : ObservableObject, ITaggable
     public int SoundRepeatCountToPlay => _model.SoundRepeatCount;
     public TimeSpan? TimeUntilNextEvent => _model.IsTriggered ? null : _model.TimeRemaining(_currentGameTime);
 
-    /// <summary>Called by MainWindowViewModel on LocalizationService.LanguageChanged (see LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).</summary>
+    /// <summary>
+    ///     Timer-specific Tag Ids (see TimerTag) - a separate tag list from the library-wide
+    ///     Tags, used to filter the Elementliste.
+    /// </summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
+
+    /// <summary>
+    ///     Called by MainWindowViewModel on LocalizationService.LanguageChanged (see
+    ///     LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).
+    /// </summary>
     public void RefreshLocalizedText()
     {
         OnPropertyChanged(string.Empty);
@@ -275,7 +284,8 @@ public partial class AlarmItemViewModel : ObservableObject, ITaggable
             RepeatInterval = dto.RepeatIntervalTicks.HasValue ? TimeSpan.FromTicks(dto.RepeatIntervalTicks.Value) : null
         };
         model.Restore(dto.IsTriggered);
-        var vm = new AlarmItemViewModel(model, currentGameTime, onDeleteRequested) { TargetSceneId = dto.TargetSceneId };
+        var vm = new AlarmItemViewModel(model, currentGameTime, onDeleteRequested)
+            { TargetSceneId = dto.TargetSceneId };
         foreach (var tagId in dto.TagIds) vm.TagIds.Add(tagId);
         if (!string.IsNullOrWhiteSpace(dto.TriggerMediaPath) &&
             Enum.TryParse<MediaKind>(dto.TriggerMediaKind, out var kind) && kind != MediaKind.None)

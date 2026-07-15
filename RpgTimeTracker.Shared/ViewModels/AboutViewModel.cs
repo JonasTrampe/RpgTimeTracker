@@ -17,17 +17,17 @@ public sealed partial class AboutViewModel : ObservableObject, IDisposable
 {
     private const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
     private const string LicenseFileName = "LICENSE.txt";
-
-    private readonly Func<string> _loadContentMarkdown;
     private readonly Assembly _assembly;
 
+    private readonly Func<string> _loadContentMarkdown;
+
     [ObservableProperty] private string _contentMarkdown;
-    [ObservableProperty] private string _versionText;
 
     /// <summary>Own project license (MIT), see LICENSE at the repo root.</summary>
     [ObservableProperty] private string _licenseText;
 
     [ObservableProperty] private string _thirdPartyNoticesText;
+    [ObservableProperty] private string _versionText;
 
     public AboutViewModel(Func<string> loadContentMarkdown, Assembly assembly)
     {

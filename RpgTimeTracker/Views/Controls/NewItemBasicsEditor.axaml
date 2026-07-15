@@ -15,10 +15,12 @@
                       DoubleTapped="OnIconDoubleTapped"
                       ToolTip.Tip="{DynamicResource NewItemBasics.IconComboTooltip}"
                       Margin="0,0,8,0" />
-            <Button Grid.Column="1" Classes="iconsquare" Content="⋯" ToolTip.Tip="{DynamicResource NewItemBasics.ChooseIconTooltip}"
+            <Button Grid.Column="1" Classes="iconsquare" Content="⋯"
+                    ToolTip.Tip="{DynamicResource NewItemBasics.ChooseIconTooltip}"
                     Click="OnChooseIconClick" Margin="0,0,10,0" />
-            <TextBox Grid.Column="2" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="{DynamicResource NewItemBasics.NamePlaceholder}"
-                     VerticalAlignment="Center" Margin="0,0,10,0" Width="150"/>
+            <TextBox Grid.Column="2" Text="{Binding Name, Mode=TwoWay}"
+                     PlaceholderText="{DynamicResource NewItemBasics.NamePlaceholder}"
+                     VerticalAlignment="Center" Margin="0,0,10,0" Width="150" />
             <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6">
                 <ComboBox ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding Sound}" Width="150"
                           VerticalAlignment="Center">
@@ -35,13 +37,16 @@
         </Grid>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
-            <TextBlock Classes="muted" Text="{DynamicResource NewItemBasics.AppearanceLabel}" VerticalAlignment="Center" />
+            <TextBlock Classes="muted" Text="{DynamicResource NewItemBasics.AppearanceLabel}"
+                       VerticalAlignment="Center" />
             <ColorPicker Color="{Binding ColorHex, Converter={x:Static conv:HexColorConverter.Instance}, Mode=TwoWay}"
                          VerticalAlignment="Center"
                          ToolTip.Tip="{DynamicResource NewItemBasics.ColorPickerTooltip}" />
-            <CheckBox Content="{DynamicResource NewItemBasics.BlinkCheckbox}" IsChecked="{Binding Blink}" VerticalAlignment="Center"
+            <CheckBox Content="{DynamicResource NewItemBasics.BlinkCheckbox}" IsChecked="{Binding Blink}"
+                      VerticalAlignment="Center"
                       ToolTip.Tip="{DynamicResource NewItemBasics.BlinkTooltip}" />
-            <CheckBox Content="{DynamicResource NewItemBasics.PlayerVisibleCheckbox}" IsChecked="{Binding IsPlayerVisible}" VerticalAlignment="Center"
+            <CheckBox Content="{DynamicResource NewItemBasics.PlayerVisibleCheckbox}"
+                      IsChecked="{Binding IsPlayerVisible}" VerticalAlignment="Center"
                       ToolTip.Tip="{DynamicResource NewItemBasics.PlayerVisibleTooltip}" />
         </StackPanel>
     </Grid>

@@ -2,7 +2,6 @@ using System;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using RpgTimeTracker.Shared.Models;
 
 namespace RpgTimeTracker.ViewModels;
 
@@ -14,17 +13,20 @@ namespace RpgTimeTracker.ViewModels;
 /// </summary>
 public sealed partial class MapFloorItemViewModel : ObservableObject
 {
-    private readonly Action<MapFloorItemViewModel> _onDeleteRequested;
     private readonly Action<MapFloorItemViewModel>? _onChanged;
+    private readonly Action<MapFloorItemViewModel> _onDeleteRequested;
 
-    [ObservableProperty] private string _name;
-
-    /// <summary>GM-editable per floor (see MainWindowViewModel.RescaleFloorCellSizeAsync) - a
-    ///     change rescales the on-disk/cached fog masks and GridWidth/GridHeight to match.</summary>
+    /// <summary>
+    ///     GM-editable per floor (see MainWindowViewModel.RescaleFloorCellSizeAsync) - a
+    ///     change rescales the on-disk/cached fog masks and GridWidth/GridHeight to match.
+    /// </summary>
     [ObservableProperty] private int _cellSizePx;
 
-    [ObservableProperty] private int _gridWidth;
     [ObservableProperty] private int _gridHeight;
+
+    [ObservableProperty] private int _gridWidth;
+
+    [ObservableProperty] private string _name;
 
     public MapFloorItemViewModel(
         Guid id,
@@ -55,9 +57,11 @@ public sealed partial class MapFloorItemViewModel : ObservableObject
     public string FogPath { get; private set; }
     public Bitmap? Thumbnail { get; }
 
-    /// <summary>Called only after the backing files have already been moved to their new
+    /// <summary>
+    ///     Called only after the backing files have already been moved to their new
     ///     location - see MainWindowViewModel.MoveMapLibraryItemToScope, which moves the whole
-    ///     per-map directory in one step and then updates every floor's paths to match.</summary>
+    ///     per-map directory in one step and then updates every floor's paths to match.
+    /// </summary>
     public void UpdatePaths(string newImagePath, string newFogPath)
     {
         ImagePath = newImagePath;

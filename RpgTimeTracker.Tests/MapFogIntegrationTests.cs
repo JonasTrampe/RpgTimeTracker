@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using RpgTimeTracker.Network;
 using RpgTimeTracker.PlayerClient.Network;
 using RpgTimeTracker.Shared.Models;
@@ -15,14 +12,12 @@ namespace RpgTimeTracker.Tests;
 ///     mocks. A mock of either side would not have caught the actual bugs this guards against
 ///     (e.g. a map-floor image header that forgot to set TotalLength, silently truncating every
 ///     transfer - see git history for "Fix map floor images never fully arriving on clients").
-///
 ///     Needs a running Avalonia dispatcher: TcpPlayerServerService posts its new-connection
 ///     catch-up and heartbeat-loop work through Dispatcher.UIThread (see
 ///     TcpPlayerServerService.SendCatchUpAsync/HeartbeatLoopAsync) since that code also reads
 ///     UI-bound state in the real app. Every test body below runs via HeadlessDispatch.RunAsync,
 ///     which provides that real, pumped dispatcher (see HeadlessDispatch.cs for why not
 ///     Avalonia.Headless.XUnit's [AvaloniaFact] directly).
-///
 ///     Not parallelized with itself (each test binds a real TCP port) - see the CollectionDefinition
 ///     below. Each test asks the OS for a free ephemeral port (TcpPlayerServerService.Start(0, ...))
 ///     rather than using a fixed one, so no two test runs (including Theory cases of the same
@@ -37,10 +32,10 @@ public sealed class MapFogIntegrationTests : IDisposable
     // (HeadlessUnitTestSession's dispatcher thread spinning up, JIT warmup, etc.) - a real hang
     // would still fail well before this budget.
     private static readonly TimeSpan EventTimeout = TimeSpan.FromSeconds(10);
-
-    private TcpPlayerServerService? _server;
     private PlayerTcpClientService? _client;
     private int _port;
+
+    private TcpPlayerServerService? _server;
 
     public void Dispose()
     {
@@ -52,13 +47,14 @@ public sealed class MapFogIntegrationTests : IDisposable
     private async Task<PlayerTcpClientService> StartServerAndConnectedClientAsync()
     {
         _server = new TcpPlayerServerService(
-            snapshotProvider: () => new SessionSnapshotParams(),
-            clockStateProvider: () => new ClockHeartbeatParams());
-        _server.Start(0, "MapFogIntegrationTests", enableDiscovery: false);
+            () => new SessionSnapshotParams(),
+            () => new ClockHeartbeatParams());
+        _server.Start(0, "MapFogIntegrationTests", false);
         _port = _server.Port;
 
         _client = new PlayerTcpClientService();
-        var connected = WaitForEvent<bool>(h => _client.ConnectionStateChanged += h, h => _client.ConnectionStateChanged -= h);
+        var connected = WaitForEvent<bool>(h => _client.ConnectionStateChanged += h,
+            h => _client.ConnectionStateChanged -= h);
 
         // ConnectionStateChanged fires as soon as the CLIENT's TCP connect succeeds - the
         // SERVER hasn't necessarily finished processing session.hello and added this connection
@@ -82,6 +78,7 @@ public sealed class MapFogIntegrationTests : IDisposable
     private static Task<T> WaitForEvent<T>(Action<Action<T>> subscribe, Action<Action<T>> unsubscribe)
     {
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         void Handler(T value)
         {
             tcs.TrySetResult(value);
@@ -91,9 +88,11 @@ public sealed class MapFogIntegrationTests : IDisposable
         return WaitWithTimeoutAsync(tcs.Task, () => unsubscribe(Handler));
     }
 
-    private static Task<(T1, T2)> WaitForEvent<T1, T2>(Action<Action<T1, T2>> subscribe, Action<Action<T1, T2>> unsubscribe)
+    private static Task<(T1, T2)> WaitForEvent<T1, T2>(Action<Action<T1, T2>> subscribe,
+        Action<Action<T1, T2>> unsubscribe)
     {
         var tcs = new TaskCompletionSource<(T1, T2)>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         void Handler(T1 first, T2 second)
         {
             tcs.TrySetResult((first, second));
@@ -178,7 +177,8 @@ public sealed class MapFogIntegrationTests : IDisposable
             var startingFog = FogMask.CreateFullyHidden(4, 4, 32);
             var floor = CreateFloor(floorId, [1, 2, 3], startingFog);
 
-            var mapShown = WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
+            var mapShown =
+                WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
             await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor]).ConfigureAwait(false);
             var mapShow = await mapShown;
 
@@ -212,7 +212,8 @@ public sealed class MapFogIntegrationTests : IDisposable
             var startingFog = FogMask.CreateFullyHidden(4, 4, 32);
             var floor = CreateFloor(floorId, [1, 2, 3], startingFog);
 
-            var mapShown = WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
+            var mapShown =
+                WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
             await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor]).ConfigureAwait(false);
             var mapShow = await mapShown;
             var clientStartingFog =
@@ -228,7 +229,8 @@ public sealed class MapFogIntegrationTests : IDisposable
             foreach (var cell in update.Cells) clientCurrentFog.SetRevealed(cell.X, cell.Y, cell.Revealed);
             Assert.True(clientCurrentFog.IsRevealed(1, 1));
 
-            var fogReset = WaitForEvent<Guid>(h => client.MapFogResetReceived += h, h => client.MapFogResetReceived -= h);
+            var fogReset =
+                WaitForEvent<Guid>(h => client.MapFogResetReceived += h, h => client.MapFogResetReceived -= h);
             await _server.PublishMapFogResetAsync(floorId).ConfigureAwait(false);
             var resetFloorId = await fogReset;
             Assert.Equal(floorId, resetFloorId);
@@ -273,7 +275,8 @@ public sealed class MapFogIntegrationTests : IDisposable
             var startingFog = FogMask.CreateFullyHidden(4, 4, 32);
             var floor = CreateFloor(floorId, [1, 2, 3], startingFog);
 
-            var firstMapShow = WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
+            var firstMapShow =
+                WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
             await _server!.PublishMapShowAsync(Guid.NewGuid(), "Test Map", [floor]).ConfigureAwait(false);
             await firstMapShow;
 
@@ -286,11 +289,13 @@ public sealed class MapFogIntegrationTests : IDisposable
 
             client.Disconnect();
 
-            var secondMapShow = WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
+            var secondMapShow =
+                WaitForEvent<MapShowParams>(h => client.MapShowReceived += h, h => client.MapShowReceived -= h);
             await client.ConnectAsync("127.0.0.1", _port).ConfigureAwait(false);
             var resynced = await secondMapShow;
 
-            var resyncedFog = FogMaskSerializer.Deserialize(Convert.FromBase64String(resynced.Floors[0].CurrentFogBase64));
+            var resyncedFog =
+                FogMaskSerializer.Deserialize(Convert.FromBase64String(resynced.Floors[0].CurrentFogBase64));
             Assert.True(resyncedFog.IsRevealed(1, 1));
         });
     }

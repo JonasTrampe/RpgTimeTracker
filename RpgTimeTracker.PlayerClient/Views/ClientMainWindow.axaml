@@ -143,9 +143,11 @@
                             ToolTip.Tip="{DynamicResource ClientMainWindow.Toolbar.MediaFullscreenTooltip}" />
                     <Button Grid.Column="2" Content="{Binding ConnectionToggleLabel}"
                             Command="{Binding ToggleConnectionSettingsCommand}" Margin="0,0,8,0" />
-                    <Button Grid.Column="3" Content="{DynamicResource ClientMainWindow.Toolbar.DisconnectButton}" Command="{Binding DisconnectCommand}"
+                    <Button Grid.Column="3" Content="{DynamicResource ClientMainWindow.Toolbar.DisconnectButton}"
+                            Command="{Binding DisconnectCommand}"
                             IsVisible="{Binding IsConnected}" Margin="0,0,8,0" />
-                    <Button Grid.Column="4" Content="{DynamicResource ClientMainWindow.Toolbar.AboutButton}" Click="OnOpenAboutClick" />
+                    <Button Grid.Column="4" Content="{DynamicResource ClientMainWindow.Toolbar.AboutButton}"
+                            Click="OnOpenAboutClick" />
                 </Grid>
             </Border>
 
@@ -159,7 +161,8 @@
                         <TextBlock Text="{DynamicResource ClientMainWindow.Connection.ManualHeader}" FontWeight="Bold" />
                         <StackPanel Spacing="4">
                             <TextBlock Text="{DynamicResource ClientMainWindow.Connection.HostLabel}" Classes="muted" />
-                            <TextBox Text="{Binding Host, Mode=TwoWay}" PlaceholderText="{DynamicResource ClientMainWindow.Connection.HostPlaceholder}" />
+                            <TextBox Text="{Binding Host, Mode=TwoWay}"
+                                     PlaceholderText="{DynamicResource ClientMainWindow.Connection.HostPlaceholder}" />
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Text="{DynamicResource ClientMainWindow.Connection.PortLabel}" Classes="muted" />
@@ -168,8 +171,9 @@
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Text="{DynamicResource ClientMainWindow.Connection.PinLabel}" Classes="muted" />
-                            <TextBox Text="{Binding Pin, Mode=TwoWay}" PasswordChar="•" PlaceholderText="{DynamicResource ClientMainWindow.Connection.PinPlaceholder}"
-                                      MaxLength="32" />
+                            <TextBox Text="{Binding Pin, Mode=TwoWay}" PasswordChar="•"
+                                     PlaceholderText="{DynamicResource ClientMainWindow.Connection.PinPlaceholder}"
+                                     MaxLength="32" />
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Text="{DynamicResource Settings.Language}" Classes="muted" />
@@ -178,14 +182,17 @@
                                       HorizontalAlignment="Stretch" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Classes="primary" Content="{DynamicResource ClientMainWindow.Connection.ConnectButton}" Command="{Binding ConnectCommand}" />
+                            <Button Classes="primary"
+                                    Content="{DynamicResource ClientMainWindow.Connection.ConnectButton}"
+                                    Command="{Binding ConnectCommand}" />
                             <Button Command="{Binding DiscoverCommand}" IsEnabled="{Binding !IsDiscovering}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <TextBlock Text="🔄" IsVisible="{Binding IsDiscovering}" />
                                     <TextBlock Text="{DynamicResource ClientMainWindow.Connection.DiscoverButton}" />
                                 </StackPanel>
                             </Button>
-                            <Button Content="{DynamicResource ClientMainWindow.Toolbar.DisconnectButton}" Command="{Binding DisconnectCommand}" />
+                            <Button Content="{DynamicResource ClientMainWindow.Toolbar.DisconnectButton}"
+                                    Command="{Binding DisconnectCommand}" />
                         </StackPanel>
                         <TextBlock Classes="muted"
                                    Text="{DynamicResource ClientMainWindow.Connection.HostAppHint}"
@@ -201,10 +208,14 @@
                             Margin="16,0,0,0">
                         <DockPanel LastChildFill="True">
                             <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-                                <TextBlock Grid.Column="0" Text="{DynamicResource ClientMainWindow.Discovery.FoundHeader}" FontWeight="Bold" />
-                                <TextBlock Grid.Column="1" Classes="muted" Text="{DynamicResource ClientMainWindow.Discovery.SearchingLabel}"
+                                <TextBlock Grid.Column="0"
+                                           Text="{DynamicResource ClientMainWindow.Discovery.FoundHeader}"
+                                           FontWeight="Bold" />
+                                <TextBlock Grid.Column="1" Classes="muted"
+                                           Text="{DynamicResource ClientMainWindow.Discovery.SearchingLabel}"
                                            IsVisible="{Binding IsDiscovering}" />
-                                <TextBlock Grid.Column="1" Classes="muted" Text="{DynamicResource ClientMainWindow.Discovery.SelectionHint}"
+                                <TextBlock Grid.Column="1" Classes="muted"
+                                           Text="{DynamicResource ClientMainWindow.Discovery.SelectionHint}"
                                            IsVisible="{Binding !IsDiscovering}" />
                             </Grid>
                             <TextBlock DockPanel.Dock="Top"
@@ -237,7 +248,9 @@
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding Display}" Classes="muted" />
                                                 </StackPanel>
-                                                <TextBlock Grid.Column="1" Text="{DynamicResource ClientMainWindow.Discovery.UseLabel}" Classes="muted"
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{DynamicResource ClientMainWindow.Discovery.UseLabel}"
+                                                           Classes="muted"
                                                            VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>

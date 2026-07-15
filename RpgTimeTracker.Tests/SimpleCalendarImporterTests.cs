@@ -10,106 +10,106 @@ public class SimpleCalendarImporterTests
     // shape (months/weekdays/leapYear/year/time/seasons/moons) to exercise the converter without
     // depending on network access during tests.
     private const string GregorianLikeJson = """
-        {
-          "calendar": {
-            "months": [
-              { "name": "January", "numericRepresentation": 1, "numberOfDays": 31, "numberOfLeapYearDays": 31, "intercalary": false },
-              { "name": "February", "numericRepresentation": 2, "numberOfDays": 28, "numberOfLeapYearDays": 29, "intercalary": false }
-            ],
-            "weekdays": [
-              { "name": "Sunday", "numericRepresentation": 1 },
-              { "name": "Monday", "numericRepresentation": 2 }
-            ],
-            "leapYear": { "rule": "gregorian", "customMod": 0 },
-            "year": { "numericRepresentation": 2022, "firstWeekday": 4, "yearZero": 1970 },
-            "time": { "hoursInDay": 24, "minutesInHour": 60, "secondsInMinute": 60 },
-            "seasons": [
-              { "name": "Spring", "startingMonth": 3, "startingDay": 19, "color": "#46b946" }
-            ],
-            "moons": [
-              {
-                "name": "Moon",
-                "cycleLength": 29.53059,
-                "firstNewMoon": { "year": 2000, "month": 1, "day": 4 },
-                "color": "#ffffff"
-              }
-            ]
-          }
-        }
-        """;
+                                             {
+                                               "calendar": {
+                                                 "months": [
+                                                   { "name": "January", "numericRepresentation": 1, "numberOfDays": 31, "numberOfLeapYearDays": 31, "intercalary": false },
+                                                   { "name": "February", "numericRepresentation": 2, "numberOfDays": 28, "numberOfLeapYearDays": 29, "intercalary": false }
+                                                 ],
+                                                 "weekdays": [
+                                                   { "name": "Sunday", "numericRepresentation": 1 },
+                                                   { "name": "Monday", "numericRepresentation": 2 }
+                                                 ],
+                                                 "leapYear": { "rule": "gregorian", "customMod": 0 },
+                                                 "year": { "numericRepresentation": 2022, "firstWeekday": 4, "yearZero": 1970 },
+                                                 "time": { "hoursInDay": 24, "minutesInHour": 60, "secondsInMinute": 60 },
+                                                 "seasons": [
+                                                   { "name": "Spring", "startingMonth": 3, "startingDay": 19, "color": "#46b946" }
+                                                 ],
+                                                 "moons": [
+                                                   {
+                                                     "name": "Moon",
+                                                     "cycleLength": 29.53059,
+                                                     "firstNewMoon": { "year": 2000, "month": 1, "day": 4 },
+                                                     "color": "#ffffff"
+                                                   }
+                                                 ]
+                                               }
+                                             }
+                                             """;
 
     private const string CustomLeapJson = """
-        {
-          "calendar": {
-            "months": [
-              { "name": "Hammer", "numberOfDays": 30, "numberOfLeapYearDays": 30, "intercalary": false },
-              { "name": "Midwinter", "numberOfDays": 1, "numberOfLeapYearDays": 1, "intercalary": true },
-              { "name": "Midsummer", "numberOfDays": 1, "numberOfLeapYearDays": 2, "intercalary": true }
-            ],
-            "weekdays": [
-              { "name": "1st" }, { "name": "2nd" }
-            ],
-            "leapYear": { "rule": "custom", "customMod": 4 },
-            "year": { "numericRepresentation": 1495, "firstWeekday": 0 },
-            "time": { "hoursInDay": 24, "minutesInHour": 60, "secondsInMinute": 60 }
-          }
-        }
-        """;
+                                          {
+                                            "calendar": {
+                                              "months": [
+                                                { "name": "Hammer", "numberOfDays": 30, "numberOfLeapYearDays": 30, "intercalary": false },
+                                                { "name": "Midwinter", "numberOfDays": 1, "numberOfLeapYearDays": 1, "intercalary": true },
+                                                { "name": "Midsummer", "numberOfDays": 1, "numberOfLeapYearDays": 2, "intercalary": true }
+                                              ],
+                                              "weekdays": [
+                                                { "name": "1st" }, { "name": "2nd" }
+                                              ],
+                                              "leapYear": { "rule": "custom", "customMod": 4 },
+                                              "year": { "numericRepresentation": 1495, "firstWeekday": 0 },
+                                              "time": { "hoursInDay": 24, "minutesInHour": 60, "secondsInMinute": 60 }
+                                            }
+                                          }
+                                          """;
 
     private const string NoLeapJson = """
-        {
-          "calendar": {
-            "months": [
-              { "name": "Praios", "numberOfDays": 30, "intercalary": false },
-              { "name": "Namenlose Tage", "numberOfDays": 5, "intercalary": false }
-            ],
-            "weekdays": [ { "name": "Windstag" } ],
-            "leapYear": { "rule": "none", "customMod": 0 },
-            "year": { "numericRepresentation": 1040, "firstWeekday": 3 },
-            "time": { "hoursInDay": 24, "minutesInHour": 60, "secondsInMinute": 60 }
-          }
-        }
-        """;
+                                      {
+                                        "calendar": {
+                                          "months": [
+                                            { "name": "Praios", "numberOfDays": 30, "intercalary": false },
+                                            { "name": "Namenlose Tage", "numberOfDays": 5, "intercalary": false }
+                                          ],
+                                          "weekdays": [ { "name": "Windstag" } ],
+                                          "leapYear": { "rule": "none", "customMod": 0 },
+                                          "year": { "numericRepresentation": 1040, "firstWeekday": 3 },
+                                          "time": { "hoursInDay": 24, "minutesInHour": 60, "secondsInMinute": 60 }
+                                        }
+                                      }
+                                      """;
 
     // A real-shaped "notes" array (sibling of "calendar", see e.g. dsa-tde5e.json) - one Yearly
     // note (repeats:3) and one Weekly note (repeats:1) to exercise both the import and the skip path.
     private const string JsonWithNotes = """
-        {
-          "calendar": {
-            "months": [ { "name": "Praios", "numberOfDays": 30, "intercalary": false } ],
-            "weekdays": [ { "name": "Windstag" } ],
-            "leapYear": { "rule": "none", "customMod": 0 },
-            "year": { "numericRepresentation": 1040, "firstWeekday": 0 },
-            "time": { "hoursInDay": 24, "minutesInHour": 60, "secondsInMinute": 60 }
-          },
-          "notes": [
-            {
-              "name": "Sommersonnenwende",
-              "content": "<p>Beginn des neuen Jahres, <b>hoechster Feiertag</b></p>",
-              "flags": {
-                "foundryvtt-simple-calendar": {
-                  "noteData": {
-                    "startDate": { "year": 1040, "month": 0, "day": 0, "hour": 12, "minute": 0, "seconds": 0 },
-                    "repeats": 3
-                  }
-                }
-              }
-            },
-            {
-              "name": "Weekly Market Day",
-              "content": "A weekly note that should be skipped.",
-              "flags": {
-                "foundryvtt-simple-calendar": {
-                  "noteData": {
-                    "startDate": { "year": 1040, "month": 0, "day": 3, "hour": 0, "minute": 0, "seconds": 0 },
-                    "repeats": 1
-                  }
-                }
-              }
-            }
-          ]
-        }
-        """;
+                                         {
+                                           "calendar": {
+                                             "months": [ { "name": "Praios", "numberOfDays": 30, "intercalary": false } ],
+                                             "weekdays": [ { "name": "Windstag" } ],
+                                             "leapYear": { "rule": "none", "customMod": 0 },
+                                             "year": { "numericRepresentation": 1040, "firstWeekday": 0 },
+                                             "time": { "hoursInDay": 24, "minutesInHour": 60, "secondsInMinute": 60 }
+                                           },
+                                           "notes": [
+                                             {
+                                               "name": "Sommersonnenwende",
+                                               "content": "<p>Beginn des neuen Jahres, <b>hoechster Feiertag</b></p>",
+                                               "flags": {
+                                                 "foundryvtt-simple-calendar": {
+                                                   "noteData": {
+                                                     "startDate": { "year": 1040, "month": 0, "day": 0, "hour": 12, "minute": 0, "seconds": 0 },
+                                                     "repeats": 3
+                                                   }
+                                                 }
+                                               }
+                                             },
+                                             {
+                                               "name": "Weekly Market Day",
+                                               "content": "A weekly note that should be skipped.",
+                                               "flags": {
+                                                 "foundryvtt-simple-calendar": {
+                                                   "noteData": {
+                                                     "startDate": { "year": 1040, "month": 0, "day": 3, "hour": 0, "minute": 0, "seconds": 0 },
+                                                     "repeats": 1
+                                                   }
+                                                 }
+                                               }
+                                             }
+                                           ]
+                                         }
+                                         """;
 
     [Fact]
     public void LooksLikeSimpleCalendarFormat_detects_the_calendar_wrapper()
@@ -182,7 +182,8 @@ public class SimpleCalendarImporterTests
     [Fact]
     public void TryConvert_fails_gracefully_on_non_calendar_json()
     {
-        var success = SimpleCalendarImporter.TryConvert("""{"foo": 1}""", "X", out var definition, out _, out var error);
+        var success =
+            SimpleCalendarImporter.TryConvert("""{"foo": 1}""", "X", out var definition, out _, out var error);
 
         Assert.False(success);
         Assert.Null(definition);
@@ -203,7 +204,7 @@ public class SimpleCalendarImporterTests
         Assert.Equal(0, entry.MonthIndex);
         Assert.Equal(1, entry.Day);
         Assert.Equal(12, entry.Hour);
-        Assert.Contains(warnings, w => w.Contains("skipped", System.StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(warnings, w => w.Contains("skipped", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

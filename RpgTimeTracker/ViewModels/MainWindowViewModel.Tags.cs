@@ -22,11 +22,39 @@ namespace RpgTimeTracker.ViewModels;
 /// </summary>
 public partial class MainWindowViewModel
 {
-    public ObservableCollection<TagViewModel> Tags { get; } = [];
+    private readonly HashSet<Guid> _selectedTimerTagFilterIds = [];
+
+    private readonly Dictionary<TimelineDisplayItemViewModel, NotifyCollectionChangedEventHandler>
+        _timelineTagSubscriptions = new();
 
     [ObservableProperty] private string _newTagName = string.Empty;
 
+    [ObservableProperty] private string _newTimerTagName = string.Empty;
+    public ObservableCollection<TagViewModel> Tags { get; } = [];
+
     public bool HasNoTags => Tags.Count == 0;
+
+    // ==================== Timer-specific Tags (separate flat list from the library-wide Tags
+    // above) - attachable to any Timer/Alarm/IntervalEvent's TagIds, global or Scene-owned (both
+    // show up wrapped in a TimelineDisplayItemViewModel in TimelineItems), so the Elementliste's
+    // tag-filter bar isn't cluttered with Media/Sound/Map/NPC/Scene tags that make no sense there. ====================
+
+    public ObservableCollection<TagViewModel> TimerTags { get; } = [];
+
+    public bool HasNoTimerTags => TimerTags.Count == 0;
+
+    /// <summary>One chip per TimerTag in the Elementliste's filter bar - see ApplyTimerTagFilter.</summary>
+    public ObservableCollection<TagFilterOptionViewModel> TimerTagFilterOptions { get; } = [];
+
+    public bool HasNoTimerTagFilterOptions => TimerTagFilterOptions.Count == 0;
+
+    /// <summary>
+    ///     Elementliste's actual ItemsSource - TimelineItems filtered by whichever
+    ///     TimerTagFilterOptions are currently toggled on (OR semantics: showing any item
+    ///     carrying at least one selected tag), or every item if none are selected. Kept in sync
+    ///     by ApplyTimerTagFilter whenever TimelineItems or any item's TagIds changes.
+    /// </summary>
+    public ObservableCollection<TimelineDisplayItemViewModel> FilteredTimelineItems { get; } = [];
 
     private void LoadTags(List<Tag> tags)
     {
@@ -41,10 +69,12 @@ public partial class MainWindowViewModel
         NewTagName = string.Empty;
     }
 
-    /// <summary>Shared by the Settings-tab "Add" button (AddTag, above) and the "+" quick-add row
+    /// <summary>
+    ///     Shared by the Settings-tab "Add" button (AddTag, above) and the "+" quick-add row
     ///     in each item's TagSelectorFlyout (see CreateTagCommand) - so a GM tagging a Media/Sound/
     ///     Music/Map/NPC/Scene item doesn't have to leave that flyout and go to Settings just to
-    ///     define a new tag first.</summary>
+    ///     define a new tag first.
+    /// </summary>
     [RelayCommand]
     private void CreateTag(string? name)
     {
@@ -72,17 +102,31 @@ public partial class MainWindowViewModel
         ThemeSettingsService.SaveSettings(settings);
     }
 
-    /// <summary>Every place a Tag Id can be attached - registered into _usageRegistry so deleting a
+    /// <summary>
+    ///     Every place a Tag Id can be attached - registered into _usageRegistry so deleting a
     ///     tag (see RemoveTag) clears it from every item that had it, the same mechanism already
-    ///     used for trigger-media/playlist/NPC references.</summary>
+    ///     used for trigger-media/playlist/NPC references.
+    /// </summary>
     private IEnumerable<string> FindTagUsagesById(Guid tagId)
     {
-        foreach (var item in MediaLibrary) if (item.TagIds.Contains(tagId)) yield return item.Name;
-        foreach (var item in SoundLibrary) if (item.TagIds.Contains(tagId)) yield return item.Name;
-        foreach (var item in MusicLibrary) if (item.TagIds.Contains(tagId)) yield return item.Name;
-        foreach (var item in MapLibrary) if (item.TagIds.Contains(tagId)) yield return item.Name;
-        foreach (var item in NpcLibrary) if (item.TagIds.Contains(tagId)) yield return item.Name;
-        foreach (var item in SceneLibrary) if (item.TagIds.Contains(tagId)) yield return item.Name;
+        foreach (var item in MediaLibrary)
+            if (item.TagIds.Contains(tagId))
+                yield return item.Name;
+        foreach (var item in SoundLibrary)
+            if (item.TagIds.Contains(tagId))
+                yield return item.Name;
+        foreach (var item in MusicLibrary)
+            if (item.TagIds.Contains(tagId))
+                yield return item.Name;
+        foreach (var item in MapLibrary)
+            if (item.TagIds.Contains(tagId))
+                yield return item.Name;
+        foreach (var item in NpcLibrary)
+            if (item.TagIds.Contains(tagId))
+                yield return item.Name;
+        foreach (var item in SceneLibrary)
+            if (item.TagIds.Contains(tagId))
+                yield return item.Name;
     }
 
     private void ClearTagReferencesById(Guid tagId)
@@ -95,34 +139,11 @@ public partial class MainWindowViewModel
         foreach (var item in SceneLibrary) item.TagIds.Remove(tagId);
     }
 
-    // ==================== Timer-specific Tags (separate flat list from the library-wide Tags
-    // above) - attachable to any Timer/Alarm/IntervalEvent's TagIds, global or Scene-owned (both
-    // show up wrapped in a TimelineDisplayItemViewModel in TimelineItems), so the Elementliste's
-    // tag-filter bar isn't cluttered with Media/Sound/Map/NPC/Scene tags that make no sense there. ====================
-
-    public ObservableCollection<TagViewModel> TimerTags { get; } = [];
-
-    [ObservableProperty] private string _newTimerTagName = string.Empty;
-
-    public bool HasNoTimerTags => TimerTags.Count == 0;
-
-    /// <summary>One chip per TimerTag in the Elementliste's filter bar - see ApplyTimerTagFilter.</summary>
-    public ObservableCollection<TagFilterOptionViewModel> TimerTagFilterOptions { get; } = [];
-
-    public bool HasNoTimerTagFilterOptions => TimerTagFilterOptions.Count == 0;
-
-    /// <summary>Elementliste's actual ItemsSource - TimelineItems filtered by whichever
-    ///     TimerTagFilterOptions are currently toggled on (OR semantics: showing any item
-    ///     carrying at least one selected tag), or every item if none are selected. Kept in sync
-    ///     by ApplyTimerTagFilter whenever TimelineItems or any item's TagIds changes.</summary>
-    public ObservableCollection<TimelineDisplayItemViewModel> FilteredTimelineItems { get; } = [];
-
-    private readonly HashSet<Guid> _selectedTimerTagFilterIds = [];
-    private readonly Dictionary<TimelineDisplayItemViewModel, NotifyCollectionChangedEventHandler> _timelineTagSubscriptions = new();
-
-    /// <summary>Called once from the constructor - keeps FilteredTimelineItems/subscriptions in
+    /// <summary>
+    ///     Called once from the constructor - keeps FilteredTimelineItems/subscriptions in
     ///     sync as items are added/removed from TimelineItems (both global and Scene-owned ones,
-    ///     see MainWindowViewModel.SceneLibrary.cs's AddSceneTimelineItem).</summary>
+    ///     see MainWindowViewModel.SceneLibrary.cs's AddSceneTimelineItem).
+    /// </summary>
     private void InitializeTimelineTagFiltering()
     {
         foreach (var item in TimelineItems) SubscribeTimelineItemTags(item);
@@ -155,7 +176,8 @@ public partial class MainWindowViewModel
     {
         TimerTagFilterOptions.Clear();
         _selectedTimerTagFilterIds.Clear();
-        foreach (var tag in TimerTags) TimerTagFilterOptions.Add(new TagFilterOptionViewModel(tag, OnTimerTagFilterToggled));
+        foreach (var tag in TimerTags)
+            TimerTagFilterOptions.Add(new TagFilterOptionViewModel(tag, OnTimerTagFilterToggled));
         OnPropertyChanged(nameof(HasNoTimerTagFilterOptions));
         ApplyTimerTagFilter();
     }
@@ -219,9 +241,11 @@ public partial class MainWindowViewModel
         ThemeSettingsService.SaveSettings(settings);
     }
 
-    /// <summary>Every Timer/Alarm/IntervalEvent, global or Scene-owned, is wrapped in a
+    /// <summary>
+    ///     Every Timer/Alarm/IntervalEvent, global or Scene-owned, is wrapped in a
     ///     TimelineDisplayItemViewModel and lives in TimelineItems - so a single loop over that
-    ///     covers both, unlike FindTagUsagesById which has to loop each library separately.</summary>
+    ///     covers both, unlike FindTagUsagesById which has to loop each library separately.
+    /// </summary>
     private IEnumerable<string> FindTimerTagUsagesById(Guid tagId)
     {
         foreach (var item in TimelineItems)

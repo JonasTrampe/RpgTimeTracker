@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,17 +13,6 @@ namespace RpgTimeTracker.Shared.ViewModels;
 
 public partial class CalendarEntryViewModel : ObservableObject
 {
-    // These are display strings, re-evaluated on each access via LocalizationService so
-    // language switches propagate immediately. They are never serialized: persisted data
-    // uses CalendarRecurrenceKind (enum) via ToRecurrenceKind/FromRecurrenceKind below, and
-    // these strings are only compared against each other (both always in the current
-    // language), never against a stored value from a previous language.
-    public static string RecurrenceNone => LocalizationService.Get("Calendar.RecurrenceNone");
-    public static string RecurrenceDaily => LocalizationService.Get("Calendar.RecurrenceDaily");
-    public static string RecurrenceWeekly => LocalizationService.Get("Calendar.RecurrenceWeekly");
-    public static string RecurrenceMonthly => LocalizationService.Get("Calendar.RecurrenceMonthly");
-    public static string RecurrenceYearly => LocalizationService.Get("Calendar.RecurrenceYearly");
-
     private readonly Action<CalendarEntryViewModel> _onChanged;
     private readonly Action<CalendarEntryViewModel> _onDeleteRequested;
 
@@ -36,6 +24,16 @@ public partial class CalendarEntryViewModel : ObservableObject
     [ObservableProperty] private string _repeatUntilText = string.Empty;
     [ObservableProperty] private string _startDateTimeText;
     private bool _suppressChangeNotifications;
+
+    /// <summary>
+    ///     Phase 4 of the Scenes/Tags/Calendars project: if set, this entry occurring also
+    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById. Host-only UI
+    ///     concern (the picker itself lives in MainWindow.axaml), but kept here alongside
+    ///     TriggerMedia since both round-trip through TryBuildDefinition/FromDefinition the same
+    ///     way.
+    /// </summary>
+    [ObservableProperty] private Guid? _targetSceneId;
+
     [ObservableProperty] private string _title = LocalizationService.Get("Calendar.NewEntryTitle");
     [ObservableProperty] private string? _validationMessage;
 
@@ -54,15 +52,19 @@ public partial class CalendarEntryViewModel : ObservableObject
         Validate();
     }
 
+    // These are display strings, re-evaluated on each access via LocalizationService so
+    // language switches propagate immediately. They are never serialized: persisted data
+    // uses CalendarRecurrenceKind (enum) via ToRecurrenceKind/FromRecurrenceKind below, and
+    // these strings are only compared against each other (both always in the current
+    // language), never against a stored value from a previous language.
+    public static string RecurrenceNone => LocalizationService.Get("Calendar.RecurrenceNone");
+    public static string RecurrenceDaily => LocalizationService.Get("Calendar.RecurrenceDaily");
+    public static string RecurrenceWeekly => LocalizationService.Get("Calendar.RecurrenceWeekly");
+    public static string RecurrenceMonthly => LocalizationService.Get("Calendar.RecurrenceMonthly");
+    public static string RecurrenceYearly => LocalizationService.Get("Calendar.RecurrenceYearly");
+
     public Guid Id { get; set; }
     public TriggerMediaConfig TriggerMedia { get; } = new();
-
-    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, this entry occurring also
-    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById. Host-only UI
-    ///     concern (the picker itself lives in MainWindow.axaml), but kept here alongside
-    ///     TriggerMedia since both round-trip through TryBuildDefinition/FromDefinition the same
-    ///     way.</summary>
-    [ObservableProperty] private Guid? _targetSceneId;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);
     public IBrush? ColorBrush => VisualItemHelper.TryBrush(ColorHex);
@@ -169,7 +171,8 @@ public partial class CalendarEntryViewModel : ObservableObject
             return false;
         }
 
-        if (repeatUntil.HasValue && CalendarService.Active.ToDayNumber(repeatUntil.Value) < CalendarService.Active.ToDayNumber(start))
+        if (repeatUntil.HasValue && CalendarService.Active.ToDayNumber(repeatUntil.Value) <
+            CalendarService.Active.ToDayNumber(start))
         {
             ValidationMessage = "Enddatum darf nicht vor dem Start liegen.";
             return false;

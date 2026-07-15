@@ -20,7 +20,8 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        DisableNetworkDiscovery = Array.Exists(args, a => a.Equals("--no-discovery", StringComparison.OrdinalIgnoreCase));
+        DisableNetworkDiscovery =
+            Array.Exists(args, a => a.Equals("--no-discovery", StringComparison.OrdinalIgnoreCase));
 
         AppLogging.Initialize("RpgTimeTracker");
         try

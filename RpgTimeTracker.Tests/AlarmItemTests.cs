@@ -119,7 +119,7 @@ public class AlarmItemTests
     {
         var alarm = new AlarmItem { TriggerAt = TriggerAt };
 
-        alarm.Restore(isTriggered: true);
+        alarm.Restore(true);
 
         Assert.True(alarm.IsTriggered);
     }

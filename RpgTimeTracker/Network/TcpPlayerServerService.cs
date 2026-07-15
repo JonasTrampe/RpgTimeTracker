@@ -32,7 +32,8 @@ public sealed record ConnectedClientInfo(
 
 /// <summary>
 ///     Read-only TCP publisher for the player client. Sends only JSON-RPC
-///     notifications (see RpgTimeTracker.Shared.Models.Rpc/RpgTimeTracker.Shared.Services.Rpc): a full state once on connect
+///     notifications (see RpgTimeTracker.Shared.Models.Rpc/RpgTimeTracker.Shared.Services.Rpc): a full state once on
+///     connect
 ///     (session.snapshot), afterwards only targeted delta events on actual changes
 ///     (start/stop/speed/jump/item change) instead of a periodically pushed full state.
 ///     Media is streamed in chunks: media.begin (metadata) followed by N raw binary frames.
@@ -65,8 +66,15 @@ public sealed class TcpPlayerServerService : IDisposable
     /// </summary>
     public static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    ///     How long to wait for the first session.hello of a newly connected client before the connection is considered
+    ///     dead.
+    /// </summary>
+    private static readonly TimeSpan HandshakeTimeout = TimeSpan.FromSeconds(5);
+
     private readonly List<ClientConnection> _clients = [];
     private readonly Func<ClockHeartbeatParams> _clockStateProvider;
+    private readonly Func<string?> _connectionPinProvider;
     private readonly object _gate = new();
     private readonly object _mediaGate = new();
 
@@ -80,28 +88,9 @@ public sealed class TcpPlayerServerService : IDisposable
     private readonly SemaphoreSlim _mediaSendLock = new(1, 1);
 
     private readonly Func<SessionSnapshotParams> _snapshotProvider;
-    private readonly Func<string?> _connectionPinProvider;
     private Task? _acceptTask;
     private PlayerMdnsAnnouncer? _announcer;
     private CancellationTokenSource? _cts;
-    private Task? _heartbeatTask;
-    private LanDiscoveryResponder? _lanDiscoveryResponder;
-
-    /// <summary>
-    ///     Last sent image/video (header + complete file), for newly connecting clients.
-    ///     Sounds DELIBERATELY don't register here - they aren't a "currently displayed" medium that
-    ///     a late-joining client would need to wait for (see PublishMediaAsync).
-    /// </summary>
-    private (MediaHeaderDto Header, byte[] FileBytes)? _lastMedia;
-
-    /// <summary>
-    ///     The map currently open to players, if any - cached so a newly connecting/reconnecting
-    ///     client gets a full resync (floor images + current fog) instead of an incremental
-    ///     replay, per the "never partially revealed/hidden by accident" requirement. Updated
-    ///     in place as fog changes (PublishMapFogUpdateAsync/PublishMapFogResetAsync) so the
-    ///     cache always reflects exactly what clients currently see.
-    /// </summary>
-    private OpenMapState? _openMap;
 
     /// <summary>
     ///     The music track currently playing (if any), cached so a newly-connecting client (or a
@@ -113,7 +102,26 @@ public sealed class TcpPlayerServerService : IDisposable
     /// </summary>
     private (MediaHeaderDto Header, byte[] FileBytes, DateTime StartedAtUtc)? _currentMusicTrack;
 
+    private Task? _heartbeatTask;
+    private LanDiscoveryResponder? _lanDiscoveryResponder;
+
+    /// <summary>
+    ///     Last sent image/video (header + complete file), for newly connecting clients.
+    ///     Sounds DELIBERATELY don't register here - they aren't a "currently displayed" medium that
+    ///     a late-joining client would need to wait for (see PublishMediaAsync).
+    /// </summary>
+    private (MediaHeaderDto Header, byte[] FileBytes)? _lastMedia;
+
     private TcpListener? _listener;
+
+    /// <summary>
+    ///     The map currently open to players, if any - cached so a newly connecting/reconnecting
+    ///     client gets a full resync (floor images + current fog) instead of an incremental
+    ///     replay, per the "never partially revealed/hidden by accident" requirement. Updated
+    ///     in place as fog changes (PublishMapFogUpdateAsync/PublishMapFogResetAsync) so the
+    ///     cache always reflects exactly what clients currently see.
+    /// </summary>
+    private OpenMapState? _openMap;
 
     public TcpPlayerServerService(Func<SessionSnapshotParams> snapshotProvider,
         Func<ClockHeartbeatParams> clockStateProvider,
@@ -123,9 +131,6 @@ public sealed class TcpPlayerServerService : IDisposable
         _clockStateProvider = clockStateProvider;
         _connectionPinProvider = connectionPinProvider ?? (() => null);
     }
-
-    /// <summary>How long to wait for the first session.hello of a newly connected client before the connection is considered dead.</summary>
-    private static readonly TimeSpan HandshakeTimeout = TimeSpan.FromSeconds(5);
 
     public int Port { get; private set; } = DefaultPort;
     public bool IsRunning { get; private set; }
@@ -151,32 +156,37 @@ public sealed class TcpPlayerServerService : IDisposable
     /// <summary>A client reports that a non-looping video has finished on its end (background thread).</summary>
     public event Action<string>? ClientReportedPlaybackEnded;
 
-    /// <summary>A client reports that the currently playing music track has finished (background
-    ///     thread) - see RpcMethods.MusicTrackEnded.</summary>
+    /// <summary>
+    ///     A client reports that the currently playing music track has finished (background
+    ///     thread) - see RpcMethods.MusicTrackEnded.
+    /// </summary>
     public event Action<string>? ClientReportedMusicTrackEnded;
 
-    /// <summary>Fires (with the RemoteEndpoint) when the GM turns Sound routing off for a
+    /// <summary>
+    ///     Fires (with the RemoteEndpoint) when the GM turns Sound routing off for a
     ///     connected client - this service has no knowledge of which sounds are currently
     ///     playing (MainWindowViewModel.ActivePlayingSounds does), so it just raises this and
-    ///     leaves "send a targeted stop per active sound" to the subscriber.</summary>
+    ///     leaves "send a targeted stop per active sound" to the subscriber.
+    /// </summary>
     public event Action<string>? ClientSoundRoutingDisabled;
 
-    /// <summary>Fires (with the RemoteEndpoint) when the GM turns Sound routing back on for a
+    /// <summary>
+    ///     Fires (with the RemoteEndpoint) when the GM turns Sound routing back on for a
     ///     connected client - mirrors ClientSoundRoutingDisabled: this service doesn't track
     ///     which sounds are currently playing, so it leaves "resend each active sound to this
     ///     client" to the subscriber (via PublishMediaToClientAsync), so a re-enabled window
-    ///     doesn't stay silent until the next brand-new sound is triggered.</summary>
+    ///     doesn't stay silent until the next brand-new sound is triggered.
+    /// </summary>
     public event Action<string>? ClientSoundRoutingEnabled;
 
     /// <summary>
     ///     Starts the TCP listener, and by default the mDNS + LAN-broadcast discovery responders
-    ///     alongside it. <paramref name="enableDiscovery"/> lets a caller skip those - the real
+    ///     alongside it. <paramref name="enableDiscovery" /> lets a caller skip those - the real
     ///     app exposes this as the <c>--no-discovery</c> CLI flag (see Program.cs) for restricted
     ///     networks, and integration tests use it to avoid best-effort UDP broadcast noise/flakiness
     ///     in CI sandboxes that don't need it (tests connect directly by IP:port, never via discovery).
-    ///
-    ///     <paramref name="port"/> of 0 asks the OS for a free ephemeral port instead of a fixed
-    ///     one - <see cref="Port"/> is updated to the actual bound port afterward, so a caller
+    ///     <paramref name="port" /> of 0 asks the OS for a free ephemeral port instead of a fixed
+    ///     one - <see cref="Port" /> is updated to the actual bound port afterward, so a caller
     ///     (currently only tests) can read it back. Real usage always passes an explicit port.
     /// </summary>
     public void Start(int port = DefaultPort, string serverName = "RpgTimeTracker", bool enableDiscovery = true)
@@ -202,7 +212,8 @@ public sealed class TcpPlayerServerService : IDisposable
             _lanDiscoveryResponder.Start();
         }
 
-        Log.Information("TCP player server started on port {Port} (server name {ServerName}, discovery={EnableDiscovery})",
+        Log.Information(
+            "TCP player server started on port {Port} (server name {ServerName}, discovery={EnableDiscovery})",
             Port, serverName, enableDiscovery);
     }
 
@@ -342,20 +353,24 @@ public sealed class TcpPlayerServerService : IDisposable
         return BroadcastRpcAsync(RpcMethods.MediaCleared, RpcEmptyParams.Instance, MediaVisualFilter(lastKind));
     }
 
-    /// <summary>Clears the currently displayed medium on exactly one client window, regardless of
+    /// <summary>
+    ///     Clears the currently displayed medium on exactly one client window, regardless of
     ///     its current Image/Video routing flag - used when the GM turns that routing off for that
     ///     window, so it doesn't keep showing stale content indefinitely (see
-    ///     SetClientImageEnabled/SetClientVideoEnabled).</summary>
+    ///     SetClientImageEnabled/SetClientVideoEnabled).
+    /// </summary>
     public Task PublishMediaClearToClientAsync(string remoteEndpoint)
     {
         return BroadcastRpcAsync(RpcMethods.MediaCleared, RpcEmptyParams.Instance,
             c => c.RemoteEndpoint == remoteEndpoint);
     }
 
-    /// <summary>Picks the Image or Video per-client routing flag matching a cached medium's Kind -
+    /// <summary>
+    ///     Picks the Image or Video per-client routing flag matching a cached medium's Kind -
     ///     used for RPCs (media.cleared, gallery retract/highlight/slideshow) that apply to
     ///     "whatever image/video is currently shown/in the gallery" without themselves carrying a
-    ///     Kind. Defaults to ImageEnabled when the kind is unknown/null (the common case).</summary>
+    ///     Kind. Defaults to ImageEnabled when the kind is unknown/null (the common case).
+    /// </summary>
     private static Func<ClientConnection, bool> MediaVisualFilter(string? kind)
     {
         return kind == MediaHeaderDto.MediaKindVideo ? c => c.VideoEnabled : c => c.ImageEnabled;
@@ -421,10 +436,12 @@ public sealed class TcpPlayerServerService : IDisposable
         return BroadcastRpcAsync(RpcMethods.MusicStop, RpcEmptyParams.Instance, c => c.MusicEnabled);
     }
 
-    /// <summary>Adjusts the volume of the currently playing music track live on Music-enabled client windows (0-100).
+    /// <summary>
+    ///     Adjusts the volume of the currently playing music track live on Music-enabled client windows (0-100).
     ///     Also updates the cached _currentMusicTrack header (a reference type, mutated in place)
     ///     so a client that connects afterward gets caught up at the current volume, not the
-    ///     track's original one.</summary>
+    ///     track's original one.
+    /// </summary>
     public Task PublishMusicSetVolumeAsync(int volume)
     {
         lock (_mediaGate)
@@ -449,10 +466,12 @@ public sealed class TcpPlayerServerService : IDisposable
             c => c.RemoteEndpoint == remoteEndpoint);
     }
 
-    /// <summary>Tells exactly one client window its current Music/Sound/Image/Video/Map routing
+    /// <summary>
+    ///     Tells exactly one client window its current Music/Sound/Image/Video/Map routing
     ///     state (see RpcMethods.AudioRoutingChanged - kept its name despite now carrying more
     ///     flags, to avoid unnecessary wire-protocol churn) - sent right after handshake and again
-    ///     on every live toggle, so the client can show a "muted by GM" indicator.</summary>
+    ///     on every live toggle, so the client can show a "muted by GM" indicator.
+    /// </summary>
     public Task PublishAudioRoutingChangedAsync(string remoteEndpoint, bool musicEnabled, bool soundEnabled,
         bool imageEnabled, bool videoEnabled, bool mapEnabled)
     {
@@ -465,9 +484,11 @@ public sealed class TcpPlayerServerService : IDisposable
             c => c.RemoteEndpoint == remoteEndpoint);
     }
 
-    /// <summary>Removes an image/video from the gallery on all clients specifically (by MediaId) -
+    /// <summary>
+    ///     Removes an image/video from the gallery on all clients specifically (by MediaId) -
     ///     the gallery can mix Images and Videos, so this reaches clients with either enabled
-    ///     rather than a single Kind-specific flag.</summary>
+    ///     rather than a single Kind-specific flag.
+    /// </summary>
     public Task PublishRetractAsync(string mediaId)
     {
         return BroadcastRpcAsync(RpcMethods.MediaRetract, new MediaRetractParams { MediaId = mediaId },
@@ -567,9 +588,11 @@ public sealed class TcpPlayerServerService : IDisposable
         return BroadcastRpcAsync(RpcMethods.MapHide, RpcEmptyParams.Instance, c => c.MapEnabled);
     }
 
-    /// <summary>Closes the currently open map on exactly one client window, regardless of its
+    /// <summary>
+    ///     Closes the currently open map on exactly one client window, regardless of its
     ///     current MapEnabled flag - used when the GM turns Map routing off for that window
-    ///     (see SetClientMapEnabled), so it doesn't keep showing a stale map indefinitely.</summary>
+    ///     (see SetClientMapEnabled), so it doesn't keep showing a stale map indefinitely.
+    /// </summary>
     public Task PublishMapHideToClientAsync(string remoteEndpoint)
     {
         return BroadcastRpcAsync(RpcMethods.MapHide, RpcEmptyParams.Instance,
@@ -631,28 +654,6 @@ public sealed class TcpPlayerServerService : IDisposable
             Log.Warning("map.show to {Client} failed - connection is being closed", client);
             RemoveClient(client);
         }
-    }
-
-    /// <summary>One floor of the currently open map, cached server-side for resync (see _openMap).</summary>
-    public sealed class OpenMapFloor
-    {
-        public Guid FloorId { get; init; }
-        public string FloorName { get; init; } = string.Empty;
-        public string ImageFileName { get; init; } = string.Empty;
-        public string ImageMimeType { get; init; } = string.Empty;
-        public byte[] ImageBytes { get; init; } = [];
-        public int CellSizePx { get; init; }
-        public int GridWidth { get; init; }
-        public int GridHeight { get; init; }
-        public FogMask StartingFog { get; init; } = FogMask.CreateFullyHidden(1, 1, 32);
-        public FogMask CurrentFog { get; set; } = FogMask.CreateFullyHidden(1, 1, 32);
-    }
-
-    private sealed class OpenMapState(Guid mapId, string mapName, List<OpenMapFloor> floors)
-    {
-        public Guid MapId { get; } = mapId;
-        public string MapName { get; } = mapName;
-        public List<OpenMapFloor> Floors { get; } = floors;
     }
 
     private async Task SendMediaToClientAsync(ClientConnection client, MediaHeaderDto header, byte[] fileBytes)
@@ -1052,13 +1053,15 @@ public sealed class TcpPlayerServerService : IDisposable
         RemoveClient(target);
     }
 
-    /// <summary>Toggles whether this client window receives Music broadcasts (GM per-window
+    /// <summary>
+    ///     Toggles whether this client window receives Music broadcasts (GM per-window
     ///     routing control) - persisted by ClientId (see ThemeSettingsService.SaveClientRoutingPreference)
     ///     so it survives a reconnect. Also tells the client live (audio.routingChanged); disabling
     ///     stops whatever it's currently playing (a toggle-off shouldn't wait for the Host's own
     ///     playlist sequencer to naturally advance/end), and re-enabling resumes the currently
     ///     playing track for it (with an estimated seek) rather than leaving it silent until the
-    ///     sequencer happens to advance to the next track.</summary>
+    ///     sequencer happens to advance to the next track.
+    /// </summary>
     public void SetClientMusicEnabled(string remoteEndpoint, bool enabled)
     {
         ClientConnection? target;
@@ -1076,13 +1079,15 @@ public sealed class TcpPlayerServerService : IDisposable
         else _ = PublishMusicStopToClientAsync(remoteEndpoint);
     }
 
-    /// <summary>Toggles whether this client window receives Sound broadcasts (GM per-window
+    /// <summary>
+    ///     Toggles whether this client window receives Sound broadcasts (GM per-window
     ///     routing control) - persisted by ClientId so it survives a reconnect. Also tells the
     ///     client live (audio.routingChanged); disabling raises ClientSoundRoutingDisabled so
     ///     whoever tracks currently-active sounds (MainWindowViewModel) can stop them on this one
     ///     client specifically, and re-enabling raises ClientSoundRoutingEnabled so it can resend
     ///     them instead - either way the client isn't left in a stale state until the next brand-
-    ///     new sound happens to play.</summary>
+    ///     new sound happens to play.
+    /// </summary>
     public void SetClientSoundEnabled(string remoteEndpoint, bool enabled)
     {
         ClientConnection? target;
@@ -1100,11 +1105,13 @@ public sealed class TcpPlayerServerService : IDisposable
         else ClientSoundRoutingDisabled?.Invoke(remoteEndpoint);
     }
 
-    /// <summary>Toggles whether this client window receives Image broadcasts (GM per-window
+    /// <summary>
+    ///     Toggles whether this client window receives Image broadcasts (GM per-window
     ///     routing control, e.g. for a multi-monitor setup where only one window shows images) -
     ///     persisted by ClientId so it survives a reconnect. Enabling resends the currently
     ///     displayed medium to just this client if it's an image; disabling clears it on just this
-    ///     client so it doesn't keep showing stale content.</summary>
+    ///     client so it doesn't keep showing stale content.
+    /// </summary>
     public void SetClientImageEnabled(string remoteEndpoint, bool enabled)
     {
         ClientConnection? target;
@@ -1121,10 +1128,12 @@ public sealed class TcpPlayerServerService : IDisposable
         ResendOrClearCachedMedia(target, remoteEndpoint, enabled, MediaHeaderDto.MediaKindImage);
     }
 
-    /// <summary>Toggles whether this client window receives Video broadcasts (GM per-window
+    /// <summary>
+    ///     Toggles whether this client window receives Video broadcasts (GM per-window
     ///     routing control) - persisted by ClientId so it survives a reconnect. Enabling resends
     ///     the currently displayed medium to just this client if it's a video; disabling clears it
-    ///     on just this client so it doesn't keep showing stale content.</summary>
+    ///     on just this client so it doesn't keep showing stale content.
+    /// </summary>
     public void SetClientVideoEnabled(string remoteEndpoint, bool enabled)
     {
         ClientConnection? target;
@@ -1141,10 +1150,12 @@ public sealed class TcpPlayerServerService : IDisposable
         ResendOrClearCachedMedia(target, remoteEndpoint, enabled, MediaHeaderDto.MediaKindVideo);
     }
 
-    /// <summary>Toggles whether this client window receives Map broadcasts (GM per-window routing
+    /// <summary>
+    ///     Toggles whether this client window receives Map broadcasts (GM per-window routing
     ///     control) - persisted by ClientId so it survives a reconnect. Enabling resends the
     ///     currently open map to just this client, disabling hides it on just this client so it
-    ///     doesn't keep showing a stale map.</summary>
+    ///     doesn't keep showing a stale map.
+    /// </summary>
     public void SetClientMapEnabled(string remoteEndpoint, bool enabled)
     {
         ClientConnection? target;
@@ -1176,10 +1187,12 @@ public sealed class TcpPlayerServerService : IDisposable
         }
     }
 
-    /// <summary>Shared tail of SetClientImageEnabled/SetClientVideoEnabled: resends the cached
+    /// <summary>
+    ///     Shared tail of SetClientImageEnabled/SetClientVideoEnabled: resends the cached
     ///     current medium to this one client if enabling and it matches the given kind, or clears
     ///     it on this one client if disabling (harmless if nothing of that kind is currently
-    ///     shown).</summary>
+    ///     shown).
+    /// </summary>
     private void ResendOrClearCachedMedia(ClientConnection target, string remoteEndpoint, bool enabled, string kind)
     {
         if (enabled)
@@ -1304,6 +1317,28 @@ public sealed class TcpPlayerServerService : IDisposable
         _cts = null;
     }
 
+    /// <summary>One floor of the currently open map, cached server-side for resync (see _openMap).</summary>
+    public sealed class OpenMapFloor
+    {
+        public Guid FloorId { get; init; }
+        public string FloorName { get; init; } = string.Empty;
+        public string ImageFileName { get; init; } = string.Empty;
+        public string ImageMimeType { get; init; } = string.Empty;
+        public byte[] ImageBytes { get; init; } = [];
+        public int CellSizePx { get; init; }
+        public int GridWidth { get; init; }
+        public int GridHeight { get; init; }
+        public FogMask StartingFog { get; init; } = FogMask.CreateFullyHidden(1, 1, 32);
+        public FogMask CurrentFog { get; set; } = FogMask.CreateFullyHidden(1, 1, 32);
+    }
+
+    private sealed class OpenMapState(Guid mapId, string mapName, List<OpenMapFloor> floors)
+    {
+        public Guid MapId { get; } = mapId;
+        public string MapName { get; } = mapName;
+        public List<OpenMapFloor> Floors { get; } = floors;
+    }
+
     private sealed class ClientConnection : IDisposable
     {
         // Generous enough to still deliver a large video chunk even over a slow connection,
@@ -1329,28 +1364,34 @@ public sealed class TcpPlayerServerService : IDisposable
         /// <summary>Set once the handshake succeeded (see PerformHandshakeAsync) - "unauthenticated" before that.</summary>
         public bool IsAccepted { get; set; }
 
-        /// <summary>Whether this window receives Music/Sound broadcasts, set by the GM via
+        /// <summary>
+        ///     Whether this window receives Music/Sound broadcasts, set by the GM via
         ///     SetClientMusicEnabled/SetClientSoundEnabled - defaults to true for a never-seen
         ///     ClientId, otherwise restored from ThemeSettingsService.LoadClientAudioPreference
-        ///     in PerformHandshakeAsync so a reconnecting window keeps its previous routing.</summary>
+        ///     in PerformHandshakeAsync so a reconnecting window keeps its previous routing.
+        /// </summary>
         public bool MusicEnabled { get; set; } = true;
 
         public bool SoundEnabled { get; set; } = true;
 
-        /// <summary>Whether this window receives Image/Video/Map broadcasts respectively, set by
+        /// <summary>
+        ///     Whether this window receives Image/Video/Map broadcasts respectively, set by
         ///     the GM via SetClientImageEnabled/SetClientVideoEnabled/SetClientMapEnabled -
         ///     defaults to true for a never-seen ClientId, otherwise restored from
         ///     ThemeSettingsService.LoadClientRoutingPreference in PerformHandshakeAsync so a
-        ///     reconnecting window keeps its previous routing.</summary>
+        ///     reconnecting window keeps its previous routing.
+        /// </summary>
         public bool ImageEnabled { get; set; } = true;
 
         public bool VideoEnabled { get; set; } = true;
         public bool MapEnabled { get; set; } = true;
 
-        /// <summary>Stable per-installation id sent in session.hello (see
+        /// <summary>
+        ///     Stable per-installation id sent in session.hello (see
         ///     SessionHelloParams.ClientId) - empty until the handshake completes. Used to key
         ///     persisted Music/Sound routing preferences, since RemoteEndpoint changes every
-        ///     reconnect (ephemeral TCP port).</summary>
+        ///     reconnect (ephemeral TCP port).
+        /// </summary>
         public string ClientId { get; set; } = string.Empty;
 
         /// <summary>Resolved by HandleClientRpcFrame upon receiving session.hello; PerformHandshakeAsync waits for it.</summary>

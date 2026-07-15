@@ -25,6 +25,14 @@ public abstract partial class LibraryItemViewModelBase<TSelf> : ObservableObject
 
     [ObservableProperty] private string _name;
 
+    /// <summary>
+    ///     Whether this item lives in the always-present Shared Library or inside the
+    ///     currently open Session's own folder - see LibraryScope. Settable (not get-only) since
+    ///     a "move to Shared"/"move to this Session" action changes it in place rather than
+    ///     requiring the item to be recreated.
+    /// </summary>
+    [ObservableProperty] private LibraryScope _scope;
+
     protected LibraryItemViewModelBase(
         Guid id,
         string name,
@@ -43,18 +51,29 @@ public abstract partial class LibraryItemViewModelBase<TSelf> : ObservableObject
         _scope = scope;
     }
 
-    /// <summary>Stable identity for this library item - added so it can be referenced by value
+    /// <summary>
+    ///     Stable identity for this library item - added so it can be referenced by value
     ///     (e.g. by an NPC's portrait/sound reference, or the usage registry) instead of by its
     ///     mutable Name/LocalPath, matching the precedent already set by MusicLibraryItemViewModel/
-    ///     MapItemViewModel.</summary>
+    ///     MapItemViewModel.
+    /// </summary>
     public Guid Id { get; }
 
-    /// <summary>Settable (not get-only) so a "move to Shared"/"move to this Session" action can
+    /// <summary>
+    ///     Settable (not get-only) so a "move to Shared"/"move to this Session" action can
     ///     update it in place once the underlying file has actually been moved on disk - see
-    ///     MainWindowViewModel's MoveMediaLibraryItemToScope/MoveSoundLibraryItemToScope.</summary>
+    ///     MainWindowViewModel's MoveMediaLibraryItemToScope/MoveSoundLibraryItemToScope.
+    /// </summary>
     public string LocalPath { get; private set; }
 
     public string MimeType { get; }
+
+    /// <summary>
+    ///     Bound by the tile's "move to Shared"/"move to this Session" buttons to decide
+    ///     which one to show - see MainWindowViewModel's MoveMediaLibraryItemToShared/ToSession
+    ///     (and the Sound/Music equivalents).
+    /// </summary>
+    public bool IsSessionLocal => Scope == LibraryScope.SessionLocal;
 
     /// <summary>Called only after the backing file has already been moved to its new location.</summary>
     public void UpdateLocalPath(string newLocalPath)
@@ -62,17 +81,6 @@ public abstract partial class LibraryItemViewModelBase<TSelf> : ObservableObject
         LocalPath = newLocalPath;
         OnPropertyChanged(nameof(LocalPath));
     }
-
-    /// <summary>Whether this item lives in the always-present Shared Library or inside the
-    ///     currently open Session's own folder - see LibraryScope. Settable (not get-only) since
-    ///     a "move to Shared"/"move to this Session" action changes it in place rather than
-    ///     requiring the item to be recreated.</summary>
-    [ObservableProperty] private LibraryScope _scope;
-
-    /// <summary>Bound by the tile's "move to Shared"/"move to this Session" buttons to decide
-    ///     which one to show - see MainWindowViewModel's MoveMediaLibraryItemToShared/ToSession
-    ///     (and the Sound/Music equivalents).</summary>
-    public bool IsSessionLocal => Scope == LibraryScope.SessionLocal;
 
     partial void OnScopeChanged(LibraryScope value)
     {

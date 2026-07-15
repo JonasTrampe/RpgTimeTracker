@@ -11,7 +11,6 @@ using Avalonia.Platform.Storage;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
-using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.ViewModels;
 
@@ -24,74 +23,82 @@ public partial class MainWindow : Window
     ///     ImportStateFromZipOrJson). A distinct extension (rather than keeping .json now that the
     ///     content is a zip) was chosen specifically to avoid confusion with other data.
     /// </summary>
-    private static readonly FilePickerFileType RttSaveFileType = new(LocalizationService.Get("MainWindow.FileTypes.GameState"))
-    {
-        Patterns = ["*.rtt-save"]
-    };
+    private static readonly FilePickerFileType RttSaveFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.GameState"))
+        {
+            Patterns = ["*.rtt-save"]
+        };
 
-    /// <summary>Old plain-JSON save format, kept only so Load still finds pre-.rtt-save files - see
-    ///     MainWindowViewModel.ImportStateFromZipOrJson for the upgrade path.</summary>
-    private static readonly FilePickerFileType JsonFileType = new(LocalizationService.Get("MainWindow.FileTypes.GameStateLegacyJson"))
-    {
-        Patterns = ["*.json"]
-    };
+    /// <summary>
+    ///     Old plain-JSON save format, kept only so Load still finds pre-.rtt-save files - see
+    ///     MainWindowViewModel.ImportStateFromZipOrJson for the upgrade path.
+    /// </summary>
+    private static readonly FilePickerFileType JsonFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.GameStateLegacyJson"))
+        {
+            Patterns = ["*.json"]
+        };
 
-    private static readonly FilePickerFileType CalendarJsonFileType = new(LocalizationService.Get("MainWindow.FileTypes.Calendar"))
-    {
-        Patterns = ["*.json"]
-    };
+    private static readonly FilePickerFileType CalendarJsonFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.Calendar"))
+        {
+            Patterns = ["*.json"]
+        };
 
-    internal static readonly FilePickerFileType AudioFileType = new(LocalizationService.Get("MainWindow.FileTypes.SoundFile"))
-    {
-        Patterns = ["*.wav", "*.mp3", "*.ogg", "*.flac", "*.aiff", "*.aif", "*.m4a", "*.aac"]
-    };
+    internal static readonly FilePickerFileType AudioFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.SoundFile"))
+        {
+            Patterns = ["*.wav", "*.mp3", "*.ogg", "*.flac", "*.aiff", "*.aif", "*.m4a", "*.aac"]
+        };
 
-    internal static readonly FilePickerFileType MediaFileType = new(LocalizationService.Get("MainWindow.FileTypes.ImageOrVideo"))
-    {
-        Patterns =
-        [
-            "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp",
-            "*.mp4", "*.m4v", "*.webm", "*.mkv", "*.mov", "*.avi"
-        ]
-    };
+    internal static readonly FilePickerFileType MediaFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.ImageOrVideo"))
+        {
+            Patterns =
+            [
+                "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp",
+                "*.mp4", "*.m4v", "*.webm", "*.mkv", "*.mov", "*.avi"
+            ]
+        };
 
-    /// <summary>Map floors are image-only for now - see MapItemViewModel/AddFloorToMapAsync.
-    ///     Looping video as a floor background is a deferred follow-up (issue #16).</summary>
-    private static readonly FilePickerFileType MapFloorImageFileType = new(LocalizationService.Get("MainWindow.FileTypes.MapFloorImage"))
-    {
-        Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"]
-    };
+    /// <summary>
+    ///     Map floors are image-only for now - see MapItemViewModel/AddFloorToMapAsync.
+    ///     Looping video as a floor background is a deferred follow-up (issue #16).
+    /// </summary>
+    private static readonly FilePickerFileType MapFloorImageFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.MapFloorImage"))
+        {
+            Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"]
+        };
 
-    /// <summary>A single exported map (image + starting fog per floor) as a self-contained zip -
-    ///     see MainWindowViewModel.ExportMapToZipBytes/ImportMapFromZipBytes.</summary>
+    /// <summary>
+    ///     A single exported map (image + starting fog per floor) as a self-contained zip -
+    ///     see MainWindowViewModel.ExportMapToZipBytes/ImportMapFromZipBytes.
+    /// </summary>
     private static readonly FilePickerFileType MapFileType = new(LocalizationService.Get("MainWindow.FileTypes.Map"))
     {
         Patterns = ["*.rtt-map"]
     };
 
-    /// <summary>Bundles game state + all three libraries into one file - see
-    ///     MainWindowViewModel.ExportFullSessionToZipBytes/ImportFullSessionFromZipBytes.</summary>
-    private static readonly FilePickerFileType FullSessionFileType = new(LocalizationService.Get("MainWindow.FileTypes.FullSession"))
-    {
-        Patterns = ["*.rtt-session"]
-    };
+    /// <summary>
+    ///     Bundles game state + all three libraries into one file - see
+    ///     MainWindowViewModel.ExportFullSessionToZipBytes/ImportFullSessionFromZipBytes.
+    /// </summary>
+    private static readonly FilePickerFileType FullSessionFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.FullSession"))
+        {
+            Patterns = ["*.rtt-session"]
+        };
 
-    // Event media (timer/alarm/interval) can still also be audio, but image/video
-    // now comes exclusively from the media library (see ChooseTriggerMediaFromLibrary) -
-    // only for audio does the direct file dialog remain, since there is no separate library concept
-    // for event media (the sound library is meant for the items' "sound" field,
-    // not for event media).
-    private static readonly FilePickerFileType TriggerAudioFileType = new(LocalizationService.Get("MainWindow.FileTypes.Audio"))
-    {
-        Patterns = ["*.mp3", "*.wav", "*.ogg", "*.flac", "*.aiff", "*.aif", "*.m4a", "*.aac"]
-    };
-
-    private static readonly FilePickerFileType TextFileType = new(LocalizationService.Get("MainWindow.FileTypes.TextFile"))
-    {
-        Patterns = ["*.txt", "*.md"]
-    };
+    private static readonly FilePickerFileType TextFileType =
+        new(LocalizationService.Get("MainWindow.FileTypes.TextFile"))
+        {
+            Patterns = ["*.txt", "*.md"]
+        };
 
     private MainWindowViewModel? _attachedViewModel;
+
+    private MapLiveWindow? _openMapLiveWindow;
 
     private PlayerWindow? _playerWindow;
 
@@ -252,8 +259,6 @@ public partial class MainWindow : Window
             await vmForFloor.AddFloorToMapAsync(map, localPath);
     }
 
-    private MapLiveWindow? _openMapLiveWindow;
-
     private void OnEditSelectedFloorClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || vm.SelectedMap is not { } map || map.Floors.Count == 0) return;
@@ -331,11 +336,13 @@ public partial class MainWindow : Window
             await using var stream = await file.OpenWriteAsync();
             stream.SetLength(0);
             await stream.WriteAsync(zipBytes);
-            vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MapExported"), map.Name));
+            vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.MapExported"),
+                map.Name));
         }
         catch (Exception ex)
         {
-            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"),
+                ex.Message);
         }
     }
 
@@ -391,7 +398,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"), ex.Message);
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ExportFailed"),
+                ex.Message);
         }
     }
 
@@ -445,7 +453,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"), ex.Message);
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.ImportFailed"),
+                ex.Message);
         }
     }
 
@@ -478,7 +487,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.MediaCouldNotBeSent"), ex.Message);
+            vm.MediaErrorMessage =
+                string.Format(LocalizationService.Get("MainWindow.Errors.MediaCouldNotBeSent"), ex.Message);
         }
     }
 
@@ -511,7 +521,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.MediaErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.SoundCouldNotBeSent"), ex.Message);
+            vm.MediaErrorMessage =
+                string.Format(LocalizationService.Get("MainWindow.Errors.SoundCouldNotBeSent"), ex.Message);
         }
     }
 
@@ -531,93 +542,6 @@ public partial class MainWindow : Window
     {
         if (sender is Control control && control.DataContext is SentMediaItemViewModel item)
             item.HighlightCommand.Execute(null);
-    }
-
-    // Event medium (timer/alarm/interval automatically trigger an image/video/audio): two
-    // click handlers each ("From library…" for image/video, "Audio…" for audio from disk) for the
-    // "Add" tab (DataContext = MainWindowViewModel, target one of the three staging configs)
-    // plus one each for an already existing item (DataContext = TimelineDisplayItemViewModel).
-    private void OnChooseTimerTriggerMediaClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) ChooseTriggerMediaFromLibrary(vm.MediaLibrary, vm.NewTimerTriggerMedia);
-    }
-
-    private async void OnChooseTimerTriggerAudioClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) await ChooseTriggerAudioAsync(vm.NewTimerTriggerMedia);
-    }
-
-    private void OnChooseAlarmTriggerMediaClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) ChooseTriggerMediaFromLibrary(vm.MediaLibrary, vm.NewAlarmTriggerMedia);
-    }
-
-    private async void OnChooseAlarmTriggerAudioClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) await ChooseTriggerAudioAsync(vm.NewAlarmTriggerMedia);
-    }
-
-    private void OnChooseIntervalTriggerMediaClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) ChooseTriggerMediaFromLibrary(vm.MediaLibrary, vm.NewIntervalTriggerMedia);
-    }
-
-    private async void OnChooseIntervalTriggerAudioClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) await ChooseTriggerAudioAsync(vm.NewIntervalTriggerMedia);
-    }
-
-    private void OnChooseItemTriggerMediaClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Control control || control.DataContext is not TimelineDisplayItemViewModel item) return;
-        if (DataContext is MainWindowViewModel vm) ChooseTriggerMediaFromLibrary(vm.MediaLibrary, item.TriggerMedia);
-    }
-
-    private async void OnChooseItemTriggerAudioClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Control control && control.DataContext is TimelineDisplayItemViewModel item)
-            await ChooseTriggerAudioAsync(item.TriggerMedia);
-    }
-
-    /// <summary>
-    ///     Image/video for an event medium comes exclusively from the media library (no more
-    ///     file dialog) - this ensures that every event medium image/video also
-    ///     exists as a library entry and the delete warning (RemoveMediaLibraryItem) can
-    ///     reliably detect it.
-    /// </summary>
-    private void ChooseTriggerMediaFromLibrary(IEnumerable<MediaLibraryItemViewModel> library, TriggerMediaConfig target)
-    {
-        var picker = new MediaLibraryPickerWindow(library, item =>
-        {
-            target.Path = item.LocalPath;
-            target.FileName = item.Name;
-            target.Kind = item.Kind;
-            target.Loop = item.Loop;
-        });
-        picker.Show(this);
-    }
-
-    private async Task ChooseTriggerAudioAsync(TriggerMediaConfig target)
-    {
-        var topLevel = GetTopLevel(this);
-        if (topLevel is null) return;
-
-        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = LocalizationService.Get("MainWindow.Dialogs.ChooseAudioForEventMedium"),
-            AllowMultiple = false,
-            FileTypeFilter = [TriggerAudioFileType]
-        });
-
-        if (files.Count == 0) return;
-
-        var localPath = files[0].TryGetLocalPath();
-        if (string.IsNullOrWhiteSpace(localPath)) return;
-        if (!MediaTypeHelper.TryGetKind(localPath, out var kind, out _) || kind != MediaKind.Audio) return;
-
-        target.Path = localPath;
-        target.FileName = Path.GetFileName(localPath);
-        target.Kind = kind;
     }
 
     private void OnMediaLibraryItemDoubleTapped(object? sender, TappedEventArgs e)
@@ -755,7 +679,8 @@ public partial class MainWindow : Window
         if (localPath is null) return;
 
         vm.CreateSession(localPath);
-        vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindow.Status.SessionCreated"), vm.CurrentSessionName));
+        vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindow.Status.SessionCreated"),
+            vm.CurrentSessionName));
     }
 
     private async void OnOpenSessionClick(object? sender, RoutedEventArgs e)
@@ -776,7 +701,8 @@ public partial class MainWindow : Window
         if (localPath is null) return;
 
         vm.OpenSession(localPath);
-        vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindow.Status.SessionOpened"), vm.CurrentSessionName));
+        vm.NotifyActionStatus(string.Format(LocalizationService.Get("MainWindow.Status.SessionOpened"),
+            vm.CurrentSessionName));
     }
 
     private void OnCloseSessionClick(object? sender, RoutedEventArgs e)
@@ -882,7 +808,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.LogExportFailed"), ex.Message);
+            vm.ClockErrorMessage =
+                string.Format(LocalizationService.Get("MainWindow.Errors.LogExportFailed"), ex.Message);
         }
     }
 
@@ -912,7 +839,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarExportFailed"), ex.Message);
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarExportFailed"),
+                ex.Message);
         }
     }
 
@@ -940,7 +868,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarImportFailed"), ex.Message);
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarImportFailed"),
+                ex.Message);
         }
     }
 
@@ -974,7 +903,9 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.CalendarDefinitionImportFailed"), ex.Message);
+            vm.ClockErrorMessage =
+                string.Format(LocalizationService.Get("MainWindowViewModel.Errors.CalendarDefinitionImportFailed"),
+                    ex.Message);
         }
     }
 }

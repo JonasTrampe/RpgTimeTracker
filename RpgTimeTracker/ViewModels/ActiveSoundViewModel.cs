@@ -18,7 +18,6 @@ public partial class ActiveSoundViewModel : ObservableObject, IDisposable
 {
     private readonly Action<ActiveSoundViewModel> _onStopRequested;
     private readonly Action<ActiveSoundViewModel, int> _onVolumeChanged;
-    private readonly SoundLibraryItemViewModel? _sourceItem;
 
     [ObservableProperty] private string _icon;
     [ObservableProperty] private string _name;
@@ -41,26 +40,28 @@ public partial class ActiveSoundViewModel : ObservableObject, IDisposable
         _volume = volume;
         _onStopRequested = onStopRequested;
         _onVolumeChanged = onVolumeChanged;
-        _sourceItem = sourceItem;
-        if (_sourceItem is not null)
-            _sourceItem.PropertyChanged += OnSourceItemPropertyChanged;
+        SourceItem = sourceItem;
+        if (SourceItem is not null)
+            SourceItem.PropertyChanged += OnSourceItemPropertyChanged;
     }
 
     public string MediaId { get; }
     public bool Loop { get; }
 
-    /// <summary>The Sound Library item this playing sound was sent from, if any - lets
+    /// <summary>
+    ///     The Sound Library item this playing sound was sent from, if any - lets
     ///     MainWindowViewModel find and stop every active sound that originated from a given
-    ///     library item (see StopShowingSound), the same "stop" gesture Maps/Playlists have.</summary>
-    public SoundLibraryItemViewModel? SourceItem => _sourceItem;
+    ///     library item (see StopShowingSound), the same "stop" gesture Maps/Playlists have.
+    /// </summary>
+    public SoundLibraryItemViewModel? SourceItem { get; }
 
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);
 
     public void Dispose()
     {
-        if (_sourceItem is not null)
-            _sourceItem.PropertyChanged -= OnSourceItemPropertyChanged;
+        if (SourceItem is not null)
+            SourceItem.PropertyChanged -= OnSourceItemPropertyChanged;
     }
 
     partial void OnIconChanged(string value)
@@ -89,11 +90,11 @@ public partial class ActiveSoundViewModel : ObservableObject, IDisposable
 
     private void OnSourceItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (_sourceItem is null) return;
+        if (SourceItem is null) return;
 
         if (e.PropertyName == nameof(SoundLibraryItemViewModel.Name))
-            Name = _sourceItem.Name;
+            Name = SourceItem.Name;
         else if (e.PropertyName == nameof(SoundLibraryItemViewModel.Icon))
-            Icon = _sourceItem.Icon;
+            Icon = SourceItem.Icon;
     }
 }

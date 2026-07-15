@@ -28,10 +28,12 @@ public sealed class CalendarEntryDefinition
     public bool TriggerPauseClockDuringVideo { get; set; }
     public bool TriggerLoop { get; set; }
 
-    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, this entry occurring also
+    /// <summary>
+    ///     Phase 4 of the Scenes/Tags/Calendars project: if set, this entry occurring also
     ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById. Purely a Host-side
     ///     concern; PlayerClient never reads this field even though CalendarEntryDefinition itself
-    ///     is sent over the wire as-is.</summary>
+    ///     is sent over the wire as-is.
+    /// </summary>
     public Guid? TargetSceneId { get; set; }
 
     public bool HasTrigger => TriggerKind != MediaKind.None && !string.IsNullOrWhiteSpace(TriggerPath);
@@ -71,7 +73,7 @@ public sealed class CalendarEntryDefinition
 
                 var monthCount = calendar.Months.Count;
                 var monthDistance = ToAbsoluteMonth(targetDate.Year, targetDate.MonthIndex, monthCount) -
-                                     ToAbsoluteMonth(startDate.Year, startDate.MonthIndex, monthCount);
+                                    ToAbsoluteMonth(startDate.Year, startDate.MonthIndex, monthCount);
                 return monthDistance >= 0;
             }
 
@@ -95,7 +97,8 @@ public sealed class CalendarEntryDefinition
         var first = calendar.FromCalendarDate(monthDate.Year, monthDate.MonthIndex, 1, 0, 0, 0);
 
         for (var day = 0; day < days; day++)
-            if (TryGetOccurrenceOn(calendar, first.Add(TimeSpan.FromSeconds((double)day * calendar.SecondsPerDay)), out _))
+            if (TryGetOccurrenceOn(calendar, first.Add(TimeSpan.FromSeconds((double)day * calendar.SecondsPerDay)),
+                    out _))
                 return true;
 
         return false;
@@ -216,7 +219,10 @@ public sealed class CalendarEntryDefinition
         return null;
     }
 
-    private static int ToAbsoluteMonth(int year, int monthIndex, int monthCount) => year * monthCount + monthIndex;
+    private static int ToAbsoluteMonth(int year, int monthIndex, int monthCount)
+    {
+        return year * monthCount + monthIndex;
+    }
 
     private static (int Year, int MonthIndex) FromAbsoluteMonth(int absoluteMonth, int monthCount)
     {

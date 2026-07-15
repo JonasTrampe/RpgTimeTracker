@@ -1,6 +1,6 @@
-using System;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using RpgTimeTracker.Shared.Models;
 
 namespace RpgTimeTracker.Shared.Services;
@@ -20,7 +20,7 @@ public static class FogMaskSerializer
     public static byte[] Serialize(FogMask mask)
     {
         using var output = new MemoryStream();
-        using (var writer = new BinaryWriter(output, System.Text.Encoding.UTF8, leaveOpen: true))
+        using (var writer = new BinaryWriter(output, Encoding.UTF8, true))
         {
             writer.Write(FormatVersion);
             writer.Write(mask.GridWidth);
@@ -28,8 +28,10 @@ public static class FogMaskSerializer
             writer.Write(mask.CellSizePx);
 
             using var compressed = new MemoryStream();
-            using (var gzip = new GZipStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
+            using (var gzip = new GZipStream(compressed, CompressionLevel.Optimal, true))
+            {
                 gzip.Write(mask.RevealedBits, 0, mask.RevealedBits.Length);
+            }
 
             var compressedBytes = compressed.ToArray();
             writer.Write(compressedBytes.Length);

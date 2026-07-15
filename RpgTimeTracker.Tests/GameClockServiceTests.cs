@@ -104,7 +104,8 @@ public class GameClockServiceTests
         Assert.Equal(60.0, clock.SpeedMultiplier);
     }
 
-    /// <summary>Regression test for a real bug: the DispatcherTimer fires every 200ms, so each
+    /// <summary>
+    ///     Regression test for a real bug: the DispatcherTimer fires every 200ms, so each
     ///     tick's real-time delta at 1x speed is well under a second. GameInstant.Add truncates a
     ///     TimeSpan to whole seconds via a (long) cast, so applying each tick's delta directly
     ///     silently discarded it every time - CurrentTime never advanced at all, while Timers/Alarms
@@ -113,14 +114,16 @@ public class GameClockServiceTests
     ///     sub-second remainder across ticks instead of dropping it (see GameClockService's
     ///     _carrySeconds field) - this drives the same private OnTimerTick the DispatcherTimer
     ///     calls, since a DispatcherTimer needs a running Avalonia dispatcher to fire on its own,
-    ///     which a plain unit test doesn't have.</summary>
+    ///     which a plain unit test doesn't have.
+    /// </summary>
     [Fact]
     public void Repeated_sub_second_ticks_accumulate_instead_of_being_dropped()
     {
         using var clock = new GameClockService(Start);
         clock.Start();
 
-        var onTimerTick = typeof(GameClockService).GetMethod("OnTimerTick", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var onTimerTick =
+            typeof(GameClockService).GetMethod("OnTimerTick", BindingFlags.NonPublic | BindingFlags.Instance)!;
 
         // 25 ticks x ~50ms real each (well under 1s per tick, matching the DispatcherTimer's 200ms
         // interval at 1x-4x speed) - without the fix, every single one truncates to zero and

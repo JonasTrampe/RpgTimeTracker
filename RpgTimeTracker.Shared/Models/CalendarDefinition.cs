@@ -4,10 +4,12 @@ using System.Linq;
 
 namespace RpgTimeTracker.Shared.Models;
 
-/// <summary>One named month: its length in days, and whether it's intercalary (a "leap month"
+/// <summary>
+///     One named month: its length in days, and whether it's intercalary (a "leap month"
 ///     inserted outside the normal month sequence - doesn't count toward normal week-day
 ///     cycling in most real-world calendars that have them, but modeled here purely as
-///     descriptive data since nothing currently needs that distinction functionally).</summary>
+///     descriptive data since nothing currently needs that distinction functionally).
+/// </summary>
 public sealed class CalendarMonthDefinition
 {
     public string Name { get; set; } = string.Empty;
@@ -20,15 +22,19 @@ public enum CalendarLeapYearRuleKind
     None,
     Interval,
 
-    /// <summary>The real Gregorian rule: a leap year every 4 years, except centuries (divisible by
+    /// <summary>
+    ///     The real Gregorian rule: a leap year every 4 years, except centuries (divisible by
     ///     100) unless also divisible by 400 - e.g. 2000 was a leap year, 1900 and 2100 are not.
     ///     IntervalYears is ignored for this kind (it's always base-4/100/400); MonthIndexAffected/
-    ///     ExtraDays still apply, since those describe *where* the extra day goes, not *when*.</summary>
+    ///     ExtraDays still apply, since those describe *where* the extra day goes, not *when*.
+    /// </summary>
     Gregorian
 }
 
-/// <summary>How many extra days get added to which month, and how often. `IntervalYears = 4,
-///     MonthIndexAffected = 1, ExtraDays = 1` reproduces the Gregorian Feb-29 rule.</summary>
+/// <summary>
+///     How many extra days get added to which month, and how often. `IntervalYears = 4,
+///     MonthIndexAffected = 1, ExtraDays = 1` reproduces the Gregorian Feb-29 rule.
+/// </summary>
 public sealed class CalendarLeapYearRule
 {
     public CalendarLeapYearRuleKind Kind { get; set; } = CalendarLeapYearRuleKind.None;
@@ -37,8 +43,10 @@ public sealed class CalendarLeapYearRule
     public int ExtraDays { get; set; } = 1;
 }
 
-/// <summary>A named span of the year, purely descriptive (display only) - not wired to any
-///     game logic yet.</summary>
+/// <summary>
+///     A named span of the year, purely descriptive (display only) - not wired to any
+///     game logic yet.
+/// </summary>
 public sealed class CalendarSeason
 {
     public string Name { get; set; } = string.Empty;
@@ -47,8 +55,10 @@ public sealed class CalendarSeason
     public string ColorHex { get; set; } = string.Empty;
 }
 
-/// <summary>A tracked moon: a repeating cycle of `CycleLengthDays` days, anchored to a known
-///     new-moon date. Purely descriptive (display only) - not wired to any game logic yet.</summary>
+/// <summary>
+///     A tracked moon: a repeating cycle of `CycleLengthDays` days, anchored to a known
+///     new-moon date. Purely descriptive (display only) - not wired to any game logic yet.
+/// </summary>
 public sealed class CalendarMoon
 {
     public string Name { get; set; } = string.Empty;
@@ -59,11 +69,13 @@ public sealed class CalendarMoon
     public string ColorHex { get; set; } = string.Empty;
 }
 
-/// <summary>A named recurring event bundled with a calendar (e.g. Harptos's five festivals) -
+/// <summary>
+///     A named recurring event bundled with a calendar (e.g. Harptos's five festivals) -
 ///     month/day-based rather than an absolute GameInstant, since the template ships with the
 ///     calendar itself, not with any particular campaign's start year. Converted to a real
 ///     CalendarEntryDefinition (anchored to a specific year, RecurrenceKind.Yearly) on demand via
-///     CalendarDefinition.BuildDefaultEntry, not automatically - the GM opts in per calendar.</summary>
+///     CalendarDefinition.BuildDefaultEntry, not automatically - the GM opts in per calendar.
+/// </summary>
 public sealed class CalendarEventTemplate
 {
     public string Title { get; set; } = string.Empty;
@@ -87,8 +99,10 @@ public readonly struct MoonPhase
     public required double PhaseFraction { get; init; }
 }
 
-/// <summary>A calendar date broken out of a GameInstant by a CalendarDefinition - the
-///     human-readable form used for display and calendar-entry matching.</summary>
+/// <summary>
+///     A calendar date broken out of a GameInstant by a CalendarDefinition - the
+///     human-readable form used for display and calendar-entry matching.
+/// </summary>
 public readonly struct CalendarDate
 {
     public required int Year { get; init; }
@@ -134,26 +148,38 @@ public sealed class CalendarDefinition
     public int MinutesPerHour { get; set; } = 60;
     public int SecondsPerMinute { get; set; } = 60;
 
-    /// <summary>Added to the computed year number purely for display (e.g. so year 0 internally
-    ///     can be shown as "Year 500").</summary>
+    /// <summary>
+    ///     Added to the computed year number purely for display (e.g. so year 0 internally
+    ///     can be shown as "Year 500").
+    /// </summary>
     public int YearZeroOffset { get; set; }
 
     public List<CalendarSeason> Seasons { get; set; } = [];
     public List<CalendarMoon> Moons { get; set; } = [];
 
-    /// <summary>Optional named recurring events bundled with this calendar (e.g. Harptos's
+    /// <summary>
+    ///     Optional named recurring events bundled with this calendar (e.g. Harptos's
     ///     festivals) - see CalendarEventTemplate. Empty for calendars with no notable holidays
-    ///     (or none authored yet).</summary>
+    ///     (or none authored yet).
+    /// </summary>
     public List<CalendarEventTemplate> DefaultEntries { get; set; } = [];
 
     public int SecondsPerDay => HoursPerDay * MinutesPerHour * SecondsPerMinute;
 
-    /// <summary>The number of whole days elapsed at/before this instant (floor-divided, so
-    ///     negative instants before the epoch still give a consistent day number).</summary>
-    public long ToDayNumber(GameInstant instant) => FloorDiv(instant.TotalSeconds, SecondsPerDay);
+    /// <summary>
+    ///     The number of whole days elapsed at/before this instant (floor-divided, so
+    ///     negative instants before the epoch still give a consistent day number).
+    /// </summary>
+    public long ToDayNumber(GameInstant instant)
+    {
+        return FloorDiv(instant.TotalSeconds, SecondsPerDay);
+    }
 
     /// <summary>The instant at 00:00:00 of the day this instant falls on.</summary>
-    public GameInstant DayStart(GameInstant instant) => new(ToDayNumber(instant) * SecondsPerDay);
+    public GameInstant DayStart(GameInstant instant)
+    {
+        return new GameInstant(ToDayNumber(instant) * SecondsPerDay);
+    }
 
     public bool IsLeapYear(int year)
     {
@@ -210,9 +236,11 @@ public sealed class CalendarDefinition
         };
     }
 
-    /// <summary>Reproduces today's exact (pre-custom-calendar) behavior: 12 Gregorian months,
+    /// <summary>
+    ///     Reproduces today's exact (pre-custom-calendar) behavior: 12 Gregorian months,
     ///     7-day weeks, the standard leap-year rule, 24h/60m/60s - the default for a fresh
-    ///     campaign that hasn't picked a different calendar.</summary>
+    ///     campaign that hasn't picked a different calendar.
+    /// </summary>
     public static CalendarDefinition CreateGregorian()
     {
         return new CalendarDefinition
@@ -248,10 +276,12 @@ public sealed class CalendarDefinition
         };
     }
 
-    /// <summary>Parses a "yyyy-MM-dd HH:mm:ss"-shaped string against this calendar's own
+    /// <summary>
+    ///     Parses a "yyyy-MM-dd HH:mm:ss"-shaped string against this calendar's own
     ///     month/day/hour bounds (not Gregorian ones) - used by date-entry controls/ViewModels
     ///     instead of DateTime.TryParseExact, which would reject or misinterpret a non-Gregorian
-    ///     calendar's numbers.</summary>
+    ///     calendar's numbers.
+    /// </summary>
     public bool TryParseDateTimeText(string? text, out GameInstant instant)
     {
         instant = GameInstant.Zero;
@@ -274,11 +304,14 @@ public sealed class CalendarDefinition
     public string FormatDateTimeText(GameInstant instant)
     {
         var date = ToCalendarDate(instant);
-        return $"{date.Year:0000}-{date.MonthIndex + 1:00}-{date.Day:00} {date.Hour:00}:{date.Minute:00}:{date.Second:00}";
+        return
+            $"{date.Year:0000}-{date.MonthIndex + 1:00}-{date.Day:00} {date.Hour:00}:{date.Minute:00}:{date.Second:00}";
     }
 
-    /// <summary>Date-only counterpart of TryParseDateTimeText (no time component - defaults to
-    ///     the start of the day).</summary>
+    /// <summary>
+    ///     Date-only counterpart of TryParseDateTimeText (no time component - defaults to
+    ///     the start of the day).
+    /// </summary>
     public bool TryParseDateText(string? text, out GameInstant instant)
     {
         instant = GameInstant.Zero;
@@ -300,9 +333,11 @@ public sealed class CalendarDefinition
         return $"{date.Year:0000}-{date.MonthIndex + 1:00}-{date.Day:00}";
     }
 
-    /// <summary>Anchors a DefaultEntries template to a concrete year, producing a real yearly-
+    /// <summary>
+    ///     Anchors a DefaultEntries template to a concrete year, producing a real yearly-
     ///     recurring CalendarEntryDefinition the GM can add to their campaign - see
-    ///     CalendarEventTemplate's doc comment for why this isn't done automatically.</summary>
+    ///     CalendarEventTemplate's doc comment for why this isn't done automatically.
+    /// </summary>
     public CalendarEntryDefinition BuildDefaultEntry(CalendarEventTemplate template, int year)
     {
         return new CalendarEntryDefinition
@@ -322,10 +357,10 @@ public sealed class CalendarDefinition
     {
         var internalYear = year - YearZeroOffset;
         var totalDays = YearMonthDayToDays(internalYear, monthIndex, day);
-        var totalSeconds = totalDays * (long)SecondsPerDay
-                            + (long)hour * MinutesPerHour * SecondsPerMinute
-                            + (long)minute * SecondsPerMinute
-                            + second;
+        var totalSeconds = totalDays * SecondsPerDay
+                           + (long)hour * MinutesPerHour * SecondsPerMinute
+                           + (long)minute * SecondsPerMinute
+                           + second;
         return new GameInstant(totalSeconds);
     }
 
@@ -349,21 +384,17 @@ public sealed class CalendarDefinition
         var year = 0;
         var remaining = totalDays;
         if (remaining >= 0)
-        {
             while (remaining >= DaysInYear(year))
             {
                 remaining -= DaysInYear(year);
                 year++;
             }
-        }
         else
-        {
             while (remaining < 0)
             {
                 year--;
                 remaining += DaysInYear(year);
             }
-        }
 
         return (year, (int)remaining);
     }
@@ -388,11 +419,9 @@ public sealed class CalendarDefinition
         var ordered = Seasons.OrderBy(s => s.StartMonthIndex).ThenBy(s => s.StartDay).ToList();
         CalendarSeason? active = null;
         foreach (var season in ordered)
-        {
             if (season.StartMonthIndex < monthIndex ||
                 (season.StartMonthIndex == monthIndex && season.StartDay <= day))
                 active = season;
-        }
 
         return (active ?? ordered[^1]).Name;
     }

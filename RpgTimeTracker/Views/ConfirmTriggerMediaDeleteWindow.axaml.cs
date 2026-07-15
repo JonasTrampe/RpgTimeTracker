@@ -21,7 +21,18 @@ public partial class ConfirmTriggerMediaDeleteWindow : Window
             mediaName, string.Join(", ", usedBy));
     }
 
-    private void OnCancelClick(object? sender, RoutedEventArgs e) => Close(TriggerMediaDeleteChoice.Cancel);
-    private void OnKeepClick(object? sender, RoutedEventArgs e) => Close(TriggerMediaDeleteChoice.KeepInItemsRemoveFromLibraryOnly);
-    private void OnRemoveAndDeleteClick(object? sender, RoutedEventArgs e) => Close(TriggerMediaDeleteChoice.RemoveFromItemsAndDelete);
+    private void OnCancelClick(object? sender, RoutedEventArgs e)
+    {
+        Close(TriggerMediaDeleteChoice.Cancel);
+    }
+
+    private void OnKeepClick(object? sender, RoutedEventArgs e)
+    {
+        Close(TriggerMediaDeleteChoice.KeepInItemsRemoveFromLibraryOnly);
+    }
+
+    private void OnRemoveAndDeleteClick(object? sender, RoutedEventArgs e)
+    {
+        Close(TriggerMediaDeleteChoice.RemoveFromItemsAndDelete);
+    }
 }

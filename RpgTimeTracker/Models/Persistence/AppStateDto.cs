@@ -11,11 +11,13 @@ namespace RpgTimeTracker.Models.Persistence;
 /// </summary>
 public class AppStateDto
 {
-    /// <summary>Version 5 replaced DateTime-based game time with the calendar-agnostic
+    /// <summary>
+    ///     Version 5 replaced DateTime-based game time with the calendar-agnostic
     ///     GameInstant (see GameClockService/CalendarDefinition) - a breaking format change with
     ///     no auto-upgrade path, unlike the earlier plain-JSON-to-zip upgrade. A save with
     ///     Version &lt; 5 must be rejected outright by the loader, not partially loaded with
-    ///     silently-wrong (zeroed) time fields.</summary>
+    ///     silently-wrong (zeroed) time fields.
+    /// </summary>
     public int Version { get; set; } = 5;
 
     /// <summary>Elapsed seconds of the calendar-agnostic GameInstant - see GameClockService.</summary>
@@ -60,13 +62,17 @@ public class TimerDto
     public bool TriggerMediaPauseClock { get; set; }
     public bool TriggerMediaLoop { get; set; }
 
-    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this Timer also
+    /// <summary>
+    ///     Phase 4 of the Scenes/Tags/Calendars project: if set, firing this Timer also
     ///     activates the named Scene (MainWindowViewModel.ActivateSceneById), reusing the same
-    ///     orchestration as the Scenes tab's "Activate" button.</summary>
+    ///     orchestration as the Scenes tab's "Activate" button.
+    /// </summary>
     public Guid? TargetSceneId { get; set; }
 
-    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate flat tag list from the
-    ///     library-wide Tags, so filtering the Elementliste isn't cluttered with Media/Sound tags.</summary>
+    /// <summary>
+    ///     Timer-specific Tag Ids (see TimerTag) - a separate flat tag list from the
+    ///     library-wide Tags, so filtering the Elementliste isn't cluttered with Media/Sound tags.
+    /// </summary>
     public List<Guid> TagIds { get; set; } = [];
 }
 
@@ -94,8 +100,10 @@ public class AlarmDto
     /// <summary>See TimerDto.TargetSceneId's doc comment - same meaning here.</summary>
     public Guid? TargetSceneId { get; set; }
 
-    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate flat tag list from the
-    ///     library-wide Tags, so filtering the Elementliste isn't cluttered with Media/Sound tags.</summary>
+    /// <summary>
+    ///     Timer-specific Tag Ids (see TimerTag) - a separate flat tag list from the
+    ///     library-wide Tags, so filtering the Elementliste isn't cluttered with Media/Sound tags.
+    /// </summary>
     public List<Guid> TagIds { get; set; } = [];
 }
 
@@ -126,8 +134,10 @@ public class IntervalEventDto
     /// <summary>See TimerDto.TargetSceneId's doc comment - same meaning here.</summary>
     public Guid? TargetSceneId { get; set; }
 
-    /// <summary>Timer-specific Tag Ids (see TimerTag) - a separate flat tag list from the
-    ///     library-wide Tags, so filtering the Elementliste isn't cluttered with Media/Sound tags.</summary>
+    /// <summary>
+    ///     Timer-specific Tag Ids (see TimerTag) - a separate flat tag list from the
+    ///     library-wide Tags, so filtering the Elementliste isn't cluttered with Media/Sound tags.
+    /// </summary>
     public List<Guid> TagIds { get; set; } = [];
 }
 

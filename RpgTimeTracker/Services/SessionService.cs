@@ -12,13 +12,11 @@ namespace RpgTimeTracker.Services;
 ///     MainWindow.axaml.cs's OnSaveClick/OnLoadClick), sitting alongside the always-present
 ///     Shared Library (ThemeSettingsService). With no session open (CurrentSessionPath is null),
 ///     the app behaves exactly as before this feature existed - Sessions are strictly additive.
-///
 ///     Folder layout of one session (see MediaDirectory/SoundDirectory/etc. below):
 ///     &lt;folder&gt;/
-///       session.json           - game state (same AppStateDto shape as .rtt-save's inner file)
-///       session-library.json   - this session's own library entries (SessionLibraryDto)
-///       media/ sound/ music/ maps/ npcs/ - this session's own asset files
-///
+///     session.json           - game state (same AppStateDto shape as .rtt-save's inner file)
+///     session-library.json   - this session's own library entries (SessionLibraryDto)
+///     media/ sound/ music/ maps/ npcs/ - this session's own asset files
 ///     This class only owns the "which folder is open, and what's its layout" concern. Reading
 ///     game state into the live clock, and merging this session's library entries into
 ///     MainWindowViewModel's displayed collections, are handled by the caller (see
@@ -42,6 +40,12 @@ public sealed class SessionService
     public string MapDirectory => RequireSubdirectory("maps");
     public string NpcDirectory => RequireSubdirectory("npcs");
 
+    private string LibraryPath => Path.Combine(CurrentSessionPath!, LibraryFileName);
+
+    private string StatePath => Path.Combine(CurrentSessionPath!, StateFileName);
+
+    public bool StateFileExists => CurrentSessionPath is not null && File.Exists(StatePath);
+
     private string RequireSubdirectory(string name)
     {
         if (CurrentSessionPath is null)
@@ -49,8 +53,10 @@ public sealed class SessionService
         return Path.Combine(CurrentSessionPath, name);
     }
 
-    /// <summary>Creates a brand-new, empty session in an existing (ideally empty) folder, then
-    ///     opens it.</summary>
+    /// <summary>
+    ///     Creates a brand-new, empty session in an existing (ideally empty) folder, then
+    ///     opens it.
+    /// </summary>
     public void CreateSession(string folderPath)
     {
         Directory.CreateDirectory(folderPath);
@@ -64,8 +70,10 @@ public sealed class SessionService
         Log.Information("Session created: {FolderPath}", folderPath);
     }
 
-    /// <summary>Opens an existing session folder (creating any missing subfolders, e.g. because
-    ///     the folder predates a newer library type being added).</summary>
+    /// <summary>
+    ///     Opens an existing session folder (creating any missing subfolders, e.g. because
+    ///     the folder predates a newer library type being added).
+    /// </summary>
     public void OpenSession(string folderPath)
     {
         CurrentSessionPath = folderPath;
@@ -82,8 +90,6 @@ public sealed class SessionService
         Log.Information("Session closed: {FolderPath}", CurrentSessionPath);
         CurrentSessionPath = null;
     }
-
-    private string LibraryPath => Path.Combine(CurrentSessionPath!, LibraryFileName);
 
     public SessionLibraryDto LoadLibrary()
     {
@@ -113,10 +119,6 @@ public sealed class SessionService
             Log.Warning(ex, "Session library could not be saved ({LibraryPath})", LibraryPath);
         }
     }
-
-    private string StatePath => Path.Combine(CurrentSessionPath!, StateFileName);
-
-    public bool StateFileExists => CurrentSessionPath is not null && File.Exists(StatePath);
 
     public string ReadStateJson()
     {

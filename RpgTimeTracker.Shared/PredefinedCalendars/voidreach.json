@@ -2,18 +2,57 @@
   "Name": "Voidreach",
   "Description": "A sci-fi colony calendar: 10 months of 36 days, an 8-day week, and a metric 20-hour/100-minute/100-second day - for campaigns that want to feel unmistakably non-Earth.",
   "Months": [
-    { "Name": "Ignis", "Days": 36 },
-    { "Name": "Verdan", "Days": 36 },
-    { "Name": "Solace", "Days": 36 },
-    { "Name": "Umbros", "Days": 36 },
-    { "Name": "Cindra", "Days": 36 },
-    { "Name": "Halcyon", "Days": 36 },
-    { "Name": "Nocturne", "Days": 36 },
-    { "Name": "Aurelia", "Days": 36 },
-    { "Name": "Vestige", "Days": 36 },
-    { "Name": "Zenith", "Days": 36 }
+    {
+      "Name": "Ignis",
+      "Days": 36
+    },
+    {
+      "Name": "Verdan",
+      "Days": 36
+    },
+    {
+      "Name": "Solace",
+      "Days": 36
+    },
+    {
+      "Name": "Umbros",
+      "Days": 36
+    },
+    {
+      "Name": "Cindra",
+      "Days": 36
+    },
+    {
+      "Name": "Halcyon",
+      "Days": 36
+    },
+    {
+      "Name": "Nocturne",
+      "Days": 36
+    },
+    {
+      "Name": "Aurelia",
+      "Days": 36
+    },
+    {
+      "Name": "Vestige",
+      "Days": 36
+    },
+    {
+      "Name": "Zenith",
+      "Days": 36
+    }
   ],
-  "Weekdays": ["Primus", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus"],
+  "Weekdays": [
+    "Primus",
+    "Secundus",
+    "Tertius",
+    "Quartus",
+    "Quintus",
+    "Sextus",
+    "Septimus",
+    "Octavus"
+  ],
   "FirstWeekdayIndex": 0,
   "LeapYear": {
     "Kind": 0,
@@ -26,13 +65,47 @@
   "SecondsPerMinute": 100,
   "YearZeroOffset": 2287,
   "Seasons": [
-    { "Name": "Thaw", "StartMonthIndex": 0, "StartDay": 1, "ColorHex": "#8BC34A" },
-    { "Name": "Zenith Heat", "StartMonthIndex": 3, "StartDay": 1, "ColorHex": "#FFC107" },
-    { "Name": "Drift", "StartMonthIndex": 6, "StartDay": 1, "ColorHex": "#FF7043" },
-    { "Name": "Long Dark", "StartMonthIndex": 8, "StartDay": 1, "ColorHex": "#4FC3F7" }
+    {
+      "Name": "Thaw",
+      "StartMonthIndex": 0,
+      "StartDay": 1,
+      "ColorHex": "#8BC34A"
+    },
+    {
+      "Name": "Zenith Heat",
+      "StartMonthIndex": 3,
+      "StartDay": 1,
+      "ColorHex": "#FFC107"
+    },
+    {
+      "Name": "Drift",
+      "StartMonthIndex": 6,
+      "StartDay": 1,
+      "ColorHex": "#FF7043"
+    },
+    {
+      "Name": "Long Dark",
+      "StartMonthIndex": 8,
+      "StartDay": 1,
+      "ColorHex": "#4FC3F7"
+    }
   ],
   "Moons": [
-    { "Name": "Ashen Wake", "CycleLengthDays": 18, "FirstNewMoonYear": 0, "FirstNewMoonMonthIndex": 0, "FirstNewMoonDay": 1, "ColorHex": "#B0BEC5" },
-    { "Name": "Farlight", "CycleLengthDays": 54, "FirstNewMoonYear": 0, "FirstNewMoonMonthIndex": 0, "FirstNewMoonDay": 1, "ColorHex": "#90CAF9" }
+    {
+      "Name": "Ashen Wake",
+      "CycleLengthDays": 18,
+      "FirstNewMoonYear": 0,
+      "FirstNewMoonMonthIndex": 0,
+      "FirstNewMoonDay": 1,
+      "ColorHex": "#B0BEC5"
+    },
+    {
+      "Name": "Farlight",
+      "CycleLengthDays": 54,
+      "FirstNewMoonYear": 0,
+      "FirstNewMoonMonthIndex": 0,
+      "FirstNewMoonDay": 1,
+      "ColorHex": "#90CAF9"
+    }
   ]
 }

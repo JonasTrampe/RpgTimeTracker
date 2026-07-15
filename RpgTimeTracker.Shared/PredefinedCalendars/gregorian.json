@@ -2,20 +2,64 @@
   "Name": "Gregorian",
   "Description": "The real-world calendar - 12 months, 7-day weeks, a leap day every 4 years (except century years not divisible by 400). The default for a fresh campaign.",
   "Months": [
-    { "Name": "January", "Days": 31 },
-    { "Name": "February", "Days": 28 },
-    { "Name": "March", "Days": 31 },
-    { "Name": "April", "Days": 30 },
-    { "Name": "May", "Days": 31 },
-    { "Name": "June", "Days": 30 },
-    { "Name": "July", "Days": 31 },
-    { "Name": "August", "Days": 31 },
-    { "Name": "September", "Days": 30 },
-    { "Name": "October", "Days": 31 },
-    { "Name": "November", "Days": 30 },
-    { "Name": "December", "Days": 31 }
+    {
+      "Name": "January",
+      "Days": 31
+    },
+    {
+      "Name": "February",
+      "Days": 28
+    },
+    {
+      "Name": "March",
+      "Days": 31
+    },
+    {
+      "Name": "April",
+      "Days": 30
+    },
+    {
+      "Name": "May",
+      "Days": 31
+    },
+    {
+      "Name": "June",
+      "Days": 30
+    },
+    {
+      "Name": "July",
+      "Days": 31
+    },
+    {
+      "Name": "August",
+      "Days": 31
+    },
+    {
+      "Name": "September",
+      "Days": 30
+    },
+    {
+      "Name": "October",
+      "Days": 31
+    },
+    {
+      "Name": "November",
+      "Days": 30
+    },
+    {
+      "Name": "December",
+      "Days": 31
+    }
   ],
-  "Weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  "Weekdays": [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday"
+  ],
   "FirstWeekdayIndex": 0,
   "LeapYear": {
     "Kind": 2,
@@ -27,12 +71,39 @@
   "SecondsPerMinute": 60,
   "YearZeroOffset": 0,
   "Seasons": [
-    { "Name": "Spring", "StartMonthIndex": 2, "StartDay": 20, "ColorHex": "#8BC34A" },
-    { "Name": "Summer", "StartMonthIndex": 5, "StartDay": 21, "ColorHex": "#FFC107" },
-    { "Name": "Autumn", "StartMonthIndex": 8, "StartDay": 22, "ColorHex": "#FF7043" },
-    { "Name": "Winter", "StartMonthIndex": 11, "StartDay": 21, "ColorHex": "#4FC3F7" }
+    {
+      "Name": "Spring",
+      "StartMonthIndex": 2,
+      "StartDay": 20,
+      "ColorHex": "#8BC34A"
+    },
+    {
+      "Name": "Summer",
+      "StartMonthIndex": 5,
+      "StartDay": 21,
+      "ColorHex": "#FFC107"
+    },
+    {
+      "Name": "Autumn",
+      "StartMonthIndex": 8,
+      "StartDay": 22,
+      "ColorHex": "#FF7043"
+    },
+    {
+      "Name": "Winter",
+      "StartMonthIndex": 11,
+      "StartDay": 21,
+      "ColorHex": "#4FC3F7"
+    }
   ],
   "Moons": [
-    { "Name": "Moon", "CycleLengthDays": 29.53, "FirstNewMoonYear": 0, "FirstNewMoonMonthIndex": 0, "FirstNewMoonDay": 6, "ColorHex": "#E0E0E0" }
+    {
+      "Name": "Moon",
+      "CycleLengthDays": 29.53,
+      "FirstNewMoonYear": 0,
+      "FirstNewMoonMonthIndex": 0,
+      "FirstNewMoonDay": 6,
+      "ColorHex": "#E0E0E0"
+    }
   ]
 }

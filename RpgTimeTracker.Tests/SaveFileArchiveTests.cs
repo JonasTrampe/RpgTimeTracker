@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using RpgTimeTracker.Shared.Services;
 
@@ -22,7 +23,7 @@ public class SaveFileArchiveTests
         var wrapped = SaveFileArchive.Wrap("{}");
 
         using var stream = new MemoryStream(wrapped);
-        using var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read);
+        using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
 
         Assert.NotNull(zip.GetEntry(SaveFileArchive.StateEntryName));
     }
@@ -44,7 +45,7 @@ public class SaveFileArchiveTests
     public void Unwrap_falls_back_when_given_a_valid_zip_missing_the_expected_entry()
     {
         using var stream = new MemoryStream();
-        using (var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
         {
             var entry = zip.CreateEntry("something-else.txt");
             using var entryStream = entry.Open();

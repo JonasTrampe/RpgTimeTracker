@@ -4,9 +4,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace RpgTimeTracker.ViewModels;
 
 /// <summary>
-///     One chip in a LibraryPanelView's tag-filter bar - a campaign-wide <see cref="TagViewModel"/>
+///     One chip in a LibraryPanelView's tag-filter bar - a campaign-wide <see cref="TagViewModel" />
 ///     plus whether it's currently part of the active multi-select filter. Distinct from
-///     <see cref="TagOptionViewModel"/> (which toggles a single item's own tag membership); this one
+///     <see cref="TagOptionViewModel" /> (which toggles a single item's own tag membership); this one
 ///     toggles membership in the filter's selected-tags set instead.
 /// </summary>
 public partial class TagFilterOptionViewModel : ObservableObject
@@ -23,5 +23,8 @@ public partial class TagFilterOptionViewModel : ObservableObject
 
     public TagViewModel Tag { get; }
 
-    partial void OnIsSelectedChanged(bool value) => _onToggled(Tag.Id, value);
+    partial void OnIsSelectedChanged(bool value)
+    {
+        _onToggled(Tag.Id, value);
+    }
 }

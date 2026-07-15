@@ -20,7 +20,6 @@ public partial class SentMediaItemViewModel : ObservableObject, IDisposable
 {
     private readonly Action<SentMediaItemViewModel> _onHighlightRequested;
     private readonly Action<SentMediaItemViewModel> _onRetractRequested;
-    private readonly MediaLibraryItemViewModel? _sourceItem;
 
     [ObservableProperty] private string _name;
     [ObservableProperty] private Bitmap? _thumbnail;
@@ -44,9 +43,9 @@ public partial class SentMediaItemViewModel : ObservableObject, IDisposable
         IsOwnedCache = isOwnedCache;
         _onHighlightRequested = onHighlightRequested;
         _onRetractRequested = onRetractRequested;
-        _sourceItem = sourceItem;
-        if (_sourceItem is not null)
-            _sourceItem.PropertyChanged += OnSourceItemPropertyChanged;
+        SourceItem = sourceItem;
+        if (SourceItem is not null)
+            SourceItem.PropertyChanged += OnSourceItemPropertyChanged;
 
         if (kind == MediaKind.Image) LoadThumbnail();
     }
@@ -56,11 +55,13 @@ public partial class SentMediaItemViewModel : ObservableObject, IDisposable
     public string LocalPath { get; }
     public string MimeType { get; }
 
-    /// <summary>The Media Library item this gallery entry was sent from, if any (ad-hoc sends
+    /// <summary>
+    ///     The Media Library item this gallery entry was sent from, if any (ad-hoc sends
     ///     have none) - lets MainWindowViewModel find and retract every gallery entry that
     ///     originated from a given library item (see StopShowingImage), the same "stop" gesture
-    ///     Maps/Playlists already have.</summary>
-    public MediaLibraryItemViewModel? SourceItem => _sourceItem;
+    ///     Maps/Playlists already have.
+    /// </summary>
+    public MediaLibraryItemViewModel? SourceItem { get; }
 
     /// <summary>
     ///     Whether LocalPath is a one-off ad-hoc cache copy (to be deleted
@@ -77,11 +78,14 @@ public partial class SentMediaItemViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        if (_sourceItem is not null)
-            _sourceItem.PropertyChanged -= OnSourceItemPropertyChanged;
+        if (SourceItem is not null)
+            SourceItem.PropertyChanged -= OnSourceItemPropertyChanged;
     }
 
-    /// <summary>Called by MainWindowViewModel on LocalizationService.LanguageChanged (see LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).</summary>
+    /// <summary>
+    ///     Called by MainWindowViewModel on LocalizationService.LanguageChanged (see
+    ///     LibraryItemViewModelBase.RefreshLocalizedText for the same pattern).
+    /// </summary>
     public void RefreshLocalizedText()
     {
         OnPropertyChanged(string.Empty);
@@ -119,9 +123,9 @@ public partial class SentMediaItemViewModel : ObservableObject, IDisposable
 
     private void OnSourceItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (_sourceItem is null) return;
+        if (SourceItem is null) return;
 
         if (e.PropertyName == nameof(MediaLibraryItemViewModel.Name))
-            Name = _sourceItem.Name;
+            Name = SourceItem.Name;
     }
 }

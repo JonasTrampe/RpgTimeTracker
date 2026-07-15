@@ -7,7 +7,7 @@ public class FogMaskTests
     [Fact]
     public void CreateFullyHidden_has_every_cell_hidden()
     {
-        var mask = FogMask.CreateFullyHidden(gridWidth: 10, gridHeight: 8, cellSizePx: 32);
+        var mask = FogMask.CreateFullyHidden(10, 8, 32);
 
         for (var y = 0; y < 8; y++)
         for (var x = 0; x < 10; x++)
@@ -17,7 +17,7 @@ public class FogMaskTests
     [Fact]
     public void SetRevealed_toggles_only_the_targeted_cell()
     {
-        var mask = FogMask.CreateFullyHidden(gridWidth: 5, gridHeight: 5, cellSizePx: 10);
+        var mask = FogMask.CreateFullyHidden(5, 5, 10);
 
         mask.SetRevealed(2, 3, true);
 
@@ -29,7 +29,7 @@ public class FogMaskTests
     [Fact]
     public void SetRevealed_can_re_hide_a_previously_revealed_cell()
     {
-        var mask = FogMask.CreateFullyHidden(gridWidth: 5, gridHeight: 5, cellSizePx: 10);
+        var mask = FogMask.CreateFullyHidden(5, 5, 10);
         mask.SetRevealed(1, 1, true);
 
         mask.SetRevealed(1, 1, false);
@@ -40,7 +40,7 @@ public class FogMaskTests
     [Fact]
     public void Clone_is_independent_of_the_original()
     {
-        var original = FogMask.CreateFullyHidden(gridWidth: 4, gridHeight: 4, cellSizePx: 16);
+        var original = FogMask.CreateFullyHidden(4, 4, 16);
         original.SetRevealed(0, 0, true);
 
         var clone = original.Clone();
@@ -55,7 +55,7 @@ public class FogMaskTests
     public void Reset_to_starting_is_a_clone_of_the_template_not_a_shared_reference()
     {
         // Models the "reset to starting" feature: CurrentFog = StartingFog.Clone().
-        var startingTemplate = FogMask.CreateFullyHidden(gridWidth: 4, gridHeight: 4, cellSizePx: 16);
+        var startingTemplate = FogMask.CreateFullyHidden(4, 4, 16);
         startingTemplate.SetRevealed(0, 0, true);
 
         var currentFog = startingTemplate.Clone();

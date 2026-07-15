@@ -14,36 +14,35 @@ namespace RpgTimeTracker.ViewModels;
 /// </summary>
 public partial class NpcVariantViewModel : ObservableObject
 {
-    private readonly Action<NpcVariantViewModel> _onDeleteRequested;
     private readonly Action<NpcVariantViewModel>? _onChanged;
+    private readonly Action<NpcVariantViewModel> _onDeleteRequested;
 
-    [ObservableProperty] private string _name;
-    [ObservableProperty] private bool _isDefault;
+    /// <summary>
+    ///     Whether Sounds is an explicit override for this variant (even if it ends up empty -
+    ///     "no sounds at all" is a valid override) rather than "inherit the Default variant's
+    ///     sounds" - flips to true the first time the GM adds/removes a sound on a non-default
+    ///     variant. See NpcLibraryItemViewModel.GetEffectiveSounds.
+    /// </summary>
+    [ObservableProperty] private bool _hasSoundsOverride;
+
     [ObservableProperty] private MediaLibraryItemViewModel? _image;
-    [ObservableProperty] private MediaLibraryItemViewModel? _tokenImage;
-    [ObservableProperty] private string? _tokenIcon;
-    [ObservableProperty] private string? _playerInfo;
+    [ObservableProperty] private bool _isDefault;
 
-    /// <summary>Purely local UI state (not persisted) - whether PlayerInfo currently shows its
+    /// <summary>
+    ///     Purely local UI state (not persisted) - whether PlayerInfo currently shows its
     ///     rendered Markdown preview instead of the plain-text editor. See MainWindow.axaml's
     ///     per-field preview toggle button. Defaults to false (edit) here since PlayerInfo isn't a
     ///     constructor parameter (it's set afterward via the property setter) - callers that
     ///     already know the loaded value should set this explicitly once PlayerInfo is populated;
     ///     see MainWindowViewModel.FromNpcLibraryEntryDto. See
-    ///     NpcGmInfoBlockViewModel.IsPreviewMode's doc comment for the edit-vs-preview reasoning.</summary>
+    ///     NpcGmInfoBlockViewModel.IsPreviewMode's doc comment for the edit-vs-preview reasoning.
+    /// </summary>
     [ObservableProperty] private bool _isPlayerInfoPreviewMode;
 
-    public string PlayerInfoPreviewToggleIcon => IsPlayerInfoPreviewMode ? "✎" : "👁";
-
-    /// <summary>Whether Sounds is an explicit override for this variant (even if it ends up empty -
-    ///     "no sounds at all" is a valid override) rather than "inherit the Default variant's
-    ///     sounds" - flips to true the first time the GM adds/removes a sound on a non-default
-    ///     variant. See NpcLibraryItemViewModel.GetEffectiveSounds.</summary>
-    [ObservableProperty] private bool _hasSoundsOverride;
-
-    public Guid Id { get; }
-
-    public ObservableCollection<SoundLibraryItemViewModel> Sounds { get; } = [];
+    [ObservableProperty] private string _name;
+    [ObservableProperty] private string? _playerInfo;
+    [ObservableProperty] private string? _tokenIcon;
+    [ObservableProperty] private MediaLibraryItemViewModel? _tokenImage;
 
     public NpcVariantViewModel(
         Guid id,
@@ -59,6 +58,12 @@ public partial class NpcVariantViewModel : ObservableObject
         _onChanged = onChanged;
         Sounds.CollectionChanged += (_, _) => _onChanged?.Invoke(this);
     }
+
+    public string PlayerInfoPreviewToggleIcon => IsPlayerInfoPreviewMode ? "✎" : "👁";
+
+    public Guid Id { get; }
+
+    public ObservableCollection<SoundLibraryItemViewModel> Sounds { get; } = [];
 
     public void AddSound(SoundLibraryItemViewModel sound)
     {
@@ -113,9 +118,11 @@ public partial class NpcVariantViewModel : ObservableObject
         IsPlayerInfoPreviewMode = !IsPlayerInfoPreviewMode;
     }
 
-    /// <summary>Not exposed for the Default variant in the UI (it can't be deleted) - the check
+    /// <summary>
+    ///     Not exposed for the Default variant in the UI (it can't be deleted) - the check
     ///     belongs to the caller (NpcLibraryItemViewModel.RemoveVariant), not this command, since
-    ///     the command has no way to refuse and stay silent otherwise.</summary>
+    ///     the command has no way to refuse and stay silent otherwise.
+    /// </summary>
     [RelayCommand]
     private void Delete()
     {

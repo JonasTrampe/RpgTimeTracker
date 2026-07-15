@@ -12,7 +12,8 @@
                         <TextBlock Classes="h1"
                                    Text="{DynamicResource PlayerTimeline.Header.Calendar}"
                                    IsVisible="{Binding ShowPlayerCalendarView}" />
-                        <TextBlock Classes="h1" Text="{DynamicResource PlayerTimeline.Header.Timeline}" IsVisible="{Binding ShowPlayerTimelineView}" />
+                        <TextBlock Classes="h1" Text="{DynamicResource PlayerTimeline.Header.Timeline}"
+                                   IsVisible="{Binding ShowPlayerTimelineView}" />
 
                         <Border Grid.Column="1"
                                 Background="{DynamicResource TextInputHeaderBrush}"
@@ -57,13 +58,20 @@
                         </Grid>
 
                         <UniformGrid Columns="7">
-                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Mon}" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Tue}" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Wed}" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Thu}" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Fri}" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Sat}" HorizontalAlignment="Center" Classes="muted" />
-                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Sun}" HorizontalAlignment="Center" Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Mon}" HorizontalAlignment="Center"
+                                       Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Tue}" HorizontalAlignment="Center"
+                                       Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Wed}" HorizontalAlignment="Center"
+                                       Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Thu}" HorizontalAlignment="Center"
+                                       Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Fri}" HorizontalAlignment="Center"
+                                       Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Sat}" HorizontalAlignment="Center"
+                                       Classes="muted" />
+                            <TextBlock Text="{DynamicResource PlayerTimeline.Weekday.Sun}" HorizontalAlignment="Center"
+                                       Classes="muted" />
                         </UniformGrid>
 
                         <ItemsControl ItemsSource="{Binding CalendarMonthDays}">

@@ -19,7 +19,8 @@
             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
                 <Button Content="{DynamicResource ConfirmTriggerMediaDelete.CancelButton}" Click="OnCancelClick" />
                 <Button Content="{DynamicResource ConfirmTriggerMediaDelete.KeepButton}" Click="OnKeepClick" />
-                <Button Classes="primary" Content="{DynamicResource ConfirmTriggerMediaDelete.RemoveAndDeleteButton}" Click="OnRemoveAndDeleteClick" />
+                <Button Classes="primary" Content="{DynamicResource ConfirmTriggerMediaDelete.RemoveAndDeleteButton}"
+                        Click="OnRemoveAndDeleteClick" />
             </StackPanel>
         </StackPanel>
     </Border>

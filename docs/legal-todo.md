@@ -37,7 +37,12 @@ This file *is* the answer to "how do I remember this": it's committed to
 the repo, so it survives regardless of who's working on the project or
 which AI session helped last. Suggested habit: whenever you (or an
 assistant) add a `PackageReference` to any `.csproj`, add a line here in
-the same commit rather than trusting memory. Optionally, a small CI check
-that diffs `PackageReference` entries across the `.csproj` files against
-the names listed in `THIRD-PARTY-NOTICES.txt` could catch anything missed
-— ask if you want that set up.
+the same commit rather than trusting memory.
+
+- [x] CI check (`third-party-notices.yml`, running
+  `scripts/check-third-party-notices.ps1`) that fails if any shipped
+  project's `PackageReference` isn't mentioned anywhere in
+  `THIRD-PARTY-NOTICES.txt` — catches a forgotten attribution entry instead
+  of relying on memory. `RpgTimeTracker.Tests`' dev/test-only packages
+  (xunit, coverlet, Avalonia.Headless, ...) are intentionally excluded,
+  since they never ship in a built app.

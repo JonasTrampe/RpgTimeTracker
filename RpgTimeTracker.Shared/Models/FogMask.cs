@@ -14,8 +14,10 @@ public sealed class FogMask
     public int GridWidth { get; set; }
     public int GridHeight { get; set; }
 
-    /// <summary>Cell size in map-image pixels. Configurable per floor - a fine grid (down to
-    ///     ~5-10px) gives detailed reveal shapes, a coarse one keeps the mask tiny.</summary>
+    /// <summary>
+    ///     Cell size in map-image pixels. Configurable per floor - a fine grid (down to
+    ///     ~5-10px) gives detailed reveal shapes, a coarse one keeps the mask tiny.
+    /// </summary>
     public int CellSizePx { get; set; } = 32;
 
     /// <summary>1 bit per cell, row-major, packed 8 cells per byte. Length = ceil(GridWidth * GridHeight / 8).</summary>
@@ -62,7 +64,8 @@ public sealed class FogMask
     private int CellIndex(int x, int y)
     {
         if (x < 0 || x >= GridWidth || y < 0 || y >= GridHeight)
-            throw new ArgumentOutOfRangeException(nameof(x), $"Cell ({x},{y}) is outside the {GridWidth}x{GridHeight} grid.");
+            throw new ArgumentOutOfRangeException(nameof(x),
+                $"Cell ({x},{y}) is outside the {GridWidth}x{GridHeight} grid.");
 
         return y * GridWidth + x;
     }

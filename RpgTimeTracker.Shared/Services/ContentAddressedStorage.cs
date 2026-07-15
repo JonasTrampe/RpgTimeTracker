@@ -14,9 +14,11 @@ namespace RpgTimeTracker.Shared.Services;
 /// </summary>
 public static class ContentAddressedStorage
 {
-    /// <summary>Copies sourcePath into destinationDirectory (created if missing), returning the
+    /// <summary>
+    ///     Copies sourcePath into destinationDirectory (created if missing), returning the
     ///     path to the resulting file - a pre-existing file with the same content is reused
-    ///     as-is rather than copied again.</summary>
+    ///     as-is rather than copied again.
+    /// </summary>
     public static async Task<string> StoreFileAsync(string sourcePath, string destinationDirectory)
     {
         Directory.CreateDirectory(destinationDirectory);

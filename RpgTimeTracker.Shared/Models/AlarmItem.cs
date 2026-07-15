@@ -78,7 +78,8 @@ public class AlarmItem
     ///     next point in time after currentGameTime. Important for large time jumps with
     ///     a short RepeatInterval, where a loop would need millions of iterations.
     /// </summary>
-    private static GameInstant AdvancePastDue(GameInstant triggerAt, GameInstant currentGameTime, TimeSpan repeatInterval)
+    private static GameInstant AdvancePastDue(GameInstant triggerAt, GameInstant currentGameTime,
+        TimeSpan repeatInterval)
     {
         if (triggerAt > currentGameTime) return triggerAt;
 

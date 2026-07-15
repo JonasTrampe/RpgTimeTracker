@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
@@ -41,6 +40,8 @@ public static class LocalizationService
 
     public static IReadOnlyList<string> SupportedLanguages => SupportedLanguagesArray;
 
+    private static string LocalizationDirectory => Path.Combine(AppContext.BaseDirectory, "Localization");
+
     /// <summary>
     ///     Raised after Apply() swaps in the new language dictionary. XAML-bound {DynamicResource}
     ///     text updates on its own, but computed C# properties that call Get() (e.g. a button label
@@ -52,8 +53,6 @@ public static class LocalizationService
     ///     unrelated state change.
     /// </summary>
     public static event Action? LanguageChanged;
-
-    private static string LocalizationDirectory => Path.Combine(AppContext.BaseDirectory, "Localization");
 
     public static void Apply(string? language)
     {
@@ -89,13 +88,19 @@ public static class LocalizationService
         LanguageChanged?.Invoke();
     }
 
-    /// <summary>For C#-side strings that can't use a XAML DynamicResource binding (e.g. status/error messages built in code-behind or view models).</summary>
+    /// <summary>
+    ///     For C#-side strings that can't use a XAML DynamicResource binding (e.g. status/error messages built in
+    ///     code-behind or view models).
+    /// </summary>
     public static string Get(string key)
     {
         return _currentStrings.TryGetValue(key, out var value) ? value : key;
     }
 
-    /// <summary>For optional overrides (e.g. a bundled sample theme's display name) where a missing key should fall back to caller-supplied data instead of the raw key string.</summary>
+    /// <summary>
+    ///     For optional overrides (e.g. a bundled sample theme's display name) where a missing key should fall back to
+    ///     caller-supplied data instead of the raw key string.
+    /// </summary>
     public static bool TryGet(string key, out string value)
     {
         return _currentStrings.TryGetValue(key, out value!);

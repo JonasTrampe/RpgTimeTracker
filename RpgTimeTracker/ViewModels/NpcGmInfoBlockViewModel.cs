@@ -11,20 +11,21 @@ namespace RpgTimeTracker.ViewModels;
 /// </summary>
 public partial class NpcGmInfoBlockViewModel : ObservableObject
 {
-    private readonly Action<NpcGmInfoBlockViewModel> _onDeleteRequested;
     private readonly Action<NpcGmInfoBlockViewModel>? _onChanged;
+    private readonly Action<NpcGmInfoBlockViewModel> _onDeleteRequested;
 
-    [ObservableProperty] private string _title;
-    [ObservableProperty] private string _markdownBody;
-
-    /// <summary>Purely local UI state (not persisted) - whether this block currently shows its
+    /// <summary>
+    ///     Purely local UI state (not persisted) - whether this block currently shows its
     ///     rendered Markdown preview instead of the plain-text editor. See MainWindow.axaml's
     ///     per-field preview toggle button. Starts true (preview) whenever markdownBody already
     ///     has content to render, and false (edit) for a genuinely empty/new block - previewing
-    ///     nothing would just look broken, and there'd be no obvious way to start typing.</summary>
+    ///     nothing would just look broken, and there'd be no obvious way to start typing.
+    /// </summary>
     [ObservableProperty] private bool _isPreviewMode;
 
-    public string PreviewToggleIcon => IsPreviewMode ? "✎" : "👁";
+    [ObservableProperty] private string _markdownBody;
+
+    [ObservableProperty] private string _title;
 
     public NpcGmInfoBlockViewModel(
         string title,
@@ -38,6 +39,8 @@ public partial class NpcGmInfoBlockViewModel : ObservableObject
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
     }
+
+    public string PreviewToggleIcon => IsPreviewMode ? "✎" : "👁";
 
     partial void OnTitleChanged(string value)
     {

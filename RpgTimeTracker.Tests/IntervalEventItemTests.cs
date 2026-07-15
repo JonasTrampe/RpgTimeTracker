@@ -19,7 +19,8 @@ public class IntervalEventItemTests
     [Fact]
     public void Advance_while_not_running_does_nothing()
     {
-        var item = new IntervalEventItem { Interval = TimeSpan.FromMinutes(10), ActiveDuration = TimeSpan.FromMinutes(1) };
+        var item = new IntervalEventItem
+            { Interval = TimeSpan.FromMinutes(10), ActiveDuration = TimeSpan.FromMinutes(1) };
 
         var triggered = item.Advance(TimeSpan.FromMinutes(10));
 
@@ -84,7 +85,7 @@ public class IntervalEventItemTests
     [Fact]
     public void MaxRepeats_completes_the_item_once_the_final_active_window_ends()
     {
-        var item = CreateRunning(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(1), maxRepeats: 2);
+        var item = CreateRunning(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(1), 2);
 
         item.Advance(TimeSpan.FromMinutes(21));
 
@@ -95,7 +96,7 @@ public class IntervalEventItemTests
     [Fact]
     public void MaxRepeats_prevents_IsActive_beyond_the_final_repeat()
     {
-        var item = CreateRunning(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(1), maxRepeats: 1);
+        var item = CreateRunning(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(1), 1);
 
         item.Advance(TimeSpan.FromMinutes(20));
 
@@ -115,7 +116,7 @@ public class IntervalEventItemTests
     [Fact]
     public void Reset_clears_elapsed_running_and_completed_state()
     {
-        var item = CreateRunning(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(1), maxRepeats: 1);
+        var item = CreateRunning(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(1), 1);
         item.Advance(TimeSpan.FromMinutes(11));
         Assert.True(item.IsCompleted);
 
@@ -129,9 +130,10 @@ public class IntervalEventItemTests
     [Fact]
     public void Restore_clamps_negative_elapsed_to_zero_and_respects_completed_flag()
     {
-        var item = new IntervalEventItem { Interval = TimeSpan.FromMinutes(10), ActiveDuration = TimeSpan.FromMinutes(1) };
+        var item = new IntervalEventItem
+            { Interval = TimeSpan.FromMinutes(10), ActiveDuration = TimeSpan.FromMinutes(1) };
 
-        item.Restore(-TimeSpan.FromMinutes(1), isRunning: true, isCompleted: true);
+        item.Restore(-TimeSpan.FromMinutes(1), true, true);
 
         Assert.Equal(TimeSpan.Zero, item.Elapsed);
         Assert.True(item.IsCompleted);

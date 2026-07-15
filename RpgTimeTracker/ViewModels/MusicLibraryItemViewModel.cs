@@ -45,16 +45,20 @@ public partial class MusicLibraryItemViewModel : LibraryItemViewModelBase<MusicL
         _volume = volume;
         _onPlayRequested = onPlayRequested;
         _onTestRequested = onTestRequested;
-        if (tagIds is not null) foreach (var tagId in tagIds) TagIds.Add(tagId);
+        if (tagIds is not null)
+            foreach (var tagId in tagIds)
+                TagIds.Add(tagId);
         TagIds.CollectionChanged += (_, _) => NotifyChanged();
     }
 
-    /// <summary>Freeform Tag Ids attached to this item (see Tag) - separate from Scene
-    ///     membership, a different, explicit mechanism.</summary>
-    public ObservableCollection<Guid> TagIds { get; } = [];
-
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);
+
+    /// <summary>
+    ///     Freeform Tag Ids attached to this item (see Tag) - separate from Scene
+    ///     membership, a different, explicit mechanism.
+    /// </summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
 
     partial void OnIconChanged(string value)
     {

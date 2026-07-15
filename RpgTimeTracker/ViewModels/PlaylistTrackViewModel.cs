@@ -12,9 +12,9 @@ namespace RpgTimeTracker.ViewModels;
 /// </summary>
 public sealed partial class PlaylistTrackViewModel : ObservableObject
 {
-    private readonly Action<PlaylistTrackViewModel> _onRemoveRequested;
-    private readonly Action<PlaylistTrackViewModel> _onMoveUpRequested;
     private readonly Action<PlaylistTrackViewModel> _onMoveDownRequested;
+    private readonly Action<PlaylistTrackViewModel> _onMoveUpRequested;
+    private readonly Action<PlaylistTrackViewModel> _onRemoveRequested;
 
     public PlaylistTrackViewModel(
         MusicLibraryItemViewModel track,
