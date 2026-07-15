@@ -474,6 +474,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         var floor = map.Floors.FirstOrDefault(f => f.Id == token.FloorId);
         if (floor is null) return false;
 
+        if (token.X < 0 || token.Y < 0) return false;
+
         var cellX = (int)(token.X / floor.CellSizePx);
         var cellY = (int)(token.Y / floor.CellSizePx);
         if (cellX < 0 || cellY < 0 || cellX >= floor.GridWidth || cellY >= floor.GridHeight) return false;
@@ -519,7 +521,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     public void NotifyTokenChanged(MapItemViewModel map, MapTokenViewModel token)
     {
         OnMapLibraryItemChanged(map);
-        if (!ReferenceEquals(OpenMap, map)) return;
+
+        RefreshTokenPlayerState(map, token);
+    }
+
+    private void RefreshTokenPlayerState(MapItemViewModel map, MapTokenViewModel token)
+    {
+        if (!IsMapOpenToPlayers || !ReferenceEquals(OpenMap, map)) return;
 
         if (token.IsVisibleToPlayers(IsTokenCellRevealed(map, token)))
         {
@@ -548,7 +556,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     public void NotifyTokenRemoved(MapItemViewModel map, Guid tokenId)
     {
         OnMapLibraryItemChanged(map);
-        if (!ReferenceEquals(OpenMap, map)) return;
+        if (!IsMapOpenToPlayers || !ReferenceEquals(OpenMap, map)) return;
 
         _ = _playerServer.PublishMapTokenRemoveAsync(tokenId);
         MapDisplay.RemoveToken(tokenId);
@@ -573,7 +581,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
             var cellX = (int)(token.X / floor.CellSizePx);
             var cellY = (int)(token.Y / floor.CellSizePx);
-            if (paintedCells.Contains((cellX, cellY))) NotifyTokenChanged(map, token);
+            if (paintedCells.Contains((cellX, cellY))) RefreshTokenPlayerState(map, token);
         }
     }
 
@@ -935,6 +943,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         await _playerServer.PublishMapFogResetAsync(floor.Id);
         MapDisplay.NotifyFogChanged(floor.Id);
+
+        if (OpenMap is { } map && map.Floors.Contains(floor))
+            foreach (var token in map.Tokens.Where(t =>
+                         t.FloorId == floor.Id && t.RevealMode == TokenRevealMode.HiddenUntilRevealed))
+                RefreshTokenPlayerState(map, token);
     }
 
     /// <summary>

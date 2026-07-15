@@ -77,6 +77,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Map tokens now update their player visibility after resetting live fog to
+  the prepared mask, render their permitted icon/detail fields correctly,
+  stay hidden when positioned outside the map, and use stable snapshots
+  during reconnect synchronization.
 - Game time appeared frozen due to sub-second deltas being truncated
   instead of accumulated.
 - Gregorian calendar's leap-year rule wrongly flagged century years.
