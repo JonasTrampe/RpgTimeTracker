@@ -2437,8 +2437,16 @@
                                                 <Border Grid.Column="1" Classes="settingsGroup" Margin="0,0,14,14"
                                                         IsVisible="{Binding SelectedScene, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                     <StackPanel Spacing="14" DataContext="{Binding SelectedScene}">
-                                                        <TextBox Classes="settingsGroupTitle"
-                                                                 Text="{Binding Name, Mode=TwoWay}" />
+                                                        <Grid ColumnDefinitions="*,Auto">
+                                                            <TextBox Grid.Column="0" Classes="settingsGroupTitle"
+                                                                     Text="{Binding Name, Mode=TwoWay}" />
+                                                            <Button Grid.Column="1"
+                                                                    Content="{DynamicResource MainWindow.Scenes.ActivateButton}"
+                                                                    Command="{Binding $parent[TabItem].DataContext.ActivateSceneCommand}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip.Tip="{DynamicResource MainWindow.Scenes.ActivateTooltip}"
+                                                                    Margin="8,0,0,0" />
+                                                        </Grid>
 
                                                         <StackPanel Spacing="4">
                                                             <TextBlock Classes="muted"

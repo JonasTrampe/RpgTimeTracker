@@ -227,6 +227,8 @@
   "MainWindow.Scenes.SoundsLabel": "Sounds",
   "MainWindow.Scenes.AddSoundLabel": "Add sound",
   "MainWindow.Scenes.NoneOption": "(None)",
+  "MainWindow.Scenes.ActivateButton": "▶ Activate",
+  "MainWindow.Scenes.ActivateTooltip": "Show/play this Scene's bundled Image, Map, Music, and Sounds to players",
 
   "MapEditor.RevealToolButton": "👁 Reveal",
   "MapEditor.BrushSizeLabel": "Brush size",
@@ -499,6 +501,7 @@
   "MainWindowViewModel.Events.TimeJumpUndone": "Time jump undone",
   "MainWindowViewModel.Events.TimeJumpRedone": "Time jump redone",
   "MainWindowViewModel.Events.TimerExpired": "Timer expired: {0}",
+  "MainWindowViewModel.Events.SceneActivated": "Scene activated: {0}",
   "MainWindowViewModel.Events.AlarmTriggered": "Alarm triggered: {0}",
   "MainWindowViewModel.Events.IntervalActive": "On-time active: {0}",
   "MainWindowViewModel.Events.CalendarEntryTriggered": "Calendar entry triggered: {0}",

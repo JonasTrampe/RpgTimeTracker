@@ -227,6 +227,8 @@
   "MainWindow.Scenes.SoundsLabel": "Sounds",
   "MainWindow.Scenes.AddSoundLabel": "Sound hinzufügen",
   "MainWindow.Scenes.NoneOption": "(Keine)",
+  "MainWindow.Scenes.ActivateButton": "▶ Aktivieren",
+  "MainWindow.Scenes.ActivateTooltip": "Bild, Karte, Musik und Sounds dieser Szene an die Spieler zeigen/abspielen",
 
   "MapEditor.RevealToolButton": "👁 Aufdecken",
   "MapEditor.BrushSizeLabel": "Pinselgröße",
@@ -499,6 +501,7 @@
   "MainWindowViewModel.Events.TimeJumpUndone": "Zeitsprung rückgängig gemacht",
   "MainWindowViewModel.Events.TimeJumpRedone": "Zeitsprung wiederholt",
   "MainWindowViewModel.Events.TimerExpired": "Timer abgelaufen: {0}",
+  "MainWindowViewModel.Events.SceneActivated": "Szene aktiviert: {0}",
   "MainWindowViewModel.Events.AlarmTriggered": "Wecker ausgelöst: {0}",
   "MainWindowViewModel.Events.IntervalActive": "OnTime aktiv: {0}",
   "MainWindowViewModel.Events.CalendarEntryTriggered": "Kalender-Eintrag ausgelöst: {0}",

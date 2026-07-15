@@ -28,9 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Sound/Music/Map item is guarded the same way NPC references already are,
   and Scenes can carry Tags like every other library item. A new "Scenes"
   tab lists and edits them, mirroring the Characters tab's list+detail
-  layout. "Activate Scene" orchestration (actually pushing the bundle to
-  players), a Scene-scoped timeline, and full-session export/import
-  wiring aren't built yet.
+  layout, plus a "▶ Activate" button that pushes the Scene's bundled
+  Image/Map/Music/Sounds to players atomically through the existing
+  per-kind send paths (the same ones a Media Library double-click or a
+  Playlist already use). A Scene-scoped timeline and full-session
+  export/import wiring aren't built yet.
 - Tags (Phase 1 of the Scenes/Tags/Calendars project): a flat, campaign-wide
   list of freeform tags (name + color) manageable from a new "Tags" group in
   Settings. Media, Sound, Music, Map, and NPC library items each gained a

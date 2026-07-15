@@ -2132,3 +2132,33 @@ it's a distinct, hardcoded rule shape. Regression tests cover 1900/2000/
 2024/2023/2100/2400 against the bundled calendar directly, rather than
 only exercising the round-trip test that happened to not touch a
 century year.
+
+## "Activate Scene": direct reuse of per-kind send paths, no new wire logic
+
+The plan called for pushing a Scene's bundle to players "atomically
+through the existing per-kind send paths" rather than inventing a new
+"bundle" concept on the wire. `ActivateSceneAsync`
+(`MainWindowViewModel.SceneLibrary.cs`) does exactly that: it calls
+`ShowMediaLibraryItem` for the Image, `OpenMapToPlayersAsync` for the Map,
+`PlaySoundLibraryItem` for each Sound, and a new small
+`SendSceneMusicTrackAsync` for Music - four independent sends, not one
+combined RPC message. If a bundle piece is missing (`null`/empty), that
+step is simply skipped; there's no partial-failure rollback to worry
+about because each send is already independently safe to call (that's
+exactly what these methods already do for a Media Library double-click,
+the "Show" button on a Map, and a Sound Library tile click).
+
+Music needed one new (but small) method rather than a call to an
+existing one: `PlayMusicLibraryItem` (a single tile's "Play" button) is
+deliberately local-preview-only - an earlier design decision was that
+real network distribution only happens through a Playlist, since a
+single ad-hoc track has no sequencing/routing context to advance from. A
+Scene's bundled Music has the same "no sequencing needed" shape, so
+`SendSceneMusicTrackAsync` reuses only the actual *send* step of
+`PlayCurrentPlaylistTrackAsync` (build the header, read the file,
+`PublishMusicTrackAsync`, start the Host's own local preview if enabled)
+without any of `PlayPlaylistAsync`'s bookkeeping (`CurrentPlaylist`,
+`_playbackOrder`, track-ended auto-advance) - there's nothing to advance
+to for a single Scene track, so building a throwaway one-track
+`PlaylistViewModel` just to reuse `PlayPlaylistAsync` would have added
+machinery instead of removing it.

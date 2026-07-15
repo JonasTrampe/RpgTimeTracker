@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
+using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Services.Localization;
+using Serilog;
 
 namespace RpgTimeTracker.ViewModels;
 
@@ -16,8 +19,7 @@ public partial class MainWindowViewModel
     // ==================== Scenes library (Phase 2 of the Scenes/Tags/Calendars project) ====================
     // Own top-level library, not nested under anything - see SceneLibraryItemViewModel's doc
     // comment for why it doesn't derive from LibraryItemViewModelBase<TSelf> like Media/Sound.
-    // Activation orchestration and a Scene-scoped timeline (Phases 3-4 of the plan) aren't wired
-    // yet - this is the data/persistence layer only, with no tab UI to edit it from either.
+    // A Scene-scoped timeline (Phase 3 of the plan) isn't wired yet.
 
     public ObservableCollection<SceneLibraryItemViewModel> SceneLibrary { get; } = [];
 
@@ -138,4 +140,63 @@ public partial class MainWindowViewModel
         SaveLibrarySettings(SceneLibrary, s => s.Scope, ToSceneLibraryEntryDto,
             (settings, list) => settings.SceneLibrary = list,
             (sessionLibrary, list) => sessionLibrary.SceneLibrary = list);
+
+    /// <summary>
+    ///     "Activate Scene" orchestration (Phase 2 of the plan): pushes each present bundle piece
+    ///     to players atomically through the existing, already-tested per-kind send paths -
+    ///     ShowMediaLibraryItem for the Image, OpenMapToPlayersAsync for the Map,
+    ///     SendSceneMusicTrackAsync (below) for Music, PlaySoundLibraryItem for each Sound. No new
+    ///     wire logic; this only decides *what* to send, reusing how every one of those already
+    ///     sends on its own (e.g. double-clicking a Media Library tile).
+    /// </summary>
+    [RelayCommand]
+    private async Task ActivateSceneAsync(SceneLibraryItemViewModel scene)
+    {
+        if (scene.Image is { } image) ShowMediaLibraryItem(image);
+        if (scene.Map is { } map) await OpenMapToPlayersAsync(map);
+        if (scene.Music is { } music) await SendSceneMusicTrackAsync(music);
+        foreach (var sound in scene.Sounds) PlaySoundLibraryItem(sound);
+
+        RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.SceneActivated"), scene.Name));
+        Log.Information("Scene activated: {SceneName}", scene.Name);
+    }
+
+    /// <summary>A Scene's bundled Music track has no Playlist to sequence from (unlike
+    ///     PlayPlaylistAsync), so this reuses just the actual send step of
+    ///     PlayCurrentPlaylistTrackAsync - build the header, read the file, publish it, and start
+    ///     the Host's own local preview if the player window has it enabled - without any of the
+    ///     playlist bookkeeping (CurrentPlaylist/_playbackOrder/track-ended advancing), since a
+    ///     Scene's single track has nothing to advance to.</summary>
+    private async Task SendSceneMusicTrackAsync(MusicLibraryItemViewModel track)
+    {
+        if (!File.Exists(track.LocalPath))
+        {
+            Log.Warning("Scene music track file missing, skipping: {Name} ({Path})", track.Name, track.LocalPath);
+            return;
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = await File.ReadAllBytesAsync(track.LocalPath);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Scene music track could not be read: {Name} ({Path})", track.Name, track.LocalPath);
+            return;
+        }
+
+        var header = new MediaHeaderDto
+        {
+            MediaId = Guid.NewGuid().ToString("N"),
+            Kind = MediaHeaderDto.MediaKindAudio,
+            Layer = MediaHeaderDto.LayerMusic,
+            FileName = track.Name,
+            MimeType = track.MimeType,
+            Volume = track.Volume
+        };
+
+        await _playerServer.PublishMusicTrackAsync(header, bytes);
+        PlayLocalMusicIfNeeded(header, track.LocalPath);
+    }
 }
