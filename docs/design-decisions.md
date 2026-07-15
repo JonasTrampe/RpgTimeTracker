@@ -2365,3 +2365,20 @@ wanting finer-grained time advancement per turn can still end the
 round early or adjust manually, but per-turn advancement would have
 meant every single "Next" click needed its own time-math instead of one
 lump adjustment when the order wraps.
+
+## Map tokens: quick reveal via mouseover, not just the settings flyout
+
+**Decision**: a `HiddenUntilRevealed` map token gets a lightweight
+mouseover popup on the Host's own canvas view with a single "Reveal to
+players" toggle, in addition to (not instead of) the full per-token
+settings flyout that already exposes Reveal mode and the visibility
+toggles.
+
+**Why**: the settings flyout is a setup-time tool - reveal state
+usually flips in response to something happening at the table right
+then (a player's perception check succeeding), and making the GM dig
+into a full flyout for that one action breaks the pace of play. The
+mouseover popup is purely a faster path to the same underlying flag
+the flyout already controls, not a new data model - `AlwaysVisible`/
+`GmOnly` tokens have nothing to toggle there, so the popup only appears
+for `HiddenUntilRevealed` tokens.
