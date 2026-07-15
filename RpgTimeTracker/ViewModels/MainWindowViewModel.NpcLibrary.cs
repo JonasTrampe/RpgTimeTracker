@@ -110,6 +110,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             Id = npc.Id,
             Name = npc.Name,
+            Kind = npc.Kind,
             GmInfoBlocks = npc.GmInfoBlocks.Select(b => new NpcGmInfoBlockDto
             {
                 Title = b.Title, MarkdownBody = b.MarkdownBody
@@ -123,7 +124,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 TokenImageId = v.TokenImage?.Id,
                 TokenIcon = v.TokenIcon,
                 PlayerInfo = v.PlayerInfo,
-                SoundIds = v.HasSoundsOverride ? v.Sounds.Select(sound => sound.Id).ToList() : null
+                SoundIds = v.HasSoundsOverride ? v.Sounds.Select(sound => sound.Id).ToList() : null,
+                Health = v.Health,
+                StatusId = v.StatusId
             }).ToList(),
             ActiveVariantId = npc.ActiveVariant?.Id ?? npc.DefaultVariant.Id,
             TagIds = npc.TagIds.ToList()
@@ -141,6 +144,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         var npc = new NpcLibraryItemViewModel(entry.Id, entry.Name, RemoveNpc, OnNpcLibraryItemChanged, scope,
             entry.TagIds);
+        npc.Kind = entry.Kind;
         npc.BeginBulkLoad();
         try
         {
@@ -163,6 +167,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                     : null;
                 variant.TokenIcon = variantEntry.TokenIcon;
                 variant.PlayerInfo = variantEntry.PlayerInfo;
+                variant.Health = variantEntry.Health;
+                variant.StatusId = variantEntry.StatusId;
                 // Empty PlayerInfo starts in edit mode (nothing to preview); non-empty PlayerInfo
                 // loaded from disk starts in preview - see IsPlayerInfoPreviewMode's doc comment.
                 variant.IsPlayerInfoPreviewMode = !string.IsNullOrWhiteSpace(variantEntry.PlayerInfo);

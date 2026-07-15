@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Characters**: entries can now be marked as a player character (`Kind`
+  toggle, alongside NPC), and each Variant gains a GM-only Health/condition
+  freetext field plus a Status picker. Status is sourced from the active
+  Theme's own configurable list (Name/tint color/"skips initiative turn"
+  per entry) rather than a fixed set, with a small built-in default list
+  for Themes that don't define their own - groundwork for map tokens and
+  the initiative tracker.
 - **Scenes/Tags/Calendars**: custom calendar engine (replacing `DateTime`,
   with bundled + importable calendars), a campaign-wide Tags system, a
   Scenes library (description, start date, media bundle) with its own

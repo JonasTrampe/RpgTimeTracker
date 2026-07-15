@@ -4,6 +4,7 @@
         xmlns:controls="using:RpgTimeTracker.Views.Controls"
         xmlns:conv="using:RpgTimeTracker.Views.Converters"
         xmlns:viewModels="clr-namespace:RpgTimeTracker.Shared.ViewModels;assembly=RpgTimeTracker.Shared"
+        xmlns:theming="clr-namespace:RpgTimeTracker.Shared.Models.Theming;assembly=RpgTimeTracker.Shared"
         xmlns:mdxaml="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
         x:Class="RpgTimeTracker.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -130,6 +131,30 @@
                                     Command="{Binding TogglePlayerInfoPreviewCommand}"
                                     ToolTip.Tip="{DynamicResource MainWindow.Characters.TogglePreviewTooltip}" />
                         </Panel>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="settingsGroup">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{DynamicResource MainWindow.Characters.HealthLabel}"
+                                   Classes="muted" />
+                        <TextBox Text="{Binding Health, Mode=TwoWay}"
+                                 AcceptsReturn="True" TextWrapping="Wrap"
+                                 MinHeight="60"
+                                 PlaceholderText="{DynamicResource MainWindow.Characters.HealthWatermark}" />
+                        <TextBlock Text="{DynamicResource MainWindow.Characters.StatusLabel}"
+                                   Classes="muted" Margin="0,6,0,0" />
+                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.ActiveStatusOptions}"
+                                  SelectedValue="{Binding StatusId, Mode=TwoWay}"
+                                  SelectedValueBinding="{Binding Id}"
+                                  PlaceholderText="{DynamicResource MainWindow.Characters.StatusNoneOption}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="theming:StatusDefinitionDto">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </StackPanel>
                 </Border>
 
@@ -1987,6 +2012,11 @@
                                                              scroll into the Variants section. -->
                                                         <TextBox Classes="settingsGroupTitle"
                                                                  Text="{Binding Name, Mode=TwoWay}" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                                            <ToggleButton Content="{DynamicResource MainWindow.Characters.KindPcLabel}"
+                                                                          IsChecked="{Binding IsPc, Mode=TwoWay}"
+                                                                          ToolTip.Tip="{DynamicResource MainWindow.Characters.KindToggleTooltip}" />
+                                                        </StackPanel>
                                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                                             <Border Width="48" Height="48" CornerRadius="6"
                                                                     ClipToBounds="True"

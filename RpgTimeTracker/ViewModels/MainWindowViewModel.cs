@@ -16,6 +16,7 @@ using RpgTimeTracker.Network;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Network;
+using RpgTimeTracker.Shared.Models.Theming;
 using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Theming;
@@ -132,6 +133,26 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private readonly Dictionary<string, ThemeDefinitionLoader.LoadedTheme> _themesByDisplayName = new();
 
     private readonly Dictionary<string, ThemeDefinitionLoader.LoadedTheme> _themesById = new();
+
+    /// <summary>
+    ///     The active Theme's character-status vocabulary (see ThemeDefinitionDto.Statuses),
+    ///     falling back to StatusDefinitionCatalog's built-in defaults - bound by the Characters
+    ///     tab's per-Variant Status picker. Refreshed on RefreshActiveStatusOptions (theme change,
+    ///     and once at startup).
+    /// </summary>
+    public ObservableCollection<StatusDefinitionDto> ActiveStatusOptions { get; } = [];
+
+    private ThemeDefinitionDto? GetActiveThemeDefinition()
+    {
+        return _themesByDisplayName.TryGetValue(SelectedThemeOption, out var loaded) ? loaded.Definition : null;
+    }
+
+    private void RefreshActiveStatusOptions()
+    {
+        ActiveStatusOptions.Clear();
+        foreach (var status in StatusDefinitionCatalog.GetActiveStatuses(GetActiveThemeDefinition()))
+            ActiveStatusOptions.Add(status);
+    }
 
     /// <summary>
     ///     Associates a triggering TriggerMediaConfig (event medium) with the MediaId of the
@@ -702,6 +723,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             // the field must still never remain uninitialized, though ThemeOptions is empty anyway in that case.
             _selectedThemeOption = string.Empty;
         }
+
+        RefreshActiveStatusOptions();
 
         _selectedCalendarOption = PopulateCalendarOptions();
 
