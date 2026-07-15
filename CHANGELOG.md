@@ -33,22 +33,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Scenes library (Phase 2 of the Scenes/Tags/Calendars project): a new
   `SceneLibraryItemViewModel` (Name, GM-only Markdown description with a
-  preview toggle, a start date on the custom calendar via `GameInstant`,
-  and an optional bundle of Media/Sound/Music/Map references) with
-  Shared-vs-SessionLocal storage identical to the Characters library.
-  Registered into `LibraryUsageRegistry` so deleting a referenced Media/
-  Sound/Music/Map item is guarded the same way NPC references already are,
-  and Scenes can carry Tags like every other library item. A new "Scenes"
-  tab lists and edits them, mirroring the Characters tab's list+detail
-  layout, plus a "▶ Activate" button that pushes the Scene's bundled
-  Image/Map/Music/Sounds to players atomically through the existing
-  per-kind send paths (the same ones a Media Library double-click or a
-  Playlist already use). Scenes are now also included in both the
-  full-session and per-session `.rtt-session` export/import, with their
-  Image/Map/Music/Sound references remapped to the freshly-imported
-  copies' Ids the same way NPC references already are. This also fixed a
-  pre-existing gap where the Music library itself wasn't part of session
-  export/import at all.
+  preview toggle, an *optional* start date on the custom calendar via
+  `GameInstant?` - not every Scene is timebound, some are purely driven
+  by player action - and an optional bundle of *multiple* Images/Maps,
+  Sounds, and a Playlist reference) with Shared-vs-SessionLocal storage
+  identical to the Characters library. Registered into
+  `LibraryUsageRegistry` so deleting a referenced Media/Sound/Map item is
+  guarded the same way NPC references already are, and Scenes can carry
+  Tags like every other library item. A new "Scenes" tab lists and edits
+  them, mirroring the Characters tab's list+detail layout. Activating a
+  Scene ("▶ Activate") only makes it the `ActiveScene` (unpausing its own
+  timeline, see below) - it deliberately does NOT auto-push the bundle,
+  since a Scene can hold several maps/images at once and blindly firing
+  all of them would be surprising; the GM sends each bundled Image/Map/
+  Sound/Playlist individually via its own "▶" button, reusing the same
+  per-kind send commands the Media/Sound/Music tabs' own tiles already
+  use (`MediaLibraryItemViewModel.ShowCommand`, `OpenMapToPlayersCommand`,
+  `SoundLibraryItemViewModel.PlayCommand`, `PlayPlaylistCommand`). Scenes
+  are now also included in both the full-session and per-session
+  `.rtt-session` export/import, with their Image/Map/Sound references
+  remapped to the freshly-imported copies' Ids the same way NPC
+  references already are (a Scene's Playlist reference is not remapped -
+  Playlists themselves aren't part of session export/import, only the
+  Music items inside them are). This also fixed a pre-existing gap where
+  the Music library itself wasn't part of session export/import at all.
 - Scene-scoped timeline (Phase 3 of the Scenes/Tags/Calendars project): a
   Scene can now own its own Timers/Alarms/Intervals, reusing the exact
   same view models as the app's global timeline, added/removed from a new

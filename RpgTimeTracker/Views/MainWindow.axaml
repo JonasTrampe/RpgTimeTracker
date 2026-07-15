@@ -2488,46 +2488,114 @@
                                                                 <StackPanel Spacing="4">
                                                                     <TextBlock Classes="muted"
                                                                                Text="{DynamicResource MainWindow.Scenes.ImageLabel}" />
-                                                                    <ComboBox ItemsSource="{Binding $parent[TabItem].DataContext.MediaLibrary}"
-                                                                              SelectedItem="{Binding Image, Mode=TwoWay}"
-                                                                              PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
-                                                                              HorizontalAlignment="Stretch">
-                                                                        <ComboBox.ItemTemplate>
+                                                                    <ItemsControl ItemsSource="{Binding Images}">
+                                                                        <ItemsControl.ItemTemplate>
                                                                             <DataTemplate x:DataType="vm:MediaLibraryItemViewModel">
-                                                                                <TextBlock Text="{Binding Name}" />
+                                                                                <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,2">
+                                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                                               VerticalAlignment="Center" />
+                                                                                    <Button Grid.Column="1" Classes="iconsquare"
+                                                                                            Content="&#9654;" Width="22" Height="22"
+                                                                                            FontSize="10"
+                                                                                            Command="{Binding ShowCommand}"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Scenes.SendTooltip}" />
+                                                                                    <Button Grid.Column="2" Classes="iconsquare"
+                                                                                            Content="&#10005;" Width="22" Height="22"
+                                                                                            FontSize="10"
+                                                                                            Command="{Binding $parent[ItemsControl].DataContext.RemoveImageCommand}"
+                                                                                            CommandParameter="{Binding}"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
+                                                                                </Grid>
                                                                             </DataTemplate>
-                                                                        </ComboBox.ItemTemplate>
-                                                                    </ComboBox>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                    </ItemsControl>
+                                                                    <Grid ColumnDefinitions="*,Auto">
+                                                                        <ComboBox Grid.Column="0"
+                                                                                  ItemsSource="{Binding $parent[TabItem].DataContext.MediaLibrary}"
+                                                                                  SelectedItem="{Binding PendingImageToAdd, Mode=TwoWay}"
+                                                                                  PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                                  HorizontalAlignment="Stretch">
+                                                                            <ComboBox.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:MediaLibraryItemViewModel">
+                                                                                    <TextBlock Text="{Binding Name}" />
+                                                                                </DataTemplate>
+                                                                            </ComboBox.ItemTemplate>
+                                                                        </ComboBox>
+                                                                        <Button Grid.Column="1"
+                                                                                Content="{DynamicResource MainWindow.Scenes.AddButton}"
+                                                                                Command="{Binding AddPendingImageCommand}"
+                                                                                Margin="4,0,0,0" />
+                                                                    </Grid>
                                                                 </StackPanel>
 
                                                                 <StackPanel Spacing="4">
                                                                     <TextBlock Classes="muted"
                                                                                Text="{DynamicResource MainWindow.Scenes.MapLabel}" />
-                                                                    <ComboBox ItemsSource="{Binding $parent[TabItem].DataContext.MapLibrary}"
-                                                                              SelectedItem="{Binding Map, Mode=TwoWay}"
-                                                                              PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
-                                                                              HorizontalAlignment="Stretch">
-                                                                        <ComboBox.ItemTemplate>
+                                                                    <ItemsControl ItemsSource="{Binding Maps}">
+                                                                        <ItemsControl.ItemTemplate>
                                                                             <DataTemplate x:DataType="vm:MapItemViewModel">
-                                                                                <TextBlock Text="{Binding Name}" />
+                                                                                <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,2">
+                                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                                               VerticalAlignment="Center" />
+                                                                                    <Button Grid.Column="1" Classes="iconsquare"
+                                                                                            Content="&#9654;" Width="22" Height="22"
+                                                                                            FontSize="10"
+                                                                                            Command="{Binding $parent[TabItem].DataContext.OpenMapToPlayersCommand}"
+                                                                                            CommandParameter="{Binding}"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Scenes.SendTooltip}" />
+                                                                                    <Button Grid.Column="2" Classes="iconsquare"
+                                                                                            Content="&#10005;" Width="22" Height="22"
+                                                                                            FontSize="10"
+                                                                                            Command="{Binding $parent[ItemsControl].DataContext.RemoveMapCommand}"
+                                                                                            CommandParameter="{Binding}"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}" />
+                                                                                </Grid>
                                                                             </DataTemplate>
-                                                                        </ComboBox.ItemTemplate>
-                                                                    </ComboBox>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                    </ItemsControl>
+                                                                    <Grid ColumnDefinitions="*,Auto">
+                                                                        <ComboBox Grid.Column="0"
+                                                                                  ItemsSource="{Binding $parent[TabItem].DataContext.MapLibrary}"
+                                                                                  SelectedItem="{Binding PendingMapToAdd, Mode=TwoWay}"
+                                                                                  PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                                  HorizontalAlignment="Stretch">
+                                                                            <ComboBox.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:MapItemViewModel">
+                                                                                    <TextBlock Text="{Binding Name}" />
+                                                                                </DataTemplate>
+                                                                            </ComboBox.ItemTemplate>
+                                                                        </ComboBox>
+                                                                        <Button Grid.Column="1"
+                                                                                Content="{DynamicResource MainWindow.Scenes.AddButton}"
+                                                                                Command="{Binding AddPendingMapCommand}"
+                                                                                Margin="4,0,0,0" />
+                                                                    </Grid>
                                                                 </StackPanel>
 
                                                                 <StackPanel Spacing="4">
                                                                     <TextBlock Classes="muted"
-                                                                               Text="{DynamicResource MainWindow.Scenes.MusicLabel}" />
-                                                                    <ComboBox ItemsSource="{Binding $parent[TabItem].DataContext.MusicLibrary}"
-                                                                              SelectedItem="{Binding Music, Mode=TwoWay}"
-                                                                              PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
-                                                                              HorizontalAlignment="Stretch">
-                                                                        <ComboBox.ItemTemplate>
-                                                                            <DataTemplate x:DataType="vm:MusicLibraryItemViewModel">
-                                                                                <TextBlock Text="{Binding Name}" />
-                                                                            </DataTemplate>
-                                                                        </ComboBox.ItemTemplate>
-                                                                    </ComboBox>
+                                                                               Text="{DynamicResource MainWindow.Scenes.PlaylistLabel}" />
+                                                                    <Grid ColumnDefinitions="*,Auto">
+                                                                        <ComboBox Grid.Column="0"
+                                                                                  ItemsSource="{Binding $parent[TabItem].DataContext.Playlists}"
+                                                                                  SelectedItem="{Binding Playlist, Mode=TwoWay}"
+                                                                                  PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                                  HorizontalAlignment="Stretch">
+                                                                            <ComboBox.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:PlaylistViewModel">
+                                                                                    <TextBlock Text="{Binding Name}" />
+                                                                                </DataTemplate>
+                                                                            </ComboBox.ItemTemplate>
+                                                                        </ComboBox>
+                                                                        <Button Grid.Column="1" Classes="iconsquare"
+                                                                                Content="&#9654;" Width="22" Height="22"
+                                                                                FontSize="10"
+                                                                                IsVisible="{Binding Playlist, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                                Command="{Binding $parent[TabItem].DataContext.PlayPlaylistCommand}"
+                                                                                CommandParameter="{Binding Playlist}"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Scenes.SendTooltip}"
+                                                                                Margin="4,0,0,0" />
+                                                                    </Grid>
                                                                 </StackPanel>
 
                                                                 <StackPanel Spacing="4">
@@ -2536,10 +2604,15 @@
                                                                     <ItemsControl ItemsSource="{Binding Sounds}">
                                                                         <ItemsControl.ItemTemplate>
                                                                             <DataTemplate x:DataType="vm:SoundLibraryItemViewModel">
-                                                                                <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                                                                                <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,2">
                                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}"
                                                                                                VerticalAlignment="Center" />
                                                                                     <Button Grid.Column="1" Classes="iconsquare"
+                                                                                            Content="&#9654;" Width="22" Height="22"
+                                                                                            FontSize="10"
+                                                                                            Command="{Binding PlayCommand}"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Scenes.SendTooltip}" />
+                                                                                    <Button Grid.Column="2" Classes="iconsquare"
                                                                                             Content="&#10005;" Width="22" Height="22"
                                                                                             FontSize="10"
                                                                                             Command="{Binding $parent[ItemsControl].DataContext.RemoveSoundCommand}"

@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
-using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Services.Localization;
 using Serilog;
 
@@ -19,7 +17,6 @@ public partial class MainWindowViewModel
     // ==================== Scenes library (Phase 2 of the Scenes/Tags/Calendars project) ====================
     // Own top-level library, not nested under anything - see SceneLibraryItemViewModel's doc
     // comment for why it doesn't derive from LibraryItemViewModelBase<TSelf> like Media/Sound.
-    // A Scene-scoped timeline (Phase 3 of the plan) isn't wired yet.
 
     public ObservableCollection<SceneLibraryItemViewModel> SceneLibrary { get; } = [];
 
@@ -38,8 +35,11 @@ public partial class MainWindowViewModel
     private async Task AddSceneAsync()
     {
         var scope = await ResolveScopeForNewItemAsync();
+        // No start date by default - not every Scene is timebound (see
+        // SceneLibraryItemViewModel's doc comment); the GM adds one via CalendarDateInput only
+        // if this Scene actually needs to be tied to a calendar date.
         var scene = new SceneLibraryItemViewModel(Guid.NewGuid(),
-            LocalizationService.Get("MainWindowViewModel.Defaults.NewSceneName"), _clock.CurrentTime,
+            LocalizationService.Get("MainWindowViewModel.Defaults.NewSceneName"), null,
             RemoveScene, OnSceneLibraryItemChanged, scope);
         SceneLibrary.Add(scene);
         SelectedScene = scene;
@@ -75,13 +75,14 @@ public partial class MainWindowViewModel
     private void MoveSceneLibraryItemToSession(SceneLibraryItemViewModel scene) =>
         MoveSceneLibraryItemToScope(scene, LibraryScope.SessionLocal);
 
-    /// <summary>Who references a Media/Sound/Music/Map Library item by Id from any Scene's bundle -
+    /// <summary>Who references a Media/Sound/Map Library item by Id from any Scene's bundle -
     ///     registered into _usageRegistry so deleting that item goes through the same 3-way
-    ///     confirm-delete flow as any other in-use item.</summary>
+    ///     confirm-delete flow as any other in-use item. Playlists aren't Library items in this
+    ///     registry's sense (see RemovePlaylist's own direct cleanup instead).</summary>
     private IEnumerable<string> FindSceneUsagesById(Guid id)
     {
         foreach (var scene in SceneLibrary)
-            if (scene.Image?.Id == id || scene.Map?.Id == id || scene.Music?.Id == id ||
+            if (scene.Images.Any(i => i.Id == id) || scene.Maps.Any(m => m.Id == id) ||
                 scene.Sounds.Any(s => s.Id == id))
                 yield return scene.Name;
     }
@@ -90,12 +91,9 @@ public partial class MainWindowViewModel
     {
         foreach (var scene in SceneLibrary)
         {
-            if (scene.Image?.Id == id) scene.Image = null;
-            if (scene.Map?.Id == id) scene.Map = null;
-            if (scene.Music?.Id == id) scene.Music = null;
-
-            var staleSounds = scene.Sounds.Where(s => s.Id == id).ToList();
-            foreach (var sound in staleSounds) scene.Sounds.Remove(sound);
+            foreach (var image in scene.Images.Where(i => i.Id == id).ToList()) scene.Images.Remove(image);
+            foreach (var map in scene.Maps.Where(m => m.Id == id).ToList()) scene.Maps.Remove(map);
+            foreach (var sound in scene.Sounds.Where(s => s.Id == id).ToList()) scene.Sounds.Remove(sound);
         }
     }
 
@@ -104,11 +102,11 @@ public partial class MainWindowViewModel
         Id = scene.Id,
         Name = scene.Name,
         DescriptionMarkdown = scene.DescriptionMarkdown,
-        StartDateSeconds = scene.StartDate.TotalSeconds,
-        ImageId = scene.Image?.Id,
-        MapId = scene.Map?.Id,
+        StartDateSeconds = scene.StartDate?.TotalSeconds,
+        ImageIds = scene.Images.Select(i => i.Id).ToList(),
+        MapIds = scene.Maps.Select(m => m.Id).ToList(),
         SoundIds = scene.Sounds.Select(s => s.Id).ToList(),
-        MusicId = scene.Music?.Id,
+        PlaylistId = scene.Playlist?.Id,
         TagIds = scene.TagIds.ToList(),
         Timers = scene.Timers.Select(t => t.ToDto()).ToList(),
         Alarms = scene.Alarms.Select(a => a.ToDto()).ToList(),
@@ -121,26 +119,40 @@ public partial class MainWindowViewModel
     ///     as it stood before this (and any later) entry was added.</summary>
     private SceneLibraryItemViewModel FromSceneLibraryEntryDto(SceneLibraryEntryDto entry, LibraryScope scope)
     {
+        var startDate = entry.StartDateSeconds is { } seconds ? new Shared.Models.GameInstant(seconds) : (Shared.Models.GameInstant?)null;
         var scene = new SceneLibraryItemViewModel(entry.Id, entry.Name,
-            new Shared.Models.GameInstant(entry.StartDateSeconds), RemoveScene, OnSceneLibraryItemChanged, scope,
+            startDate, RemoveScene, OnSceneLibraryItemChanged, scope,
             entry.TagIds);
         scene.BeginBulkLoad();
         try
         {
             scene.DescriptionMarkdown = entry.DescriptionMarkdown;
             scene.IsDescriptionPreviewMode = !string.IsNullOrWhiteSpace(entry.DescriptionMarkdown);
-            scene.Image = entry.ImageId is { } imageId ? MediaLibrary.FirstOrDefault(m => m.Id == imageId) : null;
-            scene.Map = entry.MapId is { } mapId ? MapLibrary.FirstOrDefault(m => m.Id == mapId) : null;
-            scene.Music = entry.MusicId is { } musicId ? MusicLibrary.FirstOrDefault(m => m.Id == musicId) : null;
+            foreach (var imageId in entry.ImageIds)
+            {
+                var image = MediaLibrary.FirstOrDefault(m => m.Id == imageId);
+                if (image is not null) scene.Images.Add(image);
+            }
+
+            foreach (var mapId in entry.MapIds)
+            {
+                var map = MapLibrary.FirstOrDefault(m => m.Id == mapId);
+                if (map is not null) scene.Maps.Add(map);
+            }
+
             foreach (var soundId in entry.SoundIds)
             {
                 var sound = SoundLibrary.FirstOrDefault(s => s.Id == soundId);
                 if (sound is not null) scene.Sounds.Add(sound);
             }
 
+            scene.Playlist = entry.PlaylistId is { } playlistId
+                ? Playlists.FirstOrDefault(p => p.Id == playlistId)
+                : null;
+
             foreach (var timerDto in entry.Timers) scene.Timers.Add(TimerItemViewModel.FromDto(timerDto, scene.RemoveTimer));
             foreach (var alarmDto in entry.Alarms)
-                scene.Alarms.Add(AlarmItemViewModel.FromDto(alarmDto, scene.StartDate, scene.RemoveAlarm));
+                scene.Alarms.Add(AlarmItemViewModel.FromDto(alarmDto, scene.StartDate ?? default, scene.RemoveAlarm));
             foreach (var intervalDto in entry.IntervalEvents)
                 scene.IntervalEvents.Add(IntervalEventItemViewModel.FromDto(intervalDto, scene.RemoveIntervalEvent));
 
@@ -159,21 +171,19 @@ public partial class MainWindowViewModel
             (sessionLibrary, list) => sessionLibrary.SceneLibrary = list);
 
     /// <summary>
-    ///     "Activate Scene" orchestration (Phase 2 of the plan): pushes each present bundle piece
-    ///     to players atomically through the existing, already-tested per-kind send paths -
-    ///     ShowMediaLibraryItem for the Image, OpenMapToPlayersAsync for the Map,
-    ///     SendSceneMusicTrackAsync (below) for Music, PlaySoundLibraryItem for each Sound. No new
-    ///     wire logic; this only decides *what* to send, reusing how every one of those already
-    ///     sends on its own (e.g. double-clicking a Media Library tile).
+    ///     "Activate Scene" (Phase 2 of the plan, reworked): deliberately does NOT auto-push the
+    ///     bundle to players - a Scene can hold several Images/Maps at once, and not every Scene
+    ///     is even timebound, so firing everything the moment a Scene becomes "active" would be
+    ///     surprising rather than helpful (a GM might activate a Scene purely to un-pause its own
+    ///     timeline, with no intention of showing a specific map yet). Activating only sets
+    ///     ActiveScene; the GM sends each Image/Map/Sound/Playlist individually from the Scene
+    ///     editor's own per-item buttons (MediaLibraryItemViewModel.ShowCommand,
+    ///     OpenMapToPlayersCommand, SoundLibraryItemViewModel.PlayCommand, PlayPlaylistCommand) -
+    ///     the same commands the Media/Sound/Music tabs' own tiles already use.
     /// </summary>
     [RelayCommand]
-    private async Task ActivateSceneAsync(SceneLibraryItemViewModel scene)
+    private void ActivateScene(SceneLibraryItemViewModel scene)
     {
-        if (scene.Image is { } image) ShowMediaLibraryItem(image);
-        if (scene.Map is { } map) await OpenMapToPlayersAsync(map);
-        if (scene.Music is { } music) await SendSceneMusicTrackAsync(music);
-        foreach (var sound in scene.Sounds) PlaySoundLibraryItem(sound);
-
         // Phase 3: becoming the active Scene is what "un-pauses" its own Timer/Alarm/
         // IntervalEvent timeline - see ActiveScene's doc comment and OnClockTick.
         ActiveScene = scene;
@@ -183,9 +193,8 @@ public partial class MainWindowViewModel
     }
 
     /// <summary>Phase 4 hook: resolves a Timer/Alarm/IntervalEvent/CalendarEntry's optional
-    ///     TargetSceneId and activates that Scene, reusing ActivateSceneAsync's orchestration - a
-    ///     no-op if the field is unset or no longer resolves to an existing Scene (e.g. it was
-    ///     deleted after being targeted).</summary>
+    ///     TargetSceneId and activates that Scene - a no-op if the field is unset or no longer
+    ///     resolves to an existing Scene (e.g. it was deleted after being targeted).</summary>
     private void ActivateSceneById(Guid? sceneId)
     {
         if (sceneId is not { } id) return;
@@ -193,45 +202,6 @@ public partial class MainWindowViewModel
         var scene = SceneLibrary.FirstOrDefault(s => s.Id == id);
         if (scene is null) return;
 
-        _ = ActivateSceneAsync(scene);
-    }
-
-    /// <summary>A Scene's bundled Music track has no Playlist to sequence from (unlike
-    ///     PlayPlaylistAsync), so this reuses just the actual send step of
-    ///     PlayCurrentPlaylistTrackAsync - build the header, read the file, publish it, and start
-    ///     the Host's own local preview if the player window has it enabled - without any of the
-    ///     playlist bookkeeping (CurrentPlaylist/_playbackOrder/track-ended advancing), since a
-    ///     Scene's single track has nothing to advance to.</summary>
-    private async Task SendSceneMusicTrackAsync(MusicLibraryItemViewModel track)
-    {
-        if (!File.Exists(track.LocalPath))
-        {
-            Log.Warning("Scene music track file missing, skipping: {Name} ({Path})", track.Name, track.LocalPath);
-            return;
-        }
-
-        byte[] bytes;
-        try
-        {
-            bytes = await File.ReadAllBytesAsync(track.LocalPath);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Scene music track could not be read: {Name} ({Path})", track.Name, track.LocalPath);
-            return;
-        }
-
-        var header = new MediaHeaderDto
-        {
-            MediaId = Guid.NewGuid().ToString("N"),
-            Kind = MediaHeaderDto.MediaKindAudio,
-            Layer = MediaHeaderDto.LayerMusic,
-            FileName = track.Name,
-            MimeType = track.MimeType,
-            Volume = track.Volume
-        };
-
-        await _playerServer.PublishMusicTrackAsync(header, bytes);
-        PlayLocalMusicIfNeeded(header, track.LocalPath);
+        ActivateScene(scene);
     }
 }

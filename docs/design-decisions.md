@@ -2206,3 +2206,41 @@ recent change - it went unnoticed because nothing had exercised the
 test has no running Avalonia dispatcher to pump it), only `Jump`/
 `SetTime`. The new regression test invokes the private tick handler
 directly with repeated real sub-second delays to close that gap.
+
+## Activating a Scene doesn't auto-push its bundle, and a Scene's start date is optional
+
+**Decision**: `ActivateScene` (Scenes/Tags/Calendars project, Phase 2)
+only marks a Scene as the `ActiveScene` - it does not automatically send
+any of the Scene's bundled Images/Maps/Sounds/Playlist to players. The GM
+sends each bundled item individually via its own "▶" button in the Scene
+editor, reusing the exact same per-item commands the Media/Sound/Music
+tabs' own tiles already expose (`MediaLibraryItemViewModel.ShowCommand`,
+`OpenMapToPlayersCommand`, `SoundLibraryItemViewModel.PlayCommand`,
+`PlayPlaylistCommand`). Separately, `SceneLibraryItemViewModel.StartDate`
+is `GameInstant?`, not a required value.
+
+**Why**: the original Phase 2 design bundled exactly one Image, one Map,
+and one Music track per Scene and pushed all three the moment "Activate"
+was pressed - a reasonable default for a single-backdrop Scene. Real
+usage broke both assumptions: a Scene can legitimately need *several*
+maps or images (e.g. a dungeon level with multiple rooms, or a fight with
+alternate battle-map states), and blindly firing every one of them the
+instant a Scene becomes active would be surprising rather than helpful -
+a GM might activate a Scene purely to un-pause its own Timer/Alarm/
+IntervalEvent timeline, with no intention of showing a specific map yet.
+Likewise, not every Scene is tied to a calendar date at all - some are
+purely triggered by player action (walking into a room) or by another
+trigger's "activate Scene" hook (Phase 4's `TargetSceneId`), with no
+"when" to speak of.
+
+**How this shows up**: `Images`/`Maps` are `ObservableCollection`s instead
+of single nullable references; `Music` was replaced with a single
+`Playlist` reference (sent via the existing playlist sequencer,
+`PlayPlaylistAsync`, instead of a one-off single-track send) since a
+Scene's soundtrack is much more naturally "a Playlist that already
+exists" than "one specific track"; `StartDate` became `GameInstant?`,
+with blank `CalendarDateInput` text mapping to `null` rather than being
+coerced to some default. A Playlist referenced by a Scene is unset
+silently (no confirm-delete prompt) if that Playlist is deleted, the same
+"carries no content of its own" reasoning already applied to Tag
+assignments elsewhere.

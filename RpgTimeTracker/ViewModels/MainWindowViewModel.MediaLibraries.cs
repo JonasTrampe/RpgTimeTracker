@@ -112,6 +112,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         Playlists.Remove(playlist);
         OnPropertyChanged(nameof(HasNoPlaylists));
         if (SelectedPlaylist == playlist) SelectedPlaylist = null;
+
+        // A Playlist referenced by a Scene carries no content of its own for the Scene (same as
+        // a Tag assignment) - unset silently rather than routing through the confirm-delete
+        // LibraryUsageRegistry flow used for Media/Sound/Map/Music.
+        foreach (var scene in SceneLibrary.Where(s => s.Playlist == playlist)) scene.Playlist = null;
+
         SavePlaylistsSettings();
     }
 

@@ -13,11 +13,25 @@ using RpgTimeTracker.Shared.Services.Visuals;
 namespace RpgTimeTracker.ViewModels;
 
 /// <summary>
-///     A named beat within a Session (Phase 2 of the Scenes/Tags/Calendars project) - a start date
-///     on the custom calendar plus an optional bundle of Media/Sound/Music/Map to push to players
-///     when activated. Deliberately does not derive from LibraryItemViewModelBase&lt;TSelf&gt;,
-///     following MapItemViewModel/NpcLibraryItemViewModel's precedent: a Scene owns no single file,
-///     just references (by Id) into the Media/Sound/Music/Map libraries.
+///     A named beat within a Session (Phase 2 of the Scenes/Tags/Calendars project) - an optional
+///     start date on the custom calendar plus an optional bundle of Media/Sound/Playlist/Map to
+///     make available to the GM when activated. Deliberately does not derive from
+///     LibraryItemViewModelBase&lt;TSelf&gt;, following MapItemViewModel/NpcLibraryItemViewModel's
+///     precedent: a Scene owns no single file, just references (by Id) into the Media/Sound/Map
+///     libraries and the Playlists list.
+///
+///     A Scene can bundle multiple Images and Maps (not just one of each) - not every scene is a
+///     single backdrop. StartDate is optional: not every Scene is timebound, some are purely
+///     driven by player action or by another trigger's "activate Scene" hook (see
+///     MainWindowViewModel.ActivateSceneById), with no calendar date attached at all.
+///
+///     Activating a Scene (MainWindowViewModel.ActivateSceneAsync) deliberately does NOT
+///     auto-push the bundle to players - a Scene's bundle can hold several maps/images at once,
+///     and blindly firing all of them the moment a Scene becomes active would be surprising, not
+///     helpful. Activation only makes this Scene the ActiveScene (unpausing its own timeline, see
+///     below); the GM still sends each bundled Image/Map/Sound/Playlist individually from this
+///     Scene's own editor, via the same per-item send paths already used by the Media/Sound/Music
+///     library tiles.
 ///
 ///     Phase 3 adds its own scoped Timer/Alarm/IntervalEvent timeline (Timers/Alarms/
 ///     IntervalEvents below), reusing the exact same view models as the app's global timeline.
@@ -44,20 +58,29 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
     ///     not-persisted purpose here.</summary>
     [ObservableProperty] private bool _isDescriptionPreviewMode;
 
-    [ObservableProperty] private GameInstant _startDate;
+    /// <summary>Optional - not every Scene is timebound, see this class's doc comment.</summary>
+    [ObservableProperty] private GameInstant? _startDate;
     [ObservableProperty] private LibraryScope _scope;
-    [ObservableProperty] private MediaLibraryItemViewModel? _image;
-    [ObservableProperty] private MapItemViewModel? _map;
-    [ObservableProperty] private MusicLibraryItemViewModel? _music;
+    [ObservableProperty] private PlaylistViewModel? _playlist;
 
     public Guid Id { get; }
 
+    /// <summary>A Scene can bundle several Images/Maps at once - see this class's doc comment for
+    ///     why activation doesn't auto-send them.</summary>
+    public ObservableCollection<MediaLibraryItemViewModel> Images { get; } = [];
+
+    public ObservableCollection<MapItemViewModel> Maps { get; } = [];
+
     public ObservableCollection<SoundLibraryItemViewModel> Sounds { get; } = [];
 
-    /// <summary>Purely local UI state (not persisted) - the ComboBox selection in the "add sound"
-    ///     row resets to null once picked (see AddPendingSound), so it reads as a one-shot picker
-    ///     rather than a second "currently selected sound" concept.</summary>
+    /// <summary>Purely local UI state (not persisted) - the ComboBox selection in each "add" row
+    ///     resets to null once picked (see AddPendingSound/AddPendingImage/AddPendingMap), so it
+    ///     reads as a one-shot picker rather than a second "currently selected item" concept.</summary>
     [ObservableProperty] private SoundLibraryItemViewModel? _pendingSoundToAdd;
+
+    [ObservableProperty] private MediaLibraryItemViewModel? _pendingImageToAdd;
+
+    [ObservableProperty] private MapItemViewModel? _pendingMapToAdd;
 
     /// <summary>Freeform Tag Ids attached to this Scene - separate from Scene membership on other
     ///     library items, a different, explicit mechanism (see Tag's doc comment).</summary>
@@ -81,7 +104,7 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
     public SceneLibraryItemViewModel(
         Guid id,
         string name,
-        GameInstant startDate,
+        GameInstant? startDate,
         Action<SceneLibraryItemViewModel> onDeleteRequested,
         Action<SceneLibraryItemViewModel>? onChanged,
         LibraryScope scope = LibraryScope.Shared,
@@ -95,23 +118,33 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
         _onChanged = onChanged;
         if (tagIds is not null) foreach (var tagId in tagIds) TagIds.Add(tagId);
         TagIds.CollectionChanged += (_, _) => NotifyChanged();
+        Images.CollectionChanged += (_, _) => NotifyChanged();
+        Maps.CollectionChanged += (_, _) => NotifyChanged();
         Sounds.CollectionChanged += (_, _) => NotifyChanged();
         Timers.CollectionChanged += (_, _) => NotifyChanged();
         Alarms.CollectionChanged += (_, _) => NotifyChanged();
         IntervalEvents.CollectionChanged += (_, _) => NotifyChanged();
-        _startDateText = CalendarService.Active.FormatDateTimeText(startDate);
+        _startDateText = startDate is { } start ? CalendarService.Active.FormatDateTimeText(start) : string.Empty;
         _isDescriptionPreviewMode = false;
     }
 
     /// <summary>Editable text form of StartDate, following CalendarEntryViewModel.
     ///     StartDateTimeText's precedent - bound to a CalendarDateInput, which works with plain
     ///     text rather than GameInstant directly. Invalid text is left as typed (not reverted)
-    ///     until it parses; StartDate (the actual persisted value) only updates once it does.</summary>
+    ///     until it parses; StartDate (the actual persisted value) only updates once it does.
+    ///     Blank text means "no start date" (StartDate = null) - a Scene doesn't have to be
+    ///     timebound, see this class's doc comment.</summary>
     [ObservableProperty] private string _startDateText;
 
     partial void OnStartDateTextChanged(string value)
     {
-        if (CalendarService.Active.TryParseDateTimeText(value?.Trim(), out var parsed)) StartDate = parsed;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            StartDate = null;
+            return;
+        }
+
+        if (CalendarService.Active.TryParseDateTimeText(value.Trim(), out var parsed)) StartDate = parsed;
     }
 
     partial void OnNameChanged(string value) => NotifyChanged();
@@ -122,16 +155,14 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
     [RelayCommand]
     private void ToggleDescriptionPreview() => IsDescriptionPreviewMode = !IsDescriptionPreviewMode;
 
-    partial void OnStartDateChanged(GameInstant value)
+    partial void OnStartDateChanged(GameInstant? value)
     {
-        var formatted = CalendarService.Active.FormatDateTimeText(value);
+        var formatted = value is { } date ? CalendarService.Active.FormatDateTimeText(date) : string.Empty;
         if (StartDateText != formatted) StartDateText = formatted;
         NotifyChanged();
     }
 
-    partial void OnImageChanged(MediaLibraryItemViewModel? value) => NotifyChanged();
-    partial void OnMapChanged(MapItemViewModel? value) => NotifyChanged();
-    partial void OnMusicChanged(MusicLibraryItemViewModel? value) => NotifyChanged();
+    partial void OnPlaylistChanged(PlaylistViewModel? value) => NotifyChanged();
 
     partial void OnScopeChanged(LibraryScope value)
     {
@@ -155,6 +186,36 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
     {
         if (PendingSoundToAdd is { } sound) AddSound(sound);
         PendingSoundToAdd = null;
+    }
+
+    public void AddImage(MediaLibraryItemViewModel image)
+    {
+        if (!Images.Contains(image)) Images.Add(image);
+    }
+
+    [RelayCommand]
+    private void RemoveImage(MediaLibraryItemViewModel image) => Images.Remove(image);
+
+    [RelayCommand]
+    private void AddPendingImage()
+    {
+        if (PendingImageToAdd is { } image) AddImage(image);
+        PendingImageToAdd = null;
+    }
+
+    public void AddMap(MapItemViewModel map)
+    {
+        if (!Maps.Contains(map)) Maps.Add(map);
+    }
+
+    [RelayCommand]
+    private void RemoveMap(MapItemViewModel map) => Maps.Remove(map);
+
+    [RelayCommand]
+    private void AddPendingMap()
+    {
+        if (PendingMapToAdd is { } map) AddMap(map);
+        PendingMapToAdd = null;
     }
 
     /// <summary>Creates a new Timer directly owned by this Scene, with the same sensible
@@ -181,14 +242,18 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
     [RelayCommand]
     private void AddAlarm()
     {
+        // A Scene without a StartDate (not every Scene is timebound - see this class's doc
+        // comment) has no obvious reference instant either; fall back to the calendar epoch,
+        // same as any other "no better default" case elsewhere in this file.
+        var referenceTime = StartDate ?? default;
         var model = new AlarmItem
         {
             Name = LocalizationService.Get("MainWindowViewModel.Defaults.AlarmName"),
             Icon = VisualItemHelper.NormalizeIcon(VisualItemHelper.IconAlarm),
-            TriggerAt = StartDate.Add(TimeSpan.FromHours(1)),
+            TriggerAt = referenceTime.Add(TimeSpan.FromHours(1)),
             Sound = SoundService.Pling
         };
-        Alarms.Add(new AlarmItemViewModel(model, StartDate, RemoveAlarm));
+        Alarms.Add(new AlarmItemViewModel(model, referenceTime, RemoveAlarm));
     }
 
     /// <summary>See RemoveTimer's doc comment - same reasoning.</summary>
