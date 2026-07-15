@@ -2446,23 +2446,11 @@
                                                                             </DataTemplate>
                                                                         </ItemsControl.ItemTemplate>
                                                                     </ItemsControl>
-                                                                    <Grid ColumnDefinitions="*,Auto">
-                                                                        <ComboBox Grid.Column="0"
-                                                                                  ItemsSource="{Binding $parent[TabItem].DataContext.MediaLibrary}"
-                                                                                  SelectedItem="{Binding PendingImageToAdd, Mode=TwoWay}"
-                                                                                  PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
-                                                                                  HorizontalAlignment="Stretch">
-                                                                            <ComboBox.ItemTemplate>
-                                                                                <DataTemplate x:DataType="vm:MediaLibraryItemViewModel">
-                                                                                    <TextBlock Text="{Binding Name}" />
-                                                                                </DataTemplate>
-                                                                            </ComboBox.ItemTemplate>
-                                                                        </ComboBox>
-                                                                        <Button Grid.Column="1"
-                                                                                Content="{DynamicResource MainWindow.Common.AddButton}"
-                                                                                Command="{Binding AddPendingImageCommand}"
-                                                                                Margin="4,0,0,0" />
-                                                                    </Grid>
+                                                                    <controls:LibraryAddRow
+                                                                        ItemsSource="{Binding $parent[TabItem].DataContext.MediaLibrary}"
+                                                                        SelectedItem="{Binding PendingImageToAdd, Mode=TwoWay}"
+                                                                        PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                        AddCommand="{Binding AddPendingImageCommand}" />
                                                                 </StackPanel>
 
                                                                 <StackPanel Spacing="4">
@@ -2504,23 +2492,11 @@
                                                                             </DataTemplate>
                                                                         </ItemsControl.ItemTemplate>
                                                                     </ItemsControl>
-                                                                    <Grid ColumnDefinitions="*,Auto">
-                                                                        <ComboBox Grid.Column="0"
-                                                                                  ItemsSource="{Binding $parent[TabItem].DataContext.MapLibrary}"
-                                                                                  SelectedItem="{Binding PendingMapToAdd, Mode=TwoWay}"
-                                                                                  PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
-                                                                                  HorizontalAlignment="Stretch">
-                                                                            <ComboBox.ItemTemplate>
-                                                                                <DataTemplate x:DataType="vm:MapItemViewModel">
-                                                                                    <TextBlock Text="{Binding Name}" />
-                                                                                </DataTemplate>
-                                                                            </ComboBox.ItemTemplate>
-                                                                        </ComboBox>
-                                                                        <Button Grid.Column="1"
-                                                                                Content="{DynamicResource MainWindow.Common.AddButton}"
-                                                                                Command="{Binding AddPendingMapCommand}"
-                                                                                Margin="4,0,0,0" />
-                                                                    </Grid>
+                                                                    <controls:LibraryAddRow
+                                                                        ItemsSource="{Binding $parent[TabItem].DataContext.MapLibrary}"
+                                                                        SelectedItem="{Binding PendingMapToAdd, Mode=TwoWay}"
+                                                                        PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                        AddCommand="{Binding AddPendingMapCommand}" />
                                                                 </StackPanel>
 
                                                                 <StackPanel Spacing="4">
@@ -2561,23 +2537,11 @@
                                                                             </DataTemplate>
                                                                         </ItemsControl.ItemTemplate>
                                                                     </ItemsControl>
-                                                                    <Grid ColumnDefinitions="*,Auto">
-                                                                        <ComboBox Grid.Column="0"
-                                                                                  ItemsSource="{Binding $parent[TabItem].DataContext.Playlists}"
-                                                                                  SelectedItem="{Binding PendingPlaylistToAdd, Mode=TwoWay}"
-                                                                                  PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
-                                                                                  HorizontalAlignment="Stretch">
-                                                                            <ComboBox.ItemTemplate>
-                                                                                <DataTemplate x:DataType="vm:PlaylistViewModel">
-                                                                                    <TextBlock Text="{Binding Name}" />
-                                                                                </DataTemplate>
-                                                                            </ComboBox.ItemTemplate>
-                                                                        </ComboBox>
-                                                                        <Button Grid.Column="1"
-                                                                                Content="{DynamicResource MainWindow.Common.AddButton}"
-                                                                                Command="{Binding AddPendingPlaylistCommand}"
-                                                                                Margin="4,0,0,0" />
-                                                                    </Grid>
+                                                                    <controls:LibraryAddRow
+                                                                        ItemsSource="{Binding $parent[TabItem].DataContext.Playlists}"
+                                                                        SelectedItem="{Binding PendingPlaylistToAdd, Mode=TwoWay}"
+                                                                        PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                        AddCommand="{Binding AddPendingPlaylistCommand}" />
                                                                 </StackPanel>
 
                                                                 <StackPanel Spacing="4">
@@ -2611,23 +2575,11 @@
                                                                             </DataTemplate>
                                                                         </ItemsControl.ItemTemplate>
                                                                     </ItemsControl>
-                                                                    <Grid ColumnDefinitions="*,Auto">
-                                                                        <ComboBox Grid.Column="0"
-                                                                                  ItemsSource="{Binding $parent[TabItem].DataContext.SoundLibrary}"
-                                                                                  SelectedItem="{Binding PendingSoundToAdd, Mode=TwoWay}"
-                                                                                  PlaceholderText="{DynamicResource MainWindow.Scenes.AddSoundLabel}"
-                                                                                  HorizontalAlignment="Stretch">
-                                                                            <ComboBox.ItemTemplate>
-                                                                                <DataTemplate x:DataType="vm:SoundLibraryItemViewModel">
-                                                                                    <TextBlock Text="{Binding Name}" />
-                                                                                </DataTemplate>
-                                                                            </ComboBox.ItemTemplate>
-                                                                        </ComboBox>
-                                                                        <Button Grid.Column="1"
-                                                                                Content="{DynamicResource MainWindow.Common.AddButton}"
-                                                                                Command="{Binding AddPendingSoundCommand}"
-                                                                                Margin="4,0,0,0" />
-                                                                    </Grid>
+                                                                    <controls:LibraryAddRow
+                                                                        ItemsSource="{Binding $parent[TabItem].DataContext.SoundLibrary}"
+                                                                        SelectedItem="{Binding PendingSoundToAdd, Mode=TwoWay}"
+                                                                        PlaceholderText="{DynamicResource MainWindow.Scenes.AddSoundLabel}"
+                                                                        AddCommand="{Binding AddPendingSoundCommand}" />
                                                                 </StackPanel>
                                             </StackPanel>
                                         </Border>

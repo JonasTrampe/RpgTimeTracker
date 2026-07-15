@@ -29,8 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Extracted the trigger-media editor and target-Scene picker into two
-  reusable controls, removing the duplicated markup/code-behind.
+- Extracted the trigger-media editor, target-Scene picker, and Scene
+  bundle's library-add row into three reusable controls, removing the
+  duplicated markup/code-behind.
 - Unified per-library scope/save methods and split `MainWindowViewModel.cs`
   into partial classes.
 - Reworked the Characters tab's editor into collapsible cards with Markdown
