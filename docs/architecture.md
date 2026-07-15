@@ -24,8 +24,9 @@ Both reference:
 │                        RpgTimeTracker.Shared                            │
 │  Network frame format · JSON-RPC envelope/methods/params · domain       │
 │  models (TimerItem/AlarmItem/IntervalEventItem) · GameClockService ·    │
-│  media helpers · shared Avalonia styles + views · theme loading ·       │
-│  logging bootstrap                                                      │
+│  custom calendar engine (GameInstant/CalendarDefinition) · media        │
+│  helpers · shared Avalonia styles + views · theme loading ·             │
+│  localization · logging bootstrap                                       │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -41,7 +42,7 @@ per client; the Host is the only process that ever writes game state.
 | `RpgTimeTracker.PlayerClient` | Avalonia desktop app (`WinExe`) | Read-only display app for players. Connects to the Host, derives its own clock, renders the shared timeline and any pushed media. |
 | `RpgTimeTracker.Shared` | Class library | Everything both apps need identically: the wire protocol, domain models, the derived-clock service, media helpers, shared XAML styles, logging bootstrap. Referenced by both apps — nothing protocol- or model-related is duplicated. |
 
-All three target **.NET 8** and use **Avalonia 12** for UI, **CommunityToolkit.Mvvm**
+All three target **.NET 10** and use **Avalonia 12** for UI, **CommunityToolkit.Mvvm**
 (source-generated `[ObservableProperty]`/`[RelayCommand]`) for MVVM, and
 **LibVLCSharp** (+ `LibVLCSharp.Avalonia`'s `VideoView`) for video playback, and plain
 `LibVLCSharp.Shared.MediaPlayer` instances (no `VideoView`, no visual window) for sounds -
@@ -212,6 +213,57 @@ What's *not* shared, and stays app-specific around these two controls:
 - Client's `ClientMainWindow` adds its own connection-status bar and the
   expandable "manually connect / discovered servers" section — the one part
   that has no Host equivalent, since the Host doesn't connect to anything.
+
+## Later additions (Host-only unless noted)
+
+Added after the sections above were written; kept brief rather than
+rewriting the narrative above - see [`design-decisions.md`](design-decisions.md)
+for the "why" behind each, and the CHANGELOG for the full feature list.
+
+- **Sessions** (`Services/SessionService.cs`, `MainWindowViewModel.SaveLoad.cs`) —
+  an optional, folder-scoped campaign alongside the always-present Shared
+  Library. Every library item carries a `Scope` (Shared/SessionLocal); a
+  `LibraryUsageRegistry` (`Services/LibraryUsageRegistry.cs`) tracks which
+  Timer/Alarm/Interval/Scene/Character references which Media/Sound/Map/Music
+  item, so deleting an in-use item can warn instead of silently breaking a
+  reference.
+- **Music** (`ViewModels/MusicLibraryItemViewModel.cs`,
+  `ViewModels/PlaylistViewModel.cs`) — a library and playlist system fully
+  independent of the Sound Library, played on its own network `Layer` (see
+  [`protocol.md`](protocol.md)) so a sound effect never interrupts music.
+  Playback is Host-driven (`MainWindowViewModel.SendMedia.cs`'s playlist
+  sequencer); per-client Music/Sound/Image/Video/Map routing toggles live in
+  `ConnectedClientItemViewModel`.
+- **Maps / fog-of-war** (`Views/MapPrepareWindow.axaml(.cs)`,
+  `Views/MapLiveWindow.axaml(.cs)`, `Views/Controls/MapEditCanvasControl.axaml`,
+  `Shared/Services/FogMaskRescaler.cs`) — multi-floor maps with an offline
+  "Prepare" mask and a separately-broadcast "Live" mask, sharing one canvas
+  control between the two editor windows.
+- **Characters** (`ViewModels/NpcLibraryItemViewModel.cs`,
+  `ViewModels/MainWindowViewModel.NpcLibrary.cs`) — an NPC/PC library with
+  named variants ("moods"), each optionally overriding portrait/token/player
+  info/sounds relative to the Default variant.
+- **Tags** (`Services/TagRegistry.cs`, `Views/Controls/TagSelectorFlyout.axaml`) —
+  a flat, campaign-wide tag list assignable to any library item (Media/
+  Sound/Music/Map/NPC/Scene), independent of Scene membership.
+- **Scenes** (`ViewModels/SceneLibraryItemViewModel.cs`,
+  `MainWindowViewModel.SceneLibrary.cs`) — a named beat with a description, an
+  optional calendar start date, and a bundle of Image/Map/Sound/Playlist
+  references sent individually (not auto-pushed on activation). A Scene can
+  own its own Timer/Alarm/Interval timeline, paused whenever it isn't the
+  `ActiveScene`; any global trigger can carry a `TargetSceneId` to activate a
+  Scene when it fires.
+- **Custom calendar engine** (`Shared/Models/GameInstant.cs`,
+  `Shared/Models/CalendarDefinition.cs`,
+  `Shared/Services/Theming/CalendarDefinitionLoader.cs`) — game time is a
+  calendar-agnostic `GameInstant` (elapsed seconds), converted to/from a
+  human date by the campaign's active `CalendarDefinition` (bundled or
+  GM-authored, compatible with Foundry VTT Simple Calendar's schema). This
+  was a breaking, unmigrated save-format change.
+- **Localization** (`Shared/Services/Localization/LocalizationService.cs`,
+  `Shared/Localization/{en,de}.json`) — all UI strings load from flat JSON
+  dictionaries merged into `Application.Resources`, switchable at runtime;
+  `RpgTimeTracker.Tests` asserts both language files carry the same key set.
 
 ## Threading model
 

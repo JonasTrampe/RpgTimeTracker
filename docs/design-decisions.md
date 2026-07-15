@@ -478,6 +478,9 @@ automation is built against the general case (any Design's `Backgrounds`
 list, however long) and ships wired up for the one Design that already has
 real day/night art — every other Design works exactly as it did before
 until someone (the GM) adds a second named background to its `theme.json`.
+(The unused `Assets/Backgrounds/*.png` files investigated here were later
+deleted as dead weight - see the architecture-cleanup entry in
+CHANGELOG.md.)
 
 ## Local-only video pause resolves via the same MediaPlayer.EndReached race as the remote report
 
