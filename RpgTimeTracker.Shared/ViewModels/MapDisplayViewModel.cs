@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Media;
@@ -30,6 +31,9 @@ namespace RpgTimeTracker.Shared.ViewModels;
 public sealed partial class MapDisplayViewModel : ObservableObject
 {
     private readonly List<MapDisplayFloor> _floors = [];
+
+    /// <summary>Every currently-visible token across all floors - see VisibleTokens for the current-floor filter.</summary>
+    private readonly List<MapTokenSnapshotDto> _tokens = [];
 
     /// <summary>
     ///     Whether the blurred-image layer is used at all - independent of BlurRadius so
@@ -81,6 +85,14 @@ public sealed partial class MapDisplayViewModel : ObservableObject
 
     public bool HasMultipleFloors => _floors.Count > 1;
 
+    /// <summary>
+    ///     Tokens on the currently displayed floor only, already fully resolved/filtered by
+    ///     the Host (see MapTokenSnapshotDto) - the client (this class serves both the real
+    ///     PlayerClient and the Host's own local preview) has no extra visibility logic of its own
+    ///     to apply, it just renders whatever's here.
+    /// </summary>
+    public ObservableCollection<MapTokenSnapshotDto> VisibleTokens { get; } = [];
+
     partial void OnHiddenColorChanged(Color value)
     {
         TintBrush = new SolidColorBrush(value);
@@ -119,6 +131,7 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     {
         _floors.Clear();
         _floors.AddRange(floors);
+        _tokens.Clear();
         MapName = mapName;
         CurrentFloorIndex = 0;
         IsShowingMap = true;
@@ -130,10 +143,37 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     {
         IsShowingMap = false;
         _floors.Clear();
+        _tokens.Clear();
+        VisibleTokens.Clear();
         CurrentFloorImageBitmap = null;
         MaskBrush = null;
         HasFogMask = false;
         CurrentFloorName = string.Empty;
+    }
+
+    /// <summary>Adds a token, or fully replaces an existing one with the same Id (see RpcMethods.MapTokenUpsert).</summary>
+    public void UpsertToken(MapTokenSnapshotDto token)
+    {
+        var index = _tokens.FindIndex(t => t.Id == token.Id);
+        if (index >= 0) _tokens[index] = token;
+        else _tokens.Add(token);
+
+        RefreshVisibleTokens();
+    }
+
+    public void RemoveToken(Guid tokenId)
+    {
+        _tokens.RemoveAll(t => t.Id == tokenId);
+        RefreshVisibleTokens();
+    }
+
+    private void RefreshVisibleTokens()
+    {
+        VisibleTokens.Clear();
+        if (CurrentFloorIndex < 0 || CurrentFloorIndex >= _floors.Count) return;
+
+        var floorId = _floors[CurrentFloorIndex].FloorId;
+        foreach (var token in _tokens.Where(t => t.FloorId == floorId)) VisibleTokens.Add(token);
     }
 
     /// <summary>
@@ -206,6 +246,7 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         CurrentFloorName = floor.Name;
         CurrentFloorImageBitmap = floor.Image;
         RefreshMask();
+        RefreshVisibleTokens();
     }
 
     private void RefreshMask()

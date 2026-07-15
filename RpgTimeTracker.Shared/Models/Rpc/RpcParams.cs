@@ -149,6 +149,13 @@ public sealed class MapShowParams
     public Guid MapId { get; set; }
     public string MapName { get; set; } = string.Empty;
     public List<MapFloorShowDto> Floors { get; set; } = [];
+
+    /// <summary>
+    ///     Every token currently visible to players, across all floors (each carries its own
+    ///     FloorId - see MapTokenSnapshotDto) - full resync, same "always full state on connect/
+    ///     reconnect" rule as fog.
+    /// </summary>
+    public List<MapTokenSnapshotDto> Tokens { get; set; } = [];
 }
 
 /// <summary>
@@ -200,6 +207,37 @@ public sealed class MapRenderStyleChangedParams
     public int OpacityPercent { get; set; } = 100;
     public double BlurRadius { get; set; }
     public bool BlurEnabled { get; set; } = true;
+}
+
+/// <summary>
+///     A map token, already fully resolved and filtered by the Host before it's ever put on the
+///     wire (see RpcMethods.MapTokenUpsert) - Name/Detail/IconGlyph are null when that token's
+///     corresponding PlayerVisibleName/Detail/Portrait toggle is off, so the client never even
+///     receives a field it isn't allowed to show; it has no extra visibility logic of its own to
+///     apply. Portrait image transfer (the actual picture, not just a fallback icon glyph) is
+///     deferred to a follow-up - this first pass only sends IconGlyph.
+/// </summary>
+public sealed class MapTokenSnapshotDto
+{
+    public Guid Id { get; set; }
+    public Guid FloorId { get; set; }
+    public double X { get; set; }
+    public double Y { get; set; }
+    public string? Name { get; set; }
+    public string? Detail { get; set; }
+    public string? IconGlyph { get; set; }
+
+    /// <summary>
+    ///     Wired by the Initiative tracker (#70), unset for now - always false until that
+    ///     feature exists to set it.
+    /// </summary>
+    public bool IsCurrentTurn { get; set; }
+}
+
+/// <summary>Server-to-client: a token is no longer visible to players (see RpcMethods.MapTokenRemove).</summary>
+public sealed class MapTokenRemoveParams
+{
+    public Guid TokenId { get; set; }
 }
 
 /// <summary>Server-to-client: adjusts the volume of the currently playing music track live (0-100).</summary>

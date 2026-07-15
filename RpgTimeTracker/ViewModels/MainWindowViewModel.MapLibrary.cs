@@ -390,18 +390,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     }
 
     /// <summary>
-    ///     Public re-save trigger for map-token mutations made from the map-editor UI
-    ///     (MapEditCanvasControl/MapTokenPanelView, both windows) - those live outside
-    ///     MainWindowViewModel, so they can't call the private SaveMapLibrarySettings/
-    ///     OnMapLibraryItemChanged directly; this reuses the exact same path as any other
-    ///     map property change instead of duplicating it.
-    /// </summary>
-    public void NotifyMapTokensChanged(MapItemViewModel map)
-    {
-        OnMapLibraryItemChanged(map);
-    }
-
-    /// <summary>
     ///     Resolves a token's display Name - read live from the linked Character/PointOfInterest
     ///     entry, never copied onto the token itself (see MapTokenViewModel's doc comment). Falls
     ///     back to the token's own Name field if the link no longer resolves (the linked entry was
@@ -473,6 +461,120 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         var name = ResolveTokenName(token);
         return string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2)
             .Select(word => char.ToUpperInvariant(word[0])));
+    }
+
+    /// <summary>
+    ///     Whether the grid cell a token currently occupies is revealed on the map's live fog -
+    ///     the "cellRevealed" input to MapTokenViewModel.IsVisibleToPlayers. False (never visible)
+    ///     if the token's FloorId no longer resolves to one of the map's floors, or its position
+    ///     falls outside the grid.
+    /// </summary>
+    private bool IsTokenCellRevealed(MapItemViewModel map, MapTokenViewModel token)
+    {
+        var floor = map.Floors.FirstOrDefault(f => f.Id == token.FloorId);
+        if (floor is null) return false;
+
+        var cellX = (int)(token.X / floor.CellSizePx);
+        var cellY = (int)(token.Y / floor.CellSizePx);
+        if (cellX < 0 || cellY < 0 || cellX >= floor.GridWidth || cellY >= floor.GridHeight) return false;
+
+        return GetLiveFog(floor).IsRevealed(cellX, cellY);
+    }
+
+    /// <summary>
+    ///     Builds the wire snapshot for one token - Name/Detail/IconGlyph are only populated when
+    ///     that field's player-visible toggle is on, so the client never receives data it isn't
+    ///     allowed to show (see MapTokenSnapshotDto's doc comment). Does not check
+    ///     IsVisibleToPlayers itself - callers decide whether this token should be sent/kept at all
+    ///     (see NotifyTokenChanged/BuildVisibleTokenSnapshots).
+    /// </summary>
+    private MapTokenSnapshotDto ToTokenSnapshotDto(MapTokenViewModel token)
+    {
+        return new MapTokenSnapshotDto
+        {
+            Id = token.Id,
+            FloorId = token.FloorId,
+            X = token.X,
+            Y = token.Y,
+            Name = token.PlayerVisibleName ? ResolveTokenName(token) : null,
+            Detail = token.PlayerVisibleDetail ? ResolveTokenDetail(token) : null,
+            IconGlyph = token.PlayerVisiblePortrait ? ResolveTokenIconGlyph(token) : null
+        };
+    }
+
+    /// <summary>Every token on this map currently visible to players - the full-resync payload for map.show.</summary>
+    private List<MapTokenSnapshotDto> BuildVisibleTokenSnapshots(MapItemViewModel map)
+    {
+        return map.Tokens.Where(t => t.IsVisibleToPlayers(IsTokenCellRevealed(map, t)))
+            .Select(ToTokenSnapshotDto)
+            .ToList();
+    }
+
+    /// <summary>
+    ///     Call after any edit to a token's data (link, name/description, icon, Reveal mode, a
+    ///     player-visibility toggle, or moving it to a different floor) - saves, and if this token's
+    ///     map is the one currently open to players, re-sends its full resolved snapshot (or removes
+    ///     it, if it's no longer visible) to both the network and the Host's own local preview.
+    /// </summary>
+    public void NotifyTokenChanged(MapItemViewModel map, MapTokenViewModel token)
+    {
+        OnMapLibraryItemChanged(map);
+        if (!ReferenceEquals(OpenMap, map)) return;
+
+        if (token.IsVisibleToPlayers(IsTokenCellRevealed(map, token)))
+        {
+            var snapshot = ToTokenSnapshotDto(token);
+            _ = _playerServer.PublishMapTokenUpsertAsync(snapshot);
+            MapDisplay.UpsertToken(snapshot);
+        }
+        else
+        {
+            _ = _playerServer.PublishMapTokenRemoveAsync(token.Id);
+            MapDisplay.RemoveToken(token.Id);
+        }
+    }
+
+    /// <summary>
+    ///     Call after dragging a token to a new position (same or different floor) - same
+    ///     resolve-and-resend behavior as NotifyTokenChanged (see RpcMethods.MapTokenUpsert's doc
+    ///     comment for why a position change is just another full upsert, not a lighter "move").
+    /// </summary>
+    public void NotifyTokenMoved(MapItemViewModel map, MapTokenViewModel token)
+    {
+        NotifyTokenChanged(map, token);
+    }
+
+    /// <summary>Call after removing a token (map.RemoveToken already took it out of Tokens) - saves and broadcasts.</summary>
+    public void NotifyTokenRemoved(MapItemViewModel map, Guid tokenId)
+    {
+        OnMapLibraryItemChanged(map);
+        if (!ReferenceEquals(OpenMap, map)) return;
+
+        _ = _playerServer.PublishMapTokenRemoveAsync(tokenId);
+        MapDisplay.RemoveToken(tokenId);
+    }
+
+    /// <summary>
+    ///     Called after a fog paint stroke (see MapLiveWindow.OnCellsPainted) - a
+    ///     HiddenUntilRevealed token whose cell was just painted may have just become visible (or
+    ///     hidden again), so its network/preview state needs re-evaluating even though nothing
+    ///     about the token itself changed. Cheap: only tokens on the painted floor are checked, and
+    ///     only those actually sitting in one of the just-painted cells are re-sent.
+    /// </summary>
+    public void NotifyTokensAffectedByFogChange(MapItemViewModel map, MapFloorItemViewModel floor,
+        IReadOnlyList<FogCellDto> cells)
+    {
+        if (!ReferenceEquals(OpenMap, map)) return;
+
+        var paintedCells = cells.Select(c => (c.X, c.Y)).ToHashSet();
+        foreach (var token in map.Tokens)
+        {
+            if (token.FloorId != floor.Id || token.RevealMode != TokenRevealMode.HiddenUntilRevealed) continue;
+
+            var cellX = (int)(token.X / floor.CellSizePx);
+            var cellY = (int)(token.Y / floor.CellSizePx);
+            if (paintedCells.Contains((cellX, cellY))) NotifyTokenChanged(map, token);
+        }
     }
 
     /// <summary>
@@ -780,8 +882,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         OpenMap = map;
         EditingFloor ??= map.Floors.FirstOrDefault();
         IsMapOpenToPlayers = true;
-        await _playerServer.PublishMapShowAsync(map.Id, map.Name, floors);
+        var tokens = BuildVisibleTokenSnapshots(map);
+        await _playerServer.PublishMapShowAsync(map.Id, map.Name, floors, tokens);
         MapDisplay.ShowMap(map.Name, displayFloors);
+        foreach (var token in tokens) MapDisplay.UpsertToken(token);
         ApplyAndBroadcastEffectiveFogStyleForOpenMap();
         OnPropertyChanged(nameof(ShouldShowMapLocally));
         Log.Information("Map opened to players: {MapName} ({FloorCount} floors)", map.Name, floors.Count);

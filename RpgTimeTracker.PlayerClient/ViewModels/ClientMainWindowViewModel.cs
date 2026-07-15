@@ -173,6 +173,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MapFogUpdateReceived += fogUpdate => Dispatcher.UIThread.Post(() => OnMapFogUpdate(fogUpdate));
         _client.MapFogResetReceived += floorId => Dispatcher.UIThread.Post(() => OnMapFogReset(floorId));
         _client.MapHideReceived += () => Dispatcher.UIThread.Post(OnMapHide);
+        _client.MapTokenUpsertReceived += token => Dispatcher.UIThread.Post(() => MapDisplay.UpsertToken(token));
+        _client.MapTokenRemoveReceived += tokenId => Dispatcher.UIThread.Post(() => MapDisplay.RemoveToken(tokenId));
         _client.MapRenderStyleChanged += style => Dispatcher.UIThread.Post(() => MapDisplay.ApplyRenderStyle(
             FogOverlayRenderer.BuildHiddenColor(style.ColorHex, style.OpacityPercent), style.BlurRadius,
             style.BlurEnabled));
@@ -361,8 +363,10 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
 
         _pendingFloorImagePaths.Clear();
         MapDisplay.ShowMap(mapShow.MapName, floors);
+        foreach (var token in mapShow.Tokens) MapDisplay.UpsertToken(token);
         MediaWindowShouldShow?.Invoke();
-        Log.Information("Map shown: {MapName} ({FloorCount} floors)", mapShow.MapName, floors.Count);
+        Log.Information("Map shown: {MapName} ({FloorCount} floors, {TokenCount} tokens)", mapShow.MapName,
+            floors.Count, mapShow.Tokens.Count);
     }
 
     private void OnMapFogUpdate(MapFogUpdateParams update)
