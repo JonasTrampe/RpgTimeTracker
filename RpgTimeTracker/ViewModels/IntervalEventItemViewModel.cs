@@ -62,6 +62,10 @@ public partial class IntervalEventItemViewModel : ObservableObject
     /// <summary>Optional image/video that is automatically distributed when this interval becomes active.</summary>
     public TriggerMediaConfig TriggerMedia { get; } = new();
 
+    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this interval also
+    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.</summary>
+    [ObservableProperty] private Guid? _targetSceneId;
+
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
 
@@ -269,7 +273,8 @@ public partial class IntervalEventItemViewModel : ObservableObject
             TriggerMediaKind = TriggerMedia.Kind == MediaKind.None ? null : TriggerMedia.Kind.ToString(),
             TriggerMediaFullscreen = TriggerMedia.Fullscreen,
             TriggerMediaPauseClock = TriggerMedia.PauseClockDuringVideo,
-            TriggerMediaLoop = TriggerMedia.Loop
+            TriggerMediaLoop = TriggerMedia.Loop,
+            TargetSceneId = TargetSceneId
         };
     }
 
@@ -292,7 +297,7 @@ public partial class IntervalEventItemViewModel : ObservableObject
             MaxRepeats = dto.MaxRepeats
         };
         model.Restore(TimeSpan.FromTicks(dto.ElapsedTicks), dto.IsRunning, dto.IsCompleted);
-        var vm = new IntervalEventItemViewModel(model, onDeleteRequested);
+        var vm = new IntervalEventItemViewModel(model, onDeleteRequested) { TargetSceneId = dto.TargetSceneId };
         if (!string.IsNullOrWhiteSpace(dto.TriggerMediaPath) &&
             Enum.TryParse<MediaKind>(dto.TriggerMediaKind, out var kind) && kind != MediaKind.None)
         {

@@ -56,6 +56,13 @@ public partial class CalendarEntryViewModel : ObservableObject
 
     public Guid Id { get; set; }
     public TriggerMediaConfig TriggerMedia { get; } = new();
+
+    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, this entry occurring also
+    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById. Host-only UI
+    ///     concern (the picker itself lives in MainWindow.axaml), but kept here alongside
+    ///     TriggerMedia since both round-trip through TryBuildDefinition/FromDefinition the same
+    ///     way.</summary>
+    [ObservableProperty] private Guid? _targetSceneId;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);
     public IBrush? ColorBrush => VisualItemHelper.TryBrush(ColorHex);
@@ -136,6 +143,11 @@ public partial class CalendarEntryViewModel : ObservableObject
         NotifyChanged();
     }
 
+    partial void OnTargetSceneIdChanged(Guid? value)
+    {
+        NotifyChanged();
+    }
+
     [RelayCommand]
     private void Delete()
     {
@@ -180,7 +192,8 @@ public partial class CalendarEntryViewModel : ObservableObject
             TriggerKind = TriggerMedia.Kind,
             TriggerFullscreen = TriggerMedia.Fullscreen,
             TriggerPauseClockDuringVideo = TriggerMedia.PauseClockDuringVideo,
-            TriggerLoop = TriggerMedia.Loop
+            TriggerLoop = TriggerMedia.Loop,
+            TargetSceneId = TargetSceneId
         };
         return true;
     }
@@ -209,6 +222,7 @@ public partial class CalendarEntryViewModel : ObservableObject
         vm.TriggerMedia.Fullscreen = definition.TriggerFullscreen;
         vm.TriggerMedia.PauseClockDuringVideo = definition.TriggerPauseClockDuringVideo;
         vm.TriggerMedia.Loop = definition.TriggerLoop;
+        vm.TargetSceneId = definition.TargetSceneId;
         vm._suppressChangeNotifications = false;
         vm.Validate();
         return vm;

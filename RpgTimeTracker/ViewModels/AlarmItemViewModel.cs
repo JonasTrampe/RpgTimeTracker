@@ -66,6 +66,10 @@ public partial class AlarmItemViewModel : ObservableObject
     /// <summary>Optional image/video that is automatically distributed when this alarm triggers.</summary>
     public TriggerMediaConfig TriggerMedia { get; } = new();
 
+    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this Alarm also
+    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.</summary>
+    [ObservableProperty] private Guid? _targetSceneId;
+
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
 
@@ -242,7 +246,8 @@ public partial class AlarmItemViewModel : ObservableObject
             TriggerMediaKind = TriggerMedia.Kind == MediaKind.None ? null : TriggerMedia.Kind.ToString(),
             TriggerMediaFullscreen = TriggerMedia.Fullscreen,
             TriggerMediaPauseClock = TriggerMedia.PauseClockDuringVideo,
-            TriggerMediaLoop = TriggerMedia.Loop
+            TriggerMediaLoop = TriggerMedia.Loop,
+            TargetSceneId = TargetSceneId
         };
     }
 
@@ -262,7 +267,7 @@ public partial class AlarmItemViewModel : ObservableObject
             RepeatInterval = dto.RepeatIntervalTicks.HasValue ? TimeSpan.FromTicks(dto.RepeatIntervalTicks.Value) : null
         };
         model.Restore(dto.IsTriggered);
-        var vm = new AlarmItemViewModel(model, currentGameTime, onDeleteRequested);
+        var vm = new AlarmItemViewModel(model, currentGameTime, onDeleteRequested) { TargetSceneId = dto.TargetSceneId };
         if (!string.IsNullOrWhiteSpace(dto.TriggerMediaPath) &&
             Enum.TryParse<MediaKind>(dto.TriggerMediaKind, out var kind) && kind != MediaKind.None)
         {

@@ -27,6 +27,13 @@ public partial class MainWindowViewModel
 
     [ObservableProperty] private SceneLibraryItemViewModel? _selectedScene;
 
+    /// <summary>Phase 3 of the plan: the Scene whose own Timer/Alarm/IntervalEvent timeline is
+    ///     currently ticking. OnClockTick (MainWindowViewModel.Clock.cs) only advances
+    ///     ActiveScene's items, never any other Scene's - that omission IS the "paused while
+    ///     inactive" mechanism, there's no separate pause flag to maintain. Set by
+    ///     ActivateSceneAsync; cleared if the active Scene itself gets deleted.</summary>
+    [ObservableProperty] private SceneLibraryItemViewModel? _activeScene;
+
     [RelayCommand]
     private async Task AddSceneAsync()
     {
@@ -44,6 +51,7 @@ public partial class MainWindowViewModel
     {
         SceneLibrary.Remove(scene);
         if (SelectedScene == scene) SelectedScene = null;
+        if (ActiveScene == scene) ActiveScene = null;
         OnPropertyChanged(nameof(HasNoScenes));
         SaveSceneLibrarySettings();
     }
@@ -101,7 +109,10 @@ public partial class MainWindowViewModel
         MapId = scene.Map?.Id,
         SoundIds = scene.Sounds.Select(s => s.Id).ToList(),
         MusicId = scene.Music?.Id,
-        TagIds = scene.TagIds.ToList()
+        TagIds = scene.TagIds.ToList(),
+        Timers = scene.Timers.Select(t => t.ToDto()).ToList(),
+        Alarms = scene.Alarms.Select(a => a.ToDto()).ToList(),
+        IntervalEvents = scene.IntervalEvents.Select(i => i.ToDto()).ToList()
     };
 
     /// <summary>Wrapped in BeginBulkLoad/EndBulkLoad - see NpcLibraryItemViewModel's identical
@@ -126,6 +137,12 @@ public partial class MainWindowViewModel
                 var sound = SoundLibrary.FirstOrDefault(s => s.Id == soundId);
                 if (sound is not null) scene.Sounds.Add(sound);
             }
+
+            foreach (var timerDto in entry.Timers) scene.Timers.Add(TimerItemViewModel.FromDto(timerDto, scene.RemoveTimer));
+            foreach (var alarmDto in entry.Alarms)
+                scene.Alarms.Add(AlarmItemViewModel.FromDto(alarmDto, scene.StartDate, scene.RemoveAlarm));
+            foreach (var intervalDto in entry.IntervalEvents)
+                scene.IntervalEvents.Add(IntervalEventItemViewModel.FromDto(intervalDto, scene.RemoveIntervalEvent));
 
             return scene;
         }
@@ -157,8 +174,26 @@ public partial class MainWindowViewModel
         if (scene.Music is { } music) await SendSceneMusicTrackAsync(music);
         foreach (var sound in scene.Sounds) PlaySoundLibraryItem(sound);
 
+        // Phase 3: becoming the active Scene is what "un-pauses" its own Timer/Alarm/
+        // IntervalEvent timeline - see ActiveScene's doc comment and OnClockTick.
+        ActiveScene = scene;
+
         RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.SceneActivated"), scene.Name));
         Log.Information("Scene activated: {SceneName}", scene.Name);
+    }
+
+    /// <summary>Phase 4 hook: resolves a Timer/Alarm/IntervalEvent/CalendarEntry's optional
+    ///     TargetSceneId and activates that Scene, reusing ActivateSceneAsync's orchestration - a
+    ///     no-op if the field is unset or no longer resolves to an existing Scene (e.g. it was
+    ///     deleted after being targeted).</summary>
+    private void ActivateSceneById(Guid? sceneId)
+    {
+        if (sceneId is not { } id) return;
+
+        var scene = SceneLibrary.FirstOrDefault(s => s.Id == id);
+        if (scene is null) return;
+
+        _ = ActivateSceneAsync(scene);
     }
 
     /// <summary>A Scene's bundled Music track has no Playlist to sequence from (unlike

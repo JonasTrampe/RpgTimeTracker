@@ -229,6 +229,11 @@
   "MainWindow.Scenes.NoneOption": "(None)",
   "MainWindow.Scenes.ActivateButton": "▶ Activate",
   "MainWindow.Scenes.ActivateTooltip": "Show/play this Scene's bundled Image, Map, Music, and Sounds to players",
+  "MainWindow.Scenes.TimelineTitle": "Scene timeline",
+  "MainWindow.Scenes.TimelineDescription": "Its own Timers/Alarms/Intervals, paused unless this Scene is the currently active one.",
+  "MainWindow.Scenes.AddTimerButton": "+ Timer",
+  "MainWindow.Scenes.AddAlarmButton": "+ Alarm",
+  "MainWindow.Scenes.AddIntervalButton": "+ Interval",
 
   "MapEditor.RevealToolButton": "👁 Reveal",
   "MapEditor.BrushSizeLabel": "Brush size",

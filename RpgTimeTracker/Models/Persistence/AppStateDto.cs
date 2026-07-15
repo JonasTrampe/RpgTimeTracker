@@ -59,6 +59,11 @@ public class TimerDto
     public bool TriggerMediaFullscreen { get; set; }
     public bool TriggerMediaPauseClock { get; set; }
     public bool TriggerMediaLoop { get; set; }
+
+    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this Timer also
+    ///     activates the named Scene (MainWindowViewModel.ActivateSceneById), reusing the same
+    ///     orchestration as the Scenes tab's "Activate" button.</summary>
+    public Guid? TargetSceneId { get; set; }
 }
 
 public class AlarmDto
@@ -81,6 +86,9 @@ public class AlarmDto
     public bool TriggerMediaFullscreen { get; set; }
     public bool TriggerMediaPauseClock { get; set; }
     public bool TriggerMediaLoop { get; set; }
+
+    /// <summary>See TimerDto.TargetSceneId's doc comment - same meaning here.</summary>
+    public Guid? TargetSceneId { get; set; }
 }
 
 public class IntervalEventDto
@@ -106,6 +114,9 @@ public class IntervalEventDto
     public bool TriggerMediaFullscreen { get; set; }
     public bool TriggerMediaPauseClock { get; set; }
     public bool TriggerMediaLoop { get; set; }
+
+    /// <summary>See TimerDto.TargetSceneId's doc comment - same meaning here.</summary>
+    public Guid? TargetSceneId { get; set; }
 }
 
 public class JumpMarkerDto

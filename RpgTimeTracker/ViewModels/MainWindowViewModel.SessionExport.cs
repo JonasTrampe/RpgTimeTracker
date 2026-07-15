@@ -58,10 +58,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             WriteSoundManifestSection(zip, SoundLibrary);
             WriteMapManifestSection(zip, MapLibrary);
             WriteNpcManifestSection(zip, NpcLibrary);
+            WriteMusicManifestSection(zip, MusicLibrary);
+            WriteSceneManifestSection(zip, SceneLibrary);
         }
 
-        Log.Information("Full session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} characters",
-            MediaLibrary.Count, SoundLibrary.Count, MapLibrary.Count, NpcLibrary.Count);
+        Log.Information(
+            "Full session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} characters, {MusicCount} music, {SceneCount} scenes",
+            MediaLibrary.Count, SoundLibrary.Count, MapLibrary.Count, NpcLibrary.Count, MusicLibrary.Count, SceneLibrary.Count);
         return stream.ToArray();
     }
 
@@ -84,13 +87,18 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var sessionSound = SoundLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList();
             var sessionMaps = MapLibrary.Where(m => m.Scope == LibraryScope.SessionLocal).ToList();
             var sessionNpcs = NpcLibrary.Where(n => n.Scope == LibraryScope.SessionLocal).ToList();
+            var sessionMusic = MusicLibrary.Where(m => m.Scope == LibraryScope.SessionLocal).ToList();
+            var sessionScenes = SceneLibrary.Where(s => s.Scope == LibraryScope.SessionLocal).ToList();
             WriteMediaManifestSection(zip, sessionMedia);
             WriteSoundManifestSection(zip, sessionSound);
             WriteMapManifestSection(zip, sessionMaps);
             WriteNpcManifestSection(zip, sessionNpcs);
+            WriteMusicManifestSection(zip, sessionMusic);
+            WriteSceneManifestSection(zip, sessionScenes);
 
-            Log.Information("Session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} characters",
-                sessionMedia.Count, sessionSound.Count, sessionMaps.Count, sessionNpcs.Count);
+            Log.Information(
+                "Session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} characters, {MusicCount} music, {SceneCount} scenes",
+                sessionMedia.Count, sessionSound.Count, sessionMaps.Count, sessionNpcs.Count, sessionMusic.Count, sessionScenes.Count);
         }
 
         return stream.ToArray();
@@ -135,12 +143,31 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         WriteZipTextEntry(zip, "sound/manifest.json", JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
     }
 
+    private static void WriteMusicManifestSection(ZipArchive zip, IEnumerable<MusicLibraryItemViewModel> items)
+    {
+        var manifest = new LibraryManifestDto { LibraryType = "Music" };
+        foreach (var item in items)
+        {
+            if (!File.Exists(item.LocalPath)) continue;
+
+            var fileName = $"{Guid.NewGuid():N}{Path.GetExtension(item.LocalPath)}";
+            WriteZipFileEntry(zip, $"music/{fileName}", item.LocalPath);
+            manifest.Items.Add(new LibraryManifestEntryDto
+            {
+                Id = item.Id, Name = item.Name, Icon = item.Icon, FileName = fileName, MimeType = item.MimeType,
+                Volume = item.Volume
+            });
+        }
+
+        WriteZipTextEntry(zip, "music/manifest.json", JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
+    }
+
     private static void WriteMapManifestSection(ZipArchive zip, IEnumerable<MapItemViewModel> maps)
     {
         var manifest = new MapLibraryManifestDto();
         foreach (var map in maps)
         {
-            var mapEntry = new MapLibraryManifestEntryDto { Name = map.Name, FormatVersion = map.FormatVersion };
+            var mapEntry = new MapLibraryManifestEntryDto { Id = map.Id, Name = map.Name, FormatVersion = map.FormatVersion };
             var order = 0;
             foreach (var floor in map.Floors)
             {
@@ -168,6 +195,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         var manifest = new NpcLibraryManifestDto { Npcs = npcs.Select(ToNpcLibraryEntryDto).ToList() };
         WriteZipTextEntry(zip, "npcs/manifest.json", JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
+    }
+
+    private static void WriteSceneManifestSection(ZipArchive zip, IEnumerable<SceneLibraryItemViewModel> scenes)
+    {
+        var manifest = new SceneLibraryManifestDto { Scenes = scenes.Select(ToSceneLibraryEntryDto).ToList() };
+        WriteZipTextEntry(zip, "scenes/manifest.json", JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
     }
 
     /// <summary>
@@ -199,12 +232,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
             var (mediaImported, mediaIdMap) = ImportMediaSectionFromZip(zip);
             var (soundImported, soundIdMap) = ImportSoundSectionFromZip(zip);
-            var mapsImported = ImportMapsSectionFromZip(zip);
+            var (mapsImported, mapIdMap) = ImportMapsSectionFromZip(zip);
             var npcsImported = ImportNpcSectionFromZip(zip, LibraryScope.Shared, mediaIdMap, soundIdMap);
+            var (musicImported, musicIdMap) = ImportMusicSectionFromZip(zip);
+            var scenesImported = ImportSceneSectionFromZip(zip, LibraryScope.Shared, mediaIdMap, mapIdMap, musicIdMap, soundIdMap);
 
             Log.Information(
-                "Full session imported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs",
-                mediaImported, soundImported, mapsImported, npcsImported);
+                "Full session imported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs, {MusicCount} music, {SceneCount} scenes",
+                mediaImported, soundImported, mapsImported, npcsImported, musicImported, scenesImported);
             ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.FullSessionImported"),
                 mediaImported, soundImported, mapsImported));
         }
@@ -251,13 +286,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
             var (mediaImported, mediaIdMap) = ImportMediaSectionFromZip(zip, LibraryScope.SessionLocal);
             var (soundImported, soundIdMap) = ImportSoundSectionFromZip(zip, LibraryScope.SessionLocal);
-            var mapsImported = ImportMapsSectionFromZip(zip, LibraryScope.SessionLocal);
+            var (mapsImported, mapIdMap) = ImportMapsSectionFromZip(zip, LibraryScope.SessionLocal);
             var npcsImported = ImportNpcSectionFromZip(zip, LibraryScope.SessionLocal, mediaIdMap, soundIdMap);
+            var (musicImported, musicIdMap) = ImportMusicSectionFromZip(zip, LibraryScope.SessionLocal);
+            var scenesImported = ImportSceneSectionFromZip(zip, LibraryScope.SessionLocal, mediaIdMap, mapIdMap, musicIdMap, soundIdMap);
             NotifySessionChanged();
 
             Log.Information(
-                "Session imported into {FolderPath}: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs",
-                targetFolderPath, mediaImported, soundImported, mapsImported, npcsImported);
+                "Session imported into {FolderPath}: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs, {MusicCount} music, {SceneCount} scenes",
+                targetFolderPath, mediaImported, soundImported, mapsImported, npcsImported, musicImported, scenesImported);
             ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.FullSessionImported"),
                 mediaImported, soundImported, mapsImported));
         }
@@ -365,15 +402,19 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         return (imported, idMap);
     }
 
-    private int ImportMapsSectionFromZip(ZipArchive zip, LibraryScope scope = LibraryScope.Shared)
+    /// <summary>See ImportMediaSectionFromZip's doc comment - same reasoning for Maps, used by
+    ///     ImportSceneSectionFromZip to relink a Scene's Map reference.</summary>
+    private (int Imported, Dictionary<Guid, Guid> IdMap) ImportMapsSectionFromZip(ZipArchive zip, LibraryScope scope = LibraryScope.Shared)
     {
+        var idMap = new Dictionary<Guid, Guid>();
         var manifest = ReadZipJsonEntry<MapLibraryManifestDto>(zip, "maps/manifest.json");
-        if (manifest is null) return 0;
+        if (manifest is null) return (0, idMap);
 
         var imported = 0;
         foreach (var mapEntry in manifest.Maps)
         {
             var mapId = Guid.NewGuid();
+            if (mapEntry.Id != Guid.Empty) idMap[mapEntry.Id] = mapId;
             var map = new MapItemViewModel(mapId, mapEntry.Name, DefaultMapCellSizePx, RemoveMap,
                 OnMapLibraryItemChanged, formatVersion: mapEntry.FormatVersion, scope: scope);
             var mapDirectory = Path.Combine(GetMapLibraryBaseDirectory(scope), mapId.ToString("N"));
@@ -412,7 +453,50 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
 
         if (imported > 0) SaveMapLibrarySettings();
-        return imported;
+        return (imported, idMap);
+    }
+
+    /// <summary>See ImportSoundSectionFromZip's doc comment - same reasoning for Music, used by
+    ///     ImportSceneSectionFromZip to relink a Scene's Music reference.</summary>
+    private (int Imported, Dictionary<Guid, Guid> IdMap) ImportMusicSectionFromZip(ZipArchive zip,
+        LibraryScope scope = LibraryScope.Shared)
+    {
+        var idMap = new Dictionary<Guid, Guid>();
+        var manifest = ReadZipJsonEntry<LibraryManifestDto>(zip, "music/manifest.json");
+        if (manifest is null) return (0, idMap);
+
+        var targetDirectory = GetMusicLibraryBaseDirectory(scope);
+        Directory.CreateDirectory(targetDirectory);
+        var imported = 0;
+        foreach (var item in manifest.Items)
+        {
+            var fileEntry = zip.GetEntry($"music/{item.FileName}");
+            if (fileEntry is null) continue;
+
+            var cachedPath = Path.Combine(targetDirectory,
+                $"{Guid.NewGuid():N}{Path.GetExtension(item.FileName)}");
+            using (var entryStream = fileEntry.Open())
+            using (var target = File.Create(cachedPath))
+            {
+                entryStream.CopyTo(target);
+            }
+
+            var newId = Guid.NewGuid();
+            var musicItem = CreateMusicLibraryItem(newId, item.Name, item.Icon ?? VisualItemHelper.IconTimer,
+                cachedPath, item.MimeType, item.Volume ?? 100);
+            musicItem.Scope = scope;
+            MusicLibrary.Add(musicItem);
+            if (item.Id != Guid.Empty) idMap[item.Id] = newId;
+            imported++;
+        }
+
+        if (imported > 0)
+        {
+            OnPropertyChanged(nameof(HasNoMusicLibraryItems));
+            SaveMusicLibrarySettings();
+        }
+
+        return (imported, idMap);
     }
 
     /// <summary>Imports the npcs/ section. mediaIdMap/soundIdMap (from ImportMediaSectionFromZip/
@@ -471,6 +555,51 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             SaveNpcLibrarySettings();
         }
 
+        return imported;
+    }
+
+    /// <summary>Imports the scenes/ section. mediaIdMap/mapIdMap/musicIdMap/soundIdMap (from the
+    ///     corresponding Import*SectionFromZip calls for the same zip) relink each Scene's Image/
+    ///     Map/Music/Sounds references from the exporting machine's Id to the freshly-imported
+    ///     copy's Id; a reference to an asset that wasn't bundled has no entry in the map and is
+    ///     silently dropped rather than left dangling, matching ClearSceneReferencesById's
+    ///     "unset, don't crash" behavior for deletions.</summary>
+    private int ImportSceneSectionFromZip(ZipArchive zip, LibraryScope scope,
+        IReadOnlyDictionary<Guid, Guid> mediaIdMap, IReadOnlyDictionary<Guid, Guid> mapIdMap,
+        IReadOnlyDictionary<Guid, Guid> musicIdMap, IReadOnlyDictionary<Guid, Guid> soundIdMap)
+    {
+        var manifest = ReadZipJsonEntry<SceneLibraryManifestDto>(zip, "scenes/manifest.json");
+        if (manifest is null) return 0;
+
+        var imported = 0;
+        foreach (var sceneEntry in manifest.Scenes)
+        {
+            var remapped = new SceneLibraryEntryDto
+            {
+                Id = Guid.NewGuid(),
+                Name = sceneEntry.Name,
+                DescriptionMarkdown = sceneEntry.DescriptionMarkdown,
+                StartDateSeconds = sceneEntry.StartDateSeconds,
+                ImageId = sceneEntry.ImageId is { } imageId && mediaIdMap.TryGetValue(imageId, out var newImageId)
+                    ? newImageId
+                    : null,
+                MapId = sceneEntry.MapId is { } mapId && mapIdMap.TryGetValue(mapId, out var newMapId)
+                    ? newMapId
+                    : null,
+                MusicId = sceneEntry.MusicId is { } musicId && musicIdMap.TryGetValue(musicId, out var newMusicId)
+                    ? newMusicId
+                    : null,
+                SoundIds = sceneEntry.SoundIds
+                    .Select(id => soundIdMap.TryGetValue(id, out var newSoundId) ? newSoundId : (Guid?)null)
+                    .Where(id => id is not null).Select(id => id!.Value).ToList(),
+                TagIds = sceneEntry.TagIds
+            };
+
+            SceneLibrary.Add(FromSceneLibraryEntryDto(remapped, scope));
+            imported++;
+        }
+
+        if (imported > 0) SaveSceneLibrarySettings();
         return imported;
     }
 

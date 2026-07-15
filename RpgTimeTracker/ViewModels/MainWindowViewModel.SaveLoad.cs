@@ -396,6 +396,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// </summary>
     private sealed class MapLibraryManifestEntryDto
     {
+        /// <summary>Old-export Id, used only to relink a Scene's Map reference on import (see
+        ///         ImportMapsSectionFromZip/ImportSceneSectionFromZip) - Guid.Empty on exports
+        ///         predating this field, which just means no Scene can relink to it.</summary>
+        public Guid Id { get; init; }
+
         public string Name { get; init; } = string.Empty;
         public List<MapFloorManifestEntryDto> Floors { get; init; } = [];
 
@@ -416,6 +421,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private sealed class NpcLibraryManifestDto
     {
         public List<NpcLibraryEntryDto> Npcs { get; init; } = [];
+    }
+
+    /// <summary>Manifest for the "scenes" section of a full-session/session export - Scenes own
+    ///     no files themselves (see SceneLibraryItemViewModel's doc comment), so this just wraps
+    ///     the same SceneLibraryEntryDto shape used for Shared/session-local library persistence;
+    ///     the Image/Map/Music/Sound Ids it carries are relinked on import via
+    ///     ImportSceneSectionFromZip's mediaIdMap/soundIdMap/musicIdMap/mapIdMap parameters.</summary>
+    private sealed class SceneLibraryManifestDto
+    {
+        public List<SceneLibraryEntryDto> Scenes { get; init; } = [];
     }
 
     private sealed class CalendarExportDto

@@ -431,6 +431,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             {
                 PlaySound(timer.Id, timer.SoundToPlay, timer.SoundRepeatCountToPlay);
                 TriggerEventMedia(timer.TriggerMedia);
+                ActivateSceneById(timer.TargetSceneId);
                 RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.TimerExpired"), timer.Name));
             }
 
@@ -444,6 +445,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             {
                 PlaySound(alarm.Id, alarm.SoundToPlay, alarm.SoundRepeatCountToPlay);
                 TriggerEventMedia(alarm.TriggerMedia);
+                ActivateSceneById(alarm.TargetSceneId);
                 RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.AlarmTriggered"), alarm.Name));
             }
 
@@ -457,6 +459,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             {
                 PlaySound(intervalEvent.Id, intervalEvent.SoundToPlay, intervalEvent.SoundRepeatCountToPlay);
                 TriggerEventMedia(intervalEvent.TriggerMedia);
+                ActivateSceneById(intervalEvent.TargetSceneId);
                 RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.IntervalActive"), intervalEvent.Name));
             }
 
@@ -464,10 +467,37 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 LocalizationService.Get("MainWindowViewModel.Labels.KindOnTime"), intervalEvent.TimeUntilNextEvent);
         }
 
+        AdvanceActiveSceneTimeline(gameDelta, newTime);
+
         foreach (var item in TimelineItems) item.RefreshAll();
         SyncPlayerTimelineItems();
         TriggerCalendarEntries(previousTime, newTime);
         RefreshCalendarViews();
+    }
+
+    /// <summary>Phase 3: only the currently ActiveScene's own Timer/Alarm/IntervalEvent
+    ///     collections are advanced here - every other Scene's items are simply never ticked,
+    ///     which is the entire "paused while inactive" mechanism (see ActiveScene's doc comment).
+    ///     Deliberately does not go through PlaySound/PublishItemState/TimelineItems - a Scene's
+    ///     own timeline is a Host-local authoring/scheduling tool, not networked to players.</summary>
+    private void AdvanceActiveSceneTimeline(TimeSpan gameDelta, GameInstant newTime)
+    {
+        if (ActiveScene is not { } scene) return;
+
+        foreach (var timer in scene.Timers)
+        {
+            if (timer.Advance(gameDelta)) ActivateSceneById(timer.TargetSceneId);
+        }
+
+        foreach (var alarm in scene.Alarms)
+        {
+            if (alarm.Sync(newTime)) ActivateSceneById(alarm.TargetSceneId);
+        }
+
+        foreach (var intervalEvent in scene.IntervalEvents)
+        {
+            if (intervalEvent.Advance(gameDelta)) ActivateSceneById(intervalEvent.TargetSceneId);
+        }
     }
 
     private void TriggerCalendarEntries(GameInstant previousTime, GameInstant currentTime)
@@ -485,6 +515,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 continue;
 
             TriggerCalendarMedia(definition);
+            ActivateSceneById(definition.TargetSceneId);
             RecordSessionEvent(string.Format(LocalizationService.Get("MainWindowViewModel.Events.CalendarEntryTriggered"), definition.Title));
             ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.CalendarEntry"), definition.Title));
         }

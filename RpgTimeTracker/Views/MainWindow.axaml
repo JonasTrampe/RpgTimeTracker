@@ -2567,8 +2567,87 @@
                                                                                 Margin="4,0,0,0" />
                                                                     </Grid>
                                                                 </StackPanel>
-                                                            </StackPanel>
-                                                        </Border>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Classes="settingsGroup">
+                                            <StackPanel Spacing="10">
+                                                <TextBlock Classes="h2"
+                                                           Text="{DynamicResource MainWindow.Scenes.TimelineTitle}" />
+                                                <TextBlock Classes="muted"
+                                                           Text="{DynamicResource MainWindow.Scenes.TimelineDescription}"
+                                                           TextWrapping="Wrap" />
+
+                                                <ItemsControl ItemsSource="{Binding Timers}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:TimerItemViewModel">
+                                                            <Border Classes="settingsGroup" Margin="0,2">
+                                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="4">
+                                                                    <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" />
+                                                                    <TextBox Grid.Column="1" Width="90"
+                                                                             Text="{Binding DurationText, Mode=TwoWay}" />
+                                                                    <Button Grid.Column="2" Content="{Binding StartPauseLabel}"
+                                                                            Command="{Binding ToggleRunCommand}" />
+                                                                    <Button Grid.Column="3" Content="↺"
+                                                                            Command="{Binding ResetCommand}" />
+                                                                    <Button Grid.Column="4" Classes="iconsquare" Content="&#10005;"
+                                                                            Width="22" Height="22" FontSize="10"
+                                                                            Command="{Binding DeleteCommand}" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <Button Content="{DynamicResource MainWindow.Scenes.AddTimerButton}"
+                                                        Command="{Binding AddTimerCommand}" />
+
+                                                <ItemsControl ItemsSource="{Binding Alarms}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:AlarmItemViewModel">
+                                                            <Border Classes="settingsGroup" Margin="0,2">
+                                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4">
+                                                                    <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" />
+                                                                    <controls:CalendarDateInput Grid.Column="1"
+                                                                        Text="{Binding TriggerAtDateTimeTextEdit, Mode=TwoWay}" />
+                                                                    <Button Grid.Column="2" Content="✓"
+                                                                            Command="{Binding ApplyEditsCommand}" />
+                                                                    <Button Grid.Column="3" Classes="iconsquare" Content="&#10005;"
+                                                                            Width="22" Height="22" FontSize="10"
+                                                                            Command="{Binding DeleteCommand}" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <Button Content="{DynamicResource MainWindow.Scenes.AddAlarmButton}"
+                                                        Command="{Binding AddAlarmCommand}" />
+
+                                                <ItemsControl ItemsSource="{Binding IntervalEvents}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:IntervalEventItemViewModel">
+                                                            <Border Classes="settingsGroup" Margin="0,2">
+                                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="4">
+                                                                    <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" />
+                                                                    <TextBox Grid.Column="1" Width="80"
+                                                                             Text="{Binding IntervalText, Mode=TwoWay}" />
+                                                                    <TextBox Grid.Column="2" Width="80"
+                                                                             Text="{Binding ActiveDurationText, Mode=TwoWay}" />
+                                                                    <Button Grid.Column="3" Content="{Binding StartPauseLabel}"
+                                                                            Command="{Binding ToggleRunCommand}" />
+                                                                    <Button Grid.Column="4" Content="↺"
+                                                                            Command="{Binding ResetCommand}" />
+                                                                    <Button Grid.Column="5" Classes="iconsquare" Content="&#10005;"
+                                                                            Width="22" Height="22" FontSize="10"
+                                                                            Command="{Binding DeleteCommand}" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <Button Content="{DynamicResource MainWindow.Scenes.AddIntervalButton}"
+                                                        Command="{Binding AddIntervalEventCommand}" />
+                                            </StackPanel>
+                                        </Border>
                                                     </StackPanel>
                                                 </Border>
                                             </Grid>
