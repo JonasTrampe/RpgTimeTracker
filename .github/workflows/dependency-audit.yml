@@ -1,0 +1,46 @@
+name: Dependency Audit
+
+# Fails if `dotnet list package --vulnerable` reports a known-vulnerable NuGet
+# package (direct or transitive, across every project including
+# RpgTimeTracker.Tests - a vulnerable dev/test-only package still lands on
+# CI/dev machines even though it never ships). Runs weekly in addition to
+# push/PR so a newly-disclosed CVE against an already-pinned version is
+# caught even without a dependency-touching commit - Dependabot
+# (.github/dependabot.yml) handles proposing the version bumps themselves;
+# this check is the safety net that actually blocks a PR/flags main if a
+# vulnerability is known and nothing bumped the version yet.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore
+        run: dotnet restore RpgTimeTracker.sln
+
+      - name: Check for known-vulnerable packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=$(dotnet list RpgTimeTracker.sln package --vulnerable --include-transitive 2>&1)
+          echo "$output"
+          if echo "$output" | grep -qi "has the following vulnerable packages"; then
+            echo "::error::One or more NuGet packages have a known vulnerability - see output above. Bump the affected package(s)."
+            exit 1
+          fi

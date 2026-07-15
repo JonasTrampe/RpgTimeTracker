@@ -69,6 +69,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   keys.
 - Added a check (`third-party-notices.yml`) that fails if a shipped
   project's NuGet package isn't mentioned in `THIRD-PARTY-NOTICES.txt`.
+- Added a weekly + push/PR check (`dependency-audit.yml`) that fails if
+  `dotnet list package --vulnerable` reports a known CVE in any direct or
+  transitive NuGet package, plus a Dependabot config for weekly NuGet/
+  GitHub Actions update PRs.
 
 ## [1.0.0] - 2026-07-10
 

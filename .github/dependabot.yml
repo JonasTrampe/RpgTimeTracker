@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # NuGet packages across all four projects (one .sln, so one directory
+  # covers Host/Client/Shared/Tests).
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+
+  # Keep the GitHub Actions themselves (actions/checkout, actions/setup-dotnet, ...) current too.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ci"
