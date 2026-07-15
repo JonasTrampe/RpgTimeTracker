@@ -67,6 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Added a test asserting `de.json`/`en.json` have matching localization
   keys.
+- Added a check (`third-party-notices.yml`) that fails if a shipped
+  project's NuGet package isn't mentioned in `THIRD-PARTY-NOTICES.txt`.
 
 ## [1.0.0] - 2026-07-10
 
