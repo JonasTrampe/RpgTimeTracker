@@ -1505,6 +1505,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _ = _playerServer.PublishRetractAsync(item.MediaId);
     }
 
+    /// <summary>"Stop showing" for a Media Library item sent from e.g. a Scene bundle row -
+    ///     retracts every gallery entry that was sent from this library item (see
+    ///     SentMediaItemViewModel.SourceItem). A no-op if none is currently shown.</summary>
+    [RelayCommand]
+    private void StopShowingImage(MediaLibraryItemViewModel item)
+    {
+        foreach (var sent in SentMediaItems.Where(s => ReferenceEquals(s.SourceItem, item)).ToList())
+            RetractSentMediaItem(sent);
+    }
+
     partial void OnIsClockRunningChanged(bool value)
     {
         OnPropertyChanged(nameof(ToggleClockLabel));

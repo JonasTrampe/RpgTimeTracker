@@ -214,6 +214,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var sound in ActivePlayingSounds.ToList()) StopSound(sound.MediaId);
     }
 
+    /// <summary>"Stop showing" for a Sound Library item sent from e.g. a Scene bundle row - stops
+    ///     every currently-active sound that was sent from this library item (see
+    ///     ActiveSoundViewModel.SourceItem). A no-op if none is currently playing.</summary>
+    [RelayCommand]
+    private void StopShowingSound(SoundLibraryItemViewModel item)
+    {
+        foreach (var active in ActivePlayingSounds.Where(s => ReferenceEquals(s.SourceItem, item)).ToList())
+            StopSound(active.MediaId);
+    }
+
     /// <summary>Stops every currently-active sound on exactly one client window (its Sound
     ///     routing was just turned off) - unlike StopSound, this must NOT touch the Host's own
     ///     local preview or the ActivePlayingSounds panel, since the sound keeps playing for

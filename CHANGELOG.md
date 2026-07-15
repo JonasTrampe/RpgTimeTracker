@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Scene editor's bundle rows (Images/Maps/Sounds) had their send/remove
+  buttons packed edge-to-edge, making the "remove from bundle" button easy
+  to hit by accident while aiming for "send"/"stop showing" - added
+  spacing before the remove button in all three lists.
 - Game time appeared frozen in both the Host and Player windows (Timers/
   Alarms still worked, since they track elapsed time separately) -
   `GameInstant.Add` truncates its `TimeSpan` argument to whole seconds via
@@ -31,6 +35,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Scene editor: a "⏹ Stop showing" button next to a bundled map's send
+  button, visible only while that specific map is the one currently shown
+  to players (`IsCurrentlyOpenMapConverter`) - previously the only way to
+  stop showing a map was via the separate MapLiveWindow.
+- Scene editor: matching "⏹ Stop" buttons for bundled Images/Sounds and the
+  Playlist row. Images/Sounds retract or stop every gallery entry/active
+  sound that was sent from that library item (`StopShowingImageCommand`/
+  `StopShowingSoundCommand`, matching via a new `SourceItem` reference on
+  `SentMediaItemViewModel`/`ActiveSoundViewModel`) - always available since
+  the gallery/active-sounds panel can hold several entries at once. The
+  Playlist's Stop button reuses the existing `StopPlaylistCommand` and is
+  visible only while that specific playlist is the one currently playing
+  (`ReferenceEqualsNonNullConverter`, comparing against `CurrentPlaylist`).
 - Scene-owned Timers/Alarms/Intervals now also show up in the normal
   Elementliste (the global item list tab), not just inside the Scene
   editor - each carries a "Scene: <name>" chip so it's clear which Scene
