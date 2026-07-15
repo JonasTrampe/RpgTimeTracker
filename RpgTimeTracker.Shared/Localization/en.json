@@ -229,6 +229,8 @@
   "MainWindow.Scenes.AddSoundLabel": "Add sound",
   "MainWindow.Scenes.NoneOption": "(None)",
   "MainWindow.Scenes.SendTooltip": "Send this to players now",
+  "MainWindow.Scenes.ActiveIndicatorTooltip": "This is the currently active Scene",
+  "MainWindow.Scenes.ActiveLabel": "● Active",
   "MainWindow.Scenes.ActivateButton": "▶ Activate",
   "MainWindow.Scenes.ActivateTooltip": "Make this the active Scene (un-pauses its own timeline) - does not send anything by itself, use the ▶ button next to each bundled item",
   "MainWindow.Scenes.TimelineTitle": "Scene timeline",

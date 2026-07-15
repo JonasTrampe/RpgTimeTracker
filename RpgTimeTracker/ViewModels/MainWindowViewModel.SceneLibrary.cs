@@ -31,6 +31,15 @@ public partial class MainWindowViewModel
     ///     ActivateSceneAsync; cleared if the active Scene itself gets deleted.</summary>
     [ObservableProperty] private SceneLibraryItemViewModel? _activeScene;
 
+    /// <summary>Keeps each Scene's own IsActive flag (purely local UI state) in sync with
+    ///     ActiveScene, so the Scenes list/editor can show which one is active without every
+    ///     binding having to compare against ActiveScene itself.</summary>
+    partial void OnActiveSceneChanged(SceneLibraryItemViewModel? oldValue, SceneLibraryItemViewModel? newValue)
+    {
+        if (oldValue is not null) oldValue.IsActive = false;
+        if (newValue is not null) newValue.IsActive = true;
+    }
+
     [RelayCommand]
     private async Task AddSceneAsync()
     {

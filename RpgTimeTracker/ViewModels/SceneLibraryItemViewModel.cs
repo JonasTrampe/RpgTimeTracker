@@ -65,6 +65,12 @@ public sealed partial class SceneLibraryItemViewModel : ObservableObject, ITagga
 
     public Guid Id { get; }
 
+    /// <summary>Whether this is MainWindowViewModel.ActiveScene right now - purely local UI state,
+    ///     not persisted (which Scene was active isn't meaningful across a restart). Toggled by
+    ///     MainWindowViewModel whenever ActiveScene changes, so the Scenes list/editor can show
+    ///     which one it is without every consumer having to compare against ActiveScene itself.</summary>
+    [ObservableProperty] private bool _isActive;
+
     /// <summary>A Scene can bundle several Images/Maps at once - see this class's doc comment for
     ///     why activation doesn't auto-send them.</summary>
     public ObservableCollection<MediaLibraryItemViewModel> Images { get; } = [];

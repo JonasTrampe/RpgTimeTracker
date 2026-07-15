@@ -2388,10 +2388,16 @@
                                                                  IsVisible="{Binding !HasNoScenes}">
                                                             <ListBox.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:SceneLibraryItemViewModel">
-                                                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2">
-                                                                        <TextBox Grid.Column="0"
+                                                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,2">
+                                                                        <TextBlock Grid.Column="0" Text="&#9679;"
+                                                                                   Foreground="LimeGreen"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Margin="0,0,4,0"
+                                                                                   IsVisible="{Binding IsActive}"
+                                                                                   ToolTip.Tip="{DynamicResource MainWindow.Scenes.ActiveIndicatorTooltip}" />
+                                                                        <TextBox Grid.Column="1"
                                                                                  Text="{Binding Name, Mode=TwoWay}" />
-                                                                        <Button Grid.Column="1" Classes="iconsquare"
+                                                                        <Button Grid.Column="2" Classes="iconsquare"
                                                                                 Content="&#8942;" Width="22" Height="22"
                                                                                 FontSize="10"
                                                                                 ToolTip.Tip="{DynamicResource MainWindow.Maps.MoreActionsTooltip}">
@@ -2409,7 +2415,7 @@
                                                                                 </MenuFlyout>
                                                                             </Button.Flyout>
                                                                         </Button>
-                                                                        <Button Grid.Column="2" Classes="iconsquare"
+                                                                        <Button Grid.Column="3" Classes="iconsquare"
                                                                                 Content="🏷" Width="22" Height="22"
                                                                                 FontSize="11"
                                                                                 ToolTip.Tip="{DynamicResource MainWindow.Library.TagsTooltip}">
@@ -2422,7 +2428,7 @@
                                                                                 </Flyout>
                                                                             </Button.Flyout>
                                                                         </Button>
-                                                                        <Button Grid.Column="3" Classes="iconsquare"
+                                                                        <Button Grid.Column="4" Classes="iconsquare"
                                                                                 Content="&#10005;" Width="22" Height="22"
                                                                                 FontSize="10"
                                                                                 Command="{Binding DeleteCommand}"
@@ -2437,10 +2443,16 @@
                                                 <Border Grid.Column="1" Classes="settingsGroup" Margin="0,0,14,14"
                                                         IsVisible="{Binding SelectedScene, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                     <StackPanel Spacing="14" DataContext="{Binding SelectedScene}">
-                                                        <Grid ColumnDefinitions="*,Auto">
+                                                        <Grid ColumnDefinitions="*,Auto,Auto">
                                                             <TextBox Grid.Column="0" Classes="settingsGroupTitle"
                                                                      Text="{Binding Name, Mode=TwoWay}" />
-                                                            <Button Grid.Column="1"
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{DynamicResource MainWindow.Scenes.ActiveLabel}"
+                                                                       Foreground="LimeGreen" FontWeight="Bold"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="8,0,0,0"
+                                                                       IsVisible="{Binding IsActive}" />
+                                                            <Button Grid.Column="2"
                                                                     Content="{DynamicResource MainWindow.Scenes.ActivateButton}"
                                                                     Command="{Binding $parent[TabItem].DataContext.ActivateSceneCommand}"
                                                                     CommandParameter="{Binding}"

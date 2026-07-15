@@ -229,6 +229,8 @@
   "MainWindow.Scenes.AddSoundLabel": "Sound hinzufügen",
   "MainWindow.Scenes.NoneOption": "(Keine)",
   "MainWindow.Scenes.SendTooltip": "Jetzt an die Spieler senden",
+  "MainWindow.Scenes.ActiveIndicatorTooltip": "Dies ist die aktuell aktive Szene",
+  "MainWindow.Scenes.ActiveLabel": "● Aktiv",
   "MainWindow.Scenes.ActivateButton": "▶ Aktivieren",
   "MainWindow.Scenes.ActivateTooltip": "Macht diese Szene zur aktiven Szene (pausiert ihre eigene Zeitleiste nicht mehr) - sendet für sich genommen nichts, dafür die Schaltfläche ▶ neben jedem gebündelten Element nutzen",
   "MainWindow.Scenes.TimelineTitle": "Szenen-Zeitleiste",
