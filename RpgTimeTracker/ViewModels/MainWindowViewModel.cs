@@ -520,7 +520,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _blinkTimer.Start();
         _headsUpLeadMinutes = 2;
         _manualDateTimeText = CalendarService.Active.FormatDateTimeText(start);
-        var defaultAlarm = start.Add(TimeSpan.FromHours(8));
+        var defaultAlarm = start.Add(TimeSpan.FromHours(1));
         _newAlarmDateTime = CalendarService.Active.FormatDateTimeText(defaultAlarm);
         CurrentGameTimeText = FormatGameTime(start);
 

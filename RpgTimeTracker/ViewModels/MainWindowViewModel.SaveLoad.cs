@@ -172,6 +172,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         CanRedoJump = false;
         CurrentGameTimeText = FormatGameTime(currentGameTime);
         ManualDateTimeText = CalendarService.Active.FormatDateTimeText(currentGameTime);
+        // The "new alarm" target-time default is otherwise only set once at construction (see
+        // MainWindowViewModel's constructor) and after adding an alarm - without this, it stays
+        // frozen at whatever the clock's initial default time was, completely unrelated to the
+        // just-loaded save's actual current game time.
+        NewAlarmDateTime = CalendarService.Active.FormatDateTimeText(currentGameTime.Add(TimeSpan.FromHours(1)));
         SpeedMultiplier = dto.SpeedMultiplier <= 0 ? 1.0 : Math.Round(dto.SpeedMultiplier, 1);
         SpeedMultiplierInput = (decimal)SpeedMultiplier;
 

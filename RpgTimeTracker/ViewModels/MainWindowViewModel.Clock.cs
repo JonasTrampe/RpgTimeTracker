@@ -379,7 +379,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         Log.Information("Alarm created: {Name} (target time {TriggerAt}, Id={Id})", vm.Name, triggerAt, vm.Id);
         ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.AlarmCreated"), vm.Name));
 
-        var nextAlarm = _clock.CurrentTime.Add(TimeSpan.FromHours(8));
+        var nextAlarm = _clock.CurrentTime.Add(TimeSpan.FromHours(1));
         NewAlarmDateTime = CalendarService.Active.FormatDateTimeText(nextAlarm);
         NewAlarmRepeatHours = 0;
         NewAlarmRepeatMinutes = 0;

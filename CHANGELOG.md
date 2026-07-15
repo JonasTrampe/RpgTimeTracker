@@ -62,6 +62,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Date/time and number formatting now follow the app's UI language, not
   the OS locale.
 - Maps tab layout, brush sizing, and fog-rescale sampling bugs.
+- The "New Alarm" target-time default (current time + 1h, was +8h) got
+  stuck at the clock's construction-time value after loading a save or
+  switching calendars, instead of tracking the actual current game time.
 
 ### CI
 

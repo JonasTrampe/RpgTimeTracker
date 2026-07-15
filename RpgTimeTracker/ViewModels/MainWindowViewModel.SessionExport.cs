@@ -1290,6 +1290,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         CurrentGameTimeText = FormatGameTime(_clock.CurrentTime);
         ManualDateTimeText = CalendarService.Active.FormatDateTimeText(_clock.CurrentTime);
+        NewAlarmDateTime = CalendarService.Active.FormatDateTimeText(_clock.CurrentTime.Add(TimeSpan.FromHours(1)));
         CalendarMonth = CalendarMonthStart(_clock.CurrentTime);
         CalendarSelectedDate = CalendarService.Active.DayStart(_clock.CurrentTime);
         RefreshCalendarViews();
