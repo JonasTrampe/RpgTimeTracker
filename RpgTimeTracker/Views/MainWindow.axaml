@@ -502,6 +502,39 @@
                                                                                 </StackPanel>
                                                                             </Border>
 
+                                                                            <Border
+                                                                                Background="{DynamicResource SurfaceBrush}"
+                                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                                BorderThickness="1" CornerRadius="6"
+                                                                                Padding="10">
+                                                                                <StackPanel Spacing="6">
+                                                                                    <TextBlock Classes="muted"
+                                                                                        Text="{DynamicResource MainWindow.Common.TargetSceneDescription}"
+                                                                                        TextWrapping="Wrap" />
+                                                                                    <Grid ColumnDefinitions="*,Auto">
+                                                                                        <ComboBox Grid.Column="0"
+                                                                                            ItemsSource="{Binding $parent[Window].DataContext.SceneLibrary}"
+                                                                                            SelectedValue="{Binding TargetSceneId, Mode=TwoWay}"
+                                                                                            SelectedValueBinding="{Binding Id}"
+                                                                                            PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                                            HorizontalAlignment="Stretch">
+                                                                                            <ComboBox.ItemTemplate>
+                                                                                                <DataTemplate x:DataType="vm:SceneLibraryItemViewModel">
+                                                                                                    <TextBlock Text="{Binding Name}" />
+                                                                                                </DataTemplate>
+                                                                                            </ComboBox.ItemTemplate>
+                                                                                        </ComboBox>
+                                                                                        <Button Grid.Column="1"
+                                                                                            Classes="iconsquare"
+                                                                                            Content="&#10005;"
+                                                                                            Margin="4,0,0,0"
+                                                                                            Command="{Binding ClearTargetSceneCommand}"
+                                                                                            IsVisible="{Binding TargetSceneId, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                                            ToolTip.Tip="{DynamicResource MainWindow.Common.ClearSelectionTooltip}" />
+                                                                                    </Grid>
+                                                                                </StackPanel>
+                                                                            </Border>
+
                                                                             <Button Classes="primary"
                                                                                     Content="{DynamicResource MainWindow.ItemList.ApplyChangesButton}"
                                                                                     Command="{Binding ApplyEditsCommand}"
@@ -996,7 +1029,7 @@
                                                       VerticalScrollBarVisibility="Visible" AllowAutoHide="false">
                                             <TabControl Classes="subtabs" Padding="12">
                                                 <TabItem Header="{DynamicResource MainWindow.CreateItem.TimerTab}">
-                                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
+                                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,8,0,0">
                                                         <controls:NewItemBasicsEditor Grid.Row="0"
                                                                 DataContext="{Binding NewTimerBasics}"
                                                                 Margin="0,0,0,10" />
@@ -1021,6 +1054,39 @@
                                                         </Border>
 
                                                         <Border Grid.Row="2"
+                                                                Background="{DynamicResource TextInputHeaderBrush}"
+                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6"
+                                                                Padding="10"
+                                                                Margin="0,0,0,10">
+                                                            <StackPanel Spacing="6">
+                                                                <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Common.TargetSceneDescription}"
+                                                                           TextWrapping="Wrap" />
+                                                                <Grid ColumnDefinitions="*,Auto">
+                                                                    <ComboBox Grid.Column="0"
+                                                                            ItemsSource="{Binding SceneLibrary}"
+                                                                            SelectedItem="{Binding NewTimerTargetScene, Mode=TwoWay}"
+                                                                            PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                            HorizontalAlignment="Stretch">
+                                                                        <ComboBox.ItemTemplate>
+                                                                            <DataTemplate x:DataType="vm:SceneLibraryItemViewModel">
+                                                                                <TextBlock Text="{Binding Name}" />
+                                                                            </DataTemplate>
+                                                                        </ComboBox.ItemTemplate>
+                                                                    </ComboBox>
+                                                                    <Button Grid.Column="1" Classes="iconsquare"
+                                                                            Content="&#10005;" Width="30" Height="30"
+                                                                            Margin="4,0,0,0"
+                                                                            Command="{Binding ClearNewTimerTargetSceneCommand}"
+                                                                            IsVisible="{Binding NewTimerTargetScene, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.Common.ClearSelectionTooltip}" />
+                                                                </Grid>
+                                                            </StackPanel>
+                                                        </Border>
+
+                                                        <Border Grid.Row="3"
                                                                 Background="{DynamicResource TextInputHeaderBrush}"
                                                                 BorderBrush="{DynamicResource InnerFrameBrush}"
                                                                 BorderThickness="1"
@@ -1059,7 +1125,7 @@
                                                             </StackPanel>
                                                         </Border>
 
-                                                        <Button Grid.Row="3" Classes="primary"
+                                                        <Button Grid.Row="4" Classes="primary"
                                                                 Content="{DynamicResource MainWindow.CreateItem.AddTimerButton}"
                                                                 Command="{Binding AddTimerCommand}"
                                                                 HorizontalAlignment="Right" />
@@ -1067,7 +1133,7 @@
                                                 </TabItem>
 
                                                 <TabItem Header="{DynamicResource MainWindow.CreateItem.AlarmTab}">
-                                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
+                                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,8,0,0">
                                                         <controls:NewItemBasicsEditor Grid.Row="0"
                                                                 DataContext="{Binding NewAlarmBasics}"
                                                                 Margin="0,0,0,10" />
@@ -1120,6 +1186,39 @@
                                                                 Margin="0,0,0,10">
                                                             <StackPanel Spacing="6">
                                                                 <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Common.TargetSceneDescription}"
+                                                                           TextWrapping="Wrap" />
+                                                                <Grid ColumnDefinitions="*,Auto">
+                                                                    <ComboBox Grid.Column="0"
+                                                                            ItemsSource="{Binding SceneLibrary}"
+                                                                            SelectedItem="{Binding NewAlarmTargetScene, Mode=TwoWay}"
+                                                                            PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                            HorizontalAlignment="Stretch">
+                                                                        <ComboBox.ItemTemplate>
+                                                                            <DataTemplate x:DataType="vm:SceneLibraryItemViewModel">
+                                                                                <TextBlock Text="{Binding Name}" />
+                                                                            </DataTemplate>
+                                                                        </ComboBox.ItemTemplate>
+                                                                    </ComboBox>
+                                                                    <Button Grid.Column="1" Classes="iconsquare"
+                                                                            Content="&#10005;" Width="30" Height="30"
+                                                                            Margin="4,0,0,0"
+                                                                            Command="{Binding ClearNewAlarmTargetSceneCommand}"
+                                                                            IsVisible="{Binding NewAlarmTargetScene, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.Common.ClearSelectionTooltip}" />
+                                                                </Grid>
+                                                            </StackPanel>
+                                                        </Border>
+
+                                                        <Border Grid.Row="3"
+                                                                Background="{DynamicResource TextInputHeaderBrush}"
+                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6"
+                                                                Padding="10"
+                                                                Margin="0,0,0,10">
+                                                            <StackPanel Spacing="6">
+                                                                <TextBlock Classes="muted"
                                                                            Text="{DynamicResource MainWindow.TriggerMedia.TriggerDescription}"
                                                                            TextWrapping="Wrap" />
                                                                 <Grid ColumnDefinitions="Auto,Auto,*,Auto">
@@ -1150,7 +1249,7 @@
                                                             </StackPanel>
                                                         </Border>
 
-                                                        <Button Grid.Row="3" Classes="primary"
+                                                        <Button Grid.Row="4" Classes="primary"
                                                                 Content="{DynamicResource MainWindow.CreateItem.AddAlarmButton}"
                                                                 Command="{Binding AddAlarmCommand}"
                                                                 HorizontalAlignment="Right" />
@@ -1158,7 +1257,7 @@
                                                 </TabItem>
 
                                                 <TabItem Header="{DynamicResource MainWindow.CreateItem.IntervalTab}">
-                                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
+                                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,8,0,0">
                                                         <controls:NewItemBasicsEditor Grid.Row="0"
                                                                 DataContext="{Binding NewIntervalBasics}"
                                                                 Margin="0,0,0,10" />
@@ -1223,6 +1322,39 @@
                                                                 Margin="0,0,0,10">
                                                             <StackPanel Spacing="6">
                                                                 <TextBlock Classes="muted"
+                                                                           Text="{DynamicResource MainWindow.Common.TargetSceneDescription}"
+                                                                           TextWrapping="Wrap" />
+                                                                <Grid ColumnDefinitions="*,Auto">
+                                                                    <ComboBox Grid.Column="0"
+                                                                            ItemsSource="{Binding SceneLibrary}"
+                                                                            SelectedItem="{Binding NewIntervalTargetScene, Mode=TwoWay}"
+                                                                            PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                            HorizontalAlignment="Stretch">
+                                                                        <ComboBox.ItemTemplate>
+                                                                            <DataTemplate x:DataType="vm:SceneLibraryItemViewModel">
+                                                                                <TextBlock Text="{Binding Name}" />
+                                                                            </DataTemplate>
+                                                                        </ComboBox.ItemTemplate>
+                                                                    </ComboBox>
+                                                                    <Button Grid.Column="1" Classes="iconsquare"
+                                                                            Content="&#10005;" Width="30" Height="30"
+                                                                            Margin="4,0,0,0"
+                                                                            Command="{Binding ClearNewIntervalTargetSceneCommand}"
+                                                                            IsVisible="{Binding NewIntervalTargetScene, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                            ToolTip.Tip="{DynamicResource MainWindow.Common.ClearSelectionTooltip}" />
+                                                                </Grid>
+                                                            </StackPanel>
+                                                        </Border>
+
+                                                        <Border Grid.Row="3"
+                                                                Background="{DynamicResource TextInputHeaderBrush}"
+                                                                BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6"
+                                                                Padding="10"
+                                                                Margin="0,0,0,10">
+                                                            <StackPanel Spacing="6">
+                                                                <TextBlock Classes="muted"
                                                                            Text="{DynamicResource MainWindow.TriggerMedia.IntervalDescription}"
                                                                            TextWrapping="Wrap" />
                                                                 <Grid ColumnDefinitions="Auto,Auto,*,Auto">
@@ -1253,7 +1385,7 @@
                                                             </StackPanel>
                                                         </Border>
 
-                                                        <Button Grid.Row="3" Classes="primary"
+                                                        <Button Grid.Row="4" Classes="primary"
                                                                 Content="{DynamicResource MainWindow.CreateItem.AddIntervalButton}"
                                                                 Command="{Binding AddIntervalEventCommand}"
                                                                 HorizontalAlignment="Right" />
@@ -3047,6 +3179,38 @@
                                                                                 IsChecked="{Binding SelectedCalendarEntry.TriggerMedia.PauseClockDuringVideo, Mode=TwoWay}"
                                                                                 IsVisible="{Binding SelectedCalendarEntry.TriggerMedia.IsVideo}" />
                                                                         </StackPanel>
+                                                                    </StackPanel>
+                                                                </Border>
+
+                                                                <Border Background="{DynamicResource SurfaceBrush}"
+                                                                        BorderBrush="{DynamicResource InnerFrameBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="6"
+                                                                        Padding="10">
+                                                                    <StackPanel Spacing="8">
+                                                                        <TextBlock Classes="muted"
+                                                                                Text="{DynamicResource MainWindow.Common.TargetSceneDescription}"
+                                                                                TextWrapping="Wrap" />
+                                                                        <Grid ColumnDefinitions="*,Auto">
+                                                                            <ComboBox Grid.Column="0"
+                                                                                    ItemsSource="{Binding SceneLibrary}"
+                                                                                    SelectedValue="{Binding SelectedCalendarEntry.TargetSceneId, Mode=TwoWay}"
+                                                                                    SelectedValueBinding="{Binding Id}"
+                                                                                    PlaceholderText="{DynamicResource MainWindow.Scenes.NoneOption}"
+                                                                                    HorizontalAlignment="Stretch">
+                                                                                <ComboBox.ItemTemplate>
+                                                                                    <DataTemplate x:DataType="vm:SceneLibraryItemViewModel">
+                                                                                        <TextBlock Text="{Binding Name}" />
+                                                                                    </DataTemplate>
+                                                                                </ComboBox.ItemTemplate>
+                                                                            </ComboBox>
+                                                                            <Button Grid.Column="1" Classes="iconsquare"
+                                                                                    Content="&#10005;"
+                                                                                    Margin="4,0,0,0"
+                                                                                    Command="{Binding SelectedCalendarEntry.ClearTargetSceneCommand}"
+                                                                                    IsVisible="{Binding SelectedCalendarEntry.TargetSceneId, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Common.ClearSelectionTooltip}" />
+                                                                        </Grid>
                                                                     </StackPanel>
                                                                 </Border>
 

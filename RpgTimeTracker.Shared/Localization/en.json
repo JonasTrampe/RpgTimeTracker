@@ -87,6 +87,9 @@
   "MainWindow.TriggerMedia.ChooseFromLibrary": "From Library…",
   "MainWindow.TriggerMedia.ChooseTooltip": "Choose an image/video from the media library",
   "MainWindow.TriggerMedia.ClearTooltip": "Remove event media",
+  "MainWindow.Common.TargetSceneLabel": "Activate Scene on fire",
+  "MainWindow.Common.TargetSceneDescription": "Optional - also activates the chosen Scene when this fires, same as the Scenes tab's \"▶ Activate\" button.",
+  "MainWindow.Common.ClearSelectionTooltip": "Clear",
   "MainWindow.TriggerMedia.FullscreenCheckbox": "⛶ Fullscreen on trigger",
   "MainWindow.TriggerMedia.PauseClockCheckbox": "⏸ Pause game time during video",
 

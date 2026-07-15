@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Wired up the "activate Scene on fire" picker (Phase 4 of the Scenes/Tags/
+  Calendars project) into the global trigger UI - the data model,
+  persistence, and firing logic already existed, but there was no way to
+  actually pick a target Scene outside a Scene's own timeline items. A new
+  "Activate Scene on fire" ComboBox (+ clear button) now appears when
+  creating a Timer/Alarm/IntervalEvent (Element Anlegen tab), when editing
+  an existing one (Elementliste's per-item config panel - a new
+  `TargetSceneId` passthrough + `ClearTargetSceneCommand` on
+  `TimelineDisplayItemViewModel`), and on Calendar entries (a new
+  `ClearTargetSceneCommand` on `CalendarEntryViewModel`, Shared project).
+  The Elementliste/Calendar pickers bind by Guid (`SelectedValue`/
+  `SelectedValueBinding="Id"`) since those view models can't hold a direct
+  `SceneLibraryItemViewModel` reference (Timer/Alarm/Interval item and
+  Calendar-entry view models are shared with, or edited outside of, the
+  Scene's own authoring context); the "new item" pickers bind the object
+  directly since they're created right there in `MainWindowViewModel`.
+
 ### Fixed
 
 - Scene editor's bundle rows (Images/Maps/Sounds) had their send/remove

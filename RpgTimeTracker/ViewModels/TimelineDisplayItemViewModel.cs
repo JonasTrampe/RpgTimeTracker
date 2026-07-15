@@ -83,6 +83,23 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
         ? string.Format(LocalizationService.Get("MainWindow.ItemList.SceneOwnedFormat"), scene.Name)
         : string.Empty;
 
+    /// <summary>Phase 4 of the Scenes/Tags/Calendars project: if set, firing this item also
+    ///     activates the named Scene - see MainWindowViewModel.ActivateSceneById.</summary>
+    public Guid? TargetSceneId
+    {
+        get => _timer?.TargetSceneId ?? _alarm?.TargetSceneId ?? _interval?.TargetSceneId;
+        set
+        {
+            if (_timer is not null) _timer.TargetSceneId = value;
+            else if (_alarm is not null) _alarm.TargetSceneId = value;
+            else if (_interval is not null) _interval.TargetSceneId = value;
+            OnPropertyChanged();
+        }
+    }
+
+    [RelayCommand]
+    private void ClearTargetScene() => TargetSceneId = null;
+
     public bool IsTimer => _timer is not null;
     public bool IsAlarm => _alarm is not null;
     public bool IsInterval => _interval is not null;
@@ -705,6 +722,7 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
         OnPropertyChanged(nameof(ActiveSecondsValue));
         OnPropertyChanged(nameof(MaxRepeatsText));
         OnPropertyChanged(nameof(ErrorMessage));
+        OnPropertyChanged(nameof(TargetSceneId));
         OnPropertyChanged(nameof(StartPauseLabel));
         OnPropertyChanged(nameof(CanStartPause));
         OnPropertyChanged(nameof(CanReset));
