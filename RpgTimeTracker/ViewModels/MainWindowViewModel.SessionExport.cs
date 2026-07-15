@@ -165,12 +165,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             WriteNpcManifestSection(zip, NpcLibrary);
             WriteMusicManifestSection(zip, MusicLibrary);
             WriteSceneManifestSection(zip, SceneLibrary);
+            WritePointOfInterestManifestSection(zip, PointOfInterestLibrary);
         }
 
         Log.Information(
-            "Full session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} characters, {MusicCount} music, {SceneCount} scenes",
+            "Full session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} characters, {MusicCount} music, {SceneCount} scenes, {PoiCount} points of interest",
             MediaLibrary.Count, SoundLibrary.Count, MapLibrary.Count, NpcLibrary.Count, MusicLibrary.Count,
-            SceneLibrary.Count);
+            SceneLibrary.Count, PointOfInterestLibrary.Count);
         return stream.ToArray();
     }
 
@@ -195,17 +196,19 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var sessionNpcs = NpcLibrary.Where(n => n.Scope == LibraryScope.SessionLocal).ToList();
             var sessionMusic = MusicLibrary.Where(m => m.Scope == LibraryScope.SessionLocal).ToList();
             var sessionScenes = SceneLibrary.Where(s => s.Scope == LibraryScope.SessionLocal).ToList();
+            var sessionPois = PointOfInterestLibrary.Where(p => p.Scope == LibraryScope.SessionLocal).ToList();
             WriteMediaManifestSection(zip, sessionMedia);
             WriteSoundManifestSection(zip, sessionSound);
             WriteMapManifestSection(zip, sessionMaps);
             WriteNpcManifestSection(zip, sessionNpcs);
             WriteMusicManifestSection(zip, sessionMusic);
             WriteSceneManifestSection(zip, sessionScenes);
+            WritePointOfInterestManifestSection(zip, sessionPois);
 
             Log.Information(
-                "Session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} characters, {MusicCount} music, {SceneCount} scenes",
+                "Session exported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} characters, {MusicCount} music, {SceneCount} scenes, {PoiCount} points of interest",
                 sessionMedia.Count, sessionSound.Count, sessionMaps.Count, sessionNpcs.Count, sessionMusic.Count,
-                sessionScenes.Count);
+                sessionScenes.Count, sessionPois.Count);
         }
 
         return stream.ToArray();
@@ -312,6 +315,17 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         WriteZipTextEntry(zip, "scenes/manifest.json", JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
     }
 
+    private static void WritePointOfInterestManifestSection(ZipArchive zip,
+        IEnumerable<PointOfInterestLibraryItemViewModel> pois)
+    {
+        var manifest = new PointOfInterestLibraryManifestDto
+        {
+            PointsOfInterest = pois.Select(ToPointOfInterestLibraryEntryDto).ToList()
+        };
+        WriteZipTextEntry(zip, "pointsofinterest/manifest.json",
+            JsonSerializer.Serialize(manifest, LibraryManifestJsonOptions));
+    }
+
     /// <summary>
     ///     Restores game state (replacing it, like a normal load) and adds every library item
     ///     found in the bundle (appending, like a normal library import - existing library
@@ -345,10 +359,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var npcsImported = ImportNpcSectionFromZip(zip, LibraryScope.Shared, mediaIdMap, soundIdMap);
             var (musicImported, musicIdMap) = ImportMusicSectionFromZip(zip);
             var scenesImported = ImportSceneSectionFromZip(zip, LibraryScope.Shared, mediaIdMap, mapIdMap, soundIdMap);
+            var poisImported = ImportPointOfInterestSectionFromZip(zip, LibraryScope.Shared, mediaIdMap);
 
             Log.Information(
-                "Full session imported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs, {MusicCount} music, {SceneCount} scenes",
-                mediaImported, soundImported, mapsImported, npcsImported, musicImported, scenesImported);
+                "Full session imported: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs, {MusicCount} music, {SceneCount} scenes, {PoiCount} points of interest",
+                mediaImported, soundImported, mapsImported, npcsImported, musicImported, scenesImported, poisImported);
             ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.FullSessionImported"),
                 mediaImported, soundImported, mapsImported));
         }
@@ -401,12 +416,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var (musicImported, musicIdMap) = ImportMusicSectionFromZip(zip, LibraryScope.SessionLocal);
             var scenesImported =
                 ImportSceneSectionFromZip(zip, LibraryScope.SessionLocal, mediaIdMap, mapIdMap, soundIdMap);
+            var poisImported = ImportPointOfInterestSectionFromZip(zip, LibraryScope.SessionLocal, mediaIdMap);
             NotifySessionChanged();
 
             Log.Information(
-                "Session imported into {FolderPath}: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs, {MusicCount} music, {SceneCount} scenes",
+                "Session imported into {FolderPath}: {MediaCount} media, {SoundCount} sounds, {MapCount} maps, {NpcCount} NPCs, {MusicCount} music, {SceneCount} scenes, {PoiCount} points of interest",
                 targetFolderPath, mediaImported, soundImported, mapsImported, npcsImported, musicImported,
-                scenesImported);
+                scenesImported, poisImported);
             ShowActionStatus(string.Format(LocalizationService.Get("MainWindowViewModel.Status.FullSessionImported"),
                 mediaImported, soundImported, mapsImported));
         }
@@ -725,6 +741,49 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
 
         if (imported > 0) SaveSceneLibrarySettings();
+        return imported;
+    }
+
+    /// <summary>
+    ///     Imports the pointsofinterest/ section. mediaIdMap (from ImportMediaSectionFromZip,
+    ///     called first for the same zip) relinks each entry's IconImage reference to the
+    ///     freshly-imported copy's Id; a reference to an asset that wasn't bundled has no entry in
+    ///     the map and is silently dropped rather than left dangling, matching
+    ///     ClearPointOfInterestReferencesById's "unset, don't crash" behavior for deletions.
+    /// </summary>
+    private int ImportPointOfInterestSectionFromZip(ZipArchive zip, LibraryScope scope,
+        IReadOnlyDictionary<Guid, Guid> mediaIdMap)
+    {
+        var manifest = ReadZipJsonEntry<PointOfInterestLibraryManifestDto>(zip, "pointsofinterest/manifest.json");
+        if (manifest is null) return 0;
+
+        var imported = 0;
+        foreach (var poiEntry in manifest.PointsOfInterest)
+        {
+            var remapped = new PointOfInterestLibraryEntryDto
+            {
+                Id = Guid.NewGuid(),
+                Name = poiEntry.Name,
+                Description = poiEntry.Description,
+                IconImageId = poiEntry.IconImageId is { } imageId && mediaIdMap.TryGetValue(imageId, out var newImageId)
+                    ? newImageId
+                    : null,
+                IconGlyph = poiEntry.IconGlyph,
+                PlayerVisibleName = poiEntry.PlayerVisibleName,
+                PlayerVisibleDescription = poiEntry.PlayerVisibleDescription,
+                TagIds = poiEntry.TagIds
+            };
+
+            PointOfInterestLibrary.Add(FromPointOfInterestLibraryEntryDto(remapped, scope));
+            imported++;
+        }
+
+        if (imported > 0)
+        {
+            OnPropertyChanged(nameof(HasNoPointsOfInterest));
+            SavePointOfInterestLibrarySettings();
+        }
+
         return imported;
     }
 

@@ -2563,6 +2563,102 @@
                                         </ScrollViewer>
                                     </TabItem>
 
+                                    <TabItem Header="{DynamicResource MainWindow.Tabs.PointsOfInterest}">
+                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
+                                                      VerticalScrollBarVisibility="Visible">
+                                            <Border Classes="settingsGroup" Margin="4,14,13,16" MaxWidth="420">
+                                                <StackPanel Spacing="10">
+                                                    <TextBlock Classes="settingsGroupTitle"
+                                                               Text="{DynamicResource MainWindow.PointsOfInterest.Title}" />
+                                                    <TextBlock Classes="muted"
+                                                               Text="{DynamicResource MainWindow.PointsOfInterest.Description}"
+                                                               TextWrapping="Wrap" />
+                                                    <Button Content="{DynamicResource MainWindow.PointsOfInterest.AddButton}"
+                                                            Command="{Binding AddPointOfInterestCommand}" />
+                                                    <TextBlock Classes="muted"
+                                                               Text="{DynamicResource MainWindow.PointsOfInterest.EmptyState}"
+                                                               IsVisible="{Binding HasNoPointsOfInterest}"
+                                                               FontStyle="Italic" />
+                                                    <ItemsControl ItemsSource="{Binding PointOfInterestLibrary}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:PointOfInterestLibraryItemViewModel">
+                                                                <Border Classes="item" Margin="0,0,0,8" Padding="8">
+                                                                    <StackPanel Spacing="6">
+                                                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                                                                            <Border Grid.Column="0" Width="32"
+                                                                                    Height="32" CornerRadius="4"
+                                                                                    ClipToBounds="True"
+                                                                                    Background="{DynamicResource SurfaceAltBrush}"
+                                                                                    Margin="0,0,8,0">
+                                                                                <Panel>
+                                                                                    <Image
+                                                                                        Source="{Binding IconImage.Thumbnail}"
+                                                                                        Stretch="UniformToFill"
+                                                                                        IsVisible="{Binding IconImage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                                                    <TextBlock
+                                                                                        Text="{Binding ResolvedInitials}"
+                                                                                        FontSize="12"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        IsVisible="{Binding IconImage, Converter={x:Static ObjectConverters.IsNull}}" />
+                                                                                </Panel>
+                                                                            </Border>
+                                                                            <TextBox Grid.Column="1"
+                                                                                     Text="{Binding Name, Mode=TwoWay}"
+                                                                                     VerticalAlignment="Center" />
+                                                                            <controls:MoveToScopeButtons
+                                                                                Grid.Column="2"
+                                                                                IsSessionLocal="{Binding IsSessionLocal}"
+                                                                                IsSessionOpen="{Binding $parent[TabItem].DataContext.IsSessionOpen}"
+                                                                                MoveToSharedCommand="{Binding $parent[TabItem].DataContext.MovePointOfInterestLibraryItemToSharedCommand}"
+                                                                                MoveToSessionCommand="{Binding $parent[TabItem].DataContext.MovePointOfInterestLibraryItemToSessionCommand}"
+                                                                                Item="{Binding}" />
+                                                                            <Button Grid.Column="3"
+                                                                                Classes="iconsquare"
+                                                                                Content="🏷" Width="22" Height="22"
+                                                                                FontSize="11"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Library.TagsTooltip}">
+                                                                                <Button.Flyout>
+                                                                                    <Flyout Placement="Bottom">
+                                                                                        <controls:TagSelectorFlyout
+                                                                                            AllTags="{Binding $parent[TabItem].DataContext.Tags}"
+                                                                                            AssignedTagIds="{Binding TagIds}"
+                                                                                            CreateTagCommand="{Binding $parent[TabItem].DataContext.CreateTagCommand}" />
+                                                                                    </Flyout>
+                                                                                </Button.Flyout>
+                                                                            </Button>
+                                                                            <Button Grid.Column="4"
+                                                                                Classes="iconsquare"
+                                                                                Content="&#10005;"
+                                                                                Command="{Binding DeleteCommand}"
+                                                                                ToolTip.Tip="{DynamicResource MainWindow.Common.RemoveFromLibraryTooltip}"
+                                                                                Width="22" Height="22"
+                                                                                FontSize="10" />
+                                                                        </Grid>
+                                                                        <TextBlock Classes="muted"
+                                                                                   Text="{DynamicResource MainWindow.PointsOfInterest.DescriptionLabel}" />
+                                                                        <TextBox Text="{Binding Description, Mode=TwoWay}"
+                                                                                 AcceptsReturn="True"
+                                                                                 TextWrapping="Wrap"
+                                                                                 MinHeight="50" />
+                                                                        <StackPanel Orientation="Horizontal" Spacing="14">
+                                                                            <CheckBox
+                                                                                Content="{DynamicResource MainWindow.PointsOfInterest.PlayerVisibleNameLabel}"
+                                                                                IsChecked="{Binding PlayerVisibleName, Mode=TwoWay}" />
+                                                                            <CheckBox
+                                                                                Content="{DynamicResource MainWindow.PointsOfInterest.PlayerVisibleDescriptionLabel}"
+                                                                                IsChecked="{Binding PlayerVisibleDescription, Mode=TwoWay}" />
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </Border>
+                                        </ScrollViewer>
+                                    </TabItem>
+
                                     <TabItem Header="{DynamicResource MainWindow.Tabs.Calendar}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">
