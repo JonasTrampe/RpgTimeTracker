@@ -518,9 +518,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var item in TimelineItems) item.RefreshBlinkState();
     }
 
-    private static string FormatGameTime(DateTime time)
+    private static string FormatGameTime(GameInstant time)
     {
-        return time.ToString("dddd, dd.MM.yyyy — HH:mm:ss", LocalizationService.Culture);
+        var date = CalendarService.Active.ToCalendarDate(time);
+        return $"{date.WeekdayName}, {date.Day:00}.{date.MonthIndex + 1:00}.{date.Year:0000} — {date.Hour:00}:{date.Minute:00}:{date.Second:00}";
     }
 
 }

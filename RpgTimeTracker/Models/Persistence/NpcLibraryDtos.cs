@@ -29,6 +29,10 @@ public sealed class NpcLibraryEntryDto
     ///     JSON key kept as "ActiveStateId" - see Variants' doc comment.</summary>
     [JsonPropertyName("ActiveStateId")]
     public Guid ActiveVariantId { get; set; }
+
+    /// <summary>Freeform Tag Ids attached to this character (see Tag) - shared across all
+    ///     variants, same as GmInfoBlocks.</summary>
+    public List<Guid> TagIds { get; set; } = [];
 }
 
 /// <summary>A GM-named, ordered markdown section (e.g. "Motivation", "Secrets", "Combat stats") -

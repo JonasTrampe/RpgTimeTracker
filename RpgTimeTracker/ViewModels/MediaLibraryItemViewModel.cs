@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Services.Localization;
 
@@ -12,7 +15,7 @@ namespace RpgTimeTracker.ViewModels;
 ///     A preselected image/video in the GM media library. Double-click shows it immediately
 ///     to the GM and all connected players (see MainWindowViewModel.ShowMediaLibraryItem).
 /// </summary>
-public partial class MediaLibraryItemViewModel : LibraryItemViewModelBase<MediaLibraryItemViewModel>
+public partial class MediaLibraryItemViewModel : LibraryItemViewModelBase<MediaLibraryItemViewModel>, ITaggable
 {
     private readonly Action<MediaLibraryItemViewModel> _onShowRequested;
 
@@ -33,15 +36,22 @@ public partial class MediaLibraryItemViewModel : LibraryItemViewModelBase<MediaL
         bool loop,
         Action<MediaLibraryItemViewModel> onDeleteRequested,
         Action<MediaLibraryItemViewModel> onShowRequested,
-        Action<MediaLibraryItemViewModel>? onChanged = null)
+        Action<MediaLibraryItemViewModel>? onChanged = null,
+        IEnumerable<Guid>? tagIds = null)
         : base(id, name, localPath, mimeType, onDeleteRequested, onChanged)
     {
         Kind = kind;
         _loop = loop;
         _onShowRequested = onShowRequested;
+        if (tagIds is not null) foreach (var tagId in tagIds) TagIds.Add(tagId);
+        TagIds.CollectionChanged += (_, _) => NotifyChanged();
 
         if (kind == MediaKind.Image) LoadThumbnail();
     }
+
+    /// <summary>Freeform Tag Ids attached to this item (see Tag) - separate from Scene
+    ///     membership, a different, explicit mechanism.</summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
 
     public MediaKind Kind { get; }
 

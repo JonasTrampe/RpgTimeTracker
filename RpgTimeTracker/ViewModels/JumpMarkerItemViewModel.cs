@@ -3,13 +3,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
+using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Services.Localization;
 
 namespace RpgTimeTracker.ViewModels;
 
 public partial class JumpMarkerItemViewModel : ObservableObject
 {
-    private readonly Func<DateTime> _getCurrentGameTime;
+    private readonly Func<GameInstant> _getCurrentGameTime;
     private readonly JumpMarker _model;
     private readonly Action<JumpMarkerItemViewModel> _onDeleteRequested;
     private readonly Action<TimeSpan> _requestJump;
@@ -23,7 +24,7 @@ public partial class JumpMarkerItemViewModel : ObservableObject
 
     public JumpMarkerItemViewModel(
         JumpMarker model,
-        Func<DateTime> getCurrentGameTime,
+        Func<GameInstant> getCurrentGameTime,
         Action<TimeSpan> requestJump,
         Action<JumpMarkerItemViewModel> onDeleteRequested)
     {
@@ -90,7 +91,7 @@ public partial class JumpMarkerItemViewModel : ObservableObject
     /// <summary>Rebuilds a ViewModel from a saved state.</summary>
     public static JumpMarkerItemViewModel FromDto(
         JumpMarkerDto dto,
-        Func<DateTime> getCurrentGameTime,
+        Func<GameInstant> getCurrentGameTime,
         Action<TimeSpan> requestJump,
         Action<JumpMarkerItemViewModel> onDeleteRequested)
     {

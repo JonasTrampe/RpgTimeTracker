@@ -24,7 +24,10 @@ public sealed class SessionHelloRejectedParams
 
 public sealed class SessionSnapshotParams
 {
-    public DateTime CurrentGameTime { get; set; }
+    /// <summary>Elapsed seconds of the calendar-agnostic GameInstant (see GameClockService) -
+    ///     not a wall-clock DateTime, since game time isn't locked to the Gregorian calendar.</summary>
+    public long CurrentGameTimeSeconds { get; set; }
+
     public double SpeedMultiplier { get; set; } = 1.0;
     public bool IsClockRunning { get; set; }
     public string PlayerHeaderTitle { get; set; } = "Spieleranzeige";
@@ -32,6 +35,11 @@ public sealed class SessionSnapshotParams
     public string Theme { get; set; } = "Shadowrun";
     public List<TimelineItemSnapshotDto> Items { get; set; } = new();
     public List<CalendarEntryDefinition> CalendarEntries { get; set; } = new();
+
+    /// <summary>The campaign's active calendar, sent once at connect (not re-sent per tick) so
+    ///     PlayerClient can format dates without duplicating calendar-selection logic - see
+    ///     CalendarService.Active.</summary>
+    public CalendarDefinition ActiveCalendar { get; set; } = CalendarDefinition.CreateGregorian();
 
     /// <summary>Player-side fog render style, current at connect time - see MapRenderStyleChangedParams.</summary>
     public string FogColorHex { get; set; } = "#0C0C0C";
@@ -54,7 +62,7 @@ public sealed class ClockSpeedChangedParams
 /// </summary>
 public sealed class ClockHeartbeatParams
 {
-    public DateTime CurrentGameTime { get; set; }
+    public long CurrentGameTimeSeconds { get; set; }
     public double SpeedMultiplier { get; set; } = 1.0;
     public bool IsClockRunning { get; set; }
 }
@@ -62,7 +70,7 @@ public sealed class ClockHeartbeatParams
 /// <summary>Absolute resync point (manual setting, time jump, loading a save).</summary>
 public sealed class ClockTimeJumpedParams
 {
-    public DateTime NewGameTime { get; set; }
+    public long NewGameTimeSeconds { get; set; }
 }
 
 public sealed class HeaderChangedParams
@@ -240,7 +248,7 @@ public sealed class TimelineItemSnapshotDto
     public bool IsCompleted { get; set; }
 
     // Alarm
-    public DateTime TriggerAt { get; set; }
+    public long TriggerAtSeconds { get; set; }
     public long? RepeatIntervalTicks { get; set; }
     public bool IsTriggered { get; set; }
 

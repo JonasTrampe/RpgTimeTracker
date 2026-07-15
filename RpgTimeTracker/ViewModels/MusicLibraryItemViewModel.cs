@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Shared.Services.Visuals;
 
 namespace RpgTimeTracker.ViewModels;
@@ -15,7 +17,7 @@ namespace RpgTimeTracker.ViewModels;
 ///     players (subject to per-window routing, once that milestone lands); "Test" plays ONLY
 ///     locally at the GM's side, to preview before actually sending it.
 /// </summary>
-public partial class MusicLibraryItemViewModel : LibraryItemViewModelBase<MusicLibraryItemViewModel>
+public partial class MusicLibraryItemViewModel : LibraryItemViewModelBase<MusicLibraryItemViewModel>, ITaggable
 {
     private readonly Action<MusicLibraryItemViewModel> _onPlayRequested;
     private readonly Action<MusicLibraryItemViewModel> _onTestRequested;
@@ -35,14 +37,21 @@ public partial class MusicLibraryItemViewModel : LibraryItemViewModelBase<MusicL
         Action<MusicLibraryItemViewModel> onDeleteRequested,
         Action<MusicLibraryItemViewModel> onPlayRequested,
         Action<MusicLibraryItemViewModel> onTestRequested,
-        Action<MusicLibraryItemViewModel>? onChanged = null)
+        Action<MusicLibraryItemViewModel>? onChanged = null,
+        IEnumerable<Guid>? tagIds = null)
         : base(id, name, localPath, mimeType, onDeleteRequested, onChanged)
     {
         _icon = VisualItemHelper.NormalizeIcon(icon);
         _volume = volume;
         _onPlayRequested = onPlayRequested;
         _onTestRequested = onTestRequested;
+        if (tagIds is not null) foreach (var tagId in tagIds) TagIds.Add(tagId);
+        TagIds.CollectionChanged += (_, _) => NotifyChanged();
     }
+
+    /// <summary>Freeform Tag Ids attached to this item (see Tag) - separate from Scene
+    ///     membership, a different, explicit mechanism.</summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
 
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;
     public Geometry IconGeometry => VisualItemHelper.IconGeometry(Icon);

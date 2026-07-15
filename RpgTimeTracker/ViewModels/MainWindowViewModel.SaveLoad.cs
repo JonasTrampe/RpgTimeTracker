@@ -89,7 +89,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         var dto = new AppStateDto
         {
-            CurrentGameTime = _clock.CurrentTime,
+            CurrentGameTimeSeconds = _clock.CurrentTime.TotalSeconds,
+            ActiveCalendar = CalendarService.Active,
             SpeedMultiplier = SpeedMultiplier,
             IsClockRunning = IsClockRunning,
             Timers = Timers.Select(t => t.ToDto()).ToList(),
@@ -148,6 +149,18 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             return;
         }
 
+        // Version 5 replaced DateTime-based game time with the calendar-agnostic GameInstant -
+        // a breaking, unmigrated format change (see AppStateDto.Version's doc comment). An older
+        // save's "CurrentGameTime" field doesn't exist in this schema, so without this guard it
+        // would silently deserialize as CurrentGameTimeSeconds=0 instead of failing loudly.
+        if (dto.Version < 5)
+        {
+            Log.Warning("Game state import rejected: save format version {Version} predates the calendar rework " +
+                        "and cannot be loaded", dto.Version);
+            ClockErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.SaveFormatTooOld");
+            return;
+        }
+
         Log.Information("Loading game state: {TimerCount} timers, {AlarmCount} alarms, {IntervalCount} intervals",
             dto.Timers.Count, dto.Alarms.Count, dto.IntervalEvents.Count);
 
@@ -164,7 +177,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         PlayerCalendarEntries.Clear();
         PlayerCalendarDays.Clear();
 
-        _clock.SetTime(dto.CurrentGameTime);
+        CalendarService.Active = dto.ActiveCalendar;
+        var currentGameTime = new GameInstant(dto.CurrentGameTimeSeconds);
+        _clock.SetTime(currentGameTime);
         // Undoing jumps from a previous session/file would no longer make sense after loading
         // (it refers to a different timer/alarm state) - undo/redo
         // history is deliberately purely session-local, see the _jumpUndoStack comment.
@@ -172,8 +187,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _jumpRedoStack.Clear();
         CanUndoJump = false;
         CanRedoJump = false;
-        CurrentGameTimeText = FormatGameTime(dto.CurrentGameTime);
-        ManualDateTimeText = dto.CurrentGameTime.ToString("yyyy-MM-dd HH:mm:ss");
+        CurrentGameTimeText = FormatGameTime(currentGameTime);
+        ManualDateTimeText = CalendarService.Active.FormatDateTimeText(currentGameTime);
         SpeedMultiplier = dto.SpeedMultiplier <= 0 ? 1.0 : Math.Round(dto.SpeedMultiplier, 1);
         SpeedMultiplierInput = (decimal)SpeedMultiplier;
 
@@ -189,7 +204,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         foreach (var a in dto.Alarms)
         {
-            var alarm = AlarmItemViewModel.FromDto(a, dto.CurrentGameTime, RemoveAlarm);
+            var alarm = AlarmItemViewModel.FromDto(a, currentGameTime, RemoveAlarm);
             alarm.StateChanged += () => PublishItemState(alarm);
             alarm.ResetRequested += () => StopInfiniteSoundLoop(alarm.Id);
             Alarms.Add(alarm);
@@ -212,8 +227,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             CalendarEntries.Add(CalendarEntryViewModel.FromDefinition(calendarEntry, OnCalendarEntryChanged,
                 RemoveCalendarEntry));
 
-        CalendarMonth = new DateTime(dto.CurrentGameTime.Year, dto.CurrentGameTime.Month, 1);
-        CalendarSelectedDate = dto.CurrentGameTime.Date;
+        CalendarMonth = CalendarMonthStart(currentGameTime);
+        CalendarSelectedDate = CalendarService.Active.DayStart(currentGameTime);
         RefreshCalendarViews();
 
         if (dto.IsClockRunning) _clock.Start();
@@ -271,8 +286,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             CalendarEntries.Add(
                 CalendarEntryViewModel.FromDefinition(entry, OnCalendarEntryChanged, RemoveCalendarEntry));
 
-        CalendarMonth = new DateTime(_clock.CurrentTime.Year, _clock.CurrentTime.Month, 1);
-        CalendarSelectedDate = _clock.CurrentTime.Date;
+        CalendarMonth = CalendarMonthStart(_clock.CurrentTime);
+        CalendarSelectedDate = CalendarService.Active.DayStart(_clock.CurrentTime);
         RefreshCalendarViews();
         QueueCalendarFullResync();
     }
@@ -282,7 +297,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         return new SessionSnapshotParams
         {
-            CurrentGameTime = _clock.CurrentTime,
+            CurrentGameTimeSeconds = _clock.CurrentTime.TotalSeconds,
+            ActiveCalendar = CalendarService.Active,
             SpeedMultiplier = SpeedMultiplier,
             IsClockRunning = IsClockRunning,
             PlayerHeaderTitle = PlayerHeaderTitle,
@@ -312,7 +328,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         return new ClockHeartbeatParams
         {
-            CurrentGameTime = _clock.CurrentTime,
+            CurrentGameTimeSeconds = _clock.CurrentTime.TotalSeconds,
             SpeedMultiplier = SpeedMultiplier,
             IsClockRunning = IsClockRunning
         };

@@ -83,6 +83,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private readonly Dictionary<string, ThemeDefinitionLoader.LoadedTheme> _themesById = new();
 
+    /// <summary>All available calendars (bundled PredefinedCalendars + GM's own, see
+    ///     CalendarDefinitionLoader), keyed by their Name (a calendar has no separate id, unlike a
+    ///     theme) - used both for the Settings picker and to persist/apply the GM's choice.</summary>
+    private readonly Dictionary<string, CalendarDefinitionLoader.LoadedCalendar> _calendarsByName = new();
+
     /// <summary>Items whose currently running occurrence has already been warned about.</summary>
     private readonly HashSet<Guid> _headsUpFired = [];
 
@@ -164,8 +169,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// </summary>
     private string? _ambienceCurrentFileName;
 
-    [ObservableProperty] private DateTime _calendarMonth;
-    [ObservableProperty] private DateTime _calendarSelectedDate;
+    [ObservableProperty] private GameInstant _calendarMonth;
+    [ObservableProperty] private GameInstant _calendarSelectedDate;
     private CancellationTokenSource? _calendarSyncCts;
 
     [ObservableProperty] private bool _canUndoJump;
@@ -364,6 +369,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [ObservableProperty] private CalendarEntryViewModel? _selectedCalendarEntry;
 
     [ObservableProperty] private string _selectedThemeOption;
+
+    [ObservableProperty] private string _selectedCalendarOption = string.Empty;
 
     /// <summary>Whether an ad-hoc sent video (not from the library) should loop at the end.</summary>
     [ObservableProperty] private bool _sendMediaLoop;
@@ -566,7 +573,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
             MediaLibrary.Add(new MediaLibraryItemViewModel(
                 entry.Id, entry.Name, entry.Path, kind, entry.MimeType, entry.Loop,
-                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged)
+                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged, tagIds: entry.TagIds)
             {
                 Scope = LibraryScope.SessionLocal
             });
@@ -576,7 +583,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             if (!File.Exists(entry.Path)) continue;
             var item = CreateSoundLibraryItem(entry.Id, entry.Name, entry.Icon, entry.Path, entry.MimeType,
-                entry.Loop, entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0);
+                entry.Loop, entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0,
+                entry.TagIds);
             item.Scope = LibraryScope.SessionLocal;
             SoundLibrary.Add(item);
         }
@@ -585,7 +593,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             if (!File.Exists(entry.Path)) continue;
             var item = CreateMusicLibraryItem(entry.Id, entry.Name, entry.Icon, entry.Path, entry.MimeType,
-                entry.Volume);
+                entry.Volume, entry.TagIds);
             item.Scope = LibraryScope.SessionLocal;
             MusicLibrary.Add(item);
         }
@@ -594,7 +602,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             var map = new MapItemViewModel(mapEntry.Id, mapEntry.Name, mapEntry.DefaultCellSizePx, RemoveMap,
                 OnMapLibraryItemChanged, mapEntry.FogColorHex, mapEntry.FogOpacityPercent,
-                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled, mapEntry.FormatVersion, LibraryScope.SessionLocal);
+                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled, mapEntry.FormatVersion, LibraryScope.SessionLocal,
+                mapEntry.TagIds);
             foreach (var floorEntry in mapEntry.Floors.OrderBy(f => f.Order))
             {
                 if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
@@ -615,10 +624,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             if (npc is not null) NpcLibrary.Add(npc);
         }
 
+        foreach (var sceneEntry in library.SceneLibrary)
+            SceneLibrary.Add(FromSceneLibraryEntryDto(sceneEntry, LibraryScope.SessionLocal));
+
         OnPropertyChanged(nameof(HasNoMediaLibraryItems));
         OnPropertyChanged(nameof(HasNoSoundLibraryItems));
         OnPropertyChanged(nameof(HasNoMaps));
         OnPropertyChanged(nameof(HasNoNpcLibraryItems));
+        OnPropertyChanged(nameof(HasNoScenes));
     }
 
     private void RemoveSessionLocalItemsFromCollections()
@@ -637,10 +650,17 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             if (SelectedNpc == item) SelectedNpc = null;
         }
 
+        foreach (var item in SceneLibrary.Where(i => i.Scope == LibraryScope.SessionLocal).ToList())
+        {
+            SceneLibrary.Remove(item);
+            if (SelectedScene == item) SelectedScene = null;
+        }
+
         OnPropertyChanged(nameof(HasNoMediaLibraryItems));
         OnPropertyChanged(nameof(HasNoSoundLibraryItems));
         OnPropertyChanged(nameof(HasNoNpcLibraryItems));
         OnPropertyChanged(nameof(HasNoMaps));
+        OnPropertyChanged(nameof(HasNoScenes));
     }
 
     public MainWindowViewModel()
@@ -651,9 +671,20 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _usageRegistry.RegisterClearAction(ClearPlaylistReferencesById);
         _usageRegistry.Register(FindNpcUsagesById);
         _usageRegistry.RegisterClearAction(ClearNpcReferencesById);
+        _usageRegistry.Register(FindSceneUsagesById);
+        _usageRegistry.RegisterClearAction(ClearSceneReferencesById);
+        _usageRegistry.Register(FindTagUsagesById);
+        _usageRegistry.RegisterClearAction(ClearTagReferencesById);
 
-        // Reasonable fantasy start time, can be changed immediately.
-        var start = DateTime.Now;
+        // Restore the GM's last chosen calendar before anything else touches CalendarService.Active,
+        // since the "start" default below and every date display already depend on it.
+        var initialCalendar = CalendarDefinitionLoader.Resolve(ThemeSettingsService.LoadLastCalendarName())
+                               ?? CalendarDefinitionLoader.Resolve("Gregorian");
+        if (initialCalendar is { } resolvedInitialCalendar) CalendarService.Active = resolvedInitialCalendar.Definition;
+
+        // Reasonable fantasy start time, can be changed immediately - real wall-clock "now" has no
+        // meaning under an arbitrary game-calendar epoch (see CalendarEntryViewModel's identical default).
+        var start = CalendarService.Active.FromCalendarDate(1, 0, 1, 12, 0, 0);
         _clock = new GameClockService(start);
         _clock.Tick += OnClockTick;
         _playerServer = new TcpPlayerServerService(BuildSessionSnapshot, BuildClockHeartbeat, () => ConnectionPin);
@@ -695,9 +726,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _blinkTimer.Tick += (_, _) => RefreshBlinkStates();
         _blinkTimer.Start();
         _headsUpLeadMinutes = 2;
-        _manualDateTimeText = start.ToString("yyyy-MM-dd HH:mm:ss");
-        var defaultAlarm = start.AddHours(8);
-        _newAlarmDateTime = defaultAlarm.ToString("yyyy-MM-dd HH:mm:ss");
+        _manualDateTimeText = CalendarService.Active.FormatDateTimeText(start);
+        var defaultAlarm = start.Add(TimeSpan.FromHours(8));
+        _newAlarmDateTime = CalendarService.Active.FormatDateTimeText(defaultAlarm);
         CurrentGameTimeText = FormatGameTime(start);
 
         var settings = ThemeSettingsService.LoadSettings();
@@ -728,21 +759,21 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
             MediaLibrary.Add(new MediaLibraryItemViewModel(
                 entry.Id, entry.Name, entry.Path, kind, entry.MimeType, entry.Loop,
-                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged));
+                RemoveMediaLibraryItem, ShowMediaLibraryItem, OnMediaLibraryItemChanged, tagIds: entry.TagIds));
         }
 
         foreach (var entry in settings.SoundLibrary)
         {
             if (!File.Exists(entry.Path)) continue;
             SoundLibrary.Add(CreateSoundLibraryItem(entry.Id, entry.Name, entry.Icon, entry.Path, entry.MimeType, entry.Loop,
-                entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0));
+                entry.Volume, entry.RepeatCount, entry.TrimStartMs / 1000.0, entry.TrimEndMs / 1000.0, entry.TagIds));
         }
 
         foreach (var musicEntry in settings.MusicLibrary)
         {
             if (!File.Exists(musicEntry.Path)) continue;
             MusicLibrary.Add(CreateMusicLibraryItem(musicEntry.Id, musicEntry.Name, musicEntry.Icon,
-                musicEntry.Path, musicEntry.MimeType, musicEntry.Volume));
+                musicEntry.Path, musicEntry.MimeType, musicEntry.Volume, musicEntry.TagIds));
         }
 
         foreach (var playlistEntry in settings.Playlists)
@@ -766,7 +797,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         {
             var map = new MapItemViewModel(mapEntry.Id, mapEntry.Name, mapEntry.DefaultCellSizePx, RemoveMap,
                 OnMapLibraryItemChanged, mapEntry.FogColorHex, mapEntry.FogOpacityPercent,
-                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled, mapEntry.FormatVersion);
+                mapEntry.FogBlurRadius, mapEntry.FogBlurEnabled, mapEntry.FormatVersion, tagIds: mapEntry.TagIds);
             foreach (var floorEntry in mapEntry.Floors.OrderBy(f => f.Order))
             {
                 if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
@@ -786,6 +817,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var npc = FromNpcLibraryEntryDto(npcEntry, LibraryScope.Shared);
             if (npc is not null) NpcLibrary.Add(npc);
         }
+
+        foreach (var sceneEntry in settings.SceneLibrary)
+            SceneLibrary.Add(FromSceneLibraryEntryDto(sceneEntry, LibraryScope.Shared));
+
+        LoadTags(settings.Tags);
 
         // One-time migration of old data so that nothing is lost when switching to the separate
         // sound library: (a) sounds from the old "+ add sound" settings function,
@@ -868,6 +904,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             _selectedThemeOption = string.Empty;
         }
 
+        _selectedCalendarOption = PopulateCalendarOptions();
+
         _ambienceAutomationEnabled = settings.AmbienceAutomationEnabled;
         _selectedLanguageOption = LanguageDisplayName(settings.Language);
 
@@ -876,8 +914,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         AddDefaultMarker(LocalizationService.Get("MainWindowViewModel.Defaults.MarkerEvening"), new TimeSpan(18, 0, 0));
         AddDefaultMarker(LocalizationService.Get("MainWindowViewModel.Defaults.MarkerMidnight"), TimeSpan.Zero);
 
-        _calendarMonth = new DateTime(start.Year, start.Month, 1);
-        _calendarSelectedDate = start.Date;
+        _calendarMonth = CalendarMonthStart(start);
+        _calendarSelectedDate = CalendarService.Active.DayStart(start);
         RefreshCalendarViews();
 
         LocalizationService.LanguageChanged += OnLanguageChanged;
@@ -933,6 +971,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     /// <summary>Display names for the language ComboBox; native names on purpose, not translated by LocalizationService itself.</summary>
     public ObservableCollection<string> LanguageOptions { get; } = ["English", "Deutsch"];
+
+    // Display names of the calendars for the ComboBox; populated in the constructor from
+    // CalendarDefinitionLoader.LoadAll() (see _calendarsByName).
+    public ObservableCollection<string> CalendarOptions { get; } = [];
 
     public ObservableCollection<string> SoundOptions => SoundService.SoundOptions;
     public ObservableCollection<string> IconOptions => VisualItemHelper.IconOptions;

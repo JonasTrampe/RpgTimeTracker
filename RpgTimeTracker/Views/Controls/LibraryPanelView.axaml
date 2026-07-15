@@ -1,9 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:RpgTimeTracker.Views.Controls"
+             xmlns:vm="using:RpgTimeTracker.ViewModels"
              x:Class="RpgTimeTracker.Views.Controls.LibraryPanelView">
 
-    <Grid RowSpacing="8" RowDefinitions="auto,*,auto">
+    <Grid RowSpacing="8" RowDefinitions="auto,auto,*,auto">
 
         <StackPanel Grid.Row="0" Spacing="10" >
             <TextBlock Classes="h2" Text="{Binding $parent[controls:LibraryPanelView].Title}" />
@@ -12,7 +13,25 @@
                        TextWrapping="Wrap" />
         </StackPanel>
 
-        <ItemsControl Grid.Row="1" ItemsSource="{Binding $parent[controls:LibraryPanelView].ItemsSource}"
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding $parent[controls:LibraryPanelView].FilterOptions}"
+                      IsVisible="{Binding !$parent[controls:LibraryPanelView].HasNoFilterTags}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TagFilterOptionViewModel">
+                    <ToggleButton Content="{Binding Tag.Name}"
+                                  IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                  Margin="0,0,6,6"
+                                  Padding="8,3"
+                                  FontSize="11" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <ItemsControl Grid.Row="2" ItemsSource="{Binding $parent[controls:LibraryPanelView].FilteredItemsSource}"
                       ItemTemplate="{Binding $parent[controls:LibraryPanelView].ItemTemplate}"
                       VerticalAlignment="Stretch">
             <ItemsControl.ItemsPanel>
@@ -22,7 +41,7 @@
             </ItemsControl.ItemsPanel>
         </ItemsControl>
 
-        <StackPanel Grid.Row="2" VerticalAlignment="Bottom">
+        <StackPanel Grid.Row="3" VerticalAlignment="Bottom">
             <TextBlock Classes="muted"
                        Text="{Binding $parent[controls:LibraryPanelView].EmptyStateText}"
                        IsVisible="{Binding $parent[controls:LibraryPanelView].HasNoItems}" />

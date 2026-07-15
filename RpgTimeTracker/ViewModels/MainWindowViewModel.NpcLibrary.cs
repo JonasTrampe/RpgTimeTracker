@@ -140,7 +140,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             PlayerInfo = v.PlayerInfo,
             SoundIds = v.HasSoundsOverride ? v.Sounds.Select(sound => sound.Id).ToList() : null
         }).ToList(),
-        ActiveVariantId = npc.ActiveVariant?.Id ?? npc.DefaultVariant.Id
+        ActiveVariantId = npc.ActiveVariant?.Id ?? npc.DefaultVariant.Id,
+        TagIds = npc.TagIds.ToList()
     };
 
     /// <summary>Wrapped in BeginBulkLoad/EndBulkLoad - this NPC isn't in the NpcLibrary collection
@@ -150,7 +151,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     ///     NpcLibraryItemViewModel._suppressChangeNotifications' doc comment.</summary>
     private NpcLibraryItemViewModel? FromNpcLibraryEntryDto(NpcLibraryEntryDto entry, LibraryScope scope)
     {
-        var npc = new NpcLibraryItemViewModel(entry.Id, entry.Name, RemoveNpc, OnNpcLibraryItemChanged, scope);
+        var npc = new NpcLibraryItemViewModel(entry.Id, entry.Name, RemoveNpc, OnNpcLibraryItemChanged, scope,
+            entry.TagIds);
         npc.BeginBulkLoad();
         try
         {

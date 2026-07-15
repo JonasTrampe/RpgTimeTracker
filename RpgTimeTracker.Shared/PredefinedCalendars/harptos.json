@@ -1,0 +1,51 @@
+{
+  "Name": "Harptos",
+  "Description": "Forgotten Realms-style calendar: 12 months of 30 days plus 5 single-day festivals, tendays instead of 7-day weeks, and a Shieldmeet leap day every 4 years.",
+  "Months": [
+    { "Name": "Hammer", "Days": 30 },
+    { "Name": "Midwinter", "Days": 1, "IsIntercalary": true },
+    { "Name": "Alturiak", "Days": 30 },
+    { "Name": "Ches", "Days": 30 },
+    { "Name": "Tarsakh", "Days": 30 },
+    { "Name": "Greengrass", "Days": 1, "IsIntercalary": true },
+    { "Name": "Mirtul", "Days": 30 },
+    { "Name": "Kythorn", "Days": 30 },
+    { "Name": "Flamerule", "Days": 30 },
+    { "Name": "Midsummer", "Days": 1, "IsIntercalary": true },
+    { "Name": "Eleasis", "Days": 30 },
+    { "Name": "Eleint", "Days": 30 },
+    { "Name": "Highharvestide", "Days": 1, "IsIntercalary": true },
+    { "Name": "Marpenoth", "Days": 30 },
+    { "Name": "Uktar", "Days": 30 },
+    { "Name": "Feast of the Moon", "Days": 1, "IsIntercalary": true },
+    { "Name": "Nightal", "Days": 30 }
+  ],
+  "Weekdays": ["First-day", "Second-day", "Third-day", "Fourth-day", "Fifth-day", "Sixth-day", "Seventh-day", "Eighth-day", "Ninth-day", "Tenth-day"],
+  "FirstWeekdayIndex": 0,
+  "LeapYear": {
+    "Kind": 1,
+    "IntervalYears": 4,
+    "MonthIndexAffected": 9,
+    "ExtraDays": 1
+  },
+  "HoursPerDay": 24,
+  "MinutesPerHour": 60,
+  "SecondsPerMinute": 60,
+  "YearZeroOffset": 1495,
+  "Seasons": [
+    { "Name": "Deepwinter", "StartMonthIndex": 0, "StartDay": 1, "ColorHex": "#4FC3F7" },
+    { "Name": "Early Spring", "StartMonthIndex": 3, "StartDay": 1, "ColorHex": "#8BC34A" },
+    { "Name": "High Sun", "StartMonthIndex": 7, "StartDay": 1, "ColorHex": "#FFC107" },
+    { "Name": "Autumn", "StartMonthIndex": 13, "StartDay": 1, "ColorHex": "#FF7043" }
+  ],
+  "Moons": [
+    { "Name": "Selune", "CycleLengthDays": 30.44, "FirstNewMoonYear": 0, "FirstNewMoonMonthIndex": 0, "FirstNewMoonDay": 1, "ColorHex": "#E0E0E0" }
+  ],
+  "DefaultEntries": [
+    { "Title": "Midwinter", "Description": "The dead of winter, marking the year's halfway point between Nightal and Hammer.", "MonthIndex": 1, "Day": 1, "ColorHex": "#4FC3F7" },
+    { "Title": "Greengrass", "Description": "The first day of true spring, a festival of planting and renewal.", "MonthIndex": 5, "Day": 1, "ColorHex": "#8BC34A" },
+    { "Title": "Midsummer", "Description": "The height of summer. Every four years, Shieldmeet - a day of fairs, tournaments, and public announcements - follows immediately after.", "MonthIndex": 9, "Day": 1, "ColorHex": "#FFC107" },
+    { "Title": "Highharvestide", "Description": "A feast day giving thanks for the year's harvest.", "MonthIndex": 12, "Day": 1, "ColorHex": "#FF7043" },
+    { "Title": "Feast of the Moon", "Description": "A solemn day honoring and remembering the dead.", "MonthIndex": 15, "Day": 1, "ColorHex": "#B0BEC5" }
+  ]
+}

@@ -4,14 +4,14 @@ namespace RpgTimeTracker.Tests;
 
 public class AlarmItemTests
 {
-    private static readonly DateTime TriggerAt = new(2026, 1, 1, 12, 0, 0);
+    private static readonly GameInstant TriggerAt = new(1_700_000_000);
 
     [Fact]
     public void TimeRemaining_before_trigger_counts_down()
     {
         var alarm = new AlarmItem { TriggerAt = TriggerAt };
 
-        var remaining = alarm.TimeRemaining(TriggerAt - TimeSpan.FromHours(2));
+        var remaining = alarm.TimeRemaining(TriggerAt.Add(-TimeSpan.FromHours(2)));
 
         Assert.Equal(TimeSpan.FromHours(2), remaining);
     }
@@ -21,7 +21,7 @@ public class AlarmItemTests
     {
         var alarm = new AlarmItem { TriggerAt = TriggerAt };
 
-        var remaining = alarm.TimeRemaining(TriggerAt + TimeSpan.FromHours(1));
+        var remaining = alarm.TimeRemaining(TriggerAt.Add(TimeSpan.FromHours(1)));
 
         Assert.Equal(TimeSpan.Zero, remaining);
     }
@@ -31,7 +31,7 @@ public class AlarmItemTests
     {
         var alarm = new AlarmItem { TriggerAt = TriggerAt };
 
-        Assert.False(alarm.IsOverdue(TriggerAt - TimeSpan.FromMinutes(1)));
+        Assert.False(alarm.IsOverdue(TriggerAt.Add(-TimeSpan.FromMinutes(1))));
         Assert.True(alarm.IsOverdue(TriggerAt));
 
         alarm.CheckTrigger(TriggerAt);
@@ -53,7 +53,7 @@ public class AlarmItemTests
         Assert.Equal(1, triggerCount);
 
         // A later check at the same or later time must not re-fire a non-repeating alarm.
-        var triggeredAgain = alarm.CheckTrigger(TriggerAt + TimeSpan.FromMinutes(5));
+        var triggeredAgain = alarm.CheckTrigger(TriggerAt.Add(TimeSpan.FromMinutes(5)));
         Assert.False(triggeredAgain);
         Assert.Equal(1, triggerCount);
     }
@@ -66,7 +66,7 @@ public class AlarmItemTests
         Assert.True(alarm.IsTriggered);
 
         // Jumping backward past the trigger time "disarms" it again (see README time-jump behavior).
-        alarm.SyncToTime(TriggerAt - TimeSpan.FromHours(1));
+        alarm.SyncToTime(TriggerAt.Add(-TimeSpan.FromHours(1)));
 
         Assert.False(alarm.IsTriggered);
     }
@@ -79,7 +79,7 @@ public class AlarmItemTests
         alarm.Triggered += () => triggerCount++;
 
         alarm.SyncToTime(TriggerAt);
-        alarm.SyncToTime(TriggerAt - TimeSpan.FromHours(1));
+        alarm.SyncToTime(TriggerAt.Add(-TimeSpan.FromHours(1)));
         var triggeredAgain = alarm.SyncToTime(TriggerAt);
 
         Assert.True(triggeredAgain);
@@ -95,7 +95,7 @@ public class AlarmItemTests
         alarm.CheckTrigger(TriggerAt);
 
         Assert.False(alarm.IsTriggered);
-        Assert.Equal(TriggerAt + interval, alarm.TriggerAt);
+        Assert.Equal(TriggerAt.Add(interval), alarm.TriggerAt);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class AlarmItemTests
         var interval = TimeSpan.FromMinutes(1);
         var alarm = new AlarmItem { TriggerAt = TriggerAt, RepeatInterval = interval };
 
-        var farFuture = TriggerAt + TimeSpan.FromDays(30);
+        var farFuture = TriggerAt.Add(TimeSpan.FromDays(30));
         var triggeredNow = alarm.CheckTrigger(farFuture);
 
         Assert.True(triggeredNow);

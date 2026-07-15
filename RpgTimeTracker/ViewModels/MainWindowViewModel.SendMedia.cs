@@ -448,14 +448,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
     private SoundLibraryItemViewModel CreateSoundLibraryItem(
         Guid id, string name, string icon, string localPath, string mimeType, bool loop, int volume,
-        int repeatCount = 1, double trimStartSeconds = 0, double trimEndSeconds = 0)
+        int repeatCount = 1, double trimStartSeconds = 0, double trimEndSeconds = 0,
+        IEnumerable<Guid>? tagIds = null)
     {
         return new SoundLibraryItemViewModel(id, name, icon, localPath, mimeType, loop, volume, repeatCount,
             trimStartSeconds, trimEndSeconds,
             RemoveSoundLibraryItem,
             PlaySoundLibraryItem,
             TestSoundLibraryItem,
-            OnSoundLibraryItemChanged);
+            OnSoundLibraryItemChanged,
+            tagIds);
     }
 
     private void RemoveSoundLibraryItem(SoundLibraryItemViewModel item)
@@ -605,7 +607,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         Volume = s.Volume,
         RepeatCount = s.RepeatCount,
         TrimStartMs = (long)(s.TrimStartSeconds * 1000),
-        TrimEndMs = (long)(s.TrimEndSeconds * 1000)
+        TrimEndMs = (long)(s.TrimEndSeconds * 1000),
+        TagIds = s.TagIds.ToList()
     };
 
     /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
@@ -819,13 +822,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         MoveMusicLibraryItemToScope(item, LibraryScope.SessionLocal);
 
     private MusicLibraryItemViewModel CreateMusicLibraryItem(
-        Guid id, string name, string icon, string localPath, string mimeType, int volume)
+        Guid id, string name, string icon, string localPath, string mimeType, int volume,
+        IEnumerable<Guid>? tagIds = null)
     {
         return new MusicLibraryItemViewModel(id, name, icon, localPath, mimeType, volume,
             RemoveMusicLibraryItem,
             PlayMusicLibraryItem,
             TestMusicLibraryItem,
-            OnMusicLibraryItemChanged);
+            OnMusicLibraryItemChanged,
+            tagIds);
     }
 
     private void RemoveMusicLibraryItem(MusicLibraryItemViewModel item)
@@ -1191,7 +1196,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         Icon = m.Icon,
         Path = m.LocalPath,
         MimeType = m.MimeType,
-        Volume = m.Volume
+        Volume = m.Volume,
+        TagIds = m.TagIds.ToList()
     };
 
     /// <summary>See SaveMediaLibrarySettings' doc comment - same Shared/SessionLocal split.</summary>
@@ -1343,7 +1349,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         Path = i.LocalPath,
         Kind = i.Kind.ToString(),
         MimeType = i.MimeType,
-        Loop = i.Loop
+        Loop = i.Loop,
+        TagIds = i.TagIds.ToList()
     };
 
     /// <summary>Splits MediaLibrary by Scope: Shared items round-trip through the always-present
@@ -1569,7 +1576,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     [RelayCommand]
     private void ApplyManualDateTime()
     {
-        if (!DateTime.TryParse(ManualDateTimeText, out var parsed))
+        if (!CalendarService.Active.TryParseDateTimeText(ManualDateTimeText, out var parsed))
         {
             ClockErrorMessage = LocalizationService.Get("MainWindowViewModel.Errors.InvalidDateTime");
             return;

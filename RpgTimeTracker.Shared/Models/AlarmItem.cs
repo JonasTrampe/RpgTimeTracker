@@ -20,25 +20,25 @@ public class AlarmItem
     public bool Blink { get; set; }
     public bool IsPlayerVisible { get; set; } = true;
 
-    public DateTime TriggerAt { get; set; }
+    public GameInstant TriggerAt { get; set; }
     public TimeSpan? RepeatInterval { get; set; }
 
     public bool IsTriggered { get; private set; }
 
     public event Action? Triggered;
 
-    public TimeSpan TimeRemaining(DateTime currentGameTime)
+    public TimeSpan TimeRemaining(GameInstant currentGameTime)
     {
         var remaining = TriggerAt - currentGameTime;
         return remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
     }
 
-    public bool IsOverdue(DateTime currentGameTime)
+    public bool IsOverdue(GameInstant currentGameTime)
     {
         return currentGameTime >= TriggerAt && !IsTriggered;
     }
 
-    public bool CheckTrigger(DateTime currentGameTime)
+    public bool CheckTrigger(GameInstant currentGameTime)
     {
         if (IsTriggered || currentGameTime < TriggerAt) return false;
 
@@ -54,14 +54,14 @@ public class AlarmItem
         return true;
     }
 
-    public bool SyncToTime(DateTime currentGameTime)
+    public bool SyncToTime(GameInstant currentGameTime)
     {
         if (IsTriggered && currentGameTime < TriggerAt) IsTriggered = false;
 
         return CheckTrigger(currentGameTime);
     }
 
-    public void Reset(DateTime currentGameTime)
+    public void Reset(GameInstant currentGameTime)
     {
         IsTriggered = false;
         if (TriggerAt <= currentGameTime && RepeatInterval.HasValue && RepeatInterval.Value > TimeSpan.Zero)
@@ -78,7 +78,7 @@ public class AlarmItem
     ///     next point in time after currentGameTime. Important for large time jumps with
     ///     a short RepeatInterval, where a loop would need millions of iterations.
     /// </summary>
-    private static DateTime AdvancePastDue(DateTime triggerAt, DateTime currentGameTime, TimeSpan repeatInterval)
+    private static GameInstant AdvancePastDue(GameInstant triggerAt, GameInstant currentGameTime, TimeSpan repeatInterval)
     {
         if (triggerAt > currentGameTime) return triggerAt;
 

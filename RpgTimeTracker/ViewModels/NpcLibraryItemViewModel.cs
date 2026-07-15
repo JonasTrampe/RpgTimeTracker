@@ -18,7 +18,7 @@ namespace RpgTimeTracker.ViewModels;
 ///     reference relationship in this codebase - see MainWindowViewModel's LibraryUsageRegistry
 ///     wiring for how a referenced Media/Sound item's deletion is guarded against.
 /// </summary>
-public sealed partial class NpcLibraryItemViewModel : ObservableObject
+public sealed partial class NpcLibraryItemViewModel : ObservableObject, ITaggable
 {
     private readonly Action<NpcLibraryItemViewModel> _onDeleteRequested;
     private readonly Action<NpcLibraryItemViewModel>? _onChanged;
@@ -62,18 +62,25 @@ public sealed partial class NpcLibraryItemViewModel : ObservableObject
     /// <summary>See LibraryItemViewModelBase.IsSessionLocal's doc comment - same purpose here.</summary>
     public bool IsSessionLocal => Scope == LibraryScope.SessionLocal;
 
+    /// <summary>Freeform Tag Ids attached to this character (see Tag) - separate from Scene
+    ///     membership, a different, explicit mechanism.</summary>
+    public ObservableCollection<Guid> TagIds { get; } = [];
+
     public NpcLibraryItemViewModel(
         Guid id,
         string name,
         Action<NpcLibraryItemViewModel> onDeleteRequested,
         Action<NpcLibraryItemViewModel>? onChanged,
-        LibraryScope scope = LibraryScope.Shared)
+        LibraryScope scope = LibraryScope.Shared,
+        IEnumerable<Guid>? tagIds = null)
     {
         Id = id;
         _name = name;
         _scope = scope;
         _onDeleteRequested = onDeleteRequested;
         _onChanged = onChanged;
+        if (tagIds is not null) foreach (var tagId in tagIds) TagIds.Add(tagId);
+        TagIds.CollectionChanged += (_, _) => NotifyChanged();
     }
 
     partial void OnNameChanged(string value)

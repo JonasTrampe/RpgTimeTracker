@@ -1,4 +1,6 @@
 using System;
+using RpgTimeTracker.Shared.Models;
+using RpgTimeTracker.Shared.Services;
 
 namespace RpgTimeTracker.Models;
 
@@ -16,18 +18,20 @@ public class JumpMarker
     public TimeSpan TimeOfDay { get; set; }
 
     /// <summary>Next occurrence of this time of day from the given point in time (exclusive if exactly now).</summary>
-    public DateTime NextOccurrence(DateTime from)
+    public GameInstant NextOccurrence(GameInstant from)
     {
-        var target = from.Date + TimeOfDay;
-        if (target <= from) target = target.AddDays(1);
+        var calendar = CalendarService.Active;
+        var target = calendar.DayStart(from).Add(TimeOfDay);
+        if (target <= from) target = target.Add(TimeSpan.FromSeconds(calendar.SecondsPerDay));
         return target;
     }
 
     /// <summary>Previous occurrence of this time of day before the given point in time (exclusive if exactly now).</summary>
-    public DateTime PreviousOccurrence(DateTime from)
+    public GameInstant PreviousOccurrence(GameInstant from)
     {
-        var target = from.Date + TimeOfDay;
-        if (target >= from) target = target.AddDays(-1);
+        var calendar = CalendarService.Active;
+        var target = calendar.DayStart(from).Add(TimeOfDay);
+        if (target >= from) target = target.Add(TimeSpan.FromSeconds(-calendar.SecondsPerDay));
         return target;
     }
 }

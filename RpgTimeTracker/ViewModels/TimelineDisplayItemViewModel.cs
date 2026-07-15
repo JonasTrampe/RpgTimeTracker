@@ -515,7 +515,7 @@ public partial class TimelineDisplayItemViewModel : ObservableObject, IPlayerTim
                 ColorHex = dto.ColorHex ?? string.Empty,
                 Blink = dto.Blink,
                 IsPlayerVisible = dto.IsPlayerVisible,
-                TriggerAt = dto.TriggerAt,
+                TriggerAtSeconds = dto.TriggerAtSeconds,
                 RepeatIntervalTicks = dto.RepeatIntervalTicks,
                 IsTriggered = dto.IsTriggered
             };

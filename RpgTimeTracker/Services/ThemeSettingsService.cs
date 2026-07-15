@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
 using Serilog;
 
@@ -104,6 +105,21 @@ public static class ThemeSettingsService
         SaveSettings(settings);
     }
 
+    /// <summary>Last chosen calendar name (see CalendarDefinitionLoader.Resolve) - resolved against
+    ///     the bundled + custom calendars on startup, falling back to Gregorian if not found (e.g.
+    ///     a custom calendar file was since deleted).</summary>
+    public static string? LoadLastCalendarName()
+    {
+        return LoadSettings().LastCalendarName;
+    }
+
+    public static void SaveLastCalendarName(string name)
+    {
+        var settings = LoadSettings();
+        settings.LastCalendarName = name;
+        SaveSettings(settings);
+    }
+
     /// <summary>Records the file path of the last successful manual save/load (see LastSaveFilePath).</summary>
     public static void SaveLastSaveFilePath(string path)
     {
@@ -185,6 +201,7 @@ public static class ThemeSettingsService
     public sealed class ThemeSettingsDto
     {
         public string? LastTheme { get; set; }
+        public string? LastCalendarName { get; set; }
         public string PlayerHeaderTitle { get; set; } = string.Empty;
         public string PlayerHeaderSubtitle { get; set; } = string.Empty;
         public bool HeadsUpWarningEnabled { get; set; }
@@ -240,6 +257,12 @@ public static class ThemeSettingsService
         public List<PlaylistEntryDto> Playlists { get; set; } = [];
         public List<MapLibraryEntryDto> MapLibrary { get; set; } = [];
         public List<NpcLibraryEntryDto> NpcLibrary { get; set; } = [];
+        public List<SceneLibraryEntryDto> SceneLibrary { get; set; } = [];
+
+        /// <summary>Freeform labels a GM can attach to any library item (see Tag/TagIds on each
+        ///     library item view model) - a single flat, campaign-wide list, not
+        ///     Shared-vs-SessionLocal like the libraries they tag (see Tag's doc comment).</summary>
+        public List<Tag> Tags { get; set; } = [];
         // Property name kept as "ClientAudioPreferences" (not renamed to match the DTO type)
         // purely for JSON backward-compat - System.Text.Json round-trips by property name, so
         // renaming this would silently drop every existing user's saved Music/Sound routing

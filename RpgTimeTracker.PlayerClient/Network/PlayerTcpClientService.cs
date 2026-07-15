@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using RpgTimeTracker.PlayerClient.Services;
+using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Network;
 using RpgTimeTracker.Shared.Models.Rpc;
 using RpgTimeTracker.Shared.Services.Localization;
@@ -71,7 +72,7 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action? ClockStarted;
     public event Action? ClockStopped;
     public event Action<double>? ClockSpeedChanged;
-    public event Action<DateTime>? ClockTimeJumped;
+    public event Action<GameInstant>? ClockTimeJumped;
     public event Action<string, string>? HeaderChanged;
     public event Action<string>? ThemeChanged;
     public event Action<TimelineItemSnapshotDto>? TimelineItemUpserted;
@@ -79,7 +80,7 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action<bool>? DisplayFullscreenRequested;
 
     /// <summary>Periodic heartbeat including clock state - for drift correction of the local clock.</summary>
-    public event Action<DateTime, double, bool>? ClockHeartbeatReceived;
+    public event Action<GameInstant, double, bool>? ClockHeartbeatReceived;
 
     /// <summary>A medium begins: kind/filename/MIME + path of a (still growing) temp file.</summary>
     public event Action<MediaHeaderDto, string>? MediaBeginReceived;
@@ -494,7 +495,7 @@ public sealed class PlayerTcpClientService : IDisposable
                     break;
                 case RpcMethods.ClockTimeJumped:
                     var jumped = raw.GetParams<ClockTimeJumpedParams>();
-                    if (jumped is not null) ClockTimeJumped?.Invoke(jumped.NewGameTime);
+                    if (jumped is not null) ClockTimeJumped?.Invoke(new GameInstant(jumped.NewGameTimeSeconds));
                     break;
                 case RpcMethods.HeaderChanged:
                     var header = raw.GetParams<HeaderChangedParams>();
@@ -529,8 +530,8 @@ public sealed class PlayerTcpClientService : IDisposable
                 case RpcMethods.SessionHeartbeat:
                     var heartbeat = raw.GetParams<ClockHeartbeatParams>();
                     if (heartbeat is not null)
-                        ClockHeartbeatReceived?.Invoke(heartbeat.CurrentGameTime, heartbeat.SpeedMultiplier,
-                            heartbeat.IsClockRunning);
+                        ClockHeartbeatReceived?.Invoke(new GameInstant(heartbeat.CurrentGameTimeSeconds),
+                            heartbeat.SpeedMultiplier, heartbeat.IsClockRunning);
                     break;
                 case RpcMethods.MediaStopSound:
                     var stopSound = raw.GetParams<MediaStopSoundParams>();

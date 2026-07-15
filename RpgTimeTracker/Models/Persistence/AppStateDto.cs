@@ -11,8 +11,16 @@ namespace RpgTimeTracker.Models.Persistence;
 /// </summary>
 public class AppStateDto
 {
-    public int Version { get; set; } = 4;
-    public DateTime CurrentGameTime { get; set; }
+    /// <summary>Version 5 replaced DateTime-based game time with the calendar-agnostic
+    ///     GameInstant (see GameClockService/CalendarDefinition) - a breaking format change with
+    ///     no auto-upgrade path, unlike the earlier plain-JSON-to-zip upgrade. A save with
+    ///     Version &lt; 5 must be rejected outright by the loader, not partially loaded with
+    ///     silently-wrong (zeroed) time fields.</summary>
+    public int Version { get; set; } = 5;
+
+    /// <summary>Elapsed seconds of the calendar-agnostic GameInstant - see GameClockService.</summary>
+    public long CurrentGameTimeSeconds { get; set; }
+
     public double SpeedMultiplier { get; set; } = 1.0;
     public bool IsClockRunning { get; set; }
 
@@ -21,6 +29,9 @@ public class AppStateDto
     public List<IntervalEventDto> IntervalEvents { get; set; } = [];
     public List<JumpMarkerDto> JumpMarkers { get; set; } = [];
     public List<CalendarEntryDefinition> CalendarEntries { get; set; } = [];
+
+    /// <summary>The campaign's active calendar - see CalendarService.Active.</summary>
+    public CalendarDefinition ActiveCalendar { get; set; } = CalendarDefinition.CreateGregorian();
 
     public string? Theme { get; set; }
 
@@ -60,7 +71,7 @@ public class AlarmDto
     public bool Blink { get; set; }
     public bool IsPlayerVisible { get; set; } = true;
 
-    public DateTime TriggerAt { get; set; }
+    public long TriggerAtSeconds { get; set; }
     public long? RepeatIntervalTicks { get; set; }
     public bool IsTriggered { get; set; }
 

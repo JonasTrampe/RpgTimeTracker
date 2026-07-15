@@ -7,8 +7,103 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Game time appeared frozen in both the Host and Player windows (Timers/
+  Alarms still worked, since they track elapsed time separately) -
+  `GameInstant.Add` truncates its `TimeSpan` argument to whole seconds via
+  a `(long)` cast, and the clock's `DispatcherTimer` fires every 200ms, so
+  each individual tick's real-time delta was well under a second and got
+  silently discarded every time; `CurrentTime` never advanced unless a
+  single tick happened to exceed a full second (e.g. after a long UI
+  stall). Fixed by accumulating the sub-second remainder across ticks in
+  `GameClockService` instead of dropping it, so whole seconds get applied
+  to `CurrentTime` once enough of them add up - regardless of tick
+  interval or speed multiplier. Added a regression test driving the
+  private tick handler directly with repeated sub-second real delays.
+- The bundled Gregorian calendar used a plain "every 4 years" leap rule,
+  which wrongly marks century years like 1900/2100 as leap years (the
+  real rule skips those unless also divisible by 400, e.g. 2000). Added
+  a proper `CalendarLeapYearRuleKind.Gregorian` rule implementing the
+  actual 4/100/400 logic, switched the bundled Gregorian calendar and the
+  Simple Calendar importer's "gregorian" rule mapping to use it, and
+  added regression tests covering 1900/2000/2024/2100/2400.
+
 ### Added
 
+- Scenes library (Phase 2 of the Scenes/Tags/Calendars project): a new
+  `SceneLibraryItemViewModel` (Name, GM-only Markdown description with a
+  preview toggle, a start date on the custom calendar via `GameInstant`,
+  and an optional bundle of Media/Sound/Music/Map references) with
+  Shared-vs-SessionLocal storage identical to the Characters library.
+  Registered into `LibraryUsageRegistry` so deleting a referenced Media/
+  Sound/Music/Map item is guarded the same way NPC references already are,
+  and Scenes can carry Tags like every other library item. A new "Scenes"
+  tab lists and edits them, mirroring the Characters tab's list+detail
+  layout, plus a "▶ Activate" button that pushes the Scene's bundled
+  Image/Map/Music/Sounds to players atomically through the existing
+  per-kind send paths (the same ones a Media Library double-click or a
+  Playlist already use). A Scene-scoped timeline and full-session
+  export/import wiring aren't built yet.
+- Tags (Phase 1 of the Scenes/Tags/Calendars project): a flat, campaign-wide
+  list of freeform tags (name + color) manageable from a new "Tags" group in
+  Settings. Media, Sound, Music, Map, and NPC library items each gained a
+  `TagIds` list and a new "🏷" button opening a `TagSelectorFlyout` to
+  toggle which tags are assigned. Deleting a tag clears it from every item
+  that had it via the existing `LibraryUsageRegistry` mechanism, with no
+  confirmation prompt (a tag carries no content of its own, unlike
+  deleting a media file). Each item's tag-assignment flyout also has an
+  inline "new tag" row (name field + Add button) so a GM doesn't have to
+  leave the flyout and go to Settings to define a tag before assigning it.
+  The Media/Sound/Music library panels now also
+  have a tag-filter bar: a row of toggleable chips (generated from the
+  campaign's tag list) above each library's items - select any number of
+  tags to show only items carrying at least one of them, deselect all to
+  show everything again. Map and NPC libraries use a simpler list UI
+  outside `LibraryPanelView` and aren't covered by this filter bar yet.
+- Bundled calendars can now seed their real holidays as recurring calendar
+  entries (`CalendarDefinition.DefaultEntries` + a "Import calendar's
+  default events" button in Settings) - Harptos's five festivals
+  (Midwinter, Greengrass, Midsummer, Highharvestide, Feast of the Moon) and
+  DSA's Namenlose Tage plus 19 real Aventurian feast days imported directly
+  from Simple Calendar's own bundled DSA notes (Sommersonnenwende,
+  Wintersonnenwende, Tag des Phex, ...). Opt-in and idempotent (matched by
+  title), not applied automatically on every calendar switch.
+- "Import calendar file..." button in Settings + `SimpleCalendarImporter`:
+  imports a custom calendar either in our own schema or as a Foundry VTT
+  Simple Calendar predefined-calendar export (auto-detected and converted -
+  see the README's "More calendars" section for where to find more of
+  those). Some Simple Calendar exports also bundle a "notes" array of
+  real holidays/festivals (not all - it's per-calendar-author) - Yearly-
+  recurring notes are imported as `CalendarDefinition.DefaultEntries` too,
+  with HTML in their descriptions stripped to plain text. Documented
+  approximations (e.g. weekday-epoch alignment, non-yearly notes skipped)
+  are surfaced back to the GM as a status message.
+- Custom calendar engine (Phase 0 of the Scenes/Tags/Calendars project): game
+  time is now represented by a calendar-agnostic `GameInstant` (elapsed
+  seconds) instead of `DateTime`, converted to/from a human date by a
+  pluggable `CalendarDefinition` (month/weekday names and lengths, leap-year
+  rule, hours/day, minutes/hour, seconds/minute, seasons, moons) - matching
+  Foundry VTT Simple Calendar's predefined-calendar schema closely enough
+  to adapt its calendars. Four calendars are bundled (Gregorian, a
+  Harptos-style fantasy calendar with tendays and intercalary festivals,
+  Voidreach - a 10-month/8-day-week/20-hour-day sci-fi calendar, and an
+  Aventurian/Das Schwarze Auge-style calendar with the Twelve Gods' months
+  and the five Namenlose Tage), selectable from Settings and persisted per
+  campaign; GMs can also drop their own
+  calendar JSON into `%AppData%/RpgTimeTracker/Calendars`. A new
+  `CalendarDateInput` control (Y/M/D/H/M/S box grid, replacing the old
+  Gregorian-only `DateTimeInput`) reads its bounds from the active calendar
+  everywhere a date is entered (alarms, calendar entries, jump-to-date).
+  **Breaking, unmigrated save-format change**: saves from before this
+  update (`AppStateDto.Version < 5`) are rejected on load with a clear
+  error instead of silently corrupting game time.
+- Unit test guard (`SaveFormatVersionGuardTests`) that fails if
+  `AppStateDto`'s serialized shape changes anywhere in its object graph
+  without a matching bump to `AppStateDto.Version` - forces a deliberate
+  decision about whether a data-model change needs a save-format version
+  bump, the same way the RPC protocol-version CI check does for the wire
+  format.
 - CI check (`RPC Protocol Version` workflow) that fails a PR if
   `RpcMethods.cs`/`RpcParams.cs` change by more than whitespace without
   `ProtocolInfo.Version` also being increased - catches wire-format changes

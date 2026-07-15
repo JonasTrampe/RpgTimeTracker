@@ -1,10 +1,12 @@
+using System.Reflection;
+using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Services;
 
 namespace RpgTimeTracker.Tests;
 
 public class GameClockServiceTests
 {
-    private static readonly DateTime Start = new(2026, 1, 1, 8, 0, 0);
+    private static readonly GameInstant Start = new(1_000_000);
 
     [Fact]
     public void Jump_forward_advances_current_time()
@@ -13,7 +15,7 @@ public class GameClockServiceTests
 
         clock.Jump(TimeSpan.FromHours(8));
 
-        Assert.Equal(Start + TimeSpan.FromHours(8), clock.CurrentTime);
+        Assert.Equal(Start.Add(TimeSpan.FromHours(8)), clock.CurrentTime);
     }
 
     [Fact]
@@ -23,7 +25,7 @@ public class GameClockServiceTests
 
         clock.Jump(-TimeSpan.FromDays(1));
 
-        Assert.Equal(Start - TimeSpan.FromDays(1), clock.CurrentTime);
+        Assert.Equal(Start.Add(-TimeSpan.FromDays(1)), clock.CurrentTime);
     }
 
     [Fact]
@@ -46,9 +48,9 @@ public class GameClockServiceTests
     public void Jump_raises_Tick_with_new_time_and_delta_and_raises_Jumped()
     {
         using var clock = new GameClockService(Start);
-        DateTime? tickTime = null;
+        GameInstant? tickTime = null;
         TimeSpan? tickDelta = null;
-        DateTime? jumpedTime = null;
+        GameInstant? jumpedTime = null;
         clock.Tick += (time, delta) =>
         {
             tickTime = time;
@@ -59,9 +61,9 @@ public class GameClockServiceTests
         var delta = TimeSpan.FromHours(3);
         clock.Jump(delta);
 
-        Assert.Equal(Start + delta, tickTime);
+        Assert.Equal(Start.Add(delta), tickTime);
         Assert.Equal(delta, tickDelta);
-        Assert.Equal(Start + delta, jumpedTime);
+        Assert.Equal(Start.Add(delta), jumpedTime);
     }
 
     [Fact]
@@ -71,7 +73,7 @@ public class GameClockServiceTests
         TimeSpan? tickDelta = null;
         clock.Tick += (_, delta) => tickDelta = delta;
 
-        var target = Start.AddDays(2).AddHours(-1);
+        var target = Start.Add(TimeSpan.FromDays(2)).Add(TimeSpan.FromHours(-1));
         clock.SetTime(target);
 
         Assert.Equal(target, clock.CurrentTime);
@@ -100,6 +102,37 @@ public class GameClockServiceTests
         clock.SpeedMultiplier = 60.0;
 
         Assert.Equal(60.0, clock.SpeedMultiplier);
+    }
+
+    /// <summary>Regression test for a real bug: the DispatcherTimer fires every 200ms, so each
+    ///     tick's real-time delta at 1x speed is well under a second. GameInstant.Add truncates a
+    ///     TimeSpan to whole seconds via a (long) cast, so applying each tick's delta directly
+    ///     silently discarded it every time - CurrentTime never advanced at all, while Timers/Alarms
+    ///     (which track elapsed time as a plain TimeSpan, not through GameInstant) kept working
+    ///     fine, making the bug look like "just the display is frozen." Fixed by accumulating the
+    ///     sub-second remainder across ticks instead of dropping it (see GameClockService's
+    ///     _carrySeconds field) - this drives the same private OnTimerTick the DispatcherTimer
+    ///     calls, since a DispatcherTimer needs a running Avalonia dispatcher to fire on its own,
+    ///     which a plain unit test doesn't have.</summary>
+    [Fact]
+    public void Repeated_sub_second_ticks_accumulate_instead_of_being_dropped()
+    {
+        using var clock = new GameClockService(Start);
+        clock.Start();
+
+        var onTimerTick = typeof(GameClockService).GetMethod("OnTimerTick", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+        // 25 ticks x ~50ms real each (well under 1s per tick, matching the DispatcherTimer's 200ms
+        // interval at 1x-4x speed) - without the fix, every single one truncates to zero and
+        // CurrentTime never moves, no matter how many ticks fire.
+        for (var i = 0; i < 25; i++)
+        {
+            Thread.Sleep(50);
+            onTimerTick.Invoke(clock, [null, EventArgs.Empty]);
+        }
+
+        Assert.True(clock.CurrentTime > Start,
+            "CurrentTime should have advanced from the accumulated sub-second ticks, not stayed frozen at Start.");
     }
 
     [Fact]

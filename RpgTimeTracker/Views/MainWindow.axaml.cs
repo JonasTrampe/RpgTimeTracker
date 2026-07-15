@@ -943,4 +943,38 @@ public partial class MainWindow : Window
             vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindow.Errors.CalendarImportFailed"), ex.Message);
         }
     }
+
+    /// <summary>
+    ///     Imports a calendar *definition* (the active calendar's month/weekday/leap-year schema
+    ///     picked in Settings) - distinct from OnImportCalendarClick above, which imports calendar
+    ///     *entries* (GM-authored events). Accepts either our own CalendarDefinition JSON or a
+    ///     Foundry VTT Simple Calendar predefined-calendar export (see
+    ///     MainWindowViewModel.ImportCalendarDefinitionFile/SimpleCalendarImporter).
+    /// </summary>
+    private async void OnImportCalendarDefinitionClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        var topLevel = GetTopLevel(this);
+        if (topLevel is null) return;
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = LocalizationService.Get("MainWindow.Dialogs.ImportCalendarDefinition"),
+            AllowMultiple = false,
+            FileTypeFilter = [CalendarJsonFileType]
+        });
+        if (files.Count == 0) return;
+
+        try
+        {
+            await using var stream = await files[0].OpenReadAsync();
+            using var reader = new StreamReader(stream);
+            vm.ImportCalendarDefinitionFile(await reader.ReadToEndAsync(), files[0].Name);
+        }
+        catch (Exception ex)
+        {
+            vm.ClockErrorMessage = string.Format(LocalizationService.Get("MainWindowViewModel.Errors.CalendarDefinitionImportFailed"), ex.Message);
+        }
+    }
 }

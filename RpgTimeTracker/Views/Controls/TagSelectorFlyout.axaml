@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RpgTimeTracker.ViewModels"
+             xmlns:controls="using:RpgTimeTracker.Views.Controls"
+             x:Class="RpgTimeTracker.Views.Controls.TagSelectorFlyout">
+
+    <StackPanel Spacing="6" Width="200">
+        <TextBlock Classes="muted" Text="{DynamicResource MainWindow.Library.TagsLabel}" />
+        <TextBlock Classes="muted"
+                   Text="{DynamicResource MainWindow.Library.NoTagsAvailable}"
+                   IsVisible="{Binding $parent[controls:TagSelectorFlyout].HasNoTags}" />
+        <ItemsControl ItemsSource="{Binding $parent[controls:TagSelectorFlyout].Options}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TagOptionViewModel">
+                    <CheckBox Content="{Binding Tag.Name}" IsChecked="{Binding IsAssigned, Mode=TwoWay}" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Separator Background="{DynamicResource BorderBrush}" />
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+            <TextBox Grid.Column="0" Name="NewTagNameBox"
+                     PlaceholderText="{DynamicResource MainWindow.Settings.NewTagPlaceholder}"
+                     KeyDown="OnNewTagNameKeyDown" />
+            <Button Grid.Column="1" Content="{DynamicResource MainWindow.Settings.AddTagButton}"
+                    Click="OnCreateTagClick" />
+        </Grid>
+    </StackPanel>
+</UserControl>

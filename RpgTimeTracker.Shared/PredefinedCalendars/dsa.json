@@ -1,0 +1,62 @@
+{
+  "Name": "Aventurian (DSA)",
+  "Description": "Das Schwarze Auge-style calendar: 12 months of 30 days, each named for one of the Twelve Gods, plus 5 Namenlose Tage (Nameless Days) after Rahja before the new year begins.",
+  "Months": [
+    { "Name": "Praios", "Days": 30 },
+    { "Name": "Rondra", "Days": 30 },
+    { "Name": "Efferd", "Days": 30 },
+    { "Name": "Travia", "Days": 30 },
+    { "Name": "Boron", "Days": 30 },
+    { "Name": "Hesinde", "Days": 30 },
+    { "Name": "Firun", "Days": 30 },
+    { "Name": "Tsa", "Days": 30 },
+    { "Name": "Phex", "Days": 30 },
+    { "Name": "Peraine", "Days": 30 },
+    { "Name": "Ingerimm", "Days": 30 },
+    { "Name": "Rahja", "Days": 30 },
+    { "Name": "Namenlose Tage", "Days": 5, "IsIntercalary": true }
+  ],
+  "Weekdays": ["Windstag", "Erdstag", "Markttag", "Praiostag", "Rohalstag", "Feuertag", "Wassertag"],
+  "FirstWeekdayIndex": 0,
+  "LeapYear": {
+    "Kind": 0,
+    "IntervalYears": 0,
+    "MonthIndexAffected": 0,
+    "ExtraDays": 0
+  },
+  "HoursPerDay": 24,
+  "MinutesPerHour": 60,
+  "SecondsPerMinute": 60,
+  "YearZeroOffset": 1040,
+  "Seasons": [
+    { "Name": "Fruehling", "StartMonthIndex": 0, "StartDay": 1, "ColorHex": "#8BC34A" },
+    { "Name": "Sommer", "StartMonthIndex": 3, "StartDay": 1, "ColorHex": "#FFC107" },
+    { "Name": "Herbst", "StartMonthIndex": 6, "StartDay": 1, "ColorHex": "#FF7043" },
+    { "Name": "Winter", "StartMonthIndex": 9, "StartDay": 1, "ColorHex": "#4FC3F7" }
+  ],
+  "Moons": [
+    { "Name": "Mada", "CycleLengthDays": 28, "FirstNewMoonYear": 0, "FirstNewMoonMonthIndex": 0, "FirstNewMoonDay": 1, "ColorHex": "#E0E0E0" }
+  ],
+  "DefaultEntries": [
+    { "Title": "Namenlose Tage", "Description": "The five Nameless Days between Rahja and the new year's Praios 1 - a time outside the twelve months, traditionally seen as unlucky or otherworldly.", "MonthIndex": 12, "Day": 1, "ColorHex": "#B0BEC5" },
+    { "Title": "Sommersonnenwende", "Description": "Sommersonnenwende, Beginn des neuen Jahres, höchster Feiertag in den zwölfgöttlichen Landen, Ehrung der Landesherren und der Ordnung. Großes Ritterturnier in Gareth", "MonthIndex": 0, "Day": 1 },
+    { "Title": "Greifenfest", "Description": "Greifenfest, traditionelle Erhebungen in den Adelsstand", "MonthIndex": 0, "Day": 2 },
+    { "Title": "Tag des Schwurs", "Description": "Tag des Schwurs, höchster Feiertag der Rondrakirche mit vielen Novizenweihen", "MonthIndex": 1, "Day": 5 },
+    { "Title": "Schwertfest", "Description": "Schwertfest, Feiertag der Rondrakirche mit Turnieren und Wettkämpfen", "MonthIndex": 1, "Day": 15 },
+    { "Title": "Tag des Wassers", "Description": "Tag des Wassers, höchster Feiertag der Efferdkirche, viele Prozessionen und Feiern", "MonthIndex": 2, "Day": 1 },
+    { "Title": "Fischerfest", "Description": "Fischerfest, Gedenken der Seelen der Ertrunkenen, Prüfungsfest (Feiertag der Hesindekirche), beliebter Tag für Abschlussprüfungen an Magierakademien", "MonthIndex": 2, "Day": 30 },
+    { "Title": "Tag der Heimkehr", "Description": "Tag der Heimkehr, vor allem im Norden von Thorwalern, Norbarden und Bornländern begangen", "MonthIndex": 3, "Day": 1 },
+    { "Title": "Tag der Treue", "Description": "Tag der Treue, viele Eheschließungen und sonstige Schwüre", "MonthIndex": 3, "Day": 12 },
+    { "Title": "Totenfest", "Description": "Totenfest, Gebete für alle Verstorbenen", "MonthIndex": 4, "Day": 1 },
+    { "Title": "Allaventurisches Gauklertreffen", "Description": "Allaventurisches Gauklertreffen in Khunchom mit zahllosen Darbietungen", "MonthIndex": 4, "Day": 2 },
+    { "Title": "Erleuchtungsfest", "Description": "Erleuchtungsfest, höchster Feiertag der Hesindekirche mit vielen Prozessionen", "MonthIndex": 5, "Day": 30 },
+    { "Title": "Wintersonnenwende", "Description": "Wintersonnenwende, Tag der Jagd, Feiertag der Firun- und Ifirnkirche, vielerorts Maskenumzüge, um den Winter zu vertreiben", "MonthIndex": 6, "Day": 1 },
+    { "Title": "Tag der Erneuerung", "Description": "Tag der Erneuerung, Feiertag des Tsakults, Beginn von Neuvorhaben aller Art", "MonthIndex": 7, "Day": 30 },
+    { "Title": "Tag des Phex", "Description": "Tag des Phex, Festtag der Händler und Diebe, an dem gerne heimliche Pakte mit dem Gott geschlossen werden.", "MonthIndex": 8, "Day": 16 },
+    { "Title": "Tag der Saat", "Description": "Tag der Saat, feierliche Segnung der Felder", "MonthIndex": 9, "Day": 1 },
+    { "Title": "Jährliches Bardentreffen", "Description": "Jährliches Bardentreffen (wechselweise in Honingen, Norburg, Bethana und Zorgan)", "MonthIndex": 9, "Day": 7 },
+    { "Title": "Tag des Feuers", "Description": "Tag des Feuers, rituelle Waffenweihe, auch höchster Feiertag der Angroschgläubigen, Beginn der Warenschau in Festum", "MonthIndex": 10, "Day": 1 },
+    { "Title": "Tag der Waffenschmiede", "Description": "Tag der Waffenschmiede, höchster Feiertag des Ingerimm, Fackelprozessionen, Aufnahme neuer Lehrlinge und Schmieden besonderer Meisterstücke", "MonthIndex": 10, "Day": 21 },
+    { "Title": "Fest der Freuden", "Description": "Fest der Freuden, fröhliche Straßenfeste und Umzüge zu Ehren Rahjas", "MonthIndex": 11, "Day": 1 }
+  ]
+}

@@ -1876,3 +1876,333 @@ backward-incompatible way, a load/import path can check this field and
 apply an explicit upgrade step, instead of the far worse alternative of
 having to guess a version for every already-exported map that predates
 the concept of versioning at all.
+
+## Custom calendar engine (`GameInstant`/`CalendarDefinition`), a breaking save-format change
+
+Game time used to be a plain `DateTime`, hardcoding the Gregorian calendar
+into every layer that touched it (save format, RPC wire format, alarm/
+calendar-entry recurrence math, the month-grid display, the Y/M/D/H/M/S
+entry control). Since a GM wants Scenes with start dates on a fully custom,
+exchangeable calendar (arbitrary month/weekday names and lengths, leap
+rules, hours/day, seasons, moons - matching Foundry VTT Simple Calendar's
+predefined-calendar format), this had to go all the way rather than bolting
+custom-calendar display on top of a `DateTime`-shaped core.
+
+`GameInstant` is a minimal `readonly struct` wrapping `long TotalSeconds`
+(elapsed since an arbitrary epoch) - deliberately kept this thin so
+`GameClockService`'s tick/speed/jump math (still real SI seconds via
+`TimeSpan`/`Stopwatch`) didn't need to change at all, only the type it
+stores. `CalendarDefinition` owns all the actual calendar math
+(`ToCalendarDate`/`FromCalendarDate`, leap-year rules, weekday cycling,
+moon-phase calculation) and is looked up through a `CalendarService.Active`
+static holder - the same convention already used by `LocalizationService`/
+`SoundService`/`VisualItemHelper` - so ViewModels can format/parse dates
+without threading a `CalendarDefinition` through every constructor.
+`CalendarEntryDefinition`'s recurrence logic (`TryGetOccurrenceOn`,
+`GetNextOccurrenceAtOrAfter`, etc.) now takes the active calendar as an
+explicit parameter instead of assuming `DateTime.DaysInMonth`/`IsLeapYear`.
+
+**This is a breaking, unmigrated save-format change** (`AppStateDto.Version`
+bumped from 4 to 5): a pre-rework save's `CurrentGameTime` field doesn't
+exist in the new schema, so without an explicit `Version < 5` guard in
+`ImportStateFromJson` it would silently deserialize `CurrentGameTimeSeconds`
+as `0` instead of failing loudly. Unlike the earlier plain-JSON-to-`.rtt-save`
+zip upgrade, there is deliberately no auto-upgrade path here - old saves on
+this build must simply stay on an older build. The same reasoning produced
+`SaveFormatVersionGuardTests`: a reflection-based test that fails if
+`AppStateDto`'s object graph shape changes anywhere without a matching
+`Version` bump, so this class of bug (a schema change nobody remembered to
+version-guard) can't silently recur.
+
+`Views/Controls/DateTimeInput.axaml`(`.cs`) (a Gregorian-only Y/M/D/H/M/S
+entry control) was replaced outright by `CalendarDateInput`, which reads its
+Y/M/D/H/M/S bounds (month count, days-in-month, hours/day, minutes/hour,
+seconds/minute) from `CalendarService.Active` instead of
+`DateTime.DaysInMonth`/hardcoded limits - since every call site was migrated
+in the same change, the old control was deleted rather than kept alongside
+as dead code.
+
+Four calendars ship bundled (`RpgTimeTracker.Shared/PredefinedCalendars/*.json`,
+loaded via `CalendarDefinitionLoader` following the exact
+`ThemeDefinitionLoader` bundled-vs-custom split): `Gregorian` (today's exact
+prior behavior, the default), `Harptos` (a Forgotten-Realms-style calendar
+with 30-day months, five single-day intercalary festivals, tendays instead
+of 7-day weeks, and a Shieldmeet leap day), `Aventurian (DSA)` (a Das
+Schwarze Auge-style calendar - 12 months named for the Twelve Gods plus
+five Namenlose Tage after Rahja, no leap rule) and `Voidreach` (a fictional
+sci-fi colony calendar - 10 months of 36 days, an 8-day week, and a metric
+20-hour/100-minute/100-second day) - the latter exists specifically to
+exercise "genuinely different month count/length and week length" rather
+than being a verbatim reproduction of any one external source; `Harptos`/
+`Aventurian (DSA)` reproduce only the public calendar facts (month names/
+lengths, intercalary days, week names) of their respective settings, not
+any copyrighted text - see `PredefinedCalendars/CALENDARS_NOTICE.txt` and
+`THIRD-PARTY-NOTICES.txt` for the attribution/trademark disclaimer. A GM
+can also drop a hand-authored calendar JSON into
+`%AppData%/RpgTimeTracker/Calendars`, resolved the same way as the bundled
+ones. The choice is a `MainWindowViewModel.SelectedCalendarOption` ComboBox
+in Settings, persisted as `ThemeSettingsDto.LastCalendarName` and restored
+before `GameClockService`'s own default start time is computed (so the
+"reasonable fantasy start" default itself is already expressed in the
+right calendar). Switching calendars re-renders every displayed date for
+the *same* `GameInstant` under the new rules (nothing about the underlying
+elapsed time changes) and pushes a full session resync, since
+`SessionSnapshotParams.ActiveCalendar` is only sent once at connect, not
+per tick.
+
+## Tags: a flat, campaign-wide list, not Shared-vs-SessionLocal like the libraries
+
+Every other library (Media/Sound/Music/Map/NPC) splits entries into Shared
+(campaign-wide) vs SessionLocal (this session only), because those entries
+carry real file content or session-specific detail worth scoping. Tags are
+different: a `Tag` is just an `Id`/`Name`/`ColorHex` triple with no content
+of its own, so per-session scoping would only add bookkeeping without
+buying anything - a single flat `ThemeSettingsDto.Tags` list, CRUD'd from a
+"Tags" group in Settings, is enough.
+
+Each library item ViewModel gained an `ObservableCollection<Guid> TagIds`,
+wired the same way as every other cross-referencing Id in this codebase:
+`CollectionChanged` calls the item's own existing change-notification path
+(`NotifyChanged()` on the `LibraryItemViewModelBase`-derived and NPC VMs,
+`_onChanged?.Invoke(this)` directly on `MapItemViewModel`, which predates
+that base class), so adding/removing a tag auto-persists via each item's
+already-existing `Save*LibrarySettings()` chain. Deleting a tag reuses
+`LibraryUsageRegistry.ClearReferencesTo` - the exact mechanism already used
+to unset dangling trigger-media/playlist/NPC references - and, unlike
+deleting an in-use Media/Sound/Map/NPC item, does **not** show a
+confirmation dialog first: untagging every item that had it is low-stakes
+since no content is lost, just an organizational label.
+
+Per-item tag assignment reuses one `TagSelectorFlyout` UserControl
+(`Views/Controls/TagSelectorFlyout.axaml`) embedded as a "🏷" button's
+Flyout content in each of the five item templates, rather than duplicating
+a checkbox list five times. It takes the campaign-wide `AllTags` list and
+the single item's `AssignedTagIds` collection, and on open builds a
+per-instance `TagOptionViewModel` list (Tag + IsAssigned) so each
+`CheckBox` toggle directly Adds/Removes the tag's `Guid` in the bound
+item - no two-way binding onto a `Guid` collection is needed, which
+Avalonia doesn't support cleanly for arbitrary membership toggling.
+
+`TagSelectorFlyout` also has an inline "new tag" row (a `TextBox` + Add
+`Button`, bound to a `CreateTagCommand` the flyout doesn't own the logic
+of) so a GM tagging an item doesn't have to close the flyout, go to
+Settings, define the tag there, then come back and reopen the flyout to
+actually assign it - a real point of friction reported directly. The
+command is `MainWindowViewModel.CreateTagCommand`, factored out of the
+existing `AddTag` (Settings "Add" button) so both call the same
+underlying `CreateTag(name)` rather than duplicating tag-construction
+logic. The newly created tag shows up unassigned in the flyout's list
+(via the existing `AllTags.CollectionChanged` subscription used for the
+Settings-tab case too) - the GM still checks its box once to assign it,
+rather than the flyout guessing that "just created" implies "assign to
+this item," which would be surprising for a tag meant for several items
+at once.
+
+A library filter bar (filtering `LibraryPanelView`'s displayed items by
+selected tag) is deliberately deferred to a later pass - it needs either a
+collection-view abstraction Avalonia doesn't ship out of the box, or
+duplicating a filtered-collection-per-library pattern five times, and is
+better scoped once it's clear which items actually need filtering in
+practice.
+
+## Tag filter bar: multi-select chips owned by `LibraryPanelView` itself, not the ViewModel
+
+The filter bar (a row of toggleable chips generated from the campaign's
+tag list, above each library's items) needed to support selecting several
+tags at once (any-of matching), not a single active filter. Rather than
+adding a `SelectedFilterTagIds` property + a filtered collection to
+`MainWindowViewModel` for each of Media/Sound/Music (tripling the
+plumbing), the whole feature lives inside `LibraryPanelView` itself:
+
+- A new `ITaggable` interface (`Models/ITaggable.cs`) exposes `TagIds` -
+  implemented by all five item view models - so the control can filter a
+  heterogeneous `ItemsSource` without knowing the concrete item type.
+- `LibraryPanelView` takes an `AllTags` binding (the campaign's tag list)
+  and builds one `TagFilterOptionViewModel` chip per tag; toggling a chip
+  adds/removes that tag's Id from an internal `HashSet<Guid>` and
+  recomputes an internal `FilteredItemsSource` (empty selection = show
+  everything, matching **any** selected tag = shown). The `ItemsControl`
+  that renders the actual tiles binds to `FilteredItemsSource` instead of
+  the raw `ItemsSource` now.
+- Because tags can be (un)assigned on an already-displayed item via the
+  per-item `TagSelectorFlyout` while the panel is open, `LibraryPanelView`
+  also subscribes to every item's `TagIds.CollectionChanged` (and to the
+  source collection's own `CollectionChanged`, to pick up added/removed
+  items) so the filtered view stays live without needing an explicit
+  refresh trigger from outside.
+
+This keeps `MainWindowViewModel` completely unaware that filtering exists
+- consistent with `LibraryPanelView` already owning Add/Export/Import UI
+  chrome the ViewModel doesn't know about either. Only the Media/Sound/
+  Music tabs use `LibraryPanelView`; Map and NPC use a simpler direct
+  `ListBox`, so the filter bar doesn't (yet) cover those two.
+
+## Scenes library (Phase 2): data layer first, no tab UI yet
+
+The full plan for Scenes is large - a start date on the custom calendar, a
+media bundle, its own scoped timeline, and "activate Scene" orchestration
+that pushes that bundle to players atomically. Rather than building all of
+that (plus a new Scenes tab) in one pass, this round ships only the data/
+persistence layer, following the same incremental approach the Characters
+(NPC) library and the Tags feature were built in.
+
+`SceneLibraryItemViewModel` (`ViewModels/SceneLibraryItemViewModel.cs`)
+follows `NpcLibraryItemViewModel`'s precedent exactly: it doesn't derive
+from `LibraryItemViewModelBase<TSelf>` because a Scene owns no single
+file, just references - `Image`/`Map`/`Music` (nullable) and `Sounds` (a
+collection) are foreign keys into the Media/Map/Music/Sound libraries by
+Id, resolved the same way NPC portrait/token/sound references already
+are. `StartDate` is a `GameInstant` (see the custom calendar engine's
+design decision), not a `DateTime` - it's meaningless without knowing
+which `CalendarDefinition` is active, exactly like every other game-time
+value in this codebase since Phase 0.
+
+Scenes get the same Shared-vs-SessionLocal split as every other library
+(`SaveLibrarySettings`, `ThemeSettingsDto.SceneLibrary` +
+`SessionLibraryDto.SceneLibrary`), the same `LibraryUsageRegistry`
+registration so deleting a bundled Media/Sound/Music/Map item is guarded
+against, and implement `ITaggable` so Scenes can carry Tags like every
+other library item (registered into `FindTagUsagesById`/
+`ClearTagReferencesById` alongside the other five).
+
+Deliberately not done yet, left for later rounds per the plan: a
+GM-only description pop-out window (the inline Markdown editor/preview
+toggle in the tab covers the same need for now), "activate Scene"
+orchestration (pushing the bundle to players atomically through the
+existing per-kind send paths), the Scene-scoped timeline, and inclusion
+in the full-session `.rtt-session` export/import (a known gap, same
+shape as the one NPCs briefly had - see "Fix: include NPCs in session/
+full-session export-import" in the CHANGELOG history).
+
+## Scenes tab: mirrors the Characters tab's list+detail layout, no new patterns
+
+The Scenes tab (`MainWindow.axaml`) is deliberately built from pieces
+this codebase already has, rather than inventing new UI conventions for
+what is, structurally, "another library with a detail editor":
+
+- List+detail two-column layout, `ListBox` with an inline-editable Name
+  `TextBox` and a "⋮" MenuFlyout for move-to-Shared/Session, copied from
+  the Characters tab's Character list.
+- The description field reuses the exact plain-text/Markdown-preview
+  toggle pair (`TextBox` + `mdxaml:MarkdownScrollViewer`, switched by an
+  `IsDescriptionPreviewMode` bool and a "👁"/"✎" icon button) already used
+  for NPC GM Info blocks (`NpcGmInfoBlockViewModel.IsPreviewMode`) -
+  `SceneLibraryItemViewModel` carries its own copy of that same small
+  pattern rather than factoring out a shared control, since it's only
+  used in these two places and the binding paths differ.
+- `StartDate` is edited via the existing `CalendarDateInput` control
+  through a `StartDateText` bridge property, following
+  `CalendarEntryViewModel.StartDateTimeText`'s exact precedent: invalid
+  text is left as typed until `CalendarService.Active.TryParseDateTimeText`
+  succeeds, at which point `StartDate` (the real, persisted `GameInstant`)
+  updates; edits to `StartDate` from elsewhere (e.g. on load) reformat
+  `StartDateText` the other way, guarded by an equality check to avoid
+  fighting the user while they're mid-edit.
+- The media bundle (Image/Map/Music) is three `ComboBox`es bound directly
+  to `MediaLibrary`/`MapLibrary`/`MusicLibrary` with `SelectedItem`
+  two-way bound to the Scene's own `Image`/`Map`/`Music` properties -
+  the same "pick a library item by reference" `ComboBox` pattern already
+  used for a Calendar entry's trigger media. Sounds (a list, not a single
+  reference) get a small "pick from `SoundLibrary`, then click Add" row
+  instead (`PendingSoundToAdd` + `AddPendingSoundCommand`), since a
+  `ComboBox` can't represent "add to a collection" as a `SelectedItem`
+  binding on its own.
+
+## Fix: Gregorian calendar's leap-year rule was missing the century exception
+
+`CalendarLeapYearRuleKind` originally only had `None` and `Interval`
+(leap every N years), and the bundled Gregorian calendar used
+`Interval(4)` to approximate the real-world rule. That's wrong: the
+actual Gregorian rule is "every 4 years, except centuries, except every
+4th century" - 1900 and 2100 are *not* leap years, but 2000 and 2400
+*are*. `Interval(4)` alone marks 1900/2100 as leap incorrectly, which
+would show a non-existent Feb 29 and shift every later date in those
+years by a day.
+
+Fixed by adding a dedicated `CalendarLeapYearRuleKind.Gregorian` value
+that implements the real `(year % 4 == 0 && year % 100 != 0) || year %
+400 == 0` check in `CalendarDefinition.IsLeapYear`, and switching both
+the bundled `gregorian.json` and `SimpleCalendarImporter`'s `"gregorian"`
+rule mapping (previously documented as an accepted `Interval(4)`
+approximation - now exact) to use it. `IntervalYears` stays as a
+separate rule for custom calendars that genuinely do want a flat
+N-year cycle (e.g. some homebrew calendars use a simpler rule than
+real-world centuries) - `Gregorian` isn't a generalization of `Interval`,
+it's a distinct, hardcoded rule shape. Regression tests cover 1900/2000/
+2024/2023/2100/2400 against the bundled calendar directly, rather than
+only exercising the round-trip test that happened to not touch a
+century year.
+
+## "Activate Scene": direct reuse of per-kind send paths, no new wire logic
+
+The plan called for pushing a Scene's bundle to players "atomically
+through the existing per-kind send paths" rather than inventing a new
+"bundle" concept on the wire. `ActivateSceneAsync`
+(`MainWindowViewModel.SceneLibrary.cs`) does exactly that: it calls
+`ShowMediaLibraryItem` for the Image, `OpenMapToPlayersAsync` for the Map,
+`PlaySoundLibraryItem` for each Sound, and a new small
+`SendSceneMusicTrackAsync` for Music - four independent sends, not one
+combined RPC message. If a bundle piece is missing (`null`/empty), that
+step is simply skipped; there's no partial-failure rollback to worry
+about because each send is already independently safe to call (that's
+exactly what these methods already do for a Media Library double-click,
+the "Show" button on a Map, and a Sound Library tile click).
+
+Music needed one new (but small) method rather than a call to an
+existing one: `PlayMusicLibraryItem` (a single tile's "Play" button) is
+deliberately local-preview-only - an earlier design decision was that
+real network distribution only happens through a Playlist, since a
+single ad-hoc track has no sequencing/routing context to advance from. A
+Scene's bundled Music has the same "no sequencing needed" shape, so
+`SendSceneMusicTrackAsync` reuses only the actual *send* step of
+`PlayCurrentPlaylistTrackAsync` (build the header, read the file,
+`PublishMusicTrackAsync`, start the Host's own local preview if enabled)
+without any of `PlayPlaylistAsync`'s bookkeeping (`CurrentPlaylist`,
+`_playbackOrder`, track-ended auto-advance) - there's nothing to advance
+to for a single Scene track, so building a throwaway one-track
+`PlaylistViewModel` just to reuse `PlayPlaylistAsync` would have added
+machinery instead of removing it.
+
+## Fix: sub-second clock ticks were silently discarded, freezing the displayed game time
+
+Reported as "the time in the Host/Player windows doesn't run anymore,"
+with a telling clue: Timers and Alarms kept working fine. That split is
+the key to the bug. `GameClockService`'s `DispatcherTimer` fires every
+200ms, and at 1x speed that's a real-time delta well under a second per
+tick. `GameInstant.Add` stores only whole seconds and applies a delta via
+`new(TotalSeconds + (long)delta.TotalSeconds)` - casting a sub-second
+`TimeSpan` (e.g. 0.2s) to `long` truncates it to zero. Every tick's delta
+was silently discarded before this fix, so `CurrentTime` only ever
+advanced when a single tick's delta happened to exceed a full second
+(e.g. after an unusually long UI stall) - to an observer, the clock looked
+completely frozen. Timers/Alarms were unaffected because they track
+elapsed time as a plain `TimeSpan` internally, never going through
+`GameInstant.Add`, so they kept counting down correctly the whole time -
+which is why the report specifically said "just the display," not "the
+whole engine."
+
+This was diagnosed, not guessed: a throttled temporary debug log (later
+removed) at the point where the display string is set showed
+`newTime.TotalSeconds` staying byte-for-byte identical across dozens of
+ticks with a nonzero `gameDelta` on every one - conclusive evidence the
+tick loop itself was firing and computing correctly, but its result
+never stuck. Actual log files from the running app (`%AppData%/
+RpgTimeTracker/logs`) were essential here; reasoning about the code in
+isolation had already (wrongly) pointed at exceptions in calendar
+formatting and DispatcherTimer starvation before the live diagnostic
+settled it.
+
+Fixed in `GameClockService` by accumulating the fractional game-seconds
+across ticks (`_carrySeconds`) and only applying whole seconds to
+`CurrentTime`, carrying the remainder to the next tick rather than
+dropping it - regardless of tick interval or `SpeedMultiplier`. The full-
+precision `gameDelta` `TimeSpan` is still passed to `Tick` subscribers
+unchanged, so Timers/Alarms keep their existing sub-second accuracy; only
+the `GameInstant` accumulation itself changed. This is a long-standing
+bug from the Phase 0 `GameInstant` migration (`GameClockService` itself
+was untouched by any later phase), not a regression from a specific
+recent change - it went unnoticed because nothing had exercised the
+`DispatcherTimer`-driven tick path in a unit test before (a plain xunit
+test has no running Avalonia dispatcher to pump it), only `Jump`/
+`SetTime`. The new regression test invokes the private tick handler
+directly with repeated real sub-second delays to close that gap.
