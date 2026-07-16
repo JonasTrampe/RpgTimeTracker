@@ -239,6 +239,13 @@ public sealed class MapTokenSnapshotDto
     public string? Detail { get; set; }
     public string? IconGlyph { get; set; }
 
+    /// <summary>
+    ///     The Character's player-facing Markdown bio/description (NpcVariantViewModel.PlayerInfo),
+    ///     only populated when the token's PlayerVisiblePlayerInfo toggle is on - null for
+    ///     freeform/Point of Interest tokens, which have no such field.
+    /// </summary>
+    public string? PlayerInfo { get; set; }
+
     /// <summary>Set by the Initiative tracker (#70) - true for the one token whose turn it currently is.</summary>
     public bool IsCurrentTurn { get; set; }
 
@@ -255,6 +262,18 @@ public sealed class MapTokenSnapshotDto
 public sealed class MapTokenRemoveParams
 {
     public Guid TokenId { get; set; }
+}
+
+/// <summary>
+///     Shared shape for both map.pingFromPlayer (client-to-server) and map.ping (server-to-
+///     client) - image-space coordinates on one floor, meaningful only relative to whichever
+///     floor the receiving side currently has displayed (see RpcMethods.MapPing's doc comment).
+/// </summary>
+public sealed class MapPingParams
+{
+    public Guid FloorId { get; set; }
+    public double X { get; set; }
+    public double Y { get; set; }
 }
 
 /// <summary>Server-to-client: adjusts the volume of the currently playing music track live (0-100).</summary>

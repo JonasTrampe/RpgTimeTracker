@@ -157,6 +157,20 @@ public static class RpcMethods
     public const string MapTokenRemove = "map.tokenRemove";
 
     /// <summary>
+    ///     Client-to-server: a player double-clicked the map, pointing at something for the GM -
+    ///     visible only to the GM (the Host's own preview(s)), never rebroadcast to other players.
+    ///     Ephemeral - not persisted, not part of map.show's resync for newly-connecting clients.
+    /// </summary>
+    public const string MapPingFromPlayer = "map.pingFromPlayer";
+
+    /// <summary>
+    ///     GM double-clicked their own map - broadcast to every connected player (and shown on
+    ///     the Host's own preview locally, no network round-trip needed for that). Same ephemeral
+    ///     nature as MapPingFromPlayer, just the other direction.
+    /// </summary>
+    public const string MapPing = "map.ping";
+
+    /// <summary>
     ///     GM stops the currently playing music track/playlist - independent of the image/video
     ///     "current medium" slot and of sound effects, see MediaHeaderDto.MediaKindMusic.
     /// </summary>

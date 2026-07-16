@@ -3,7 +3,8 @@
              xmlns:viewModels="using:RpgTimeTracker.Shared.ViewModels"
              xmlns:rpc="using:RpgTimeTracker.Shared.Models.Rpc"
              x:Class="RpgTimeTracker.Shared.Views.MapDisplayView"
-             x:DataType="viewModels:MapDisplayViewModel">
+             x:DataType="viewModels:MapDisplayViewModel"
+             x:Name="Self">
 
     <!-- Shared by the Host's local player-window preview (PlayerWindow.axaml) and the real
          PlayerClient (MediaWindow.axaml) - both set DataContext="{Binding MapDisplay}" on this
@@ -34,7 +35,7 @@
                 <LayoutTransformControl.LayoutTransform>
                     <ScaleTransform />
                 </LayoutTransformControl.LayoutTransform>
-                <Panel Width="{Binding CurrentFloorImageBitmap.PixelSize.Width}"
+                <Panel x:Name="ImageContentPanel" Width="{Binding CurrentFloorImageBitmap.PixelSize.Width}"
                        Height="{Binding CurrentFloorImageBitmap.PixelSize.Height}">
                 <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Fill" />
                 <Image Source="{Binding CurrentFloorImageBitmap}" Stretch="Fill"
@@ -90,6 +91,13 @@
                                                        IsVisible="{Binding Name, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                                             <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" MaxWidth="260"
                                                        IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <!-- Plain text, not rendered as Markdown despite PlayerInfo being
+                                                 Markdown-authored (matches the About screen's renderer) - a
+                                                 ToolTip is a lightweight hover affordance, not worth pulling a
+                                                 Markdown control into; can be revisited if plain text reads
+                                                 poorly in practice. -->
+                                            <TextBlock Text="{Binding PlayerInfo}" TextWrapping="Wrap" MaxWidth="260"
+                                                       IsVisible="{Binding PlayerInfo, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                                         </StackPanel>
                                     </ToolTip.Tip>
                                     <Panel>
@@ -134,9 +142,13 @@
 
         <!-- Zoom/pan toolbar - bottom-left specifically avoids every existing overlay in both
              host windows (game-time text top-left, minimize/close top-right, the floor-nav bar
-             above is bottom-center, PlayerWindow's ExitFullscreenButton is bottom-right). -->
+             above is bottom-center, PlayerWindow's ExitFullscreenButton is bottom-right). Hidden
+             when this view mirrors another control's viewport instead of owning its own zoom
+             (see ShowZoomControls/SetExternalViewport) - the buttons would just get overridden by
+             the next source-control zoom/pan anyway. -->
         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left"
-                    VerticalAlignment="Bottom" Margin="16">
+                    VerticalAlignment="Bottom" Margin="16"
+                    IsVisible="{Binding #Self.ShowZoomControls}">
             <Button Content="&#8722;" Click="OnZoomOutClick"
                     Background="#66000000" Foreground="White" BorderThickness="0" />
             <Border Background="#66000000" CornerRadius="6" Padding="10,6">

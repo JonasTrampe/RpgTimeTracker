@@ -51,6 +51,9 @@ public partial class MapLiveWindow : Window
         EditCanvas.Configure(_vm.GetLiveFog, FogOverlayRenderer.EditorHiddenColor);
         EditCanvas.FloorChanged += OnFloorChanged;
         EditCanvas.CellsPainted += OnCellsPainted;
+        // Subscribed before SetFloors below, which already applies an initial fit-zoom and would
+        // otherwise fire ViewportChanged before the preview is listening for it.
+        EditCanvas.ViewportChanged += (zoom, offset) => PreviewDisplay.SetExternalViewport(zoom, offset);
         EditCanvas.SetFloors(map.Floors, _vm.EditingFloor is not null && map.Floors.Contains(_vm.EditingFloor)
             ? _vm.EditingFloor
             : map.Floors.Count > 0
@@ -60,12 +63,18 @@ public partial class MapLiveWindow : Window
         EditCanvas.SetMap(_map);
         EditCanvas.TokenSelected += token => TokenPanel.SelectedToken = token;
         EditCanvas.TokenMoved += _ => RefreshPreviewTokens();
+        EditCanvas.PingRequested += (floorId, x, y) =>
+        {
+            _ = _vm.BroadcastMapPingAsync(floorId, x, y);
+            _previewDisplay.NotifyPingReceived(floorId, x, y);
+        };
         TokenPanel.Configure(_vm, _map);
         TokenPanel.TokensMutated += EditCanvas.RefreshTokens;
         TokenPanel.TokensMutated += RefreshPreviewTokens;
 
         InitiativePanel.Configure(_vm, _map);
         _vm.InitiativeTurnChanged += OnInitiativeTurnChanged;
+        _vm.PlayerMapPingReceived += OnPlayerMapPingReceived;
 
         _flushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
         _flushTimer.Tick += (_, _) => _ = FlushPendingAsync();
@@ -193,10 +202,24 @@ public partial class MapLiveWindow : Window
         EditCanvas.SetFloors(_map.Floors, floor);
     }
 
+    /// <summary>
+    ///     A player pinged the map - shows it on this window's mirrored preview, but only if
+    ///     this window is editing the map currently open to players (the ping payload carries no
+    ///     map identity - see MainWindowViewModel.PlayerMapPingReceived's doc comment).
+    ///     NotifyPingReceived itself drops it if the preview isn't showing the pinged floor.
+    /// </summary>
+    private void OnPlayerMapPingReceived(Guid floorId, double x, double y)
+    {
+        if (!ReferenceEquals(_vm.OpenMap, _map)) return;
+
+        _previewDisplay.NotifyPingReceived(floorId, x, y);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         _flushTimer.Stop();
         _vm.InitiativeTurnChanged -= OnInitiativeTurnChanged;
+        _vm.PlayerMapPingReceived -= OnPlayerMapPingReceived;
         base.OnClosed(e);
     }
 }

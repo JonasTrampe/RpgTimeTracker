@@ -144,6 +144,27 @@ public partial class MapEditCanvasControl : UserControl
     public event Action<MapTokenViewModel>? TokenMoved;
 
     /// <summary>
+    ///     Fired whenever this canvas's own zoom or pan changes (ApplyZoom/PanToPoint) - lets an
+    ///     owner mirror the exact viewport elsewhere, e.g. MapLiveWindow's "Vorschau" thumbnail
+    ///     tracking whatever the GM is currently looking at rather than fitting/zooming
+    ///     independently.
+    /// </summary>
+    public event Action<double, Vector>? ViewportChanged;
+
+    /// <summary>Current zoom/pan, for an owner to sync a mirrored view to on first load (before any ApplyZoom/PanToPoint call has fired ViewportChanged).</summary>
+    public (double Zoom, Vector Offset) GetViewport()
+    {
+        return (_zoom, ScrollHost.Offset);
+    }
+
+    /// <summary>
+    ///     Fired when the GM double-clicks the canvas background (not a token marker) - image-
+    ///     space (x, y) on the given floor. The owner broadcasts this to every connected player
+    ///     (see MainWindowViewModel.BroadcastMapPingAsync) and shows it locally too.
+    /// </summary>
+    public event Action<Guid, double, double>? PingRequested;
+
+    /// <summary>
     ///     Must be called once (any time before/after SetMap) - the resolver methods on
     ///     MainWindowViewModel (ResolveTokenName/Portrait/IconGlyph/Initials) are how a linked
     ///     token's marker knows what to render without this control needing its own copy of the
@@ -417,6 +438,7 @@ public partial class MapEditCanvasControl : UserControl
         UpdateZoomLabel();
         if (_lastPointerPosition is { } position) UpdateBrushCursor(position);
         RenderTokens();
+        ViewportChanged?.Invoke(_zoom, ScrollHost.Offset);
     }
 
     private void UpdateZoomLabel()
@@ -433,6 +455,7 @@ public partial class MapEditCanvasControl : UserControl
     {
         var viewport = ScrollHost.Viewport;
         ScrollHost.Offset = new Vector(imageX * _zoom - viewport.Width / 2, imageY * _zoom - viewport.Height / 2);
+        ViewportChanged?.Invoke(_zoom, ScrollHost.Offset);
     }
 
     private void OnZoomInClick(object? sender, RoutedEventArgs e)
@@ -463,9 +486,23 @@ public partial class MapEditCanvasControl : UserControl
         e.Handled = true;
     }
 
+    /// <summary>
+    ///     A left-button double-click on the canvas background pings players instead of
+    ///     painting fog (see PingRequested) - the first click of the pair still paints one brush
+    ///     stroke as normal (there's no way to know it's a double-click until the second press
+    ///     arrives), only the second click is diverted.
+    /// </summary>
     private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(EditorCanvas).Properties.IsLeftButtonPressed) return;
+
+        if (e.ClickCount == 2 && CurrentFloor is not null)
+        {
+            var pingPosition = e.GetPosition(EditorCanvas);
+            PingRequested?.Invoke(CurrentFloor.Id, pingPosition.X / _zoom, pingPosition.Y / _zoom);
+            e.Handled = true;
+            return;
+        }
 
         _isPainting = true;
         PaintAt(e.GetPosition(EditorCanvas));

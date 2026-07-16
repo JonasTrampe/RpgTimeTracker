@@ -15,6 +15,15 @@ public partial class MediaWindow : Window
     {
         InitializeComponent();
         KeyDown += OnKeyDown;
+        MapDisplayControl.PingRequested += OnMapPingRequested;
+    }
+
+    /// <summary>Double-click on the map - reports it to the host, visible only to the GM.</summary>
+    private void OnMapPingRequested(double x, double y)
+    {
+        if (DataContext is not ClientMainWindowViewModel vm || vm.MapDisplay.CurrentFloorId is not { } floorId) return;
+
+        _ = vm.SendMapPingAsync(floorId, x, y);
     }
 
     // Local closing, independent of the host: stops any running video playback and only

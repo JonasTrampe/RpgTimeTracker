@@ -1,9 +1,13 @@
 using System;
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Styling;
 using RpgTimeTracker.Shared.ViewModels;
 
 namespace RpgTimeTracker.Shared.Views;
@@ -29,14 +33,38 @@ public partial class MapDisplayView : UserControl
     private const double ZoomMax = 8.0;
     private const double ZoomStep = 0.1;
 
+    /// <summary>
+    ///     False for MapLiveWindow's "Vorschau" thumbnail, which mirrors the GM's own EditCanvas
+    ///     viewport live (see SetExternalViewport) rather than being independently zoomable - its
+    ///     own zoom/Fit buttons would just get overridden by the next main-canvas zoom/pan, so
+    ///     they're hidden there instead of left as dead UI. True (default) for every real
+    ///     player-facing use (PlayerWindow/MediaWindow), which does own its zoom.
+    /// </summary>
+    public static readonly StyledProperty<bool> ShowZoomControlsProperty =
+        AvaloniaProperty.Register<MapDisplayView, bool>(nameof(ShowZoomControls), true);
+
+    public bool ShowZoomControls
+    {
+        get => GetValue(ShowZoomControlsProperty);
+        set => SetValue(ShowZoomControlsProperty, value);
+    }
+
     private double _zoom = 1.0;
     private bool _zoomIsFit = true;
     private MapDisplayViewModel? _viewModel;
 
-    /// <summary>Right- or middle-button drag pan state - left button is left free for whatever future token/marker interaction players might get.</summary>
+    /// <summary>Right- or middle-button drag pan state - left button is used for the ping double-click below.</summary>
     private Point? _dragStartPointerPosition;
 
     private Vector _dragStartOffset;
+
+    /// <summary>
+    ///     Fired on a left-button double-click on the map, image-space (x, y) - the owner
+    ///     decides what a ping means here: the real PlayerClient sends it to the host
+    ///     (SendMapPingFromPlayerAsync), the Host's own PlayerWindow preview has nothing
+    ///     sensible to do with it and can just leave it unhandled.
+    /// </summary>
+    public event Action<double, double>? PingRequested;
 
     public MapDisplayView()
     {
@@ -53,10 +81,22 @@ public partial class MapDisplayView : UserControl
         DataContextChanged += OnDataContextChanged;
     }
 
-    /// <summary>Right/middle-button drag pans the map - left click is left free, and there are no scrollbars/wheel-scroll to pan with otherwise since wheel now zooms directly (see OnPointerWheelChanged).</summary>
+    /// <summary>
+    ///     Right/middle-button drag pans the map. A left-button double-click pings instead (see
+    ///     PingRequested) - single left-clicks are otherwise unclaimed here, so this doesn't
+    ///     conflict with anything.
+    /// </summary>
     private void OnScrollHostPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         var point = e.GetCurrentPoint(ScrollHost);
+        if (point.Properties.IsLeftButtonPressed && e.ClickCount == 2)
+        {
+            var position = e.GetPosition(ImageContentPanel);
+            PingRequested?.Invoke(position.X, position.Y);
+            e.Handled = true;
+            return;
+        }
+
         if (!point.Properties.IsRightButtonPressed && !point.Properties.IsMiddleButtonPressed) return;
 
         _dragStartPointerPosition = e.GetPosition(ScrollHost);
@@ -89,6 +129,7 @@ public partial class MapDisplayView : UserControl
         {
             _viewModel.ActiveCharacterZoomRequested -= OnActiveCharacterZoomRequested;
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _viewModel.PingReceived -= OnPingReceived;
         }
 
         _viewModel = DataContext as MapDisplayViewModel;
@@ -97,7 +138,49 @@ public partial class MapDisplayView : UserControl
         {
             _viewModel.ActiveCharacterZoomRequested += OnActiveCharacterZoomRequested;
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            _viewModel.PingReceived += OnPingReceived;
         }
+    }
+
+    /// <summary>
+    ///     Renders a generic, un-attributed ripple at the given image-space point (#28's "map
+    ///     ping") and removes it again once it's fully faded - fire-and-forget, not part of
+    ///     VisibleTokens since there's no persisted state behind it (see
+    ///     MapDisplayViewModel.NotifyPingReceived).
+    /// </summary>
+    private async void OnPingReceived(double x, double y)
+    {
+        const double diameter = 56;
+        var ring = new Ellipse
+        {
+            Width = diameter,
+            Height = diameter,
+            Stroke = Brushes.Gold,
+            StrokeThickness = 4,
+            IsHitTestVisible = false,
+            RenderTransform = new TranslateTransform(x - diameter / 2, y - diameter / 2)
+        };
+        ImageContentPanel.Children.Add(ring);
+
+        var fadeOut = new Animation
+        {
+            Duration = TimeSpan.FromSeconds(2.5),
+            Easing = new CubicEaseOut(),
+            FillMode = FillMode.Forward,
+            Children =
+            {
+                new KeyFrame
+                {
+                    Cue = new Cue(0), Setters = { new Setter(Visual.OpacityProperty, 1.0) }
+                },
+                new KeyFrame
+                {
+                    Cue = new Cue(1), Setters = { new Setter(Visual.OpacityProperty, 0.0) }
+                }
+            }
+        };
+        await fadeOut.RunAsync(ring);
+        ImageContentPanel.Children.Remove(ring);
     }
 
     /// <summary>
@@ -106,11 +189,15 @@ public partial class MapDisplayView : UserControl
     ///     MapDisplayViewModel.CurrentFloorImageBitmap) - matches
     ///     MapEditCanvasControl.LoadFloor's "a newly loaded floor always starts fit-to-window"
     ///     convention, except the auto-zoom sequence below immediately overrides this with the
-    ///     configured zoom level when that's what triggered the floor switch.
+    ///     configured zoom level when that's what triggered the floor switch. Skipped entirely
+    ///     when this view mirrors another control's viewport (ShowZoomControls false, see
+    ///     SetExternalViewport) - the mirrored zoom/pan already got set from the source control's
+    ///     own ViewportChanged before this image swap, and auto-fitting here would immediately
+    ///     stomp on it.
     /// </summary>
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(MapDisplayViewModel.CurrentFloorImageBitmap)) return;
+        if (e.PropertyName != nameof(MapDisplayViewModel.CurrentFloorImageBitmap) || !ShowZoomControls) return;
 
         _zoomIsFit = true;
         ApplyZoom(ComputeFitZoom(), true);
@@ -176,6 +263,26 @@ public partial class MapDisplayView : UserControl
     {
         var viewport = ScrollHost.Viewport;
         ScrollHost.Offset = new Vector(imageX * _zoom - viewport.Width / 2, imageY * _zoom - viewport.Height / 2);
+    }
+
+    /// <summary>
+    ///     Sets zoom/pan directly, exactly as given - for an owner mirroring another control's
+    ///     viewport (MapLiveWindow's "Vorschau" tracking MapEditCanvasControl), where the zoom
+    ///     decision is made elsewhere and this view just needs to reflect it. Unlike ApplyZoom,
+    ///     this doesn't try to preserve the previously-centered point (there's no "previous zoom"
+    ///     concept to preserve here - the caller already knows the exact target zoom/offset) and
+    ///     doesn't clamp to ZoomMin/ZoomMax (the source viewport has already been clamped by its
+    ///     own zoom logic).
+    /// </summary>
+    public void SetExternalViewport(double zoom, Vector offset)
+    {
+        _zoomIsFit = false;
+        _zoom = zoom;
+        var transform = (ScaleTransform)ZoomHost.LayoutTransform!;
+        transform.ScaleX = _zoom;
+        transform.ScaleY = _zoom;
+        ScrollHost.Offset = offset;
+        UpdateZoomLabel();
     }
 
     private void UpdateZoomLabel()

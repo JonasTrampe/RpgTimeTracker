@@ -281,6 +281,7 @@
   "MapEditor.PlayerVisibleNameLabel": "Name visible to players",
   "MapEditor.PlayerVisiblePortraitLabel": "Portrait visible to players",
   "MapEditor.PlayerVisibleDetailLabel": "Detail visible to players",
+  "MapEditor.PlayerVisiblePlayerInfoLabel": "Player info visible to players",
   "MapEditor.MoveToFloorLabel": "Floor",
   "MapEditor.TokenNameLabel": "Name",
   "MapEditor.TokenNameWatermark": "e.g. \"Treasure chest\"",

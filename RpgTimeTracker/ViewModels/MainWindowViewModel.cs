@@ -549,6 +549,15 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             ResolvePendingVideo(mediaId);
             RemoveActiveSound(mediaId);
         });
+        // A player pinged the map - shown on the Host's own local preview directly (no map
+        // identity in the payload, but only one map can be open to players at a time) and
+        // forwarded so an open MapLiveWindow for that same map can show it on its mirrored
+        // preview too (see PlayerMapPingReceived).
+        _playerServer.ClientReportedMapPing += (floorId, x, y) => Dispatcher.UIThread.Post(() =>
+        {
+            MapDisplay.NotifyPingReceived(floorId, x, y);
+            PlayerMapPingReceived?.Invoke(floorId, x, y);
+        });
         // Decisive for the playlist sequencer's "when does the current track end" tracking - see
         // BeginMusicTracking.
         _playerServer.ClientReportedMusicTrackEnded +=

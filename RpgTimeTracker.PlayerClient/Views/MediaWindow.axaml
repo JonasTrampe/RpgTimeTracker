@@ -25,7 +25,7 @@
             <vlc:VideoView MediaPlayer="{Binding MediaPlayer}" />
         </Panel>
 
-        <views:MapDisplayView DataContext="{Binding MapDisplay}" />
+        <views:MapDisplayView x:Name="MapDisplayControl" DataContext="{Binding MapDisplay}" />
 
         <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12"
                 Background="#66000000" CornerRadius="6" Padding="10,6">
