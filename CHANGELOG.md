@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Documentation restructure**: the root README is now reStructuredText
+  (`README.rst`), kept short (what the program is, how to build it, a
+  link to the docs site) instead of the previous 300+ line feature list.
+  The full feature-by-feature depth, plus a new FAQ, moved into a
+  proper multi-page Sphinx site (`docs/`, Furo theme) published to
+  GitHub Pages via a new `docs.yml` Actions workflow. Contributor-facing
+  material (`architecture.md`, `design-decisions.md`, `protocol.md`,
+  `legal-todo.md`) moved to `docs/internal/`, unchanged in content.
+
 ### Added
 
 - **Characters**: entries can now be marked as a player character (`Kind`

@@ -9,7 +9,7 @@ name: RPC Protocol Version
 on:
   pull_request:
     branches: [ main ]
-    paths-ignore: [ '**/*.md', 'docs/**' ]
+    paths-ignore: [ '**/*.md', '**/*.rst', 'docs/**' ]
   workflow_dispatch:
 
 jobs:

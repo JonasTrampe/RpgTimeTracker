@@ -6,6 +6,7 @@ obj/
 .idea/
 publish/
 .build-scratch/
+docs/_build/
 
 # Lokale Claude-Code-Einstellungen (Maschinen-/Nutzer-spezifisch, kein Projektzustand).
 .claude/settings.local.json

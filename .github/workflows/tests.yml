@@ -7,10 +7,10 @@ name: Tests
 on:
   push:
     branches: [ main ]
-    paths-ignore: [ '**/*.md', 'docs/**' ]
+    paths-ignore: [ '**/*.md', '**/*.rst', 'docs/**' ]
   pull_request:
     branches: [ main ]
-    paths-ignore: [ '**/*.md', 'docs/**' ]
+    paths-ignore: [ '**/*.md', '**/*.rst', 'docs/**' ]
   workflow_dispatch:
 
 jobs:

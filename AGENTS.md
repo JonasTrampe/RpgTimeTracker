@@ -34,7 +34,7 @@ build` there can corrupt or lock its build output.
 - **UI pattern**: MVVM via CommunityToolkit.Mvvm (`[ObservableProperty]`,
   `[RelayCommand]`), compiled bindings by default
 - **Networking**: hand-rolled length-prefixed JSON-RPC over TCP (see
-  `docs/protocol.md`) — no ASP.NET/SignalR/gRPC
+  `docs/internal/protocol.md`) — no ASP.NET/SignalR/gRPC
 - **Media playback**: LibVLCSharp (images/video/audio)
 - **Logging**: Serilog, rolling file sink under `%AppData%/RpgTimeTracker/logs`
 - **Testing**: xunit 2 + `Avalonia.Headless` (not `Avalonia.Headless.XUnit`,
@@ -67,9 +67,10 @@ RpgTimeTracker.PlayerClient/  # Player display app
 
 RpgTimeTracker.Tests/         # xunit test project (covers Shared + Host logic)
 
-docs/
-├── protocol.md               # Wire protocol reference
-└── design-decisions.md       # Dated "why is this shaped this way" notes
+docs/                         # Sphinx-built user docs (published to GitHub Pages)
+└── internal/
+    ├── protocol.md            # Wire protocol reference
+    └── design-decisions.md    # Dated "why is this shaped this way" notes
 ```
 
 ## Code Standards
@@ -87,7 +88,7 @@ docs/
   for any new library-like collection instead of inventing a new one
 - Default to writing no comments; when one is warranted, explain *why*
   (a non-obvious constraint, invariant, or past bug), never *what* the code
-  does — see `docs/design-decisions.md` for the level of "why" expected
+  does — see `docs/internal/design-decisions.md` for the level of "why" expected
 
 ### Naming Conventions
 - Classes/ViewModels/Views: PascalCase (`SceneLibraryItemViewModel`)
@@ -167,7 +168,7 @@ Game time is `GameInstant` (calendar-agnostic elapsed seconds), not
   in this repo — history cleanup here uses cherry-pick + `reset --soft` instead
 - DON'T: force-push over already-published history without calling it out
   explicitly first
-- DO: check `docs/design-decisions.md` before "fixing" something that looks
+- DO: check `docs/internal/design-decisions.md` before "fixing" something that looks
   wrong — it likely exists because an earlier, more obvious approach broke
   something specific
 - DO: keep `CHANGELOG.md` updated for user-visible changes (Added/Fixed
@@ -185,7 +186,7 @@ Game time is `GameInstant` (calendar-agnostic elapsed seconds), not
 
 ## Additional Resources
 
-- Wire protocol reference: `docs/protocol.md`
-- Design rationale ("why is this shaped this way"): `docs/design-decisions.md`
+- Wire protocol reference: `docs/internal/protocol.md`
+- Design rationale ("why is this shaped this way"): `docs/internal/design-decisions.md`
 - User-facing feature history: `CHANGELOG.md`
 - Full feature list and screenshots: `README.md`
