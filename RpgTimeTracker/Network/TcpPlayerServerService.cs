@@ -616,6 +616,12 @@ public sealed class TcpPlayerServerService : IDisposable
         }, c => c.MapEnabled);
     }
 
+    public Task PublishMapAutoZoomChangedAsync(bool enabled, double zoomLevel)
+    {
+        return BroadcastRpcAsync(RpcMethods.MapAutoZoomChanged,
+            new MapAutoZoomChangedParams { Enabled = enabled, ZoomLevel = zoomLevel }, c => c.MapEnabled);
+    }
+
     /// <summary>
     ///     Adds/fully updates one map token - see RpcMethods.MapTokenUpsert's doc comment for why
     ///     there's no separate "move" variant. Updates the cached snapshot list (replacing any

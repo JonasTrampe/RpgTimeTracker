@@ -466,6 +466,18 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     public bool IsInitiativeAdvancePerRound => InitiativeClockMode == InitiativeClockMode.AdvancePerRound;
 
     /// <summary>
+    ///     Whether a turn changing to a new Character-linked token snaps every connected view
+    ///     (players and the Host's own local preview) to AutoZoomLevel, centered on it -
+    ///     GM-configurable (Settings tab), reaches already-connected clients via
+    ///     map.autoZoomChanged and newly-connecting ones via session.snapshot (same pattern as
+    ///     FogColorHex/MapRenderStyleChangedParams).
+    /// </summary>
+    [ObservableProperty] private bool _autoZoomEnabled;
+
+    /// <summary>Only meaningful while AutoZoomEnabled - see MapDisplayViewModel.AutoZoomLevel.</summary>
+    [ObservableProperty] private double _autoZoomLevel = 2.0;
+
+    /// <summary>
     ///     Minimum sound duration (ms) worth estimating a mid-playback seek for when
     ///     resending it to a client whose Sound routing was just re-enabled - see
     ///     ResendActiveSoundsToClient. Persisted, GM-configurable (Settings tab).
@@ -575,6 +587,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _soundSeekThresholdMs = settings.SoundSeekThresholdMs;
         _initiativeClockMode = settings.InitiativeClockMode;
         _initiativeAdvanceSecondsPerRound = settings.InitiativeAdvanceSecondsPerRound;
+        _autoZoomEnabled = settings.AutoZoomEnabled;
+        _autoZoomLevel = settings.AutoZoomLevel;
+        MapDisplay.AutoZoomEnabled = _autoZoomEnabled;
+        MapDisplay.AutoZoomLevel = _autoZoomLevel;
         _serverName = string.IsNullOrWhiteSpace(settings.ServerName) ? "RpgTimeTracker" : settings.ServerName;
         _connectionPin = settings.ConnectionPin;
         _autoSaveOnCloseEnabled = settings.AutoSaveOnCloseEnabled;
@@ -941,6 +957,20 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     partial void OnInitiativeAdvanceSecondsPerRoundChanged(int value)
     {
         SaveUiSettings();
+    }
+
+    partial void OnAutoZoomEnabledChanged(bool value)
+    {
+        MapDisplay.AutoZoomEnabled = value;
+        SaveUiSettings();
+        _ = _playerServer.PublishMapAutoZoomChangedAsync(value, AutoZoomLevel);
+    }
+
+    partial void OnAutoZoomLevelChanged(double value)
+    {
+        MapDisplay.AutoZoomLevel = value;
+        SaveUiSettings();
+        _ = _playerServer.PublishMapAutoZoomChangedAsync(AutoZoomEnabled, value);
     }
 
     /// <summary>

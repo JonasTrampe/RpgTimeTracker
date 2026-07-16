@@ -140,6 +140,9 @@ public partial class MapEditCanvasControl : UserControl
     /// </summary>
     public event Action<MapTokenViewModel>? TokenSelected;
 
+    /// <summary>Fired after a token drag completes (position already applied to the model/network) - lets an owner refresh anything else that mirrors token positions, e.g. MapLiveWindow's own preview thumbnail.</summary>
+    public event Action<MapTokenViewModel>? TokenMoved;
+
     /// <summary>
     ///     Must be called once (any time before/after SetMap) - the resolver methods on
     ///     MainWindowViewModel (ResolveTokenName/Portrait/IconGlyph/Initials) are how a linked
@@ -336,7 +339,11 @@ public partial class MapEditCanvasControl : UserControl
         _draggingToken = null;
         e.Handled = true;
 
-        if (_dragMoved) _vm?.NotifyTokenMoved(_map!, token);
+        if (_dragMoved)
+        {
+            _vm?.NotifyTokenMoved(_map!, token);
+            TokenMoved?.Invoke(token);
+        }
         else TokenSelected?.Invoke(token);
     }
 

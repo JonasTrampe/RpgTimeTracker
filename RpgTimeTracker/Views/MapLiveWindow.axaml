@@ -18,18 +18,32 @@
             <Button Content="{DynamicResource MapLiveWindow.ResetToPreparedButton}" Margin="0,0,10,6"
                     Click="OnResetClick" />
 
-            <ToggleButton Name="OpenToPlayersToggle" Margin="0,0,0,6"
+            <ToggleButton Name="OpenToPlayersToggle" Margin="0,0,10,6"
                           Content="{DynamicResource MapEditor.OpenToPlayersButton}"
                           Click="OnToggleOpenClick" />
+
+            <!-- Same setting as the Settings tab's "Auto-zoom to active character" checkbox
+                 (MainWindowViewModel.AutoZoomEnabled) - also surfaced here since it's a
+                 map-viewing behavior a GM would expect to find right where they're looking at
+                 the map, not just buried in the global Settings tab. -->
+            <CheckBox Name="AutoZoomToggle" Margin="0,0,0,6"
+                      Content="{DynamicResource MapEditor.AutoZoomToggleLabel}"
+                      Click="OnAutoZoomToggleClick" />
         </WrapPanel>
 
-        <Grid ColumnDefinitions="*,320">
-            <controls:MapEditCanvasControl x:Name="EditCanvas" Grid.Column="0" />
+        <Grid ColumnDefinitions="*,Auto,320">
+            <controls:MapEditCanvasControl x:Name="EditCanvas" Grid.Column="0" MinWidth="200" />
 
-            <Border Grid.Column="1" Classes="settingsGroup" Margin="10,0,0,0">
-                <Grid RowDefinitions="Auto,Auto,Auto,*">
+            <GridSplitter Grid.Column="1" Width="6" Margin="4,0" HorizontalAlignment="Stretch"
+                          Background="{DynamicResource BorderBrush}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2" Classes="settingsGroup" Margin="6,0,0,0" MinWidth="260">
+                <Grid RowDefinitions="Auto,280,Auto,*">
                     <TextBlock Grid.Row="0" Classes="settingsGroupTitle"
                                Text="{DynamicResource MapEditor.PreviewTitle}" Margin="0,0,0,8" />
+                    <!-- A fixed, generous height (was Auto, which starved this to whatever its
+                         minimum content size happened to be) - the preview needs real screen
+                         space to actually be zoomable/pannable, not just a thumbnail. -->
                     <sharedViews:MapDisplayView Grid.Row="1" x:Name="PreviewDisplay" />
                     <Separator Grid.Row="2" Background="{DynamicResource BorderBrush}" Margin="0,10" />
                     <TabControl Grid.Row="3">

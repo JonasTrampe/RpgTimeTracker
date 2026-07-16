@@ -52,6 +52,11 @@ public sealed class SessionSnapshotParams
     public int FogOpacityPercent { get; set; } = 100;
     public double FogBlurRadius { get; set; }
     public bool FogBlurEnabled { get; set; } = true;
+
+    /// <summary>Player-side auto-zoom-to-active-character preference, current at connect time - see MapAutoZoomChangedParams.</summary>
+    public bool AutoZoomEnabled { get; set; }
+
+    public double AutoZoomLevel { get; set; } = 2.0;
 }
 
 public sealed class ClockSpeedChangedParams
@@ -207,6 +212,13 @@ public sealed class MapRenderStyleChangedParams
     public int OpacityPercent { get; set; } = 100;
     public double BlurRadius { get; set; }
     public bool BlurEnabled { get; set; } = true;
+}
+
+/// <summary>Server-to-client: live change of the auto-zoom-to-active-character preference (see RpcMethods.MapAutoZoomChanged).</summary>
+public sealed class MapAutoZoomChangedParams
+{
+    public bool Enabled { get; set; }
+    public double ZoomLevel { get; set; } = 2.0;
 }
 
 /// <summary>

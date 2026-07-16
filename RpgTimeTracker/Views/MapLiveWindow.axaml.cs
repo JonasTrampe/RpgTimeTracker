@@ -44,6 +44,7 @@ public partial class MapLiveWindow : Window
         _map = map;
         Title = string.Format(LocalizationService.Get("MapLiveWindow.Title"), map.Name);
         OpenToPlayersToggle.IsChecked = _vm.IsMapOpenToPlayers && _vm.OpenMap == map;
+        AutoZoomToggle.IsChecked = _vm.AutoZoomEnabled;
 
         PreviewDisplay.DataContext = _previewDisplay;
 
@@ -58,8 +59,10 @@ public partial class MapLiveWindow : Window
         EditCanvas.ConfigureTokens(_vm);
         EditCanvas.SetMap(_map);
         EditCanvas.TokenSelected += token => TokenPanel.SelectedToken = token;
+        EditCanvas.TokenMoved += _ => RefreshPreviewTokens();
         TokenPanel.Configure(_vm, _map);
         TokenPanel.TokensMutated += EditCanvas.RefreshTokens;
+        TokenPanel.TokensMutated += RefreshPreviewTokens;
 
         InitiativePanel.Configure(_vm, _map);
         _vm.InitiativeTurnChanged += OnInitiativeTurnChanged;
@@ -73,6 +76,7 @@ public partial class MapLiveWindow : Window
     {
         _vm.EditingFloor = floor;
         RefreshPreviewFloor(floor);
+        RefreshPreviewTokens();
     }
 
     private void OnCellsPainted(MapFloorItemViewModel floor, IReadOnlyList<FogCellDto> cells)
@@ -85,6 +89,20 @@ public partial class MapLiveWindow : Window
         // A HiddenUntilRevealed token sitting in one of the just-painted cells may have just
         // become visible (or hidden again) - re-evaluate just those tokens' network/preview state.
         _vm.NotifyTokensAffectedByFogChange(_map, floor, cells);
+        RefreshPreviewTokens();
+    }
+
+    /// <summary>
+    ///     Re-resolves this preview's full token set from scratch (see MapDisplayViewModel.
+    ///     ReplaceAllTokens) - this window's own "Vorschau" MapDisplayViewModel is a separate
+    ///     instance from MainWindowViewModel.MapDisplay and isn't kept in sync by
+    ///     RefreshTokenPlayerState (which only targets whichever map is open to players), so it
+    ///     needs its own refresh on every token add/edit/delete/drag and on every floor
+    ///     switch (ShowMap already clears _previewDisplay's tokens) or fog reveal change.
+    /// </summary>
+    private void RefreshPreviewTokens()
+    {
+        _previewDisplay.ReplaceAllTokens(_vm.GetVisibleTokenSnapshots(_map));
     }
 
     /// <summary>
@@ -139,6 +157,18 @@ public partial class MapLiveWindow : Window
     }
 
     /// <summary>
+    ///     Same setting the Settings tab's "Auto-zoom to active character" checkbox controls
+    ///     (MainWindowViewModel.AutoZoomEnabled) - surfaced here too since it's a map-viewing
+    ///     behavior a GM would expect to toggle right where they're looking at the map. Also
+    ///     gates the GM's own EditCanvas jump (see OnInitiativeTurnChanged) - previously that
+    ///     always jumped regardless of any setting.
+    /// </summary>
+    private void OnAutoZoomToggleClick(object? sender, RoutedEventArgs e)
+    {
+        _vm.AutoZoomEnabled = AutoZoomToggle.IsChecked == true;
+    }
+
+    /// <summary>
     ///     Reacts to the initiative tracker's current-turn token changing (#70) - switches floor
     ///     (a token might be on a different floor than the one currently shown) and pans the
     ///     canvas to it. No-op for a map this window isn't editing, or when there's no placed
@@ -146,7 +176,7 @@ public partial class MapLiveWindow : Window
     /// </summary>
     private void OnInitiativeTurnChanged(MapItemViewModel map, MapTokenViewModel? token)
     {
-        if (!ReferenceEquals(map, _map) || token is null) return;
+        if (!_vm.AutoZoomEnabled || !ReferenceEquals(map, _map) || token is null) return;
 
         if (EditCanvas.CurrentFloor?.Id != token.FloorId)
         {

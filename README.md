@@ -8,10 +8,10 @@
 > notable changes.
 
 Two AvaloniaUI desktop apps (Windows/Linux/macOS) for a shared game clock
-(timers, alarms, recurring intervals) at the pen & paper table: a
-GM-side control app and a read-only display app for the players on a
-second screen, including image/video sending and a completely separate
-sound library for background sounds/effects.
+(timers, alarms, recurring intervals) at the pen & paper table: a GM-side
+control app and a read-only display app for players on a second screen,
+including image/video sending and a separate sound library for
+background sounds/effects.
 
 ## The two apps
 
@@ -35,253 +35,195 @@ method list, media streaming) can be found in [`docs/protocol.md`](docs/protocol
 - **Speed**: time factor from 0.1x to 300x (presets + slider) —
   e.g. "1 real second = 1 hour of game time" during a rest.
 - **Time jump forward & backward**: free-form jump text field (`hh:mm:ss` or
-  `t.hh:mm:ss` for days, with `-` for backward) as well as quick-select buttons
-  (+1 hr, +8 hr, +1 day, -1 hr, -1 day). The most recent time jump
-  (including via quick select or bookmarks) can be undone again with a button.
-- **Configurable bookmarks**: e.g. "Dawn" (06:00), "Noon"
-  (12:00), "Evening" (18:00), "Midnight" — freely nameable, editable, and
-  deletable. For each bookmark, ▶ jumps to the next and ◀ to the previous occurrence
-  of that time of day.
+  `t.hh:mm:ss` for days, `-` for backward) plus quick-select buttons (+1 hr,
+  +8 hr, +1 day, -1 hr, -1 day). The most recent jump (including via quick
+  select or bookmarks) can be undone with a button.
+- **Configurable bookmarks**: e.g. "Dawn" (06:00), "Noon" (12:00), "Evening"
+  (18:00), "Midnight" — freely nameable, editable, deletable. ▶/◀ jump to the
+  next/previous occurrence of that time of day.
 - **Timers**: any number of countdown timers with progress bar and
-  remaining-time display, run on game time (not real time) and react
-  correctly to time jumps in both directions (only while actively running).
-  Optionally, an image/video can be attached to each timer, which is
-  automatically sent to all players when it expires (see trigger media below);
-  manually resetting the timer also closes this media again, if
-  it is still being shown.
+  remaining-time display, run on game time and react correctly to time
+  jumps in both directions while running. An attached image/video is sent
+  to all players automatically on expiry (see trigger media below);
+  resetting the timer closes it again if still shown.
 - **Alarms**: any number of alarms with a fixed target time, optionally
-  recurring (e.g. every 24 game hours). Jumping back in time before the
-  target time "disarms" an already-triggered alarm again.
-- **Save & load**: the complete state (game time, speed,
-  all timers, alarms, and bookmarks) can be exported as a `.rtt-save` file via
-  the 💾/📂 buttons in the top left, or imported again. Older plain-JSON save
-  files from before this format still load fine and are upgraded automatically
-  the next time you save.
-- **Sessions (optional, folder-scoped campaigns)**: "New Session…"/"Open
-  Session…"/"Close Session" in the status bar create or open a folder that
-  holds one campaign's own copy of the Media, Sound, Map, and Character
-  libraries, alongside the always-present Shared Library. With no session
-  open, everything behaves exactly as before - Sessions are purely opt-in.
-  Adding a new item while a session is open asks whether it belongs to the
-  Shared Library (reused across campaigns) or just this session; either can
-  be changed later per item via a "Move to Shared Library"/"Move to this
-  Session" action. Closing a session hides its session-local items from
-  every library list (the files stay on disk); opening it again brings them
-  back.
-- **Full session export/import**: the Settings tab has a "📦 Export
-  session…"/"📦 Import session…" pair. With a Session open, it bundles that
-  session's state and session-local Media/Sound/Map/Character entries,
-  including copies of any Shared-sourced assets a Character actually
-  references, so the result is self-contained on another machine; import
-  always creates a brand-new session folder with fresh IDs, never merging
-  into the target's Shared Library. With no session open, it keeps its
-  original meaning: the game state plus the entire Media, Sound, Map, and
-  Character Shared Library in one `.rtt-session` file - a full backup or a
-  one-step move to a new machine, instead of exporting the save file and
-  each library separately. (The Music library and playlists aren't part of
-  this bundle yet - back them up via their own Export/Import in the Music
-  tab.)
-- **Maps / fog-of-war (its own "Maps" tab)**: build a library of maps, each
-  made of one or more floors (image + grid cell size). Preparing a floor's
-  fog (brush reveal/hide, zoom, resizable floor-cell size) happens entirely
-  offline in a dedicated "Prepare" window — nothing painted there is ever
-  visible to players — and is completely separate from the "Show" window,
-  which paints and broadcasts the *live*, currently-players-visible fog and
-  can pull in whatever was prepared with a "Reset to Prepared" button. Both
-  windows include a live, player-accurate preview and can be open side by
-  side. A map can override the fog color/opacity/blur individually,
-  falling back to the global default (Settings tab) for whatever it leaves
-  unset. Floors are reorderable layers (their order is saved explicitly, so
-  it survives export/import) with a small thumbnail per floor. Only one map
-  can be shown to players at a time, and a map currently open in its
-  Prepare window can't be shown until that's closed. Maps can be exported/
-  imported individually (`.rtt-map`) or as part of a full session bundle.
+  recurring (e.g. every 24 game hours). Jumping back before the target time
+  disarms an already-triggered alarm.
+- **Save & load**: the complete state (game time, speed, timers, alarms,
+  bookmarks) can be exported as a `.rtt-save` file via the 💾/📂 buttons top
+  left, or imported again. Older plain-JSON saves still load and are
+  upgraded automatically on next save.
+- **Sessions (optional, folder-scoped campaigns)**: "New/Open/Close
+  Session" in the status bar creates or opens a folder holding one
+  campaign's own Media/Sound/Map/Character libraries, alongside the
+  always-present Shared Library - purely opt-in, no session behaves as
+  before. New items ask Shared Library or session-only, changeable later
+  via "Move to Shared Library"/"Move to this Session". Closing a session
+  hides its items from library lists (files stay on disk).
+- **Full session export/import**: Settings' "📦 Export/Import session…".
+  With a session open, it bundles that session's state and local
+  Media/Sound/Map/Character entries plus copies of any referenced
+  Shared-sourced assets, so it's self-contained elsewhere; import always
+  creates a fresh session with new IDs, never merging into the target's
+  Shared Library. With no session open, it exports the game state plus
+  the entire Shared Library as one `.rtt-session` file - a full backup or
+  one-step machine move. (Music/playlists use their own Export/Import in
+  the Music tab.)
+- **Maps / fog-of-war (its own "Maps" tab)**: a library of maps, each made
+  of one or more floors (image + grid cell size). A floor's fog (brush
+  reveal/hide, zoom, resizable cell size) is prepared offline in a
+  "Prepare" window — never visible to players — separate from the "Show"
+  window, which paints and broadcasts the *live* fog and can reset it to
+  the prepared state. Both windows have a live, player-accurate preview
+  and can be open side by side. A map can override fog color/opacity/blur,
+  falling back to the global default (Settings tab). Floors are
+  reorderable, thumbnailed layers whose order survives export/import.
+  Only one map shows to players at a time, and not while its Prepare
+  window is open. Exportable individually (`.rtt-map`) or in a session
+  bundle.
 - **Characters library (its own "Characters" tab)**: NPCs/PCs with a
-  portrait, a map token (an image, a Bootstrap icon, or initials derived
-  from the name - whichever is set, in that order), any number of named,
-  ordered GM-only reference note blocks (e.g. "Motivation"/"Secrets",
-  rendered as Markdown), and any number of named variants/moods (e.g.
-  "Neutral"/"Angry") that can each override the portrait, token, player
-  info, and connected sounds - a variant left unset falls back to the
-  character's Default variant, so only what actually changes needs
-  overriding. A character's portrait and sounds reference the Media/Sound
-  Libraries by ID instead of owning copies; deleting a referenced item
-  warns if a character still uses it, the same 3-way confirm-delete already
-  used for trigger media and playlists. Included in the Sessions'
-  Shared-vs-session-local split and in both full-session and open-session
-  export/import (see Sessions above). Player info is GM-facing only in this
-  pass - not yet transmitted to connected players, and there's no map
-  token placement/dragging or fog-linked token visibility yet.
-- **Networked player display**: the GM starts a TCP server in the
-  control app on a freely selectable port with a freely selectable
-  server name (this is included in the mDNS/LAN announcement and thus appears
-  in the clients' server list — useful once several hosts are running on
-  the same network); player clients find it automatically via mDNS
-  and LAN broadcast discovery (both sources are merged into one
-  entry per server, with an indication of how it was found), or
-  connect manually via IP:port. Connected clients are listed in the
-  control app along with their connection time and can be disconnected
-  individually with a click. If the connection drops unexpectedly (Wi-Fi
-  hiccup, host restart), the client automatically retries the connection with
-  increasing backoff, and on success receives the same complete
-  state as a freshly connected client would — a manual "disconnect",
-  on the other hand, stays disconnected. Before closing, if there are
-  still cached images/videos, the client asks whether these temp files
-  should be deleted. A PIN can optionally be set in the network settings
-  that a client must know when connecting (empty =
-  no PIN required) — pure LAN access control against accidentally
-  connecting foreign devices, not real encryption/authentication.
-  Client and host also exchange their
-  protocol version when the connection is established; if they don't match, the
-  host rejects the connection with a clear error message instead of undefined behavior.
-  For each connected client (and the Host's own local preview), the GM can
-  independently turn Music/Sound/Image/Video/Map routing on or off — e.g. a
-  second-monitor client dedicated to maps/images while a tablet client only
-  gets Music. The preference persists per client across reconnects; turning
-  a kind back on immediately catches that client up (resends the current
-  image/video/open map) instead of requiring a reconnect, and turning it off
-  clears whatever that client was showing.
-- **Send image/video to players**: select an image or
-  video (up to about 1900 MB) in the media library — this immediately opens a
-  dedicated media window on all connected player clients (images inline,
-  videos via the embedded VLC playback), optionally also locally on the GM's
-  side (only when no player is currently connected, to avoid
-  duplicate display). The window can be closed for everyone by the GM via
-  "Remove"; whether it is shown in fullscreen or as a normal window
-  is set independently and locally by each side (GM and each player). The GM's
-  "player fullscreen" toggle switches both all connected player clients
-  and the GM's own player window to fullscreen;
-  each window (GM and client) can be shrunk back down at any time, purely
-  locally, via the Escape key (or, for the GM, additionally via a button), without
-  affecting the fullscreen state on the other side.
-  The player client also reports back to the host when a
-  video actually starts and ends playing (real VLC duration instead of
-  an estimate), which e.g. an automatic clock pause during the video
-  is based on.
-- **Media library**: add images/videos to the library ahead of time
-  (persists across restarts, including a thumbnail for images and
-  free renaming) — double-clicking an entry shows it immediately
-  to the GM and all connected players. Can be backed up via "Export"/
-  "Import" ("Library" tab) into a separate, freely selectable folder,
-  or read back in on a different machine.
-- **Slideshow/gallery (image/video)**: every sent image/video is
-  kept instead of being replaced by the next one — the GM and each player
-  browse independently through everything that has already been shown, using the arrow
-  key or clicks in the player window (purely locally, without asking the
-  host). The GM can "highlight" an item for everyone (a
-  suggested jump, not a requirement) or remove it from the gallery entirely, and
-  an optional seconds-per-image setting advances everyone
-  automatically (videos are never interrupted by this). Event
-  media (timer/alarm/interval) take priority: they briefly interrupt the
-  gallery display without becoming part of it themselves, and the gallery
-  only continues after the triggering item is reset.
-- **Trigger media**: an image/video (or a sound, selected directly from
-  disk) can be assigned to timers, alarms, and interval events,
-  which is sent automatically when triggered, optionally with fullscreen and
-  an infinite loop instead of closing automatically. For video, there's additionally
-  a clock pause during playback (pauses the clock exactly until the
-  actual end, not just an estimated duration, even if
-  the video only plays locally on the GM's side).
-- **Sound library (its own "Sounds" tab, completely separate from
-  image/video)**: send sounds to all players with a single click (and
-  locally to the GM, if no player is currently connected) —
-  entirely without its own display window, without replacing any currently shown
-  image/video, and without being stopped itself by a new image/video or
-  another sound. Any number of sounds can play simultaneously. Each
-  library tile has a ⚙ icon with the settings (volume,
-  infinite loop or a fixed repeat count, trimming — start/end
-  in seconds — and an "GM test" button to preview locally without
-  sending); this opens as an overlay, without shifting the
-  tile layout. A sound triggered via the "sound" field of a timer/alarm/
-  interval (instead of the built-in tones Ping/Bell/
-  Digital) is also sent to the players and ends automatically
-  when the triggering item is reset. The sound library can
-  also be exported/imported like the media library.
+  portrait, a map token (image, Bootstrap icon, or initials from the name -
+  whichever is set), any number of named, ordered GM-only reference note
+  blocks (e.g. "Motivation"/"Secrets", rendered as Markdown), and any number
+  of named variants/moods (e.g. "Neutral"/"Angry") that can each override
+  the portrait, token, player info, and connected sounds - an unset variant
+  falls back to the Default variant. Portrait and sounds reference the
+  Media/Sound Libraries by ID rather than owning copies; deleting a
+  referenced item warns if a character still uses it, the same 3-way
+  confirm-delete used for trigger media and playlists. Included in the
+  Sessions' Shared-vs-session-local split and export/import.
+- **Map tokens**: markers placed on a map (drag to reposition), either
+  freeform or linked live to a Character+Variant or a Point of Interest, with
+  a Reveal-mode border, a hover tooltip, and per-field player-visibility
+  toggles - synced live to connected players (`map.tokenUpsert`/
+  `map.tokenRemove`), with hidden/GM-only fields resolved on the Host so
+  they never reach the wire.
+- **Initiative tracker**: a drag-to-reorder combat order per map (Start/
+  Stop/Next), with auto-skip for incapacitated participants, a facing arrow
+  (mouse wheel to rotate) on Character tokens, and a per-campaign choice of
+  whether the game clock freezes or advances a fixed amount per round while
+  it runs.
+- **Player-side map zoom/pan**: players (and the Host's own local preview)
+  can independently zoom (Ctrl+wheel), pan (right/middle-drag, or scroll/
+  Shift+scroll), and fit-to-window. A GM setting can snap every connected
+  view to a configured zoom centered on the current initiative turn.
+- **Networked player display**: the GM starts a TCP server on a freely
+  selectable port/name (in the mDNS/LAN announcement - useful with several
+  hosts on one network); clients find it via mDNS/LAN discovery (merged
+  into one entry per server) or manual IP:port. Connected clients are
+  listed with connection time and can be disconnected individually. On an
+  unexpected drop, the client retries with backoff and, on success, gets
+  the same full state as a fresh connection - a manual disconnect stays
+  disconnected. The client offers to delete cached temp media before
+  closing. An optional PIN gates connections (LAN access control, not real
+  auth); client/host also exchange protocol version, rejecting a mismatch
+  clearly instead of misbehaving. For each connected client (and the
+  Host's own preview), the GM can independently route Music/Sound/Image/
+  Video/Map - e.g. a second-monitor client for maps/images, a tablet for
+  Music only. The preference persists across reconnects; re-enabling a
+  kind catches the client up immediately, disabling it clears the display.
+- **Send image/video to players**: selecting an image or video (up to
+  ~1900 MB) opens a dedicated media window on all connected clients
+  (images inline, video via embedded VLC), and locally for the GM if no
+  player is connected. The GM closes it for everyone via "Remove";
+  fullscreen vs. normal window is set independently per side, and the
+  GM's "player fullscreen" toggle switches all clients and the GM's own
+  window at once - each can shrink back locally via Escape (or a button
+  for the GM) without affecting the other side. The client reports real
+  video start/end (actual VLC duration, not an estimate) for things like
+  an automatic clock pause during playback.
+- **Media library**: add images/videos ahead of time (persists across
+  restarts, with thumbnails and free renaming) — double-clicking shows an
+  entry immediately to the GM and all connected players. Backed up via
+  "Export"/"Import" (Library tab) into any folder.
+- **Slideshow/gallery (image/video)**: every sent item is kept instead of
+  replaced by the next - the GM and each player browse independently
+  through everything shown so far (arrow keys or clicks, purely local).
+  The GM can "highlight" an item for everyone (a suggested jump) or
+  remove it from the gallery; an optional seconds-per-image setting
+  auto-advances everyone (videos are never interrupted). Event media
+  (timer/alarm/interval) briefly interrupts the gallery without joining
+  it, resuming once the trigger resets.
+- **Trigger media**: an image/video (or a sound, picked directly from
+  disk) can be assigned to timers, alarms, and interval events, sent
+  automatically on trigger, optionally fullscreen and looping instead of
+  auto-closing. Video additionally pauses the clock for its actual
+  duration, even when it only plays locally for the GM.
+- **Sound library (its own "Sounds" tab, separate from image/video)**:
+  send sounds to all players (and locally, if no player is connected)
+  with no display window, without touching any shown image/video or
+  stopping other sounds - any number play simultaneously. Each tile's ⚙
+  overlay covers volume, infinite loop or a fixed repeat count, start/end
+  trimming, and a "GM test" preview. A sound triggered via a timer/alarm/
+  interval's "sound" field (instead of the built-in Ping/Bell/Digital
+  tones) is likewise sent to players and ends when the trigger resets.
+  Exportable/importable like the media library.
 - **Status bar (bottom, visible on every tab)**: server status
-  (running/stopped, address:port, number of connected players), the currently
-  shown image/video with a close button, a sound counter whose
-  flyout lists all currently playing sounds with a live volume control
-  and allows stopping each individually or all together (also across
-  all connected player clients), a bell whose flyout shows the most recently
-  triggered action messages ("... sent", etc.) as a history,
-  as well as two fullscreen toggles (the GM's own local preview, remote player
-  display). Deliberately placed outside the tab content so that nothing
-  "jumps" while sounds start/end or a medium
-  changes in the background.
+  (running/stopped, address:port, connected players), the current
+  image/video with a close button, a sound counter whose flyout lists
+  playing sounds with live volume control and per-item/all-together stop
+  (across all clients), a bell showing recent action messages, and two
+  fullscreen toggles (GM preview, remote player display). Placed outside
+  the tab content so nothing "jumps" as sounds or media change in the
+  background.
 - **Ingame calendar (its own host tab "Calendar")**: freely definable
   events on an ingame date/time with title, description, icon, color,
-  recurrence (daily/weekly/monthly/yearly, optionally with an
-  end date), and an optional image/video/sound trigger (triggers the usual
-  event media, like a timer/alarm). A small toggle
-  "Timeline ↔ Calendar" appears in the shared header area of the
-  host's player window and the client — but only if at least one event
-  visible to players exists; otherwise it stays as a plain timeline,
-  with no empty calendar option. Persisted in the normal save state and
-  additionally exportable/importable separately as JSON; changes are
-  automatically sent to all connected players, and newly connected clients
-  receive the full calendar upon connecting.
+  recurrence (daily/weekly/monthly/yearly, optional end date), and an
+  optional image/video/sound trigger (same event-media path as a
+  timer/alarm). A "Timeline ↔ Calendar" toggle appears in the shared
+  header once a player-visible event exists; otherwise it stays a plain
+  timeline. Persisted in the save state and exportable/importable
+  separately as JSON; changes sync live, and new connections get the
+  full calendar.
 - **Custom calendars (Settings tab)**: game time is calendar-agnostic
-  (`GameInstant`, elapsed seconds), so any campaign can pick a different
-  calendar - arbitrary month names/lengths, weekday names, a leap-year rule,
-  hours/minutes/seconds per day, seasons, and moons. Four calendars ship
-  bundled (Gregorian, a Forgotten Realms-style Harptos, a Das Schwarze
-  Auge-style Aventurian calendar, and Voidreach, a fictional sci-fi
-  calendar), each with a "Import calendar's default events" button that adds
-  its real holidays (Harptos's five festivals, DSA's Namenlose Tage, ...) as
-  recurring calendar entries. Switching calendars only changes how dates are
-  displayed - the underlying elapsed time is unaffected.
+  (`GameInstant`, elapsed seconds), so a campaign can pick a different
+  calendar - month/weekday names and lengths, leap-year rule,
+  hours/minutes/seconds per day, seasons, moons. Four ship bundled
+  (Gregorian, Forgotten Realms-style Harptos, a Das Schwarze Auge-style
+  Aventurian calendar, and Voidreach, a fictional sci-fi calendar), each
+  with an "Import calendar's default events" button for its real holidays
+  (Harptos's five festivals, DSA's Namenlose Tage, ...). Switching
+  calendars only changes how dates display - elapsed time is unaffected.
   - **More calendars**: [Foundry VTT's Simple Calendar module](https://github.com/vigoren/foundryvtt-simple-calendar/tree/main/src/predefined-calendars)
-    ships several dozen more predefined calendars (Dark Sun, Eberron,
-    Exandria, Golarion, Greyhawk, Warhammer, ...). Its JSON schema differs
-    from ours, so those files aren't usable as-is - use Settings' "Import
-    calendar file..." button, which auto-detects a Simple Calendar export and
-    converts it (see `RpgTimeTracker.Shared/Services/SimpleCalendarImporter.cs`
-    for the exact field mapping and its documented approximations, mainly
-    around weekday-epoch alignment). GM-authored calendar JSON (our own
-    schema) can also be dropped directly into
-    `%AppData%/RpgTimeTracker/Calendars` (Linux/macOS: `~/.config/RpgTimeTracker/Calendars`).
-- **About dialog (host and client, "ℹ" button)**: title/description from an
-  app-specific Markdown file (`About/AboutContent.md`, rendered via
-  ClassIsland.Markdown.Avalonia), version number, as well as the app's own
-  project license and the license notices of all
-  third-party libraries used (`LICENSE`/`THIRD-PARTY-NOTICES.txt`, the same
-  files this repo also draws its license information from — not
-  duplicated separately), each in a collapsed section.
-- **Media windows (host preview and client)**: in addition to the image/
-  video, they show a small clock display (the current game time stays
-  visible even with a full-area medium) as well as their own minimize button next to
-  the close button, since in fullscreen/borderless mode there is no operating-system
-  window title bar with native minimize available.
-- **Sound per item**: timers/alarms/intervals play a
-  selectable sound when triggered — either one of the built-in default tones (Ping/
-  Bell/Digital, purely local on the GM's side) or a sound from the
-  sound library (sent to players, see above). For the
-  built-in tones, optionally multiple times in a row (configurable
-  repeat count, 0 = infinite — only stops once the respective item
-  is reset, acknowledged, or deleted); a library sound
-  with a repeat count of 0 loops infinitely accordingly, until the item
-  is reset.
-- **Advance warning (visible only to the GM)**: optionally a notice banner a
-  configurable time window (minutes of game time) before a timer/alarm/
-  interval triggers — never sent to players.
-- **Session log**: an optionally recordable list of triggered events
-  (time jumps, triggers, sent media) with a game-time stamp; exportable
-  as a text file to a freely selectable location.
-- **Themes (JSON designs)**: all 8 bundled themes (Shadowrun, Medieval,
+    ships several dozen more (Dark Sun, Eberron, Exandria, Golarion,
+    Greyhawk, Warhammer, ...). Its schema differs from ours - use
+    Settings' "Import calendar file..." button, which auto-detects and
+    converts a Simple Calendar export (see
+    `RpgTimeTracker.Shared/Services/SimpleCalendarImporter.cs` for the
+    field mapping and its weekday-epoch approximations). GM-authored
+    calendar JSON (our schema) can also be dropped directly into
+    `%AppData%/RpgTimeTracker/Calendars`
+    (Linux/macOS: `~/.config/RpgTimeTracker/Calendars`).
+- **About dialog (host and client, "ℹ" button)**: title/description from
+  `About/AboutContent.md` (rendered via ClassIsland.Markdown.Avalonia),
+  version number, the app's project license, and third-party license
+  notices (`LICENSE`/`THIRD-PARTY-NOTICES.txt`, not duplicated
+  separately), each in a collapsed section.
+- **Media windows (host preview and client)**: alongside the image/video,
+  a small clock display (game time stays visible even full-area) and
+  their own minimize button next to close, since fullscreen/borderless
+  mode has no OS title bar.
+- **Sound per item**: timers/alarms/intervals play a selectable sound on
+  trigger — a built-in tone (Ping/Bell/Digital, local to the GM) or a
+  library sound (sent to players). Built-in tones can repeat (configurable
+  count, 0 = infinite, stopping only on reset/acknowledge/delete); a
+  library sound with repeat count 0 loops the same way until reset.
+- **Advance warning (GM-only)**: an optional notice banner a configurable
+  number of game-minutes before a timer/alarm/interval triggers — never
+  sent to players.
+- **Session log**: an optionally recordable list of triggered events (time
+  jumps, triggers, sent media) with a game-time stamp, exportable as text.
+- **Themes (JSON designs)**: 8 bundled themes (Shadowrun, Medieval,
   Warhammer 40k, Alien, Steampunk, Post-Apocalypse, Eldritch Horror, Gothic
-  Vampire) as well as any number of custom ones exist as `theme.json` files (colors,
-  gradient colors, fonts, named background/button images) —
-  the bundled ones under `SampleThemes/`, custom GM themes additionally in
-  `%AppData%/RpgTimeTracker/Themes/`, where they automatically show up in the
-  theme selector. When the GM selects a theme, it is also transmitted to
-  connected player clients (by theme ID) — the client displays it
-  correctly if it has the same `theme.json` locally (bundled for all 8
-  default themes; a brand-new custom GM theme currently still has to be
-  copied manually to the players' machines as well).
-- **Ambient automation (optional)**: for a theme with several
-  named backgrounds, automatically switches between day and night background,
-  depending on the game time. For themes with only one background (currently all
-  of them), it has no visible effect.
+  Vampire) plus any custom ones as `theme.json` files (colors, gradients,
+  fonts, background/button images) — bundled ones under `SampleThemes/`,
+  custom GM themes in `%AppData%/RpgTimeTracker/Themes/`, auto-appearing in
+  the selector. A selected theme is transmitted to clients by ID; a client
+  renders it correctly if it has the same `theme.json` locally (bundled
+  for all 8 defaults; a new custom theme still needs manual copying).
+- **Ambient automation (optional)**: for a theme with multiple named
+  backgrounds, switches day/night background by game time - no visible
+  effect for single-background themes (currently all of them).
 
 All timers and alarms are updated with the corresponding game-time delta on every
 tick of the game clock *and* on every manual time jump —
@@ -294,15 +236,15 @@ without needing a network message on every tick.
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download) (see `global.json`;
   all three projects target `net10.0`)
-- Internet access for the first build (NuGet packages: Avalonia, CommunityToolkit.Mvvm,
+- Internet access for the first build (NuGet: Avalonia, CommunityToolkit.Mvvm,
   LibVLCSharp, Serilog)
-- For video/audio playback (images always work without additional software):
-  - **Windows**: no additional installation needed — the native VLC library
-    is bundled via the `VideoLAN.LibVLC.Windows` NuGet package.
+- For video/audio playback (images always work without extra software):
+  - **Windows**: nothing extra needed — native VLC is bundled via the
+    `VideoLAN.LibVLC.Windows` NuGet package.
   - **Linux**: VLC must be installed system-wide, e.g.
     `sudo apt install vlc` (Debian/Ubuntu) or `sudo dnf install vlc` (Fedora).
-    Without VLC installed, image display still works, but video/
-    audio sending shows an error message instead of playing.
+    Without it, images still work but video/audio sending errors instead
+    of playing.
 
 ## Building & Running
 
@@ -376,10 +318,9 @@ More detailed technical documentation lives in [`docs/`](docs/):
 - Sound/popup notification when a timer expires or an alarm triggers
 - Auto-save on closing the app / remember the last-used file
 - Video chunking with progressive playback already during transfer
-- Characters: drag a token onto a map (with fog-linked visibility), send
-  player info to connected clients, automatic/triggered variant-switching
-  (currently only manual GM switching of a character's Active variant), and a
-  live side-by-side Markdown preview for GM info blocks/player info
-  (currently a toggleable preview, not split-view)
+- Characters: send player info to connected clients, automatic/triggered
+  variant-switching (currently only manual GM switching of a character's
+  Active variant), and a live side-by-side Markdown preview for GM info
+  blocks/player info (currently a toggleable preview, not split-view)
 - Standalone Character export/import (folder-based, like Media/Sound/Music)
   and a `.rtt-map`-style single-character export

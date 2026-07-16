@@ -16,6 +16,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   per entry) rather than a fixed set, with a small built-in default list
   for Themes that don't define their own - groundwork for map tokens and
   the initiative tracker.
+- **Player-side map zoom/pan/fit**: the map view players see (and the
+  Host's own local preview) now supports independent zoom (Ctrl+wheel),
+  panning (drag with right/middle mouse button, or scroll/Shift+scroll),
+  and a Fit button - a `LayoutTransformControl` replaces the old fixed
+  fit-to-window `Viewbox`, so every existing floor-image/token binding
+  needed no change. A GM setting ("auto-zoom to active character",
+  toggleable from both Settings and the Map view itself) snaps every
+  connected view to a configured zoom level centered on whichever token
+  has the initiative tracker's current turn whenever a turn starts
+  (switching floor first if needed) - players remain free to zoom/pan away
+  again afterward until the next turn. Reaches already-connected clients
+  live (`map.autoZoomChanged`) and newly-connecting ones via
+  `session.snapshot`, same pattern as the fog render style. The Live
+  window's sidebar is now resizable (`GridSplitter`).
 - **Map tokens**: markers placed on a map, either freeform (own Name/
   Description/icon) or linked live to a Character+Variant or a Point of
   Interest (no data copied onto the token). Editable from both the

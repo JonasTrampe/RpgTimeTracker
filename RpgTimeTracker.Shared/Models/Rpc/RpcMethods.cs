@@ -128,6 +128,16 @@ public static class RpcMethods
     public const string MapRenderStyleChanged = "map.renderStyleChanged";
 
     /// <summary>
+    ///     GM toggled/reconfigured "auto-zoom to the active-turn character" (a player-side
+    ///     preference: when a turn starts, every connected view - including the Host's own local
+    ///     preview - snaps to the configured zoom level centered on the current-turn token, then
+    ///     the player is free to zoom/pan away again on their own until the next turn change).
+    ///     Same pattern as MapRenderStyleChanged - also sent as part of session.snapshot for
+    ///     newly connecting clients.
+    /// </summary>
+    public const string MapAutoZoomChanged = "map.autoZoomChanged";
+
+    /// <summary>
     ///     Adds or fully updates one map token (#31/#33) - always the whole resolved snapshot
     ///     (Name/Detail/IconGlyph already filtered by that token's player-visible toggles, position,
     ///     and current floor), never a partial diff: unlike fog cells, a token's payload is tiny, so
