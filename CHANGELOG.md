@@ -29,6 +29,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the wire, so a hidden or GM-only token's data never leaves the Host.
   Portrait image transfer (vs. a fallback icon glyph) is deferred to a
   follow-up.
+- **Initiative tracker**: a manually-ordered (drag to reorder), possibly-
+  repeating combat order tracked per map, lives as an "Initiative" tab
+  alongside the map's Tokens panel in the Live window. Add Characters or
+  freeform participants, Start/Stop/Next; advancing auto-skips a
+  participant whose Status has "skips initiative turn" set, wraps to
+  round 1→N, and - for a Character with a token placed on the current
+  map - switches floor and pans the canvas to it, plus pushes a
+  highlighted ring to connected PlayerClients via a new `IsCurrentTurn`
+  flag on `map.tokenUpsert`. The game clock's behavior while a tracker
+  is running (freeze it entirely, or jump forward a configurable number
+  of game-seconds once per round) is a GM setting. Character tokens also
+  gain a facing-direction arrow, adjusted via mouse wheel over the
+  marker and synced to players the same way.
 - **Points of Interest**: a new top-level library for non-Character map
   markers (chests, traps, signposts) - Name/GM-only Description, an icon
   (either a Media Library image or a Bootstrap icon), player-visibility

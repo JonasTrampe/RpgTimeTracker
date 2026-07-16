@@ -139,6 +139,13 @@ public sealed class MapLibraryEntryDto
 
     /// <summary>See MapTokenDto's doc comment - belongs to the Map, not a Floor.</summary>
     public List<MapTokenDto> Tokens { get; set; } = [];
+
+    /// <summary>See InitiativeEntryDto's doc comment - the map's combat state (#70).</summary>
+    public List<InitiativeEntryDto> InitiativeEntries { get; set; } = [];
+
+    public int InitiativeCurrentIndex { get; set; }
+    public bool InitiativeIsRunning { get; set; }
+    public int InitiativeRound { get; set; }
 }
 
 /// <summary>
@@ -168,4 +175,20 @@ public sealed class MapTokenDto
     public bool PlayerVisibleName { get; set; }
     public bool PlayerVisiblePortrait { get; set; }
     public bool PlayerVisibleDetail { get; set; }
+
+    /// <summary>See MapTokenViewModel.FacingDegrees' doc comment (#70).</summary>
+    public double FacingDegrees { get; set; }
+}
+
+/// <summary>
+///     Serializable shape of one InitiativeEntryViewModel (#70) - see its doc comment. Belongs
+///     to the Map, not a Floor, same as MapTokenDto.
+/// </summary>
+public sealed class InitiativeEntryDto
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public TokenLinkKind LinkKind { get; set; } = TokenLinkKind.None;
+    public Guid? LinkedId { get; set; }
+    public Guid? LinkedVariantId { get; set; }
+    public string FreeformName { get; set; } = string.Empty;
 }

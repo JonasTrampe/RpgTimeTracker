@@ -49,6 +49,15 @@ public sealed partial class MapItemViewModel : ObservableObject, ITaggable
 
     [ObservableProperty] private string _name;
 
+    /// <summary>Index into InitiativeEntries whose turn it currently is - meaningless while InitiativeIsRunning is false.</summary>
+    [ObservableProperty] private int _initiativeCurrentIndex;
+
+    /// <summary>Whether an initiative order (#70) is currently being tracked for this map.</summary>
+    [ObservableProperty] private bool _initiativeIsRunning;
+
+    /// <summary>Starts at 1, increments each time InitiativeCurrentIndex wraps back to 0.</summary>
+    [ObservableProperty] private int _initiativeRound;
+
     /// <summary>
     ///     Whether this map lives in the always-present Shared Library or inside the
     ///     currently open Session's own folder - see LibraryScope.
@@ -86,6 +95,11 @@ public sealed partial class MapItemViewModel : ObservableObject, ITaggable
             OnPropertyChanged(nameof(HasNoTokens));
             _onChanged?.Invoke(this);
         };
+        InitiativeEntries.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasNoInitiativeEntries));
+            _onChanged?.Invoke(this);
+        };
         if (tagIds is not null)
             foreach (var tagId in tagIds)
                 TagIds.Add(tagId);
@@ -117,6 +131,15 @@ public sealed partial class MapItemViewModel : ObservableObject, ITaggable
     public bool HasNoTokens => Tokens.Count == 0;
 
     /// <summary>
+    ///     The initiative order for this map's combat (#70) - GM-ordered manually (drag to
+    ///     reorder), not by a numeric score. The same participant can appear more than once, for
+    ///     one with multiple turns per round.
+    /// </summary>
+    public ObservableCollection<InitiativeEntryViewModel> InitiativeEntries { get; } = [];
+
+    public bool HasNoInitiativeEntries => InitiativeEntries.Count == 0;
+
+    /// <summary>
     ///     Freeform Tag Ids attached to this map (see Tag) - separate from Scene
     ///     membership, a different, explicit mechanism.
     /// </summary>
@@ -143,6 +166,21 @@ public sealed partial class MapItemViewModel : ObservableObject, ITaggable
     }
 
     partial void OnFogBlurEnabledChanged(bool? value)
+    {
+        _onChanged?.Invoke(this);
+    }
+
+    partial void OnInitiativeCurrentIndexChanged(int value)
+    {
+        _onChanged?.Invoke(this);
+    }
+
+    partial void OnInitiativeIsRunningChanged(bool value)
+    {
+        _onChanged?.Invoke(this);
+    }
+
+    partial void OnInitiativeRoundChanged(int value)
     {
         _onChanged?.Invoke(this);
     }
@@ -213,5 +251,49 @@ public sealed partial class MapItemViewModel : ObservableObject, ITaggable
     public void RemoveToken(MapTokenViewModel token)
     {
         Tokens.Remove(token);
+    }
+
+    /// <summary>
+    ///     Adds a new initiative entry - unlike AddOrSelectToken, no dedup against an existing
+    ///     Character link: the same participant can legitimately appear more than once (one
+    ///     entry per turn per round), so every call creates a new entry.
+    /// </summary>
+    public InitiativeEntryViewModel AddInitiativeEntry(TokenLinkKind linkKind, Guid? linkedId,
+        Guid? linkedVariantId, string freeformName, Action<InitiativeEntryViewModel> onDeleteRequested,
+        Action<InitiativeEntryViewModel>? onChanged)
+    {
+        var entry = new InitiativeEntryViewModel(Guid.NewGuid(), linkKind, linkedId, linkedVariantId, freeformName,
+            onDeleteRequested, onChanged);
+        InitiativeEntries.Add(entry);
+        return entry;
+    }
+
+    public void RemoveInitiativeEntry(InitiativeEntryViewModel entry)
+    {
+        var index = InitiativeEntries.IndexOf(entry);
+        if (index < 0) return;
+
+        InitiativeEntries.RemoveAt(index);
+        // A removal before the current turn (or the current turn itself, at the end of the
+        // list) shifts everyone after it back by one - keep pointing at the same logical
+        // participant instead of skipping/repeating one.
+        if (index < InitiativeCurrentIndex ||
+            (index == InitiativeCurrentIndex && InitiativeCurrentIndex >= InitiativeEntries.Count))
+            InitiativeCurrentIndex = Math.Max(0, InitiativeCurrentIndex - 1);
+    }
+
+    /// <summary>Drag-and-drop reorder target for InitiativeTrackerPanelView - a plain list splice.</summary>
+    public void MoveInitiativeEntryTo(InitiativeEntryViewModel entry, int newIndex)
+    {
+        var oldIndex = InitiativeEntries.IndexOf(entry);
+        newIndex = Math.Clamp(newIndex, 0, InitiativeEntries.Count - 1);
+        if (oldIndex < 0 || oldIndex == newIndex) return;
+
+        InitiativeEntries.Move(oldIndex, newIndex);
+
+        // Keep InitiativeCurrentIndex pointing at the same logical entry it did before the move.
+        if (InitiativeCurrentIndex == oldIndex) InitiativeCurrentIndex = newIndex;
+        else if (oldIndex < InitiativeCurrentIndex && newIndex >= InitiativeCurrentIndex) InitiativeCurrentIndex--;
+        else if (oldIndex > InitiativeCurrentIndex && newIndex <= InitiativeCurrentIndex) InitiativeCurrentIndex++;
     }
 }

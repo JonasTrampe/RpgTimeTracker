@@ -18,6 +18,7 @@ using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Rpc;
 using RpgTimeTracker.Shared.Services;
 using RpgTimeTracker.Shared.Services.Localization;
+using RpgTimeTracker.Shared.Services.Theming;
 using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.Shared.ViewModels;
 using Serilog;
@@ -325,6 +326,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             FormatVersion = map.FormatVersion,
             TagIds = map.TagIds.ToList(),
             Tokens = map.Tokens.Select(ToMapTokenDto).ToList(),
+            InitiativeEntries = map.InitiativeEntries.Select(ToInitiativeEntryDto).ToList(),
+            InitiativeCurrentIndex = map.InitiativeCurrentIndex,
+            InitiativeIsRunning = map.InitiativeIsRunning,
+            InitiativeRound = map.InitiativeRound,
             Floors = map.Floors.Select((floor, index) => new MapFloorEntryDto
             {
                 Id = floor.Id,
@@ -357,7 +362,20 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             RevealMode = token.RevealMode,
             PlayerVisibleName = token.PlayerVisibleName,
             PlayerVisiblePortrait = token.PlayerVisiblePortrait,
-            PlayerVisibleDetail = token.PlayerVisibleDetail
+            PlayerVisibleDetail = token.PlayerVisibleDetail,
+            FacingDegrees = token.FacingDegrees
+        };
+    }
+
+    private static InitiativeEntryDto ToInitiativeEntryDto(InitiativeEntryViewModel entry)
+    {
+        return new InitiativeEntryDto
+        {
+            Id = entry.Id,
+            LinkKind = entry.LinkKind,
+            LinkedId = entry.LinkedId,
+            LinkedVariantId = entry.LinkedVariantId,
+            FreeformName = entry.FreeformName
         };
     }
 
@@ -383,10 +401,31 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 RevealMode = dto.RevealMode,
                 PlayerVisibleName = dto.PlayerVisibleName,
                 PlayerVisiblePortrait = dto.PlayerVisiblePortrait,
-                PlayerVisibleDetail = dto.PlayerVisibleDetail
+                PlayerVisibleDetail = dto.PlayerVisibleDetail,
+                FacingDegrees = dto.FacingDegrees
             };
             map.Tokens.Add(token);
         }
+    }
+
+    /// <summary>
+    ///     Reconstructs a Map's initiative order (#70) from its saved entries - same "every
+    ///     construction call site needs the exact same reconstruction" reasoning as
+    ///     LoadTokensIntoMap, called alongside it.
+    /// </summary>
+    private void LoadInitiativeIntoMap(MapItemViewModel map, MapLibraryEntryDto dto)
+    {
+        foreach (var entryDto in dto.InitiativeEntries)
+        {
+            var entry = new InitiativeEntryViewModel(entryDto.Id, entryDto.LinkKind, entryDto.LinkedId,
+                entryDto.LinkedVariantId, entryDto.FreeformName, map.RemoveInitiativeEntry,
+                _ => SaveMapLibrarySettings());
+            map.InitiativeEntries.Add(entry);
+        }
+
+        map.InitiativeCurrentIndex = dto.InitiativeCurrentIndex;
+        map.InitiativeIsRunning = dto.InitiativeIsRunning;
+        map.InitiativeRound = dto.InitiativeRound;
     }
 
     /// <summary>
@@ -490,7 +529,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     ///     IsVisibleToPlayers itself - callers decide whether this token should be sent/kept at all
     ///     (see NotifyTokenChanged/BuildVisibleTokenSnapshots).
     /// </summary>
-    private MapTokenSnapshotDto ToTokenSnapshotDto(MapTokenViewModel token)
+    private MapTokenSnapshotDto ToTokenSnapshotDto(MapItemViewModel map, MapTokenViewModel token)
     {
         return new MapTokenSnapshotDto
         {
@@ -500,15 +539,35 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             Y = token.Y,
             Name = token.PlayerVisibleName ? ResolveTokenName(token) : null,
             Detail = token.PlayerVisibleDetail ? ResolveTokenDetail(token) : null,
-            IconGlyph = token.PlayerVisiblePortrait ? ResolveTokenIconGlyph(token) : null
+            IconGlyph = token.PlayerVisiblePortrait ? ResolveTokenIconGlyph(token) : null,
+            IsCurrentTurn = token.Id == GetCurrentTurnTokenId(map),
+            FacingDegrees = token.LinkKind == TokenLinkKind.Character ? token.FacingDegrees : null
         };
+    }
+
+    /// <summary>
+    ///     Resolves the map token whose turn it currently is (#70) - null unless the initiative
+    ///     tracker is running, currently pointing at a Character-linked entry, and that Character
+    ///     has a token actually placed on this map. Recomputed on demand rather than cached, so
+    ///     every snapshot build (a token edit, a fog reveal, a full map.show resync) always
+    ///     reflects the tracker's current state without a separate field to keep in sync.
+    /// </summary>
+    private Guid? GetCurrentTurnTokenId(MapItemViewModel map)
+    {
+        if (!map.InitiativeIsRunning) return null;
+        if (map.InitiativeCurrentIndex < 0 || map.InitiativeCurrentIndex >= map.InitiativeEntries.Count) return null;
+
+        var entry = map.InitiativeEntries[map.InitiativeCurrentIndex];
+        if (entry.LinkKind != TokenLinkKind.Character || entry.LinkedId is not { } linkedId) return null;
+
+        return map.Tokens.FirstOrDefault(t => t.LinkKind == TokenLinkKind.Character && t.LinkedId == linkedId)?.Id;
     }
 
     /// <summary>Every token on this map currently visible to players - the full-resync payload for map.show.</summary>
     private List<MapTokenSnapshotDto> BuildVisibleTokenSnapshots(MapItemViewModel map)
     {
         return map.Tokens.Where(t => t.IsVisibleToPlayers(IsTokenCellRevealed(map, t)))
-            .Select(ToTokenSnapshotDto)
+            .Select(t => ToTokenSnapshotDto(map, t))
             .ToList();
     }
 
@@ -531,7 +590,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
 
         if (token.IsVisibleToPlayers(IsTokenCellRevealed(map, token)))
         {
-            var snapshot = ToTokenSnapshotDto(token);
+            var snapshot = ToTokenSnapshotDto(map, token);
             _ = _playerServer.PublishMapTokenUpsertAsync(snapshot);
             MapDisplay.UpsertToken(snapshot);
         }
@@ -583,6 +642,145 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             var cellY = (int)(token.Y / floor.CellSizePx);
             if (paintedCells.Contains((cellX, cellY))) RefreshTokenPlayerState(map, token);
         }
+    }
+
+    // ==================== Initiative tracker (#70) ====================
+
+    /// <summary>
+    ///     Call after any edit to an initiative entry (add, remove, reorder) - the tracker itself
+    ///     has no network presence (only its effect, IsCurrentTurn, does - see
+    ///     GetCurrentTurnTokenId), so this is just a save, matching InitiativeEntryViewModel's own
+    ///     onChanged callback shape.
+    /// </summary>
+    public void OnInitiativeEntryChanged(MapItemViewModel map)
+    {
+        OnMapLibraryItemChanged(map);
+    }
+
+    /// <summary>
+    ///     Whether the clock was running before Freeze mode paused it for the currently-running
+    ///     tracker, so StopInitiative only resumes it if it was actually running before - only
+    ///     meaningful while some map's InitiativeIsRunning is true and InitiativeClockMode ==
+    ///     Freeze (at most one map can have a running tracker matter here in practice, since only
+    ///     one map is ever "open"/actively played at a time).
+    /// </summary>
+    private bool _clockWasRunningBeforeInitiative;
+
+    /// <summary>
+    ///     Fired whenever the current-turn token changes (including to/from null) - MapLiveWindow
+    ///     subscribes to this (filtered to the map it's editing) to switch floor and pan the view
+    ///     to the new current-turn token, matching how EditCanvas.TokenSelected is already used for
+    ///     a similar "the ViewModel changed something the window needs to react to" purpose.
+    /// </summary>
+    public event Action<MapItemViewModel, MapTokenViewModel?>? InitiativeTurnChanged;
+
+    /// <summary>
+    ///     Starts tracking initiative for this map from the top of the order - resets
+    ///     InitiativeCurrentIndex/Round rather than resuming wherever it was left, since a
+    ///     previous stop implies the prior combat ended.
+    /// </summary>
+    public void StartInitiative(MapItemViewModel map)
+    {
+        if (map.InitiativeEntries.Count == 0) return;
+
+        map.InitiativeIsRunning = true;
+        map.InitiativeCurrentIndex = 0;
+        map.InitiativeRound = 1;
+
+        if (InitiativeClockMode == InitiativeClockMode.Freeze)
+        {
+            _clockWasRunningBeforeInitiative = _clock.IsRunning;
+            _clock.Pause();
+        }
+
+        ApplyCurrentTurn(map, previousTokenId: null);
+    }
+
+    public void StopInitiative(MapItemViewModel map)
+    {
+        var previousTokenId = GetCurrentTurnTokenId(map);
+        map.InitiativeIsRunning = false;
+
+        if (InitiativeClockMode == InitiativeClockMode.Freeze && _clockWasRunningBeforeInitiative) _clock.Start();
+
+        ApplyCurrentTurn(map, previousTokenId);
+    }
+
+    /// <summary>
+    ///     Advances to the next non-skipped entry (see IsInitiativeEntrySkipped), wrapping back to
+    ///     0 and incrementing Round when it passes the end - bounded to at most one full lap so an
+    ///     all-skipped order can't infinite-loop (the pointer just settles on whichever skipped
+    ///     entry it reached).
+    /// </summary>
+    public void AdvanceInitiative(MapItemViewModel map)
+    {
+        if (!map.InitiativeIsRunning || map.InitiativeEntries.Count == 0) return;
+
+        var previousTokenId = GetCurrentTurnTokenId(map);
+        var wrapped = false;
+        var attempts = 0;
+        do
+        {
+            map.InitiativeCurrentIndex++;
+            if (map.InitiativeCurrentIndex >= map.InitiativeEntries.Count)
+            {
+                map.InitiativeCurrentIndex = 0;
+                wrapped = true;
+            }
+
+            attempts++;
+        } while (attempts <= map.InitiativeEntries.Count &&
+                 IsInitiativeEntrySkipped(map.InitiativeEntries[map.InitiativeCurrentIndex]));
+
+        if (wrapped)
+        {
+            map.InitiativeRound++;
+            if (InitiativeClockMode == InitiativeClockMode.AdvancePerRound)
+                _clock.Jump(TimeSpan.FromSeconds(InitiativeAdvanceSecondsPerRound));
+        }
+
+        ApplyCurrentTurn(map, previousTokenId);
+    }
+
+    /// <summary>
+    ///     Whether an entry's linked Character's active Status (see StatusDefinitionCatalog)
+    ///     skips its initiative turn - always false for a freeform entry (nothing to look up).
+    /// </summary>
+    private bool IsInitiativeEntrySkipped(InitiativeEntryViewModel entry)
+    {
+        if (entry.LinkKind != TokenLinkKind.Character || entry.LinkedId is not { } linkedId) return false;
+
+        var npc = NpcLibrary.FirstOrDefault(n => n.Id == linkedId);
+        if (npc is null) return false;
+
+        var variant = npc.Variants.FirstOrDefault(v => v.Id == entry.LinkedVariantId) ?? npc.DefaultVariant;
+        return StatusDefinitionCatalog.Resolve(GetActiveThemeDefinition(), variant.StatusId)?.SkipsInitiativeTurn ??
+               false;
+    }
+
+    /// <summary>
+    ///     Pushes the (possibly unchanged) current-turn token state to the network/local preview
+    ///     and fires InitiativeTurnChanged for the live map window's pan-to-token - called after
+    ///     Start/Stop/Advance, all of which may have changed which token (if any) is "current".
+    /// </summary>
+    private void ApplyCurrentTurn(MapItemViewModel map, Guid? previousTokenId)
+    {
+        var newTokenId = GetCurrentTurnTokenId(map);
+
+        if (previousTokenId is { } prevId && prevId != newTokenId)
+        {
+            var previousToken = map.Tokens.FirstOrDefault(t => t.Id == prevId);
+            if (previousToken is not null) RefreshTokenPlayerState(map, previousToken);
+        }
+
+        MapTokenViewModel? newToken = null;
+        if (newTokenId is { } newId)
+        {
+            newToken = map.Tokens.FirstOrDefault(t => t.Id == newId);
+            if (newToken is not null && newId != previousTokenId) RefreshTokenPlayerState(map, newToken);
+        }
+
+        InitiativeTurnChanged?.Invoke(map, newToken);
     }
 
     /// <summary>

@@ -1639,6 +1639,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         settings.HeadsUpWarningEnabled = HeadsUpWarningEnabled;
         settings.HeadsUpLeadMinutes = (double)HeadsUpLeadMinutes;
         settings.SoundSeekThresholdMs = SoundSeekThresholdMs;
+        settings.InitiativeClockMode = InitiativeClockMode;
+        settings.InitiativeAdvanceSecondsPerRound = InitiativeAdvanceSecondsPerRound;
         settings.AmbienceAutomationEnabled = AmbienceAutomationEnabled;
         settings.ServerName = string.IsNullOrWhiteSpace(ServerName) ? "RpgTimeTracker" : ServerName;
         settings.ConnectionPin = ConnectionPin;

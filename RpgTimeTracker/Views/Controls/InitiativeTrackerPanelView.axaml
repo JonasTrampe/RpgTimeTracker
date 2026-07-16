@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RpgTimeTracker.ViewModels"
+             x:Class="RpgTimeTracker.Views.Controls.InitiativeTrackerPanelView">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+        <TextBlock Grid.Row="0" Classes="settingsGroupTitle" Text="{DynamicResource MapEditor.InitiativeTitle}"
+                   Margin="0,0,0,8" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,0,0,6">
+            <ComboBox Name="CharacterPicker" Grid.Column="0" HorizontalAlignment="Stretch"
+                      PlaceholderText="{DynamicResource MapEditor.InitiativeCharacterPickerPlaceholder}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:NpcLibraryItemViewModel">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Grid.Column="1" Content="+" Width="32" Click="OnAddCharacterEntryClick" />
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,0,0,8">
+            <TextBox Name="FreeformNameBox" Grid.Column="0" HorizontalAlignment="Stretch"
+                     PlaceholderText="{DynamicResource MapEditor.InitiativeFreeformWatermark}" />
+            <Button Grid.Column="1" Content="+" Width="32" Click="OnAddFreeformEntryClick" />
+        </Grid>
+
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,0,0,8"
+              VerticalAlignment="Center">
+            <Button Grid.Column="0" Name="StartStopButton" Click="OnStartStopClick" />
+            <TextBlock Grid.Column="1" Name="RoundLabel" HorizontalAlignment="Center" FontWeight="Bold" />
+            <Button Grid.Column="2" Name="NextButton" Content="{DynamicResource MapEditor.InitiativeNextButton}"
+                    Click="OnNextClick" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto" MinHeight="120">
+            <StackPanel Spacing="4">
+                <TextBlock Name="EmptyStateLabel" Classes="muted" FontStyle="Italic"
+                           Text="{DynamicResource MapEditor.InitiativeEmptyText}" />
+                <StackPanel Name="EntryList" Spacing="4" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
