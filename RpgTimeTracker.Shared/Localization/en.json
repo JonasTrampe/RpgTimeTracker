@@ -255,6 +255,8 @@
   "MainWindow.Scenes.AddAlarmButton": "+ Alarm",
   "MainWindow.Scenes.AddIntervalButton": "+ Interval",
   "MapEditor.RevealToolButton": "👁 Reveal",
+  "MapEditor.PingToolButton": "📍 Ping",
+  "MapEditor.PingToolTooltip": "While on, left-click the map to ping every connected player instead of painting fog",
   "MapEditor.BrushSizeLabel": "Brush size",
   "MapEditor.PreviewTitle": "Preview (as players see it)",
   "MapEditor.ZoomOutTooltip": "Zoom out",

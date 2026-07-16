@@ -91,8 +91,17 @@ public partial class MapDisplayView : UserControl
         var point = e.GetCurrentPoint(ScrollHost);
         if (point.Properties.IsLeftButtonPressed && e.ClickCount == 2)
         {
-            var position = e.GetPosition(ImageContentPanel);
-            PingRequested?.Invoke(position.X, position.Y);
+            // GetPosition(ImageContentPanel) would need Avalonia to correctly invert
+            // LayoutTransformControl's scale for hit-testing an arbitrary descendant, which
+            // doesn't hold up in practice (pings landed in the wrong place and didn't track
+            // zoom). Same explicit screen-position/zoom math ApplyZoom/PanToPoint already use
+            // instead - a click at ScrollHost-relative position P corresponds to content
+            // position (Offset + P) in already-scaled pixels, so dividing by _zoom recovers
+            // native image-space coordinates.
+            var screenPosition = e.GetPosition(ScrollHost);
+            var imageX = (ScrollHost.Offset.X + screenPosition.X) / _zoom;
+            var imageY = (ScrollHost.Offset.Y + screenPosition.Y) / _zoom;
+            PingRequested?.Invoke(imageX, imageY);
             e.Handled = true;
             return;
         }
@@ -158,6 +167,14 @@ public partial class MapDisplayView : UserControl
             Stroke = Brushes.Gold,
             StrokeThickness = 4,
             IsHitTestVisible = false,
+            // ImageContentPanel is a plain Panel (not a Canvas) - with the default Stretch
+            // alignment, a child that also has a fixed Width/Height gets CENTERED within the
+            // panel's arrange rect instead of anchored at (0,0), which silently threw the
+            // TranslateTransform offset below off by half the map image's size. Explicit
+            // Left/Top anchors it at (0,0) first, matching how the token markers rely on Canvas
+            // positioning instead.
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
             RenderTransform = new TranslateTransform(x - diameter / 2, y - diameter / 2)
         };
         ImageContentPanel.Children.Add(ring);
@@ -266,22 +283,44 @@ public partial class MapDisplayView : UserControl
     }
 
     /// <summary>
-    ///     Sets zoom/pan directly, exactly as given - for an owner mirroring another control's
-    ///     viewport (MapLiveWindow's "Vorschau" tracking MapEditCanvasControl), where the zoom
-    ///     decision is made elsewhere and this view just needs to reflect it. Unlike ApplyZoom,
-    ///     this doesn't try to preserve the previously-centered point (there's no "previous zoom"
-    ///     concept to preserve here - the caller already knows the exact target zoom/offset) and
-    ///     doesn't clamp to ZoomMin/ZoomMax (the source viewport has already been clamped by its
-    ///     own zoom logic).
+    ///     Fits the given image-space extent (the region MapEditCanvasControl currently has
+    ///     visible) into this view's own viewport and pans to center the given point, for an owner
+    ///     mirroring another control's viewport (MapLiveWindow's "Vorschau" tracking
+    ///     MapEditCanvasControl). Takes the source's visible WIDTH/HEIGHT rather than its raw zoom
+    ///     factor - the source's zoom% is only meaningful relative to its own viewport size, so
+    ///     applying the same zoom% verbatim here (a differently-sized, usually much smaller
+    ///     viewport) would show a tiny sliver of the map at "true" pixel scale instead of the same
+    ///     field of view scaled down to fit, which is the entire point of a live minimap. Computing
+    ///     our own fit-zoom from the source's visible extent (exactly like ComputeFitZoom does
+    ///     against the whole image) is what actually keeps the two views showing the same content.
     /// </summary>
-    public void SetExternalViewport(double zoom, Vector offset)
+    public void SetExternalViewport(double visibleImageWidth, double visibleImageHeight, double centerImageX,
+        double centerImageY)
     {
         _zoomIsFit = false;
-        _zoom = zoom;
+
+        var viewport = ScrollHost.Viewport;
+        _zoom = visibleImageWidth <= 0 || visibleImageHeight <= 0 || viewport.Width <= 0 || viewport.Height <= 0
+            ? _zoom
+            : Math.Min(viewport.Width / visibleImageWidth, viewport.Height / visibleImageHeight);
+
         var transform = (ScaleTransform)ZoomHost.LayoutTransform!;
         transform.ScaleX = _zoom;
         transform.ScaleY = _zoom;
-        ScrollHost.Offset = offset;
+
+        // Can't just call PanToPoint here - unlike ApplyZoom, it always computes an offset
+        // assuming the content fills the viewport on both axes. When it doesn't (this preview is
+        // often used well below "fit" for a small thumbnail), ZoomHost's own Center alignment is
+        // what actually centers the content, and any nonzero Offset PanToPoint computed on top of
+        // that just adds a spurious, inconsistently-clamped shift. Same content-vs-viewport guard
+        // as ApplyZoom.
+        var imageSize = _viewModel?.CurrentFloorImageBitmap?.PixelSize;
+        var contentWidth = (imageSize?.Width ?? 0) * _zoom;
+        var contentHeight = (imageSize?.Height ?? 0) * _zoom;
+        var offsetX = contentWidth > viewport.Width ? centerImageX * _zoom - viewport.Width / 2 : 0;
+        var offsetY = contentHeight > viewport.Height ? centerImageY * _zoom - viewport.Height / 2 : 0;
+        ScrollHost.Offset = new Vector(offsetX, offsetY);
+
         UpdateZoomLabel();
     }
 

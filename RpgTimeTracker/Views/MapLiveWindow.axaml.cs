@@ -53,7 +53,8 @@ public partial class MapLiveWindow : Window
         EditCanvas.CellsPainted += OnCellsPainted;
         // Subscribed before SetFloors below, which already applies an initial fit-zoom and would
         // otherwise fire ViewportChanged before the preview is listening for it.
-        EditCanvas.ViewportChanged += (zoom, offset) => PreviewDisplay.SetExternalViewport(zoom, offset);
+        EditCanvas.ViewportChanged += (visibleWidth, visibleHeight, centerX, centerY) =>
+            PreviewDisplay.SetExternalViewport(visibleWidth, visibleHeight, centerX, centerY);
         EditCanvas.SetFloors(map.Floors, _vm.EditingFloor is not null && map.Floors.Contains(_vm.EditingFloor)
             ? _vm.EditingFloor
             : map.Floors.Count > 0

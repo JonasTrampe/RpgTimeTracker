@@ -255,6 +255,8 @@
   "MainWindow.Scenes.AddAlarmButton": "+ Wecker",
   "MainWindow.Scenes.AddIntervalButton": "+ Intervall",
   "MapEditor.RevealToolButton": "👁 Aufdecken",
+  "MapEditor.PingToolButton": "📍 Ping",
+  "MapEditor.PingToolTooltip": "Solange aktiv, pingt ein Linksklick auf die Karte alle verbundenen Spieler an, statt Nebel zu malen",
   "MapEditor.BrushSizeLabel": "Pinselgröße",
   "MapEditor.PreviewTitle": "Vorschau (Spieleransicht)",
   "MapEditor.ZoomOutTooltip": "Verkleinern",
