@@ -30,6 +30,14 @@ public sealed partial class MapTokenViewModel : ObservableObject
     private readonly Action<MapTokenViewModel>? _onChanged;
 
     [ObservableProperty] private string _description = string.Empty;
+
+    /// <summary>
+    ///     Facing direction in degrees, 0 = up/north, clockwise (#70) - only meaningful/shown
+    ///     for LinkKind == Character (a freeform marker or Point of Interest has no facing).
+    ///     Adjusted in the editor via mouse wheel over the token marker, not drag.
+    /// </summary>
+    [ObservableProperty] private double _facingDegrees;
+
     [ObservableProperty] private Guid _floorId;
     [ObservableProperty] private MediaLibraryItemViewModel? _iconImage;
     [ObservableProperty] private string? _iconGlyph;
@@ -105,6 +113,11 @@ public sealed partial class MapTokenViewModel : ObservableObject
     }
 
     partial void OnDescriptionChanged(string value)
+    {
+        NotifyChanged();
+    }
+
+    partial void OnFacingDegreesChanged(double value)
     {
         NotifyChanged();
     }

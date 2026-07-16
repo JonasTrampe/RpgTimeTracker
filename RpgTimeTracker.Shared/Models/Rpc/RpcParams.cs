@@ -227,11 +227,16 @@ public sealed class MapTokenSnapshotDto
     public string? Detail { get; set; }
     public string? IconGlyph { get; set; }
 
-    /// <summary>
-    ///     Wired by the Initiative tracker (#70), unset for now - always false until that
-    ///     feature exists to set it.
-    /// </summary>
+    /// <summary>Set by the Initiative tracker (#70) - true for the one token whose turn it currently is.</summary>
     public bool IsCurrentTurn { get; set; }
+
+    /// <summary>
+    ///     Facing direction in degrees, 0 = up/north, clockwise (#70) - only set for a
+    ///     Character-linked token (null for freeform/Point of Interest tokens, which have no
+    ///     facing), so the client's arrow overlay can gate on this being non-null instead of
+    ///     needing the token's LinkKind sent over the wire.
+    /// </summary>
+    public double? FacingDegrees { get; set; }
 }
 
 /// <summary>Server-to-client: a token is no longer visible to players (see RpcMethods.MapTokenRemove).</summary>

@@ -54,31 +54,50 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="rpc:MapTokenSnapshotDto">
-                            <!-- The container above is positioned at the token's raw (X,Y) - its
-                                 center, matching MapEditCanvasControl's own marker placement - so
-                                 this Border shifts itself to center on that point via a plain
-                                 static RenderTransform (half its own 32px size). -->
-                            <Border Width="32" Height="32" CornerRadius="16" ClipToBounds="True"
-                                    Background="Black" BorderBrush="White" BorderThickness="2"
-                                    RenderTransform="translate(-16px, -16px)">
-                                <ToolTip.Tip>
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                                   IsVisible="{Binding Name, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                                        <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" MaxWidth="260"
-                                                   IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                                    </StackPanel>
-                                </ToolTip.Tip>
-                                <Panel>
-                                    <TextBlock Text="{Binding IconGlyph}" FontSize="16" Foreground="White"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               IsVisible="{Binding IconGlyph, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                                    <TextBlock Text="{Binding Name}" FontSize="10" Foreground="White"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis" MaxWidth="30"
-                                               IsVisible="{Binding IconGlyph, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
-                                </Panel>
-                            </Border>
+                            <!-- Positioned at the token's raw (X,Y) - its center, matching
+                                 MapEditCanvasControl's own marker placement - the whole Panel
+                                 (sized to its largest child, the 40px current-turn ring) shifts
+                                 itself to center on that point via a plain static RenderTransform. -->
+                            <Panel RenderTransform="translate(-20px, -20px)">
+                                <!-- Current-turn highlight ring (#70) - a token's own toggles
+                                     never gate this: it's a GM-driven state, not player-visible
+                                     data the token itself opts into showing. -->
+                                <Border Width="40" Height="40" CornerRadius="20" BorderThickness="3"
+                                        BorderBrush="Gold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        IsVisible="{Binding IsCurrentTurn}" />
+                                <Border Width="32" Height="32" CornerRadius="16" ClipToBounds="True"
+                                        Background="Black" BorderBrush="White" BorderThickness="2"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <ToolTip.Tip>
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                       IsVisible="{Binding Name, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" MaxWidth="260"
+                                                       IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        </StackPanel>
+                                    </ToolTip.Tip>
+                                    <Panel>
+                                        <TextBlock Text="{Binding IconGlyph}" FontSize="16" Foreground="White"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   IsVisible="{Binding IconGlyph, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        <TextBlock Text="{Binding Name}" FontSize="10" Foreground="White"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="30"
+                                                   IsVisible="{Binding IconGlyph, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+                                    </Panel>
+                                </Border>
+                                <!-- Facing-direction arrow (#70) - only sent by the Host for a
+                                     Character-linked token (null otherwise), so IsVisible gates on
+                                     that instead of needing the token's LinkKind over the wire. -->
+                                <Path Data="M 0,-15 L 4,-8 L -4,-8 Z" Fill="White"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                                      IsVisible="{Binding FacingDegrees, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Path.RenderTransform>
+                                        <RotateTransform Angle="{Binding FacingDegrees}" />
+                                    </Path.RenderTransform>
+                                </Path>
+                            </Panel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

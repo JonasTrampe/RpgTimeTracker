@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -59,6 +60,9 @@ public partial class MapLiveWindow : Window
         EditCanvas.TokenSelected += token => TokenPanel.SelectedToken = token;
         TokenPanel.Configure(_vm, _map);
         TokenPanel.TokensMutated += EditCanvas.RefreshTokens;
+
+        InitiativePanel.Configure(_vm, _map);
+        _vm.InitiativeTurnChanged += OnInitiativeTurnChanged;
 
         _flushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
         _flushTimer.Tick += (_, _) => _ = FlushPendingAsync();
@@ -134,9 +138,35 @@ public partial class MapLiveWindow : Window
             await _vm.CloseMapToPlayersCommand.ExecuteAsync(null);
     }
 
+    /// <summary>
+    ///     Reacts to the initiative tracker's current-turn token changing (#70) - switches floor
+    ///     (a token might be on a different floor than the one currently shown) and pans the
+    ///     canvas to it. No-op for a map this window isn't editing, or when there's no placed
+    ///     token to jump to (a freeform entry, or a Character with no token on this map).
+    /// </summary>
+    private void OnInitiativeTurnChanged(MapItemViewModel map, MapTokenViewModel? token)
+    {
+        if (!ReferenceEquals(map, _map) || token is null) return;
+
+        if (EditCanvas.CurrentFloor?.Id != token.FloorId)
+        {
+            var floor = _map.Floors.FirstOrDefault(f => f.Id == token.FloorId);
+            if (floor is not null) FloorSelectorSelect(floor);
+        }
+
+        EditCanvas.PanToPoint(token.X, token.Y);
+    }
+
+    /// <summary>Selects a floor via the same public API SetFloors already exposes, without re-supplying the full list.</summary>
+    private void FloorSelectorSelect(MapFloorItemViewModel floor)
+    {
+        EditCanvas.SetFloors(_map.Floors, floor);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         _flushTimer.Stop();
+        _vm.InitiativeTurnChanged -= OnInitiativeTurnChanged;
         base.OnClosed(e);
     }
 }

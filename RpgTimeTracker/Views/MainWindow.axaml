@@ -3332,6 +3332,37 @@
                                                 <Border Classes="settingsGroup" Width="520" Margin="0,0,14,14">
                                                     <StackPanel Spacing="10">
                                                         <TextBlock Classes="settingsGroupTitle"
+                                                                   Text="{DynamicResource MainWindow.Settings.InitiativeHeader}" />
+                                                        <TextBlock Classes="muted"
+                                                                   Text="{DynamicResource MainWindow.Settings.InitiativeDescription}"
+                                                                   TextWrapping="Wrap" />
+                                                        <Grid ColumnDefinitions="Auto,*"
+                                                              RowDefinitions="Auto,Auto"
+                                                              ColumnSpacing="10" RowSpacing="8">
+                                                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                                                       Text="{DynamicResource MainWindow.Settings.InitiativeClockModeLabel}"
+                                                                       VerticalAlignment="Center" />
+                                                            <ComboBox Grid.Row="0" Grid.Column="1"
+                                                                      ItemsSource="{Binding InitiativeClockModeOptions}"
+                                                                      SelectedItem="{Binding InitiativeClockMode}"
+                                                                      HorizontalAlignment="Left" />
+
+                                                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                                                       Text="{DynamicResource MainWindow.Settings.InitiativeAdvanceSecondsLabel}"
+                                                                       VerticalAlignment="Center" />
+                                                            <NumericUpDown Grid.Row="1" Grid.Column="1"
+                                                                           Value="{Binding InitiativeAdvanceSecondsPerRound}"
+                                                                           Minimum="0" Maximum="86400"
+                                                                           Increment="10" FormatString="0"
+                                                                           NumberFormat="{DynamicResource App.NumberFormat}"
+                                                                           IsEnabled="{Binding IsInitiativeAdvancePerRound}"
+                                                                           HorizontalAlignment="Left" Width="140" />
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Classes="settingsGroup" Width="520" Margin="0,0,14,14">
+                                                    <StackPanel Spacing="10">
+                                                        <TextBlock Classes="settingsGroupTitle"
                                                                    Text="{DynamicResource MainWindow.Settings.TagsHeader}" />
                                                         <TextBlock Classes="muted"
                                                                    Text="{DynamicResource MainWindow.Settings.TagsDescription}"

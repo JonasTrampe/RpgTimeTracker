@@ -452,6 +452,20 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private DispatcherTimer? _slideshowTimer;
 
     /// <summary>
+    ///     Game clock behavior while an initiative order (#70) is running - GM-configurable
+    ///     (Settings tab), persisted like SoundSeekThresholdMs below.
+    /// </summary>
+    [ObservableProperty] private InitiativeClockMode _initiativeClockMode = InitiativeClockMode.Freeze;
+
+    /// <summary>Only meaningful when InitiativeClockMode == AdvancePerRound - see AdvanceInitiative.</summary>
+    [ObservableProperty] private int _initiativeAdvanceSecondsPerRound = 60;
+
+    /// <summary>Settings-tab ComboBox source - matches the plain-enum-ComboBox convention already used for TokenRevealMode.</summary>
+    public static Array InitiativeClockModeOptions { get; } = Enum.GetValues(typeof(InitiativeClockMode));
+
+    public bool IsInitiativeAdvancePerRound => InitiativeClockMode == InitiativeClockMode.AdvancePerRound;
+
+    /// <summary>
     ///     Minimum sound duration (ms) worth estimating a mid-playback seek for when
     ///     resending it to a client whose Sound routing was just re-enabled - see
     ///     ResendActiveSoundsToClient. Persisted, GM-configurable (Settings tab).
@@ -559,6 +573,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         _headsUpWarningEnabled = settings.HeadsUpWarningEnabled;
         _headsUpLeadMinutes = (decimal)settings.HeadsUpLeadMinutes;
         _soundSeekThresholdMs = settings.SoundSeekThresholdMs;
+        _initiativeClockMode = settings.InitiativeClockMode;
+        _initiativeAdvanceSecondsPerRound = settings.InitiativeAdvanceSecondsPerRound;
         _serverName = string.IsNullOrWhiteSpace(settings.ServerName) ? "RpgTimeTracker" : settings.ServerName;
         _connectionPin = settings.ConnectionPin;
         _autoSaveOnCloseEnabled = settings.AutoSaveOnCloseEnabled;
@@ -630,6 +646,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             }
 
             LoadTokensIntoMap(map, mapEntry.Tokens);
+            LoadInitiativeIntoMap(map, mapEntry);
             MapLibrary.Add(map);
         }
 
@@ -915,6 +932,17 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         SaveUiSettings();
     }
 
+    partial void OnInitiativeClockModeChanged(InitiativeClockMode value)
+    {
+        OnPropertyChanged(nameof(IsInitiativeAdvancePerRound));
+        SaveUiSettings();
+    }
+
+    partial void OnInitiativeAdvanceSecondsPerRoundChanged(int value)
+    {
+        SaveUiSettings();
+    }
+
     /// <summary>
     ///     Registered into _usageRegistry for both Media and Sound library items - trigger
     ///     media configs (Timer/Alarm/IntervalEvent/CalendarEntry) reference a file by Path, not
@@ -1060,6 +1088,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             }
 
             LoadTokensIntoMap(map, mapEntry.Tokens);
+            LoadInitiativeIntoMap(map, mapEntry);
             MapLibrary.Add(map);
         }
 

@@ -226,6 +226,11 @@ public static class ThemeSettingsService
         /// </summary>
         public int SoundSeekThresholdMs { get; set; } = 10_000;
 
+        /// <summary>See MainWindowViewModel.InitiativeClockMode/InitiativeAdvanceSecondsPerRound's doc comments (#70).</summary>
+        public InitiativeClockMode InitiativeClockMode { get; set; } = InitiativeClockMode.Freeze;
+
+        public int InitiativeAdvanceSecondsPerRound { get; set; } = 60;
+
         /// <summary>
         ///     Display name transmitted in the LAN/mDNS announcement, so that multiple servers on the same
         ///     network are distinguishable in the client's server list (see

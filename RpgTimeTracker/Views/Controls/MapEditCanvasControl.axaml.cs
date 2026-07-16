@@ -210,6 +210,13 @@ public partial class MapEditCanvasControl : UserControl
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
 
+        // A Character token also shows a little facing-direction arrow (#70), adjusted via mouse
+        // wheel over the marker rather than drag (dragging the marker already moves the token).
+        var facingArrow = token.LinkKind == TokenLinkKind.Character ? CreateFacingArrow(token) : null;
+        var markerContent = facingArrow is null
+            ? content
+            : new Panel { Children = { content, facingArrow } };
+
         var marker = new Border
         {
             Width = TokenMarkerSizePx,
@@ -220,16 +227,48 @@ public partial class MapEditCanvasControl : UserControl
             BorderThickness = new Thickness(2),
             Background = Brushes.Black,
             Cursor = new Cursor(StandardCursorType.Hand),
-            Child = content
+            Child = markerContent
         };
         ToolTip.SetTip(marker, BuildTokenTooltip(token));
 
         marker.PointerPressed += (_, e) => OnTokenPointerPressed(token, marker, e);
         marker.PointerMoved += (_, e) => OnTokenPointerMoved(token, marker, e);
         marker.PointerReleased += (_, e) => OnTokenPointerReleased(token, e);
+        if (facingArrow is not null)
+            marker.PointerWheelChanged += (_, e) => OnTokenFacingWheelChanged(token, facingArrow, e);
 
         PositionMarker(marker, token);
         return marker;
+    }
+
+    private const double FacingStepDegrees = 15;
+
+    private static Avalonia.Controls.Shapes.Path CreateFacingArrow(MapTokenViewModel token)
+    {
+        return new Avalonia.Controls.Shapes.Path
+        {
+            Data = Geometry.Parse("M 0,-15 L 4,-8 L -4,-8 Z"),
+            Fill = Brushes.White,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            RenderTransformOrigin = RelativePoint.Center,
+            RenderTransform = new RotateTransform(token.FacingDegrees)
+        };
+    }
+
+    /// <summary>
+    ///     Adjusts a Character token's facing (#70) by a fixed step per wheel notch, wrapping at
+    ///     360 - a plain wheel scoped to the marker itself (not Ctrl, unlike the canvas-wide
+    ///     zoom in OnCanvasPointerWheelChanged), so it doesn't also scroll/zoom the canvas
+    ///     underneath.
+    /// </summary>
+    private void OnTokenFacingWheelChanged(MapTokenViewModel token, Avalonia.Controls.Shapes.Path facingArrow,
+        PointerWheelEventArgs e)
+    {
+        var step = e.Delta.Y > 0 ? FacingStepDegrees : -FacingStepDegrees;
+        token.FacingDegrees = (token.FacingDegrees + step + 360) % 360;
+        facingArrow.RenderTransform = new RotateTransform(token.FacingDegrees);
+        e.Handled = true;
     }
 
     /// <summary>
@@ -376,6 +415,17 @@ public partial class MapEditCanvasControl : UserControl
     private void UpdateZoomLabel()
     {
         ZoomLabel.Text = $"{_zoom * 100:0}%";
+    }
+
+    /// <summary>
+    ///     Centers the viewport on an image-space point (#70's "jump to the current turn's
+    ///     token") - the same offset math ApplyZoom already uses to keep a point centered across
+    ///     a zoom change, just driven by an explicit target instead of the viewport's prior center.
+    /// </summary>
+    public void PanToPoint(double imageX, double imageY)
+    {
+        var viewport = ScrollHost.Viewport;
+        ScrollHost.Offset = new Vector(imageX * _zoom - viewport.Width / 2, imageY * _zoom - viewport.Height / 2);
     }
 
     private void OnZoomInClick(object? sender, RoutedEventArgs e)
