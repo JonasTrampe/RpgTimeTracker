@@ -178,6 +178,11 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MapRenderStyleChanged += style => Dispatcher.UIThread.Post(() => MapDisplay.ApplyRenderStyle(
             FogOverlayRenderer.BuildHiddenColor(style.ColorHex, style.OpacityPercent), style.BlurRadius,
             style.BlurEnabled));
+        _client.MapAutoZoomChanged += autoZoom => Dispatcher.UIThread.Post(() =>
+        {
+            MapDisplay.AutoZoomEnabled = autoZoom.Enabled;
+            MapDisplay.AutoZoomLevel = autoZoom.ZoomLevel;
+        });
         _client.MusicTrackReceived += (header, path) => Dispatcher.UIThread.Post(() => PlayMusicTrack(path, header));
         _client.MusicStopRequested += () => Dispatcher.UIThread.Post(StopMusic);
         _client.MusicVolumeChangeRequested += volume => Dispatcher.UIThread.Post(() => ApplyMusicVolume(volume));
@@ -552,6 +557,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         MapDisplay.ApplyRenderStyle(
             FogOverlayRenderer.BuildHiddenColor(snapshot.FogColorHex, snapshot.FogOpacityPercent),
             snapshot.FogBlurRadius, snapshot.FogBlurEnabled);
+        MapDisplay.AutoZoomEnabled = snapshot.AutoZoomEnabled;
+        MapDisplay.AutoZoomLevel = snapshot.AutoZoomLevel;
 
         CalendarService.Active = snapshot.ActiveCalendar;
         _localClock.SpeedMultiplier = snapshot.SpeedMultiplier <= 0 ? 1.0 : snapshot.SpeedMultiplier;

@@ -231,6 +231,11 @@ public static class ThemeSettingsService
 
         public int InitiativeAdvanceSecondsPerRound { get; set; } = 60;
 
+        /// <summary>See MainWindowViewModel.AutoZoomEnabled/AutoZoomLevel's doc comments.</summary>
+        public bool AutoZoomEnabled { get; set; }
+
+        public double AutoZoomLevel { get; set; } = 2.0;
+
         /// <summary>
         ///     Display name transmitted in the LAN/mDNS announcement, so that multiple servers on the same
         ///     network are distinguishable in the client's server list (see

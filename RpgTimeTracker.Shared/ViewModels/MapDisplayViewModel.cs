@@ -93,6 +93,26 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     /// </summary>
     public ObservableCollection<MapTokenSnapshotDto> VisibleTokens { get; } = [];
 
+    /// <summary>
+    ///     Whether a turn changing to a new Character-linked token should snap this view to
+    ///     AutoZoomLevel, centered on it (a GM setting, see MainWindowViewModel.AutoZoomEnabled) -
+    ///     a plain settable property (not [ObservableProperty]) since nothing in the View binds to
+    ///     it directly; the Host sets it locally from its own setting, the PlayerClient sets it
+    ///     from map.autoZoomChanged/session.snapshot.
+    /// </summary>
+    public bool AutoZoomEnabled { get; set; }
+
+    /// <summary>Only meaningful while AutoZoomEnabled - see AutoZoomEnabled's doc comment.</summary>
+    public double AutoZoomLevel { get; set; } = 2.0;
+
+    /// <summary>
+    ///     Fired from UpsertToken when a token's IsCurrentTurn just flipped to true and
+    ///     AutoZoomEnabled is on - MapDisplayView.axaml.cs subscribes to zoom+pan to (x,y), the
+    ///     same two-call sequence MapLiveWindow already uses GM-side via
+    ///     MapEditCanvasControl.PanToPoint for the analogous GM-only convenience.
+    /// </summary>
+    public event Action<double, double>? ActiveCharacterZoomRequested;
+
     partial void OnHiddenColorChanged(Color value)
     {
         TintBrush = new SolidColorBrush(value);
@@ -155,15 +175,51 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     public void UpsertToken(MapTokenSnapshotDto token)
     {
         var index = _tokens.FindIndex(t => t.Id == token.Id);
+        var wasCurrentTurn = index >= 0 && _tokens[index].IsCurrentTurn;
         if (index >= 0) _tokens[index] = token;
         else _tokens.Add(token);
 
         RefreshVisibleTokens();
+
+        if (AutoZoomEnabled && token.IsCurrentTurn && !wasCurrentTurn)
+        {
+            ShowFloorIfDifferent(token.FloorId);
+            ActiveCharacterZoomRequested?.Invoke(token.X, token.Y);
+        }
+    }
+
+    /// <summary>
+    ///     Switches to the floor a token just became "current turn" on, if it isn't already the
+    ///     one shown - a token's (X,Y) is only meaningful within its own floor's image space, so
+    ///     the auto-zoom pan below only makes sense after this runs (see UpsertToken).
+    /// </summary>
+    private void ShowFloorIfDifferent(Guid floorId)
+    {
+        var index = _floors.FindIndex(f => f.FloorId == floorId);
+        if (index < 0 || index == CurrentFloorIndex) return;
+
+        CurrentFloorIndex = index;
+        DisplayCurrentFloor();
     }
 
     public void RemoveToken(Guid tokenId)
     {
         _tokens.RemoveAll(t => t.Id == tokenId);
+        RefreshVisibleTokens();
+    }
+
+    /// <summary>
+    ///     Wholesale replace, for an owner (MapLiveWindow's own preview) that doesn't get live
+    ///     per-token Upsert/Remove calls and instead just re-resolves the full set on every
+    ///     relevant change (a token add/edit/delete/drag, or a fog reveal affecting a
+    ///     HiddenUntilRevealed token's visibility). Doesn't raise ActiveCharacterZoomRequested -
+    ///     that's a player-facing reaction to a token's turn *just* starting, not meaningful for a
+    ///     full resync.
+    /// </summary>
+    public void ReplaceAllTokens(IReadOnlyList<MapTokenSnapshotDto> tokens)
+    {
+        _tokens.Clear();
+        _tokens.AddRange(tokens);
         RefreshVisibleTokens();
     }
 

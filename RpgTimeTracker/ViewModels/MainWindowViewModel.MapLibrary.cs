@@ -572,6 +572,18 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     }
 
     /// <summary>
+    ///     Public wrapper around BuildVisibleTokenSnapshots for MapLiveWindow's own "Vorschau"
+    ///     thumbnail (a separate MapDisplayViewModel instance from MapDisplay that isn't kept in
+    ///     sync by RefreshTokenPlayerState, since that only targets whichever map is currently open
+    ///     to players - the preview needs the same resolved/filtered snapshots for whatever map its
+    ///     own window is editing, open-to-players or not).
+    /// </summary>
+    public IReadOnlyList<MapTokenSnapshotDto> GetVisibleTokenSnapshots(MapItemViewModel map)
+    {
+        return BuildVisibleTokenSnapshots(map);
+    }
+
+    /// <summary>
     ///     Call after any edit to a token's data (link, name/description, icon, Reveal mode, a
     ///     player-visibility toggle, or moving it to a different floor) - saves, and if this token's
     ///     map is the one currently open to players, re-sends its full resolved snapshot (or removes

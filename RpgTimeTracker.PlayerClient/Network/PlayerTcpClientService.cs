@@ -121,6 +121,7 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action<MapTokenSnapshotDto>? MapTokenUpsertReceived;
     public event Action<Guid>? MapTokenRemoveReceived;
     public event Action<MapRenderStyleChangedParams>? MapRenderStyleChanged;
+    public event Action<MapAutoZoomChangedParams>? MapAutoZoomChanged;
 
     /// <summary>
     ///     A music track finished transferring (see MediaHeaderDto.LayerMusic) - kept as its
@@ -582,6 +583,10 @@ public sealed class PlayerTcpClientService : IDisposable
                 case RpcMethods.MapRenderStyleChanged:
                     var renderStyle = raw.GetParams<MapRenderStyleChangedParams>();
                     if (renderStyle is not null) MapRenderStyleChanged?.Invoke(renderStyle);
+                    break;
+                case RpcMethods.MapAutoZoomChanged:
+                    var autoZoom = raw.GetParams<MapAutoZoomChangedParams>();
+                    if (autoZoom is not null) MapAutoZoomChanged?.Invoke(autoZoom);
                     break;
                 case RpcMethods.MapTokenUpsert:
                     var tokenUpsert = raw.GetParams<MapTokenSnapshotDto>();

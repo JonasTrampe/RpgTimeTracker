@@ -297,6 +297,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             FogOpacityPercent = FogOpacityPercent,
             FogBlurRadius = FogBlurRadius,
             FogBlurEnabled = FogBlurEnabled,
+            AutoZoomEnabled = AutoZoomEnabled,
+            AutoZoomLevel = AutoZoomLevel,
             CalendarEntries = CalendarEntries
                 .Select(item => item.TryBuildDefinition(out var definition) ? definition : null)
                 .Where(definition => definition is not null && definition.IsPlayerVisible)

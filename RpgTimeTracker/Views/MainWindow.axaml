@@ -3337,7 +3337,7 @@
                                                                    Text="{DynamicResource MainWindow.Settings.InitiativeDescription}"
                                                                    TextWrapping="Wrap" />
                                                         <Grid ColumnDefinitions="Auto,*"
-                                                              RowDefinitions="Auto,Auto"
+                                                              RowDefinitions="Auto,Auto,Auto,Auto"
                                                               ColumnSpacing="10" RowSpacing="8">
                                                             <TextBlock Grid.Row="0" Grid.Column="0"
                                                                        Text="{DynamicResource MainWindow.Settings.InitiativeClockModeLabel}"
@@ -3356,6 +3356,24 @@
                                                                            Increment="10" FormatString="0"
                                                                            NumberFormat="{DynamicResource App.NumberFormat}"
                                                                            IsEnabled="{Binding IsInitiativeAdvancePerRound}"
+                                                                           HorizontalAlignment="Left" Width="140" />
+
+                                                            <TextBlock Grid.Row="2" Grid.Column="0"
+                                                                       Text="{DynamicResource MainWindow.Settings.AutoZoomEnabledLabel}"
+                                                                       VerticalAlignment="Center" />
+                                                            <CheckBox Grid.Row="2" Grid.Column="1"
+                                                                      IsChecked="{Binding AutoZoomEnabled}"
+                                                                      ToolTip.Tip="{DynamicResource MainWindow.Settings.AutoZoomEnabledTooltip}" />
+
+                                                            <TextBlock Grid.Row="3" Grid.Column="0"
+                                                                       Text="{DynamicResource MainWindow.Settings.AutoZoomLevelLabel}"
+                                                                       VerticalAlignment="Center" />
+                                                            <NumericUpDown Grid.Row="3" Grid.Column="1"
+                                                                           Value="{Binding AutoZoomLevel}"
+                                                                           Minimum="0.25" Maximum="4.0"
+                                                                           Increment="0.25" FormatString="0.00"
+                                                                           NumberFormat="{DynamicResource App.NumberFormat}"
+                                                                           IsEnabled="{Binding AutoZoomEnabled}"
                                                                            HorizontalAlignment="Left" Width="140" />
                                                         </Grid>
                                                     </StackPanel>

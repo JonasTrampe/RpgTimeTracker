@@ -24,12 +24,12 @@
             <Button Grid.Column="1" Content="+" Width="32" Click="OnAddFreeformEntryClick" />
         </Grid>
 
-        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,0,0,8"
-              VerticalAlignment="Center">
-            <Button Grid.Column="0" Name="StartStopButton" Click="OnStartStopClick" />
-            <TextBlock Grid.Column="1" Name="RoundLabel" HorizontalAlignment="Center" FontWeight="Bold" />
-            <Button Grid.Column="2" Name="NextButton" Content="{DynamicResource MapEditor.InitiativeNextButton}"
-                    Click="OnNextClick" />
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,0,0,8">
+            <Button Grid.Column="0" Name="StartStopButton" VerticalAlignment="Center" Click="OnStartStopClick" />
+            <TextBlock Grid.Column="1" Name="RoundLabel" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontWeight="Bold" />
+            <Button Grid.Column="2" Name="NextButton" VerticalAlignment="Center"
+                    Content="{DynamicResource MapEditor.InitiativeNextButton}" Click="OnNextClick" />
         </Grid>
 
         <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto" MinHeight="120">

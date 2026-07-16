@@ -8,10 +8,22 @@
         Title="{Binding CurrentMediaFileName, StringFormat='Medium: {0}'}"
         Width="960" Height="600" MinWidth="320" MinHeight="240"
         Background="Black">
-    <Panel PointerPressed="OnPanelPointerPressed"
-           ToolTip.Tip="{DynamicResource MediaWindow.PanelTooltip}">
-        <Image Source="{Binding CurrentMediaBitmap}" Stretch="Uniform" IsVisible="{Binding HasImageMedia}" />
-        <vlc:VideoView MediaPlayer="{Binding MediaPlayer}" IsVisible="{Binding HasVideoMedia}" />
+    <Panel>
+        <!-- Gallery-advance click/tooltip only applies to image/video media - separated from the
+             map Panel below (which has its own click/drag/wheel handling for zoom/pan) so a click
+             or hover on the map doesn't also advance the gallery or show the "next image" hint
+             (see PlayerWindow.axaml's ShouldShowMediaLocally/ShouldShowMapLocally split, which
+             already had this separation - this window didn't). -->
+        <Panel PointerPressed="OnPanelPointerPressed"
+               ToolTip.Tip="{DynamicResource MediaWindow.PanelTooltip}"
+               IsVisible="{Binding HasImageMedia}">
+            <Image Source="{Binding CurrentMediaBitmap}" Stretch="Uniform" />
+        </Panel>
+        <Panel PointerPressed="OnPanelPointerPressed"
+               ToolTip.Tip="{DynamicResource MediaWindow.PanelTooltip}"
+               IsVisible="{Binding HasVideoMedia}">
+            <vlc:VideoView MediaPlayer="{Binding MediaPlayer}" />
+        </Panel>
 
         <views:MapDisplayView DataContext="{Binding MapDisplay}" />
 

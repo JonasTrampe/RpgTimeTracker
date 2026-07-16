@@ -1641,6 +1641,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         settings.SoundSeekThresholdMs = SoundSeekThresholdMs;
         settings.InitiativeClockMode = InitiativeClockMode;
         settings.InitiativeAdvanceSecondsPerRound = InitiativeAdvanceSecondsPerRound;
+        settings.AutoZoomEnabled = AutoZoomEnabled;
+        settings.AutoZoomLevel = AutoZoomLevel;
         settings.AmbienceAutomationEnabled = AmbienceAutomationEnabled;
         settings.ServerName = string.IsNullOrWhiteSpace(ServerName) ? "RpgTimeTracker" : ServerName;
         settings.ConnectionPin = ConnectionPin;
