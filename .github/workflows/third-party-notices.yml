@@ -3,16 +3,16 @@ name: Third-Party Notices
 # Fails if a NuGet package referenced by a shipped project (Host/Client/Shared -
 # RpgTimeTracker.Tests is dev/test-only and excluded) isn't mentioned anywhere in
 # THIRD-PARTY-NOTICES.txt, so a missing attribution entry doesn't slip through
-# unmerged (see docs/legal-todo.md). Static file inspection only - no build/
+# unmerged (see docs/internal/legal-todo.md). Static file inspection only - no build/
 # restore needed, and no OS matrix since csproj/text parsing behaves the same
 # everywhere; runs via pwsh (preinstalled on GitHub-hosted ubuntu-latest).
 on:
   push:
     branches: [ main ]
-    paths-ignore: [ '**/*.md', 'docs/**' ]
+    paths-ignore: [ '**/*.md', '**/*.rst', 'docs/**' ]
   pull_request:
     branches: [ main ]
-    paths-ignore: [ '**/*.md', 'docs/**' ]
+    paths-ignore: [ '**/*.md', '**/*.rst', 'docs/**' ]
   workflow_dispatch:
 
 jobs:
