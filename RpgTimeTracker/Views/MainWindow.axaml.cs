@@ -98,7 +98,15 @@ public partial class MainWindow : Window
 
     private MainWindowViewModel? _attachedViewModel;
 
-    private MapLiveWindow? _openMapLiveWindow;
+    /// <summary>
+    ///     Keyed by map Id, not a single instance - previously only one MapLiveWindow could be
+    ///     open at all, so switching which prepared map was being shown/edited meant closing the
+    ///     current one before a different map's "Show" button would even open a new one. Multiple
+    ///     maps can each have their own Live window open at once now, so the GM can quick-switch
+    ///     which one is actually broadcast to players (via each window's own "Open to players"
+    ///     toggle) without losing the other's editor state.
+    /// </summary>
+    private readonly Dictionary<Guid, MapLiveWindow> _openMapLiveWindows = [];
 
     private PlayerWindow? _playerWindow;
 
@@ -301,15 +309,15 @@ public partial class MainWindow : Window
         // this case; this is defense-in-depth.
         if (vm.IsSelectedMapBeingPrepared) return;
 
-        if (_openMapLiveWindow is not null)
+        if (_openMapLiveWindows.TryGetValue(map.Id, out var existing))
         {
-            _openMapLiveWindow.Activate();
+            existing.Activate();
             return;
         }
 
         var editor = new MapLiveWindow(vm, map);
-        editor.Closed += (_, _) => _openMapLiveWindow = null;
-        _openMapLiveWindow = editor;
+        editor.Closed += (_, _) => _openMapLiveWindows.Remove(map.Id);
+        _openMapLiveWindows[map.Id] = editor;
         editor.Show(this);
     }
 

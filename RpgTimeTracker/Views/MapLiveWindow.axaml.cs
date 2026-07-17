@@ -45,6 +45,11 @@ public partial class MapLiveWindow : Window
         Title = string.Format(LocalizationService.Get("MapLiveWindow.Title"), map.Name);
         OpenToPlayersToggle.IsChecked = _vm.IsMapOpenToPlayers && _vm.OpenMap == map;
         AutoZoomToggle.IsChecked = _vm.AutoZoomEnabled;
+        // Multiple MapLiveWindows can be open at once (one per map) - if the GM switches which
+        // map is shown to players from a DIFFERENT window, this one's own toggle would otherwise
+        // stay stuck on its initial (now stale) value instead of reflecting that it's no longer
+        // the one being broadcast.
+        _vm.PropertyChanged += OnViewModelPropertyChanged;
 
         PreviewDisplay.DataContext = _previewDisplay;
 
@@ -80,6 +85,14 @@ public partial class MapLiveWindow : Window
         _flushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
         _flushTimer.Tick += (_, _) => _ = FlushPendingAsync();
         _flushTimer.Start();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(MainWindowViewModel.OpenMap) &&
+            e.PropertyName != nameof(MainWindowViewModel.IsMapOpenToPlayers)) return;
+
+        OpenToPlayersToggle.IsChecked = _vm.IsMapOpenToPlayers && ReferenceEquals(_vm.OpenMap, _map);
     }
 
     private void OnFloorChanged(MapFloorItemViewModel? floor)
@@ -221,6 +234,7 @@ public partial class MapLiveWindow : Window
         _flushTimer.Stop();
         _vm.InitiativeTurnChanged -= OnInitiativeTurnChanged;
         _vm.PlayerMapPingReceived -= OnPlayerMapPingReceived;
+        _vm.PropertyChanged -= OnViewModelPropertyChanged;
         base.OnClosed(e);
     }
 }

@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Quick-switch between prepared maps**: a "Show" window can now be open
+  for more than one map at once, so switching which one players see is a
+  single click of the new map's "Open to players" toggle instead of
+  closing the current map's window first. Every open window's toggle
+  stays live-synced to which map is actually being broadcast.
 - **Player info for Points of Interest**: POI library entries now have their
   own Markdown-authored player-facing bio field (previously only Characters
   had this), gated by its own player-visibility toggle - shown in a linked

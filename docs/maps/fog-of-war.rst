@@ -13,3 +13,9 @@ default (Settings tab). Floors are reorderable, thumbnailed layers whose
 order survives export/import. Only one map shows to players at a time,
 and not while its Prepare window is open. Exportable individually
 (``.rtt-map``) or as part of a full session bundle.
+
+A "Show" window can be open for more than one map at once, so switching
+which one players actually see is a single click of that map's "Open to
+players" toggle - no need to close the current map's window first. Every
+open window's toggle stays in sync, so whichever one just took over
+clearly shows as active and the one it replaced clearly shows as not.
