@@ -100,10 +100,12 @@ public partial class MainWindowViewModel
             Id = poi.Id,
             Name = poi.Name,
             Description = poi.Description,
+            PlayerInfo = poi.PlayerInfo,
             IconImageId = poi.IconImage?.Id,
             IconGlyph = poi.IconGlyph,
             PlayerVisibleName = poi.PlayerVisibleName,
             PlayerVisibleDescription = poi.PlayerVisibleDescription,
+            PlayerVisiblePlayerInfo = poi.PlayerVisiblePlayerInfo,
             TagIds = poi.TagIds.ToList()
         };
     }
@@ -123,12 +125,17 @@ public partial class MainWindowViewModel
         try
         {
             poi.Description = entry.Description;
+            poi.PlayerInfo = entry.PlayerInfo;
             poi.IconImage = entry.IconImageId is { } imageId
                 ? MediaLibrary.FirstOrDefault(m => m.Id == imageId)
                 : null;
             poi.IconGlyph = entry.IconGlyph;
             poi.PlayerVisibleName = entry.PlayerVisibleName;
             poi.PlayerVisibleDescription = entry.PlayerVisibleDescription;
+            poi.PlayerVisiblePlayerInfo = entry.PlayerVisiblePlayerInfo;
+            // Loaded from disk starts in preview - see IsPlayerInfoPreviewMode's doc comment
+            // (matches NpcLibrary's identical convention for the same field).
+            poi.IsPlayerInfoPreviewMode = !string.IsNullOrWhiteSpace(entry.PlayerInfo);
             return poi;
         }
         finally

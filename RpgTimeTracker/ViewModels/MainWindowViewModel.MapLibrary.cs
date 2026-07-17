@@ -463,18 +463,25 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     }
 
     /// <summary>
-    ///     The Character's player-facing Markdown bio (NpcVariantViewModel.PlayerInfo, via
-    ///     GetEffectivePlayerInfo's Default-variant fallback) - null for PointOfInterest/freeform
-    ///     tokens, which have no such field.
+    ///     The linked entity's player-facing Markdown bio - a Character's PlayerInfo
+    ///     (NpcVariantViewModel.PlayerInfo, via GetEffectivePlayerInfo's Default-variant fallback)
+    ///     or a Point of Interest's own PlayerInfo field; null for freeform tokens, which have no
+    ///     such field.
     /// </summary>
     public string? ResolvePlayerInfo(MapTokenViewModel token)
     {
-        if (token.LinkKind != TokenLinkKind.Character) return null;
-
-        var npc = NpcLibrary.FirstOrDefault(n => n.Id == token.LinkedId);
-        if (npc is null) return null;
-        var variant = npc.Variants.FirstOrDefault(v => v.Id == token.LinkedVariantId) ?? npc.DefaultVariant;
-        return npc.GetEffectivePlayerInfo(variant);
+        switch (token.LinkKind)
+        {
+            case TokenLinkKind.Character:
+                var npc = NpcLibrary.FirstOrDefault(n => n.Id == token.LinkedId);
+                if (npc is null) return null;
+                var variant = npc.Variants.FirstOrDefault(v => v.Id == token.LinkedVariantId) ?? npc.DefaultVariant;
+                return npc.GetEffectivePlayerInfo(variant);
+            case TokenLinkKind.PointOfInterest:
+                return PointOfInterestLibrary.FirstOrDefault(p => p.Id == token.LinkedId)?.PlayerInfo;
+            default:
+                return null;
+        }
     }
 
     public MediaLibraryItemViewModel? ResolveTokenPortrait(MapTokenViewModel token)
