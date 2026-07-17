@@ -509,23 +509,28 @@ public partial class MapEditCanvasControl : UserControl
     }
 
     /// <summary>
-    ///     While PingModeToggle is on, a left-click pings instead of painting (see
-    ///     PingRequested) - the clean, no-side-effect way to ping. A plain double-click also pings
-    ///     even while still in paint mode, as a quick shortcut matching the player-facing gesture -
-    ///     that one still paints a single cell on its first press before the second press can be
-    ///     recognized as a double-click (left-click already starts painting immediately on press,
-    ///     with no way to know it's a double-click until the second press arrives), which is an
-    ///     accepted minor side effect of that shortcut rather than something worth debouncing every
-    ///     single click for.
+    ///     Pinging requires both PingModeToggle to be on AND a double-click - matching the
+    ///     player-facing gesture (double-click) while still needing the deliberate tool switch to
+    ///     avoid any ambiguity with painting. A single left-click while the toggle is on does
+    ///     nothing (not even a ping) rather than painting, since switching to the Ping tool signals
+    ///     "I'm done painting for now." Not offered while still in Paint mode (unlike an earlier
+    ///     iteration) - painting starts immediately on PointerPressed, so a double-click there would
+    ///     still paint one cell on its first press before the second press could be recognized as a
+    ///     double-click, and that inconsistent one-cell side effect wasn't worth keeping as a
+    ///     shortcut once a dedicated tool already exists.
     /// </summary>
     private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(EditorCanvas).Properties.IsLeftButtonPressed) return;
 
-        if ((PingModeToggle.IsChecked == true || e.ClickCount == 2) && CurrentFloor is not null)
+        if (PingModeToggle.IsChecked == true)
         {
-            var pingPosition = e.GetPosition(EditorCanvas);
-            PingRequested?.Invoke(CurrentFloor.Id, pingPosition.X / _zoom, pingPosition.Y / _zoom);
+            if (e.ClickCount == 2 && CurrentFloor is not null)
+            {
+                var pingPosition = e.GetPosition(EditorCanvas);
+                PingRequested?.Invoke(CurrentFloor.Id, pingPosition.X / _zoom, pingPosition.Y / _zoom);
+            }
+
             e.Handled = true;
             return;
         }
