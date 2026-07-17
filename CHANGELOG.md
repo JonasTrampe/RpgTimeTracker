@@ -20,6 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Map annotation strokes/pings never actually disappearing**: confirmed via
+  diagnostic logging that `AnnotationLayer.Children` grew monotonically
+  across an entire session on the GM's own canvas - `Animation.RunAsync`'s
+  returned Task was never completing, so the fade-then-remove logic never
+  reached the removal step; every Temporary-tier stroke and ping ripple
+  just piled up, fully opaque, forever instead of disappearing after a few
+  seconds. Both duplicate implementations (MapEditCanvasControl's GM
+  canvas, MapDisplayView's player-facing view) now drive the opacity
+  animation fire-and-forget and remove the visual on a plain timer instead
+  of awaiting the animation's own completion, so removal happens reliably
+  regardless of the animation clock.
 - **ColorPicker rendering completely blank everywhere it's used**: the real
   root cause was that `App.axaml` never included Avalonia.Controls.
   ColorPicker's own theme resources - `<FluentTheme/>` doesn't automatically

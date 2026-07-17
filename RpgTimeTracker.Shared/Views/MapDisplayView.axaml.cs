@@ -410,7 +410,15 @@ public partial class MapDisplayView : UserControl
             FadeOutAndRemoveAsync(label, StrokeFadeDuration));
     }
 
-    /// <summary>Shared fade-out-then-remove for the ping ripple and both annotation-stroke paths (drawn locally and received).</summary>
+    /// <summary>
+    ///     Shared fade-out-then-remove for the ping ripple and both annotation-stroke paths (drawn
+    ///     locally and received). Removal is driven by a plain Task.Delay rather than awaiting
+    ///     Animation.RunAsync's own completion - the same pattern in MapEditCanvasControl's copy of
+    ///     this method was observed (via diagnostic logging) to never actually complete, leaving
+    ///     stroke visuals piling up forever instead of disappearing. Firing the animation without
+    ///     awaiting it and using a plain timer for removal keeps the visual disappearing reliably
+    ///     even if the opacity animation itself doesn't finish for whatever reason.
+    /// </summary>
     private async Task FadeOutAndRemoveAsync(Control visual, TimeSpan duration)
     {
         var fadeOut = new Animation
@@ -430,7 +438,8 @@ public partial class MapDisplayView : UserControl
                 }
             }
         };
-        await fadeOut.RunAsync(visual);
+        _ = fadeOut.RunAsync(visual);
+        await Task.Delay(duration);
         AnnotationOverlay.Children.Remove(visual);
     }
 

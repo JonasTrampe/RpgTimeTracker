@@ -21,6 +21,7 @@ using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Rpc;
 using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.ViewModels;
+using Serilog;
 
 namespace RpgTimeTracker.Views.Controls;
 
@@ -848,6 +849,9 @@ public partial class MapEditCanvasControl : UserControl
             IsHitTestVisible = false
         };
         AnnotationLayer.Children.Add(_activeDrawVisual);
+        Log.Debug(
+            "Draw stroke started: durability={Durability} color={Color} thickness={Thickness} AnnotationLayer.Children={Count}",
+            _activeDrawDurability, _activeDrawColor, SelectedLineThickness, AnnotationLayer.Children.Count);
     }
 
     private void AppendDrawPoint(Point screenPosition)
@@ -880,6 +884,9 @@ public partial class MapEditCanvasControl : UserControl
         {
             // Never added to floor.Lines/persisted (see TemporaryLineDrawn's doc comment) - just
             // fades out locally like the original ephemeral stroke feature.
+            Log.Debug(
+                "Draw stroke finished (Temporary): points={PointCount} color={Color} visual.Opacity={Opacity} visual.IsVisible={IsVisible} AnnotationLayer.Children={Count}",
+                points.Count, _activeDrawColor, visual.Opacity, visual.IsVisible, AnnotationLayer.Children.Count);
             _ = FadeOutAndRemoveAnnotationAsync(visual);
             TemporaryLineDrawn?.Invoke(CurrentFloor.Id, points, _activeDrawColor.ToString());
             return;
@@ -971,6 +978,16 @@ public partial class MapEditCanvasControl : UserControl
         _ = FadeOutAndRemoveAnnotationAsync(polyline);
     }
 
+    /// <summary>
+    ///     Fades a stroke's opacity out, then removes it after AnnotationFadeDuration - removal is
+    ///     driven by a plain Task.Delay rather than awaiting Animation.RunAsync's own completion.
+    ///     Diagnostic logging (see BeginDrawStroke/FinishDrawStroke) showed AnnotationLayer.Children
+    ///     growing monotonically across an entire GM session - RunAsync's Task was never completing,
+    ///     so strokes never got removed at all (just sitting there, fully opaque, piling up forever).
+    ///     Firing the animation without awaiting it and using a plain timer for removal means the
+    ///     stroke still disappears reliably from the tree even if the opacity animation itself never
+    ///     finishes for whatever reason.
+    /// </summary>
     private async Task FadeOutAndRemoveAnnotationAsync(Control visual)
     {
         var fadeOut = new Animation
@@ -984,7 +1001,8 @@ public partial class MapEditCanvasControl : UserControl
                 new KeyFrame { Cue = new Cue(1), Setters = { new Setter(Visual.OpacityProperty, 0.0) } }
             }
         };
-        await fadeOut.RunAsync(visual);
+        _ = fadeOut.RunAsync(visual);
+        await Task.Delay(AnnotationFadeDuration);
         AnnotationLayer.Children.Remove(visual);
     }
 
