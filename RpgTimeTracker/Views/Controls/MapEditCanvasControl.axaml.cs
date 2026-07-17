@@ -415,6 +415,18 @@ public partial class MapEditCanvasControl : UserControl
         LoadFloor(FloorSelector.SelectedItem as MapFloorItemViewModel);
     }
 
+    /// <summary>Shows only the config panel relevant to the newly selected tool - see the sidebar's BrushConfigPanel/DrawConfigPanel/EraseConfigPanel.</summary>
+    private void OnToolChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (BrushConfigPanel is null) return; // fires once during InitializeComponent, before the other panels exist yet
+
+        var index = ToolCombo.SelectedIndex;
+        BrushConfigPanel.IsVisible = index == ToolRevealFog || index == ToolHideFog;
+        DrawConfigPanel.IsVisible = index == ToolDraw;
+        EraseConfigPanel.IsVisible = index == ToolErase;
+        UpdateBrushCursor(_lastPointerPosition ?? default);
+    }
+
     private void LoadFloor(MapFloorItemViewModel? floor)
     {
         ClearPersistedLineVisuals();
@@ -530,12 +542,19 @@ public partial class MapEditCanvasControl : UserControl
         e.Handled = true;
     }
 
+    // ToolCombo item indices - must match the ComboBoxItem order in MapEditCanvasControl.axaml.
+    private const int ToolRevealFog = 0;
+    private const int ToolHideFog = 1;
+    private const int ToolPing = 2;
+    private const int ToolDraw = 3;
+    private const int ToolErase = 4;
+
     /// <summary>
-    ///     Pinging requires both PingModeToggle to be on AND a double-click - matching the
+    ///     Pinging requires both the Ping tool to be selected AND a double-click - matching the
     ///     player-facing gesture (double-click) while still needing the deliberate tool switch to
-    ///     avoid any ambiguity with painting. A single left-click while the toggle is on does
+    ///     avoid any ambiguity with painting. A single left-click while Ping is selected does
     ///     nothing (not even a ping) rather than painting, since switching to the Ping tool signals
-    ///     "I'm done painting for now." Not offered while still in Paint mode (unlike an earlier
+    ///     "I'm done painting for now." Not offered while still on Reveal/Hide (unlike an earlier
     ///     iteration) - painting starts immediately on PointerPressed, so a double-click there would
     ///     still paint one cell on its first press before the second press could be recognized as a
     ///     double-click, and that inconsistent one-cell side effect wasn't worth keeping as a
@@ -545,7 +564,7 @@ public partial class MapEditCanvasControl : UserControl
     {
         if (!e.GetCurrentPoint(EditorCanvas).Properties.IsLeftButtonPressed) return;
 
-        if (PingModeToggle.IsChecked == true)
+        if (ToolCombo.SelectedIndex == ToolPing)
         {
             if (e.ClickCount == 2 && CurrentFloor is not null)
             {
@@ -557,13 +576,15 @@ public partial class MapEditCanvasControl : UserControl
             return;
         }
 
-        if (DrawModeToggle.IsChecked == true && CurrentFloor is not null)
+        if (ToolCombo.SelectedIndex == ToolDraw && CurrentFloor is not null)
         {
             BeginDrawStroke(e.GetPosition(EditorCanvas));
             e.Pointer.Capture(EditorCanvas);
             e.Handled = true;
             return;
         }
+
+        if (ToolCombo.SelectedIndex == ToolErase) return;
 
         _isPainting = true;
         PaintAt(e.GetPosition(EditorCanvas));
@@ -754,7 +775,8 @@ public partial class MapEditCanvasControl : UserControl
     /// </summary>
     private void UpdateBrushCursor(Point position)
     {
-        if (CurrentFloor is null || FloorImageControl.Source is null || PingModeToggle.IsChecked == true)
+        if (CurrentFloor is null || FloorImageControl.Source is null ||
+            (ToolCombo.SelectedIndex != ToolRevealFog && ToolCombo.SelectedIndex != ToolHideFog))
         {
             BrushCursor.IsVisible = false;
             return;
@@ -785,7 +807,7 @@ public partial class MapEditCanvasControl : UserControl
         var centerX = (int)(imageX / CurrentFloor.CellSizePx);
         var centerY = (int)(imageY / CurrentFloor.CellSizePx);
         var radius = GetBrushRadiusCells(CurrentFloor);
-        var revealed = RevealModeToggle.IsChecked == true;
+        var revealed = ToolCombo.SelectedIndex == ToolRevealFog;
 
         var fog = _getFog(CurrentFloor);
         var changedCells = new List<FogCellDto>();
