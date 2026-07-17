@@ -631,6 +631,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             Points = line.Points.Select(p => new MapLinePoint { X = p.X, Y = p.Y }).ToList(),
             ColorHex = line.ColorHex,
             Durability = (RpgTimeTracker.Shared.Models.Rpc.MapLineDurability)(int)line.Durability,
+            Thickness = line.Thickness,
             OwnerClientId = line.OwnerClientId
         };
     }
@@ -668,6 +669,23 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         await Task.Delay(SemiPermanentLineLifetime);
         RemoveMapLine(map, floor, lineId);
+    }
+
+    /// <summary>
+    ///     GM's Erase tool trimmed a line down to fewer points instead of removing it outright (see
+    ///     MapEditCanvasControl.LinePointsErased) - the line is already sitting in floor.Lines
+    ///     (mutated in place), so this just re-persists and re-sends it as a full upsert by Id,
+    ///     the same wire shape a newly drawn line uses (see AddMapLine).
+    /// </summary>
+    public void UpdateMapLine(MapItemViewModel map, MapFloorItemViewModel floor, Persistence.MapLineDto line)
+    {
+        SaveMapLibrarySettings();
+
+        if (!ReferenceEquals(OpenMap, map)) return;
+
+        var snapshot = ToLineSnapshotDto(floor, line);
+        MapDisplay.UpsertLine(snapshot);
+        if (!line.HiddenUntilRevealed) _ = _playerServer.PublishMapLineUpsertAsync(snapshot);
     }
 
     /// <summary>GM's Erase tool removed one specific line (own or, for the GM, anyone's).</summary>
@@ -1274,6 +1292,19 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     {
         MapDisplay.NotifyPingReceived(floorId, x, y);
         return _playerServer.PublishMapPingAsync(floorId, x, y);
+    }
+
+    /// <summary>
+    ///     GM's Draw tool finished a Temporary-tier stroke (MapEditCanvasControl.TemporaryLineDrawn) -
+    ///     unlike SemiPermanent/Permanent (AddMapLine), a Temporary line is never added to
+    ///     floor.Lines/persisted at all; it's purely a live fade-and-forget stroke, reusing the exact
+    ///     same ephemeral pipeline a player's own Shift+drag stroke uses (empty ClientId marks it as
+    ///     the GM's, so PainterTagHelper still resolves a stable color/tag for it).
+    /// </summary>
+    public Task BroadcastGmAnnotationAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    {
+        MapDisplay.NotifyAnnotationReceived(floorId, points, string.Empty);
+        return _playerServer.PublishGmAnnotationAsync(floorId, points);
     }
 
     /// <summary>

@@ -24,8 +24,7 @@
                     <TextBlock Text="{DynamicResource MapEditor.ToolLabel}" FontWeight="SemiBold" />
                     <ComboBox Name="ToolCombo" HorizontalAlignment="Stretch" SelectedIndex="0"
                               SelectionChanged="OnToolChanged">
-                        <ComboBoxItem Content="{DynamicResource MapEditor.Tool.RevealFog}" />
-                        <ComboBoxItem Content="{DynamicResource MapEditor.Tool.HideFog}" />
+                        <ComboBoxItem Content="{DynamicResource MapEditor.Tool.Fog}" />
                         <ComboBoxItem Content="{DynamicResource MapEditor.Tool.Ping}"
                                       ToolTip.Tip="{DynamicResource MapEditor.PingToolTooltip}" />
                         <ComboBoxItem Content="{DynamicResource MapEditor.Tool.Draw}"
@@ -34,14 +33,21 @@
                     </ComboBox>
                 </StackPanel>
 
-                <!-- Reveal/Hide config - brush size only matters while painting fog. -->
+                <!-- Fog/Erase config - brush size is shared by both (fog painting and the erase brush
+                     drag - see EraseAt), so it's one panel instead of two identical sliders. The
+                     Reveal/Hide toggle only matters for the Fog tool, so it's nested and hidden
+                     separately (see OnToolChanged) rather than living in its own panel. -->
                 <StackPanel Name="BrushConfigPanel" Spacing="4">
                     <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" />
                     <Slider Name="BrushSizeSlider" Minimum="0" Maximum="40" Value="4"
                             HorizontalAlignment="Stretch" TickFrequency="1" IsSnapToTickEnabled="True" />
+                    <ToggleSwitch Name="FogModeToggle" IsChecked="True" IsVisible="False"
+                                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                  OnContent="{DynamicResource MapEditor.Tool.RevealFog}"
+                                  OffContent="{DynamicResource MapEditor.Tool.HideFog}" />
                 </StackPanel>
 
-                <!-- Draw config - durability tier for the next stroke. -->
+                <!-- Draw config - durability tier + brush thickness for the next stroke. -->
                 <StackPanel Name="DrawConfigPanel" Spacing="4" IsVisible="False">
                     <TextBlock Text="{DynamicResource MapEditor.LineDurabilityLabel}" />
                     <ComboBox Name="LineDurabilityCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
@@ -49,10 +55,20 @@
                         <ComboBoxItem Content="{DynamicResource MapEditor.LineDurability.SemiPermanent}" />
                         <ComboBoxItem Content="{DynamicResource MapEditor.LineDurability.Permanent}" />
                     </ComboBox>
+                    <TextBlock Text="{DynamicResource MapEditor.LineThicknessLabel}" />
+                    <Slider Name="LineThicknessSlider" Minimum="1" Maximum="20" Value="4"
+                            HorizontalAlignment="Stretch" TickFrequency="1" IsSnapToTickEnabled="True" />
                 </StackPanel>
 
-                <!-- Erase config - only "erase all" for now (per-line/partial erase is a later milestone). -->
+                <!-- Erase config - brush-drag erase uses BrushConfigPanel's own slider as its radius
+                     (see EraseAt); the toggle switches between deleting only the points a drag
+                     actually touches (partial erase) and deleting the whole line the moment any part
+                     of it is touched. "Erase all" stays as a one-click fallback either way. -->
                 <StackPanel Name="EraseConfigPanel" Spacing="4" IsVisible="False">
+                    <ToggleSwitch Name="EraseModeToggle" IsChecked="False"
+                                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                  OnContent="{DynamicResource MapEditor.EraseMode.Points}"
+                                  OffContent="{DynamicResource MapEditor.EraseMode.WholeLine}" />
                     <Button Name="EraseAllLinesButton" HorizontalAlignment="Stretch"
                             Content="{DynamicResource MapEditor.EraseAllLinesButton}"
                             Click="OnEraseAllLinesClick"

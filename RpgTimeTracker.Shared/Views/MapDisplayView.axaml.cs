@@ -356,14 +356,20 @@ public partial class MapDisplayView : UserControl
     }
 
     /// <summary>
-    ///     Renders a player's freehand annotation stroke, points already in image-space, colored
-    ///     and labeled by the originating player's ClientId (see PainterTagHelper) - same
-    ///     fade-and-remove treatment as the ping ripple, just much longer (see StrokeFadeDuration).
-    ///     Reaches every connected view, not just the GM's (see RpcMethods.MapAnnotationBroadcast).
+    ///     Renders a freehand annotation stroke, points already in image-space - same fade-and-remove
+    ///     treatment as the ping ripple, just much longer (see StrokeFadeDuration). Reaches every
+    ///     connected view, not just the GM's (see RpcMethods.MapAnnotationBroadcast). An empty
+    ///     clientId is the GM's own Temporary-tier Draw-tool stroke (see MainWindowViewModel.
+    ///     BroadcastGmAnnotationAsync) - every real player has a persistent non-empty ClientId (see
+    ///     ClientSettingsService.GetOrCreateClientId), so this is an unambiguous signal, not a
+    ///     fallback. It's rendered Gold with no player-tag label to match the GM's Draw-tool color
+    ///     everywhere else, instead of falling into PainterTagHelper's "unknown painter" look
+    ///     (a red stroke labeled "????").
     /// </summary>
     private async void OnAnnotationReceived(IReadOnlyList<AnnotationPoint> points, string clientId)
     {
-        var color = PainterTagHelper.ColorFor(clientId);
+        var isGm = string.IsNullOrEmpty(clientId);
+        var color = isGm ? Colors.Gold : PainterTagHelper.ColorFor(clientId);
         var brush = new SolidColorBrush(color);
         var visual = new Polyline
         {
@@ -375,6 +381,12 @@ public partial class MapDisplayView : UserControl
             IsHitTestVisible = false
         };
         AnnotationOverlay.Children.Add(visual);
+
+        if (isGm)
+        {
+            await FadeOutAndRemoveAsync(visual, StrokeFadeDuration);
+            return;
+        }
 
         var firstPoint = points[0];
         var label = new Border

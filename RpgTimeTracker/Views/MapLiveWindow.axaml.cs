@@ -78,16 +78,40 @@ public partial class MapLiveWindow : Window
                 FloorId = floorId,
                 Points = points.Select(p => new Persistence.MapLinePointDto { X = p.X, Y = p.Y }).ToList(),
                 ColorHex = "#FFD700",
-                Durability = durability
+                Durability = durability,
+                Thickness = EditCanvas.SelectedLineThickness
             };
             _vm.AddMapLine(_map, floor, line);
             EditCanvas.ShowPersistedLine(line);
             _previewDisplay.UpsertLine(_vm.BuildLineSnapshot(floor, line));
         };
+        EditCanvas.TemporaryLineDrawn += (floorId, points) =>
+        {
+            var annotationPoints = points.Select(p => new AnnotationPoint { X = p.X, Y = p.Y }).ToList();
+            _ = _vm.BroadcastGmAnnotationAsync(floorId, annotationPoints);
+            _previewDisplay.NotifyAnnotationReceived(floorId, annotationPoints, string.Empty);
+        };
         EditCanvas.EraseAllLinesRequested += floor =>
         {
             _vm.ClearMapLines(_map, floor);
             _previewDisplay.ClearLinesForFloor(floor.Id);
+        };
+        EditCanvas.LineEraseRequested += (floor, lineId) =>
+        {
+            _vm.RemoveMapLine(_map, floor, lineId);
+            _previewDisplay.RemoveLine(lineId);
+        };
+        EditCanvas.LinePointsErased += (floor, line) =>
+        {
+            _vm.UpdateMapLine(_map, floor, line);
+            _previewDisplay.UpsertLine(_vm.BuildLineSnapshot(floor, line));
+        };
+        EditCanvas.LineSplitCreated += (floor, newLine) =>
+        {
+            // EraseAt already rendered this split-off run on EditCanvas itself - AddMapLine adds
+            // it to the model/network, same as a freshly drawn line.
+            _vm.AddMapLine(_map, floor, newLine);
+            _previewDisplay.UpsertLine(_vm.BuildLineSnapshot(floor, newLine));
         };
         TokenPanel.Configure(_vm, _map);
         TokenPanel.TokensMutated += EditCanvas.RefreshTokens;

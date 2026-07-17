@@ -137,6 +137,9 @@ public sealed class MapLineDto
     public string ColorHex { get; set; } = "#FFD700";
     public MapLineDurability Durability { get; set; } = MapLineDurability.Temporary;
 
+    /// <summary>Stroke width in image pixels - GM-adjustable via the Draw tool's brush-size slider, same convention as fog's brush radius.</summary>
+    public double Thickness { get; set; } = 4;
+
     /// <summary>
     ///     GM-only per-line fog gate (defaults to visible, matching player-drawn lines - see
     ///     MapTokenDto.RevealMode's similar "opt into hiding" convention): when true, this line is

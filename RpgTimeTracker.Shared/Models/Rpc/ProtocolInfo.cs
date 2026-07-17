@@ -9,5 +9,5 @@ namespace RpgTimeTracker.Shared.Models.Rpc;
 /// </summary>
 public static class ProtocolInfo
 {
-    public const int Version = 7;
+    public const int Version = 8;
 }

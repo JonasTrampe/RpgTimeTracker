@@ -97,6 +97,12 @@ public partial class MapEditCanvasControl : UserControl
         {
             if (e.Property == ScrollViewer.OffsetProperty) RaiseViewportChanged();
         };
+
+        // ToolCombo's own SelectionChanged fired once already, above, during InitializeComponent -
+        // before BrushConfigPanel/FogModeToggle etc. existed, so it no-oped (see
+        // SyncToolConfigVisibility). This catches up the default tool's (Fog's) visibility now that
+        // everything actually exists.
+        SyncToolConfigVisibility();
     }
 
     private void RaiseViewportChanged()
@@ -199,11 +205,47 @@ public partial class MapEditCanvasControl : UserControl
     /// </summary>
     public event Action<Guid, IReadOnlyList<Point>, Persistence.MapLineDurability>? LineDrawn;
 
+    /// <summary>
+    ///     Fired instead of LineDrawn when the completed stroke's durability is Temporary - a
+    ///     Temporary line is never added to floor.Lines (see MainWindowViewModel.AddMapLine's doc
+    ///     comment), so the owner doesn't build a MapLineDto for it at all; it just broadcasts these
+    ///     raw image-space points via the same ephemeral fade-and-forget pipeline a player's own
+    ///     stroke uses (MainWindowViewModel.BroadcastGmAnnotationAsync). This control fades and
+    ///     removes its own local visual itself (see FinishDrawStroke) rather than asking the owner to.
+    /// </summary>
+    public event Action<Guid, IReadOnlyList<Point>>? TemporaryLineDrawn;
+
     /// <summary>GM clicked "Erase all" - the owner clears the floor's persisted Lines and calls ClearPersistedLineVisuals.</summary>
     public event Action<MapFloorItemViewModel>? EraseAllLinesRequested;
 
+    /// <summary>
+    ///     Fired once per line touched by an Erase-tool brush drag (see EraseAt) - the owner removes
+    ///     it via MainWindowViewModel.RemoveMapLine. This control already took its own visual down
+    ///     immediately (EraseAt), so the owner doesn't need to call back into ClearPersistedLineVisuals.
+    /// </summary>
+    public event Action<MapFloorItemViewModel, Guid>? LineEraseRequested;
+
+    /// <summary>
+    ///     Fired once per line trimmed by a points-mode Erase-tool drag (see EraseAt) - the line
+    ///     still exists (at least 2 points survived) but its Points list was mutated in place. The
+    ///     owner re-persists/re-broadcasts it via MainWindowViewModel.UpdateMapLine, the same "full
+    ///     upsert by Id" path used for a newly drawn line.
+    /// </summary>
+    public event Action<MapFloorItemViewModel, Persistence.MapLineDto>? LinePointsErased;
+
+    /// <summary>
+    ///     Fired once per extra surviving run when a points-mode Erase-tool drag splits a line into
+    ///     two or more disconnected pieces (see SplitIntoUntouchedRuns) - the first run just updates
+    ///     the original line in place (LinePointsErased), but every additional run is a brand new
+    ///     line with its own Id, already shown locally (ShowPersistedLine) and needing the owner to
+    ///     add it via MainWindowViewModel.AddMapLine, same as a freshly drawn line.
+    /// </summary>
+    public event Action<MapFloorItemViewModel, Persistence.MapLineDto>? LineSplitCreated;
+
     private List<Point>? _drawImagePoints;
     private Polyline? _activeDrawVisual;
+    private Persistence.MapLineDurability _activeDrawDurability;
+    private bool _isErasing;
     private readonly Dictionary<Guid, Polyline> _persistedLineVisuals = new();
 
     /// <summary>
@@ -418,10 +460,25 @@ public partial class MapEditCanvasControl : UserControl
     /// <summary>Shows only the config panel relevant to the newly selected tool - see the sidebar's BrushConfigPanel/DrawConfigPanel/EraseConfigPanel.</summary>
     private void OnToolChanged(object? sender, SelectionChangedEventArgs e)
     {
+        SyncToolConfigVisibility();
+    }
+
+    /// <summary>
+    ///     Shared by OnToolChanged and the constructor (see its call site) - ToolCombo's
+    ///     SelectionChanged fires once during InitializeComponent, before BrushConfigPanel etc. even
+    ///     exist yet, so that very first firing is a no-op and the default tool's (Fog's) config
+    ///     panel/toggle would otherwise stay at its XAML-declared IsVisible="False" until the GM
+    ///     manually switched tools away and back.
+    /// </summary>
+    private void SyncToolConfigVisibility()
+    {
         if (BrushConfigPanel is null) return; // fires once during InitializeComponent, before the other panels exist yet
 
         var index = ToolCombo.SelectedIndex;
-        BrushConfigPanel.IsVisible = index == ToolRevealFog || index == ToolHideFog;
+        // Erase also uses BrushSizeSlider - it doubles as the erase brush radius (see EraseAt) -
+        // so both Fog and Erase share the one slider instead of a second, redundant one.
+        BrushConfigPanel.IsVisible = index == ToolFog || index == ToolErase;
+        FogModeToggle.IsVisible = index == ToolFog;
         DrawConfigPanel.IsVisible = index == ToolDraw;
         EraseConfigPanel.IsVisible = index == ToolErase;
         UpdateBrushCursor(_lastPointerPosition ?? default);
@@ -494,6 +551,13 @@ public partial class MapEditCanvasControl : UserControl
         UpdateZoomLabel();
         if (_lastPointerPosition is { } position) UpdateBrushCursor(position);
         RenderTokens();
+        // Persisted-line Polylines are drawn in screen-space (image point * zoom, see
+        // ShowPersistedLine) rather than being affected by any layout transform, so unlike the fog
+        // overlay image (which just re-stretches) they were left stuck at their old zoom's pixel
+        // positions until the floor was reloaded - redrawing them here keeps them lined up with the
+        // map underneath at every zoom level.
+        ClearPersistedLineVisuals();
+        ShowAllPersistedLinesForCurrentFloor();
         ViewportChanged?.Invoke(viewport.Width / _zoom, viewport.Height / _zoom, imageCenterX, imageCenterY);
     }
 
@@ -543,11 +607,15 @@ public partial class MapEditCanvasControl : UserControl
     }
 
     // ToolCombo item indices - must match the ComboBoxItem order in MapEditCanvasControl.axaml.
-    private const int ToolRevealFog = 0;
-    private const int ToolHideFog = 1;
-    private const int ToolPing = 2;
-    private const int ToolDraw = 3;
-    private const int ToolErase = 4;
+    // Reveal/Hide used to be two separate tools; they're now one Fog tool with FogModeToggle
+    // choosing the mode (see IsRevealMode), so the remaining tools each shifted down by one.
+    private const int ToolFog = 0;
+    private const int ToolPing = 1;
+    private const int ToolDraw = 2;
+    private const int ToolErase = 3;
+
+    /// <summary>FogModeToggle's current state - true (default) reveals fog, false hides it.</summary>
+    private bool IsRevealMode => FogModeToggle.IsChecked != false;
 
     /// <summary>
     ///     Pinging requires both the Ping tool to be selected AND a double-click - matching the
@@ -584,7 +652,14 @@ public partial class MapEditCanvasControl : UserControl
             return;
         }
 
-        if (ToolCombo.SelectedIndex == ToolErase) return;
+        if (ToolCombo.SelectedIndex == ToolErase && CurrentFloor is not null)
+        {
+            _isErasing = true;
+            e.Pointer.Capture(EditorCanvas);
+            EraseAt(e.GetPosition(EditorCanvas));
+            e.Handled = true;
+            return;
+        }
 
         _isPainting = true;
         PaintAt(e.GetPosition(EditorCanvas));
@@ -602,6 +677,12 @@ public partial class MapEditCanvasControl : UserControl
             return;
         }
 
+        if (_isErasing && ReferenceEquals(e.Pointer.Captured, EditorCanvas))
+        {
+            EraseAt(position);
+            return;
+        }
+
         if (!_isPainting) return;
 
         PaintAt(position);
@@ -611,11 +692,125 @@ public partial class MapEditCanvasControl : UserControl
     {
         _isPainting = false;
 
+        if (_isErasing)
+        {
+            _isErasing = false;
+            e.Pointer.Capture(null);
+            return;
+        }
+
         if (_drawImagePoints is not null)
         {
             FinishDrawStroke();
             e.Pointer.Capture(null);
         }
+    }
+
+    /// <summary>
+    ///     Erase-tool brush drag - two modes, chosen via EraseModeToggle:
+    ///     whole-line (default) removes any line touched anywhere by the brush, same "paint over it"
+    ///     feel as the fog tools; points mode instead deletes only the individual points a drag
+    ///     actually passes over (the originally grilled "drag to rub out a region" design), so a line
+    ///     can be trimmed down rather than removed outright. Erasing points out of the *middle* of a
+    ///     line splits it into separate surviving runs (see SplitIntoUntouchedRuns) instead of just
+    ///     dropping the touched points and leaving the two sides visually bridged by a straight line
+    ///     across the gap - the first run replaces the original line in place, any further runs
+    ///     become new sibling lines. A run of fewer than 2 points can't draw a line and is dropped.
+    ///     Each touched line's visual is updated/removed/split immediately (so a drag over several
+    ///     lines handles all of them in one gesture) and reported via LineEraseRequested/
+    ///     LinePointsErased/LineSplitCreated for the owner to persist/broadcast.
+    /// </summary>
+    private void EraseAt(Point position)
+    {
+        if (CurrentFloor is null) return;
+
+        var imageX = position.X / _zoom;
+        var imageY = position.Y / _zoom;
+        var radiusPx = GetBrushRadiusCells(CurrentFloor) * CurrentFloor.CellSizePx;
+        var radiusSquared = radiusPx * radiusPx;
+
+        bool Touched(Persistence.MapLinePointDto p)
+        {
+            var dx = p.X - imageX;
+            var dy = p.Y - imageY;
+            return dx * dx + dy * dy <= radiusSquared;
+        }
+
+        var pointsMode = EraseModeToggle.IsChecked == true;
+
+        foreach (var line in CurrentFloor.Lines.ToList())
+        {
+            if (!line.Points.Any(Touched)) continue;
+
+            if (!pointsMode)
+            {
+                RemoveLine(line.Id);
+                continue;
+            }
+
+            var runs = SplitIntoUntouchedRuns(line.Points, Touched);
+            if (runs.Count == 0)
+            {
+                RemoveLine(line.Id);
+                continue;
+            }
+
+            line.Points = runs[0];
+            UpdatePersistedLineVisual(line);
+            LinePointsErased?.Invoke(CurrentFloor, line);
+
+            foreach (var extraRun in runs.Skip(1))
+            {
+                var newLine = new Persistence.MapLineDto
+                {
+                    FloorId = line.FloorId,
+                    Points = extraRun,
+                    ColorHex = line.ColorHex,
+                    Durability = line.Durability,
+                    Thickness = line.Thickness,
+                    HiddenUntilRevealed = line.HiddenUntilRevealed,
+                    OwnerClientId = line.OwnerClientId
+                };
+                ShowPersistedLine(newLine);
+                LineSplitCreated?.Invoke(CurrentFloor, newLine);
+            }
+        }
+
+        void RemoveLine(Guid lineId)
+        {
+            if (_persistedLineVisuals.Remove(lineId, out var visual))
+                AnnotationLayer.Children.Remove(visual);
+            LineEraseRequested?.Invoke(CurrentFloor, lineId);
+        }
+    }
+
+    /// <summary>
+    ///     Splits a line's points into maximal contiguous runs of untouched points, dropping every
+    ///     touched point and discarding any run too short to still draw a line (fewer than 2 points)
+    ///     - erasing the middle of a line yields two separate runs instead of one list with a gap
+    ///     bridged by a straight line across it.
+    /// </summary>
+    private static List<List<Persistence.MapLinePointDto>> SplitIntoUntouchedRuns(
+        List<Persistence.MapLinePointDto> points, Func<Persistence.MapLinePointDto, bool> touched)
+    {
+        var runs = new List<List<Persistence.MapLinePointDto>>();
+        List<Persistence.MapLinePointDto>? current = null;
+
+        foreach (var point in points)
+        {
+            if (touched(point))
+            {
+                if (current is { Count: >= 2 }) runs.Add(current);
+                current = null;
+                continue;
+            }
+
+            current ??= [];
+            current.Add(point);
+        }
+
+        if (current is { Count: >= 2 }) runs.Add(current);
+        return runs;
     }
 
     /// <summary>
@@ -625,15 +820,22 @@ public partial class MapEditCanvasControl : UserControl
     private Persistence.MapLineDurability SelectedLineDurability =>
         (Persistence.MapLineDurability)Math.Max(0, LineDurabilityCombo.SelectedIndex);
 
+    /// <summary>Stroke width for the next Draw-tool line, from LineThicknessSlider - same "brush size" convention as the fog tools' BrushSizeSlider.</summary>
+    public double SelectedLineThickness => LineThicknessSlider.Value;
+
     private void BeginDrawStroke(Point firstPoint)
     {
+        // Captured once at stroke start rather than re-read in FinishDrawStroke - the GM could
+        // otherwise flip LineDurabilityCombo mid-drag and have the stroke silently change tier.
+        _activeDrawDurability = SelectedLineDurability;
+
         var imagePoint = new Point(firstPoint.X / _zoom, firstPoint.Y / _zoom);
         _drawImagePoints = [imagePoint];
         _activeDrawVisual = new Polyline
         {
             Points = [firstPoint],
             Stroke = Brushes.Gold,
-            StrokeThickness = 4,
+            StrokeThickness = SelectedLineThickness,
             StrokeJoin = PenLineJoin.Round,
             StrokeLineCap = PenLineCap.Round,
             IsHitTestVisible = false
@@ -660,11 +862,24 @@ public partial class MapEditCanvasControl : UserControl
 
         _drawImagePoints = null;
         _activeDrawVisual = null;
+
+        if (points.Count < 2 || CurrentFloor is null)
+        {
+            AnnotationLayer.Children.Remove(visual);
+            return;
+        }
+
+        if (_activeDrawDurability == Persistence.MapLineDurability.Temporary)
+        {
+            // Never added to floor.Lines/persisted (see TemporaryLineDrawn's doc comment) - just
+            // fades out locally like the original ephemeral stroke feature.
+            _ = FadeOutAndRemoveAnnotationAsync(visual);
+            TemporaryLineDrawn?.Invoke(CurrentFloor.Id, points);
+            return;
+        }
+
         AnnotationLayer.Children.Remove(visual);
-
-        if (points.Count < 2 || CurrentFloor is null) return;
-
-        LineDrawn?.Invoke(CurrentFloor.Id, points, SelectedLineDurability);
+        LineDrawn?.Invoke(CurrentFloor.Id, points, _activeDrawDurability);
     }
 
     /// <summary>
@@ -681,13 +896,21 @@ public partial class MapEditCanvasControl : UserControl
         {
             Points = new Points(line.Points.Select(p => new Point(p.X * _zoom, p.Y * _zoom))),
             Stroke = Brushes.Gold,
-            StrokeThickness = 4,
+            StrokeThickness = line.Thickness,
             StrokeJoin = PenLineJoin.Round,
             StrokeLineCap = PenLineCap.Round,
             IsHitTestVisible = false
         };
         AnnotationLayer.Children.Add(polyline);
         _persistedLineVisuals[line.Id] = polyline;
+    }
+
+    /// <summary>Re-renders an already-shown persisted line whose Points were just mutated in place (see EraseAt's points mode) - unlike ShowPersistedLine, this replaces the existing visual instead of no-oping.</summary>
+    public void UpdatePersistedLineVisual(Persistence.MapLineDto line)
+    {
+        if (_persistedLineVisuals.Remove(line.Id, out var oldVisual))
+            AnnotationLayer.Children.Remove(oldVisual);
+        ShowPersistedLine(line);
     }
 
     /// <summary>Redraws every persisted line for the current floor - called after LoadFloor and after ClearPersistedLineVisuals.</summary>
@@ -776,7 +999,7 @@ public partial class MapEditCanvasControl : UserControl
     private void UpdateBrushCursor(Point position)
     {
         if (CurrentFloor is null || FloorImageControl.Source is null ||
-            (ToolCombo.SelectedIndex != ToolRevealFog && ToolCombo.SelectedIndex != ToolHideFog))
+            (ToolCombo.SelectedIndex != ToolFog && ToolCombo.SelectedIndex != ToolErase))
         {
             BrushCursor.IsVisible = false;
             return;
@@ -807,7 +1030,7 @@ public partial class MapEditCanvasControl : UserControl
         var centerX = (int)(imageX / CurrentFloor.CellSizePx);
         var centerY = (int)(imageY / CurrentFloor.CellSizePx);
         var radius = GetBrushRadiusCells(CurrentFloor);
-        var revealed = ToolCombo.SelectedIndex == ToolRevealFog;
+        var revealed = IsRevealMode;
 
         var fog = _getFog(CurrentFloor);
         var changedCells = new List<FogCellDto>();

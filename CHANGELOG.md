@@ -18,6 +18,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   material (`architecture.md`, `design-decisions.md`, `protocol.md`,
   `legal-todo.md`) moved to `docs/internal/`, unchanged in content.
 
+### Changed
+
+- **Map editor toolbar**: Reveal/Hide fog are now one "Fog" tool with a
+  Reveal/Hide toggle beneath the shared brush-size slider, instead of two
+  separate ComboBox entries. The Erase tool gained its own toggle to
+  switch between erasing a whole touched line (default) and erasing only
+  the individual points a brush drag passes over, trimming the line down
+  instead of removing it outright (removing the line only once too few
+  points remain to still draw one). Erasing points out of the middle of a
+  line now splits it into separate lines instead of leaving a straight
+  line visually bridging the gap where the erased points used to be.
+
+### Fixed
+
+- **GM's Temporary-tier Draw stroke showing as a red "????" tag**: it was
+  reusing the player-stroke rendering path, which colors/labels a stroke by
+  the drawing player's ClientId (PainterTagHelper) - an empty ClientId (the
+  GM's own broadcast) fell into that helper's "unknown painter" fallback
+  (red, tagged "????") instead of being recognized as the GM. It's now
+  rendered Gold with no tag, matching the GM's other Draw-tool lines.
+- **Fog tool's Reveal/Hide toggle not showing on first open**: the toggle's
+  visibility was only synced from ToolCombo's SelectionChanged, which fires
+  once during control initialization before the toggle even exists, so the
+  default tool (Fog) never got its visibility set until the GM manually
+  switched tools away and back.
+- **Map editor sidebar layout**: the Fog/Erase mode toggles no longer overflow
+  the sidebar (German labels like "Verstecken" were getting clipped) - each
+  is now a single ToggleSwitch showing one label at a time instead of two
+  fixed labels flanking the switch.
+- **Persisted lines not rescaling with zoom**: SemiPermanent/Permanent lines
+  on the GM's own map canvas stayed at their old pixel positions after
+  zooming in/out (only the fog overlay and tokens were redrawn) - they're
+  now redrawn at the new zoom level along with everything else.
+- **GM map Draw tool**: a Temporary-tier line drawn with the GM's Draw tool
+  now actually fades out after a few seconds instead of sitting on the map
+  forever (it was being routed through the persisted-line path meant only
+  for SemiPermanent/Permanent lines). The Erase tool now supports
+  brush-drag erasing (reusing the same brush-size slider as the fog
+  tools) in addition to the existing "Erase all" button. The Draw tool
+  also gained its own brush-size slider to control line thickness,
+  instead of a hardcoded stroke width.
+
 ### Added
 
 - **Map annotation strokes**: a player can Shift+left-drag a freehand

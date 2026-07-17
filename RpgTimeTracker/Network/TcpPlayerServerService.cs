@@ -744,6 +744,18 @@ public sealed class TcpPlayerServerService : IDisposable
             c => c.MapEnabled && !ReferenceEquals(c, originConnection));
     }
 
+    /// <summary>
+    ///     Broadcasts the GM's own Temporary-tier Draw-tool stroke to every connected player - the
+    ///     GM isn't a ClientConnection (unlike a player's own stroke), so unlike
+    ///     PublishMapAnnotationBroadcastAsync there's no originating connection to exclude.
+    /// </summary>
+    public Task PublishGmAnnotationAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    {
+        return BroadcastRpcAsync(RpcMethods.MapAnnotationBroadcast,
+            new MapAnnotationBroadcastParams { FloorId = floorId, Points = points.ToList(), ClientId = string.Empty },
+            c => c.MapEnabled);
+    }
+
     private async Task SendMapShowToClientAsync(ClientConnection client, Guid mapId, string mapName,
         List<OpenMapFloor> floors, List<MapTokenSnapshotDto> tokens, List<MapLineSnapshotDto>? lines = null)
     {

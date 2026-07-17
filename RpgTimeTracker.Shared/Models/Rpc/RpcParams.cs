@@ -199,6 +199,7 @@ public sealed class MapLineSnapshotDto
     public List<MapLinePoint> Points { get; set; } = [];
     public string ColorHex { get; set; } = "#FFD700";
     public MapLineDurability Durability { get; set; } = MapLineDurability.Temporary;
+    public double Thickness { get; set; } = 4;
     public string OwnerClientId { get; set; } = string.Empty;
 }
 
