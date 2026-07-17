@@ -717,6 +717,9 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     /// </summary>
     public event Action<Guid, double, double>? PlayerMapPingReceived;
 
+    /// <summary>Same shape as PlayerMapPingReceived, for a player's freehand annotation stroke instead of a single point.</summary>
+    public event Action<Guid, IReadOnlyList<AnnotationPoint>>? PlayerMapAnnotationReceived;
+
     /// <summary>
     ///     Starts tracking initiative for this map from the top of the order - resets
     ///     InitiativeCurrentIndex/Round rather than resuming wherever it was left, since a

@@ -1,7 +1,11 @@
+using System.Collections.Generic;
+using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using RpgTimeTracker.PlayerClient.ViewModels;
+using RpgTimeTracker.Shared.Models.Rpc;
 
 namespace RpgTimeTracker.PlayerClient.Views;
 
@@ -16,6 +20,7 @@ public partial class MediaWindow : Window
         InitializeComponent();
         KeyDown += OnKeyDown;
         MapDisplayControl.PingRequested += OnMapPingRequested;
+        MapDisplayControl.AnnotationRequested += OnMapAnnotationRequested;
     }
 
     /// <summary>Double-click on the map - reports it to the host, visible only to the GM.</summary>
@@ -24,6 +29,15 @@ public partial class MediaWindow : Window
         if (DataContext is not ClientMainWindowViewModel vm || vm.MapDisplay.CurrentFloorId is not { } floorId) return;
 
         _ = vm.SendMapPingAsync(floorId, x, y);
+    }
+
+    /// <summary>A completed Shift+left-drag stroke on the map - reports it to the host, visible only to the GM.</summary>
+    private void OnMapAnnotationRequested(IReadOnlyList<Point> points)
+    {
+        if (DataContext is not ClientMainWindowViewModel vm || vm.MapDisplay.CurrentFloorId is not { } floorId) return;
+
+        var annotationPoints = points.Select(p => new AnnotationPoint { X = p.X, Y = p.Y }).ToList();
+        _ = vm.SendMapAnnotationAsync(floorId, annotationPoints);
     }
 
     // Local closing, independent of the host: stops any running video playback and only

@@ -251,6 +251,12 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         return _client.SendMapPingFromPlayerAsync(floorId, x, y);
     }
 
+    /// <summary>Reports a completed freehand annotation stroke (MediaWindow's AnnotationRequested) to the host - visible only to the GM.</summary>
+    public Task SendMapAnnotationAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    {
+        return _client.SendMapAnnotationFromPlayerAsync(floorId, points);
+    }
+
     public ObservableCollection<RemoteTimelineItemViewModel> Items { get; } = new();
     public ObservableCollection<PlayerCalendarDayViewModel> PlayerCalendarDays { get; } = new();
     public ObservableCollection<PlayerCalendarEntryViewModel> PlayerCalendarEntries { get; } = new();

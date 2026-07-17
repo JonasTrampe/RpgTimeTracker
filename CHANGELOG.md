@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Map annotation strokes**: a player can Shift+left-drag a freehand
+  stroke on their own map view to point something out in more detail
+  than a single ping - visible only to the GM, same one-way visibility
+  and fade-out-after-a-few-seconds treatment as map ping.
 - **Player info for Points of Interest**: POI library entries now have their
   own Markdown-authored player-facing bio field (previously only Characters
   had this), gated by its own player-visibility toggle - shown in a linked

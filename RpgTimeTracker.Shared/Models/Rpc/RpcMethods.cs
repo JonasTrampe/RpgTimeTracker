@@ -171,6 +171,14 @@ public static class RpcMethods
     public const string MapPing = "map.ping";
 
     /// <summary>
+    ///     Client-to-server: a player Shift+left-drew a freehand stroke on their own map view,
+    ///     marking something for the GM - same one-way, GM-only visibility as MapPingFromPlayer
+    ///     (never rebroadcast to other players, no server-to-client counterpart). Ephemeral - not
+    ///     persisted, not part of map.show's resync.
+    /// </summary>
+    public const string MapAnnotationFromPlayer = "map.annotationFromPlayer";
+
+    /// <summary>
     ///     GM stops the currently playing music track/playlist - independent of the image/video
     ///     "current medium" slot and of sound effects, see MediaHeaderDto.MediaKindMusic.
     /// </summary>

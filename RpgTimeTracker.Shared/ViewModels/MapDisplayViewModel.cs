@@ -138,6 +138,27 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     public Guid? CurrentFloorId =>
         CurrentFloorIndex >= 0 && CurrentFloorIndex < _floors.Count ? _floors[CurrentFloorIndex].FloorId : null;
 
+    /// <summary>
+    ///     Fired from NotifyAnnotationReceived when a player's freehand stroke arrives for
+    ///     whichever floor this view currently has displayed - MapDisplayView.axaml.cs subscribes
+    ///     to render it as a fading polyline. Only ever reaches the GM's own views (see
+    ///     RpcMethods.MapAnnotationFromPlayer), so this is only meaningfully raised on the Host
+    ///     side, but lives here rather than duplicated per-owner since MapDisplayViewModel already
+    ///     is that shared "what does this view show right now" state.
+    /// </summary>
+    public event Action<IReadOnlyList<AnnotationPoint>>? AnnotationReceived;
+
+    /// <summary>
+    ///     A player's freehand annotation stroke arrived for the given floor - dropped silently
+    ///     if that isn't the floor currently displayed here, same reasoning as NotifyPingReceived.
+    /// </summary>
+    public void NotifyAnnotationReceived(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    {
+        if (CurrentFloorId != floorId) return;
+
+        AnnotationReceived?.Invoke(points);
+    }
+
     partial void OnHiddenColorChanged(Color value)
     {
         TintBrush = new SolidColorBrush(value);

@@ -276,6 +276,25 @@ public sealed class MapPingParams
     public double Y { get; set; }
 }
 
+/// <summary>One point of a freehand annotation stroke, in image-space coordinates - see MapAnnotationParams.</summary>
+public sealed class AnnotationPoint
+{
+    public double X { get; set; }
+    public double Y { get; set; }
+}
+
+/// <summary>
+///     Shape for map.annotationFromPlayer (client-to-server only - see RpcMethods.
+///     MapAnnotationFromPlayer's doc comment for why there's no server-to-client counterpart).
+///     Points are in image-space coordinates on the given floor, sent as one message per
+///     completed stroke rather than per pointer-move.
+/// </summary>
+public sealed class MapAnnotationParams
+{
+    public Guid FloorId { get; set; }
+    public List<AnnotationPoint> Points { get; set; } = [];
+}
+
 /// <summary>Server-to-client: adjusts the volume of the currently playing music track live (0-100).</summary>
 public sealed class MusicSetVolumeParams
 {

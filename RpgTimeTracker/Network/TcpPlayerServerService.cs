@@ -159,6 +159,9 @@ public sealed class TcpPlayerServerService : IDisposable
     /// <summary>A player double-clicked the map, pinging the GM (background thread) - see RpcMethods.MapPingFromPlayer.</summary>
     public event Action<Guid, double, double>? ClientReportedMapPing;
 
+    /// <summary>A player Shift+left-drew a freehand annotation stroke (background thread) - see RpcMethods.MapAnnotationFromPlayer.</summary>
+    public event Action<Guid, IReadOnlyList<AnnotationPoint>>? ClientReportedMapAnnotation;
+
     /// <summary>
     ///     A client reports that the currently playing music track has finished (background
     ///     thread) - see RpcMethods.MusicTrackEnded.
@@ -1062,6 +1065,16 @@ public sealed class TcpPlayerServerService : IDisposable
                         Log.Debug("Client pinged the map at floor {FloorId} ({X}, {Y})", ping.FloorId, ping.X,
                             ping.Y);
                         ClientReportedMapPing?.Invoke(ping.FloorId, ping.X, ping.Y);
+                    }
+
+                    break;
+                case RpcMethods.MapAnnotationFromPlayer:
+                    var annotation = raw.GetParams<MapAnnotationParams>();
+                    if (annotation is not null)
+                    {
+                        Log.Debug("Client drew a map annotation on floor {FloorId} ({PointCount} points)",
+                            annotation.FloorId, annotation.Points.Count);
+                        ClientReportedMapAnnotation?.Invoke(annotation.FloorId, annotation.Points);
                     }
 
                     break;

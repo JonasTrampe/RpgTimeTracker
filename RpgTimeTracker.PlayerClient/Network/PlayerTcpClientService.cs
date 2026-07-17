@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -299,6 +301,13 @@ public sealed class PlayerTcpClientService : IDisposable
     public Task SendMapPingFromPlayerAsync(Guid floorId, double x, double y)
     {
         return SendRpcAsync(RpcMethods.MapPingFromPlayer, new MapPingParams { FloorId = floorId, X = x, Y = y });
+    }
+
+    /// <summary>Reports a player's completed freehand annotation stroke, visible only to the GM.</summary>
+    public Task SendMapAnnotationFromPlayerAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    {
+        return SendRpcAsync(RpcMethods.MapAnnotationFromPlayer,
+            new MapAnnotationParams { FloorId = floorId, Points = points.ToList() });
     }
 
     private async Task SendRpcAsync<TParams>(string method, TParams @params)

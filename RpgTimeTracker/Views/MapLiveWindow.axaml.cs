@@ -76,6 +76,7 @@ public partial class MapLiveWindow : Window
         InitiativePanel.Configure(_vm, _map);
         _vm.InitiativeTurnChanged += OnInitiativeTurnChanged;
         _vm.PlayerMapPingReceived += OnPlayerMapPingReceived;
+        _vm.PlayerMapAnnotationReceived += OnPlayerMapAnnotationReceived;
 
         _flushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
         _flushTimer.Tick += (_, _) => _ = FlushPendingAsync();
@@ -216,11 +217,20 @@ public partial class MapLiveWindow : Window
         _previewDisplay.NotifyPingReceived(floorId, x, y);
     }
 
+    /// <summary>Same guard/purpose as OnPlayerMapPingReceived, for a player's freehand annotation stroke.</summary>
+    private void OnPlayerMapAnnotationReceived(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    {
+        if (!ReferenceEquals(_vm.OpenMap, _map)) return;
+
+        _previewDisplay.NotifyAnnotationReceived(floorId, points);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         _flushTimer.Stop();
         _vm.InitiativeTurnChanged -= OnInitiativeTurnChanged;
         _vm.PlayerMapPingReceived -= OnPlayerMapPingReceived;
+        _vm.PlayerMapAnnotationReceived -= OnPlayerMapAnnotationReceived;
         base.OnClosed(e);
     }
 }
