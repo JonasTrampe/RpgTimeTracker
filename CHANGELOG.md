@@ -63,6 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Draw tool's line-thickness slider**: capped at 12px instead of 20px -
+  the fog/erase brush's own size slider goes much larger since it controls
+  an area radius in map cells, not a raw on-screen stroke width, so the
+  Draw tool's own slider didn't need nearly the same range.
 - **GM Draw tool color picker**: the GM can now pick any color for the next
   line before drawing (previously fixed to Gold) - persisted lines keep
   their own color from when they were drawn (SemiPermanent/Permanent), and
