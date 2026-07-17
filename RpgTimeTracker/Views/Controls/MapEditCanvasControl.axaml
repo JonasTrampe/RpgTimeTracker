@@ -28,6 +28,21 @@
                           Content="{DynamicResource MapEditor.PingToolButton}"
                           ToolTip.Tip="{DynamicResource MapEditor.PingToolTooltip}" />
 
+            <ToggleButton Name="DrawModeToggle" Margin="0,0,6,6"
+                          Content="{DynamicResource MapEditor.DrawToolButton}"
+                          ToolTip.Tip="{DynamicResource MapEditor.DrawToolTooltip}" />
+
+            <ComboBox Name="LineDurabilityCombo" MinWidth="120" Margin="0,0,10,6" SelectedIndex="0">
+                <ComboBoxItem Content="{DynamicResource MapEditor.LineDurability.Temporary}" />
+                <ComboBoxItem Content="{DynamicResource MapEditor.LineDurability.SemiPermanent}" />
+                <ComboBoxItem Content="{DynamicResource MapEditor.LineDurability.Permanent}" />
+            </ComboBox>
+
+            <Button Name="EraseAllLinesButton" Margin="0,0,10,6"
+                    Content="{DynamicResource MapEditor.EraseAllLinesButton}"
+                    Click="OnEraseAllLinesClick"
+                    ToolTip.Tip="{DynamicResource MapEditor.EraseAllLinesTooltip}" />
+
             <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" VerticalAlignment="Center"
                        Margin="0,0,6,6" />
             <Slider Name="BrushSizeSlider" Minimum="0" Maximum="40" Value="4" Width="140"

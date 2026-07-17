@@ -533,13 +533,15 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     Caches the open state so later-connecting clients get the same full resync.
     /// </summary>
     public async Task PublishMapShowAsync(Guid mapId, string mapName, List<OpenMapFloor> floors,
-        List<MapTokenSnapshotDto> tokens)
+        List<MapTokenSnapshotDto> tokens, List<MapLineSnapshotDto>? lines = null)
     {
         if (!IsRunning) return;
 
+        lines ??= [];
+
         lock (_mediaGate)
         {
-            _openMap = new OpenMapState(mapId, mapName, floors, tokens.ToList());
+            _openMap = new OpenMapState(mapId, mapName, floors, tokens.ToList(), lines.ToList());
         }
 
         ClientConnection[] clients;
@@ -555,7 +557,7 @@ public sealed class TcpPlayerServerService : IDisposable
         try
         {
             foreach (var client in clients)
-                await SendMapShowToClientAsync(client, mapId, mapName, floors, tokens).ConfigureAwait(false);
+                await SendMapShowToClientAsync(client, mapId, mapName, floors, tokens, lines).ConfigureAwait(false);
         }
         finally
         {
@@ -683,6 +685,52 @@ public sealed class TcpPlayerServerService : IDisposable
     }
 
     /// <summary>
+    ///     Adds/fully updates one SemiPermanent/Permanent map line - caller (MainWindowViewModel)
+    ///     is responsible for never calling this for a HiddenUntilRevealed=true line, since unlike
+    ///     tokens there's no per-client filtering step here; a hidden line simply never reaches
+    ///     this method until the GM un-hides it. Updates the cached snapshot list (replacing any
+    ///     existing entry with the same Id) so a later-connecting client's map.show resync
+    ///     includes it, exactly like PublishMapTokenUpsertAsync.
+    /// </summary>
+    public Task PublishMapLineUpsertAsync(MapLineSnapshotDto line)
+    {
+        lock (_mediaGate)
+        {
+            if (_openMap is null) return Task.CompletedTask;
+
+            var index = _openMap.Lines.FindIndex(l => l.Id == line.Id);
+            if (index >= 0) _openMap.Lines[index] = line;
+            else _openMap.Lines.Add(line);
+        }
+
+        return BroadcastRpcAsync(RpcMethods.MapLineUpsert, line, c => c.MapEnabled);
+    }
+
+    /// <summary>One specific line is gone (erased, or its SemiPermanent timer expired) - see RpcMethods.MapLineRemove.</summary>
+    public Task PublishMapLineRemoveAsync(Guid floorId, Guid lineId)
+    {
+        lock (_mediaGate)
+        {
+            _openMap?.Lines.RemoveAll(l => l.Id == lineId);
+        }
+
+        return BroadcastRpcAsync(RpcMethods.MapLineRemove, new MapLineRemoveParams { FloorId = floorId, LineId = lineId },
+            c => c.MapEnabled);
+    }
+
+    /// <summary>GM's "Erase all" for one floor - see RpcMethods.MapLineClearAll.</summary>
+    public Task PublishMapLineClearAllAsync(Guid floorId)
+    {
+        lock (_mediaGate)
+        {
+            _openMap?.Lines.RemoveAll(l => l.FloorId == floorId);
+        }
+
+        return BroadcastRpcAsync(RpcMethods.MapLineClearAll, new MapLineClearAllParams { FloorId = floorId },
+            c => c.MapEnabled);
+    }
+
+    /// <summary>
     ///     Relays a just-received player annotation stroke to every OTHER connected player - the
     ///     originating connection already rendered its own local echo the instant it finished
     ///     drawing, so it's excluded here to avoid a redundant second render of the identical
@@ -697,7 +745,7 @@ public sealed class TcpPlayerServerService : IDisposable
     }
 
     private async Task SendMapShowToClientAsync(ClientConnection client, Guid mapId, string mapName,
-        List<OpenMapFloor> floors, List<MapTokenSnapshotDto> tokens)
+        List<OpenMapFloor> floors, List<MapTokenSnapshotDto> tokens, List<MapLineSnapshotDto>? lines = null)
     {
         foreach (var floor in floors)
         {
@@ -727,7 +775,8 @@ public sealed class TcpPlayerServerService : IDisposable
                 StartingFogBase64 = Convert.ToBase64String(FogMaskSerializer.Serialize(f.StartingFog)),
                 CurrentFogBase64 = Convert.ToBase64String(FogMaskSerializer.Serialize(f.CurrentFog))
             }).ToList(),
-            Tokens = tokens
+            Tokens = tokens,
+            Lines = lines ?? []
         };
 
         var payload = RpcMessage.Serialize(RpcMethods.MapShow, showParams);
@@ -977,17 +1026,17 @@ public sealed class TcpPlayerServerService : IDisposable
 
         if (connection.MapEnabled)
         {
-            (OpenMapState State, List<MapTokenSnapshotDto> Tokens)? openMap;
+            (OpenMapState State, List<MapTokenSnapshotDto> Tokens, List<MapLineSnapshotDto> Lines)? openMap;
             lock (_mediaGate)
             {
-                openMap = _openMap is { } state ? (state, state.Tokens.ToList()) : null;
+                openMap = _openMap is { } state ? (state, state.Tokens.ToList(), state.Lines.ToList()) : null;
             }
 
             // Full resync (all floor images + current fog), never an incremental replay - a
             // reconnecting client must never end up with a fog state that's partially stale.
             if (openMap is { } mapSnapshot)
                 await SendMapShowToClientAsync(connection, mapSnapshot.State.MapId, mapSnapshot.State.MapName,
-                        mapSnapshot.State.Floors, mapSnapshot.Tokens)
+                        mapSnapshot.State.Floors, mapSnapshot.Tokens, mapSnapshot.Lines)
                     .ConfigureAwait(false);
         }
 
@@ -1284,15 +1333,15 @@ public sealed class TcpPlayerServerService : IDisposable
 
         if (enabled)
         {
-            (OpenMapState State, List<MapTokenSnapshotDto> Tokens)? openMap;
+            (OpenMapState State, List<MapTokenSnapshotDto> Tokens, List<MapLineSnapshotDto> Lines)? openMap;
             lock (_mediaGate)
             {
-                openMap = _openMap is { } state ? (state, state.Tokens.ToList()) : null;
+                openMap = _openMap is { } state ? (state, state.Tokens.ToList(), state.Lines.ToList()) : null;
             }
 
             if (openMap is { } mapSnapshot)
                 _ = SendMapShowToClientAsync(target, mapSnapshot.State.MapId, mapSnapshot.State.MapName,
-                    mapSnapshot.State.Floors, mapSnapshot.Tokens);
+                    mapSnapshot.State.Floors, mapSnapshot.Tokens, mapSnapshot.Lines);
         }
         else
         {
@@ -1469,7 +1518,7 @@ public sealed class TcpPlayerServerService : IDisposable
     }
 
     private sealed class OpenMapState(Guid mapId, string mapName, List<OpenMapFloor> floors,
-        List<MapTokenSnapshotDto> tokens)
+        List<MapTokenSnapshotDto> tokens, List<MapLineSnapshotDto>? lines = null)
     {
         public Guid MapId { get; } = mapId;
         public string MapName { get; } = mapName;
@@ -1482,6 +1531,13 @@ public sealed class TcpPlayerServerService : IDisposable
         ///     connected clients do.
         /// </summary>
         public List<MapTokenSnapshotDto> Tokens { get; } = tokens;
+
+        /// <summary>
+        ///     Every currently-active SemiPermanent/Permanent line visible to players (GM already
+        ///     excluded any HiddenUntilRevealed=true one before it ever reached PublishMapLineUpsertAsync)
+        ///     - kept in sync the same way Tokens is, for the same resync reason.
+        /// </summary>
+        public List<MapLineSnapshotDto> Lines { get; } = lines ?? [];
     }
 
     private sealed class ClientConnection : IDisposable

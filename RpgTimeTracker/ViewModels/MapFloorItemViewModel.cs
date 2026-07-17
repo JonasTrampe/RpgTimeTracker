@@ -1,7 +1,9 @@
 using System;
+using System.Collections.ObjectModel;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RpgTimeTracker.Models.Persistence;
 
 namespace RpgTimeTracker.ViewModels;
 
@@ -56,6 +58,14 @@ public sealed partial class MapFloorItemViewModel : ObservableObject
     public string ImagePath { get; private set; }
     public string FogPath { get; private set; }
     public Bitmap? Thumbnail { get; }
+
+    /// <summary>
+    ///     SemiPermanent/Permanent map annotation lines on this floor (see MapLineDto's doc
+    ///     comment) - Temporary lines are never added here, they only ever exist as a live RPC/fade
+    ///     animation. Populated on load from MapFloorEntryDto.Lines and mutated by
+    ///     MainWindowViewModel's AddMapLine/RemoveMapLine/ClearMapLines.
+    /// </summary>
+    public ObservableCollection<MapLineDto> Lines { get; } = [];
 
     /// <summary>
     ///     Called only after the backing files have already been moved to their new

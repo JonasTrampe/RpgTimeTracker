@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using Persistence = RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Shared.Models.Rpc;
 using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Visuals;
@@ -68,6 +69,25 @@ public partial class MapLiveWindow : Window
         {
             _ = _vm.BroadcastMapPingAsync(floorId, x, y);
             _previewDisplay.NotifyPingReceived(floorId, x, y);
+        };
+        EditCanvas.LineDrawn += (floorId, points, durability) =>
+        {
+            var floor = EditCanvas.CurrentFloor!;
+            var line = new Persistence.MapLineDto
+            {
+                FloorId = floorId,
+                Points = points.Select(p => new Persistence.MapLinePointDto { X = p.X, Y = p.Y }).ToList(),
+                ColorHex = "#FFD700",
+                Durability = durability
+            };
+            _vm.AddMapLine(_map, floor, line);
+            EditCanvas.ShowPersistedLine(line);
+            _previewDisplay.UpsertLine(_vm.BuildLineSnapshot(floor, line));
+        };
+        EditCanvas.EraseAllLinesRequested += floor =>
+        {
+            _vm.ClearMapLines(_map, floor);
+            _previewDisplay.ClearLinesForFloor(floor.Id);
         };
         TokenPanel.Configure(_vm, _map);
         TokenPanel.TokensMutated += EditCanvas.RefreshTokens;

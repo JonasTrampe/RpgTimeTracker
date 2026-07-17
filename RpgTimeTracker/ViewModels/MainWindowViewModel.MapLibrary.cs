@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Models.Persistence;
+using Persistence = RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Network;
 using RpgTimeTracker.Services;
 using RpgTimeTracker.Shared.Models;
@@ -339,7 +340,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 CellSizePx = floor.CellSizePx,
                 GridWidth = floor.GridWidth,
                 GridHeight = floor.GridHeight,
-                Order = index
+                Order = index,
+                // Only Permanent lines are ever written to disk - SemiPermanent ones expire on
+                // their own timer (see ExpireSemiPermanentLineAsync) and would be meaningless to
+                // restore with no remaining time left after an app restart.
+                Lines = floor.Lines.Where(l => l.Durability == Persistence.MapLineDurability.Permanent).ToList()
             }).ToList()
         };
     }
@@ -604,6 +609,96 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     public IReadOnlyList<MapTokenSnapshotDto> GetVisibleTokenSnapshots(MapItemViewModel map)
     {
         return BuildVisibleTokenSnapshots(map);
+    }
+
+    /// <summary>How long a SemiPermanent line stays up before automatically erasing itself (#Tier1 grilled design).</summary>
+    private static readonly TimeSpan SemiPermanentLineLifetime = TimeSpan.FromMinutes(5);
+
+    /// <summary>Every SemiPermanent/Permanent line on this map not withheld by HiddenUntilRevealed - the full-resync payload for map.show.</summary>
+    private static List<MapLineSnapshotDto> BuildVisibleLineSnapshots(MapItemViewModel map)
+    {
+        return map.Floors
+            .SelectMany(floor => floor.Lines.Where(l => !l.HiddenUntilRevealed), (floor, line) => ToLineSnapshotDto(floor, line))
+            .ToList();
+    }
+
+    private static MapLineSnapshotDto ToLineSnapshotDto(MapFloorItemViewModel floor, Persistence.MapLineDto line)
+    {
+        return new MapLineSnapshotDto
+        {
+            Id = line.Id,
+            FloorId = floor.Id,
+            Points = line.Points.Select(p => new MapLinePoint { X = p.X, Y = p.Y }).ToList(),
+            ColorHex = line.ColorHex,
+            Durability = (RpgTimeTracker.Shared.Models.Rpc.MapLineDurability)(int)line.Durability,
+            OwnerClientId = line.OwnerClientId
+        };
+    }
+
+    /// <summary>
+    ///     GM draws a SemiPermanent/Permanent line (see MapEditCanvasControl's Draw tool) - adds it
+    ///     to the floor, persists (Permanent only - see ToMapLibraryEntryDto), and broadcasts it live
+    ///     if this map is currently open to players and the line isn't withheld by
+    ///     HiddenUntilRevealed. A SemiPermanent line also gets a one-shot timer that removes itself
+    ///     once SemiPermanentLineLifetime elapses.
+    /// </summary>
+    public void AddMapLine(MapItemViewModel map, MapFloorItemViewModel floor, Persistence.MapLineDto line)
+    {
+        floor.Lines.Add(line);
+        SaveMapLibrarySettings();
+
+        if (ReferenceEquals(OpenMap, map))
+        {
+            var snapshot = ToLineSnapshotDto(floor, line);
+            MapDisplay.UpsertLine(snapshot);
+            if (!line.HiddenUntilRevealed) _ = _playerServer.PublishMapLineUpsertAsync(snapshot);
+        }
+
+        if (line.Durability == Persistence.MapLineDurability.SemiPermanent)
+            _ = ExpireSemiPermanentLineAsync(map, floor, line.Id);
+    }
+
+    /// <summary>Public wrapper around ToLineSnapshotDto for MapLiveWindow's own "Vorschau" thumbnail, mirroring GetVisibleTokenSnapshots.</summary>
+    public RpgTimeTracker.Shared.Models.Rpc.MapLineSnapshotDto BuildLineSnapshot(MapFloorItemViewModel floor, Persistence.MapLineDto line)
+    {
+        return ToLineSnapshotDto(floor, line);
+    }
+
+    private async Task ExpireSemiPermanentLineAsync(MapItemViewModel map, MapFloorItemViewModel floor, Guid lineId)
+    {
+        await Task.Delay(SemiPermanentLineLifetime);
+        RemoveMapLine(map, floor, lineId);
+    }
+
+    /// <summary>GM's Erase tool removed one specific line (own or, for the GM, anyone's).</summary>
+    public void RemoveMapLine(MapItemViewModel map, MapFloorItemViewModel floor, Guid lineId)
+    {
+        var removed = floor.Lines.FirstOrDefault(l => l.Id == lineId);
+        if (removed is null) return;
+
+        floor.Lines.Remove(removed);
+        SaveMapLibrarySettings();
+
+        if (ReferenceEquals(OpenMap, map))
+        {
+            MapDisplay.RemoveLine(lineId);
+            _ = _playerServer.PublishMapLineRemoveAsync(floor.Id, lineId);
+        }
+    }
+
+    /// <summary>GM's "Erase all" - clears every line on this one floor at once.</summary>
+    public void ClearMapLines(MapItemViewModel map, MapFloorItemViewModel floor)
+    {
+        if (floor.Lines.Count == 0) return;
+
+        floor.Lines.Clear();
+        SaveMapLibrarySettings();
+
+        if (ReferenceEquals(OpenMap, map))
+        {
+            MapDisplay.ClearLinesForFloor(floor.Id);
+            _ = _playerServer.PublishMapLineClearAllAsync(floor.Id);
+        }
     }
 
     /// <summary>
@@ -1139,7 +1234,8 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         EditingFloor ??= map.Floors.FirstOrDefault();
         IsMapOpenToPlayers = true;
         var tokens = BuildVisibleTokenSnapshots(map);
-        await _playerServer.PublishMapShowAsync(map.Id, map.Name, floors, tokens);
+        var lines = BuildVisibleLineSnapshots(map);
+        await _playerServer.PublishMapShowAsync(map.Id, map.Name, floors, tokens, lines);
         MapDisplay.ShowMap(map.Name, displayFloors);
         foreach (var token in tokens) MapDisplay.UpsertToken(token);
         ApplyAndBroadcastEffectiveFogStyleForOpenMap();

@@ -35,6 +35,9 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     /// <summary>Every currently-visible token across all floors - see VisibleTokens for the current-floor filter.</summary>
     private readonly List<MapTokenSnapshotDto> _tokens = [];
 
+    /// <summary>Every currently-active SemiPermanent/Permanent line across all floors - see VisibleLines for the current-floor filter.</summary>
+    private readonly List<MapLineSnapshotDto> _lines = [];
+
     /// <summary>
     ///     Whether the blurred-image layer is used at all - independent of BlurRadius so
     ///     toggling it off/on doesn't lose the configured strength. When false, only the flat
@@ -101,6 +104,13 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     ///     to apply, it just renders whatever's here.
     /// </summary>
     public ObservableCollection<MapTokenSnapshotDto> VisibleTokens { get; } = [];
+
+    /// <summary>
+    ///     SemiPermanent/Permanent lines on the currently displayed floor only - MapDisplayView.axaml.cs
+    ///     subscribes to CollectionChanged to draw/remove a Polyline per entry (no fade, unlike the
+    ///     ephemeral map.annotationBroadcast stroke - see AnnotationReceived).
+    /// </summary>
+    public ObservableCollection<MapLineSnapshotDto> VisibleLines { get; } = [];
 
     /// <summary>
     ///     Whether a turn changing to a new Character-linked token should snap this view to
@@ -209,6 +219,7 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         _floors.Clear();
         _floors.AddRange(floors);
         _tokens.Clear();
+        _lines.Clear();
         MapName = mapName;
         CurrentFloorIndex = 0;
         IsShowingMap = true;
@@ -221,11 +232,54 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         IsShowingMap = false;
         _floors.Clear();
         _tokens.Clear();
+        _lines.Clear();
         VisibleTokens.Clear();
+        VisibleLines.Clear();
         CurrentFloorImageBitmap = null;
         MaskBrush = null;
         HasFogMask = false;
         CurrentFloorName = string.Empty;
+    }
+
+    /// <summary>Wholesale load for map.show's full resync (see MapShowParams.Lines) - replaces every line across all floors at once.</summary>
+    public void ReplaceAllLines(IReadOnlyList<MapLineSnapshotDto> lines)
+    {
+        _lines.Clear();
+        _lines.AddRange(lines);
+        RefreshVisibleLines();
+    }
+
+    /// <summary>Adds a line, or fully replaces an existing one with the same Id (see RpcMethods.MapLineUpsert).</summary>
+    public void UpsertLine(MapLineSnapshotDto line)
+    {
+        var index = _lines.FindIndex(l => l.Id == line.Id);
+        if (index >= 0) _lines[index] = line;
+        else _lines.Add(line);
+
+        RefreshVisibleLines();
+    }
+
+    /// <summary>See RpcMethods.MapLineRemove's doc comment.</summary>
+    public void RemoveLine(Guid lineId)
+    {
+        _lines.RemoveAll(l => l.Id == lineId);
+        RefreshVisibleLines();
+    }
+
+    /// <summary>GM's "Erase all" for one floor - see RpcMethods.MapLineClearAll.</summary>
+    public void ClearLinesForFloor(Guid floorId)
+    {
+        _lines.RemoveAll(l => l.FloorId == floorId);
+        RefreshVisibleLines();
+    }
+
+    private void RefreshVisibleLines()
+    {
+        VisibleLines.Clear();
+        if (CurrentFloorIndex < 0 || CurrentFloorIndex >= _floors.Count) return;
+
+        var floorId = _floors[CurrentFloorIndex].FloorId;
+        foreach (var line in _lines.Where(l => l.FloorId == floorId)) VisibleLines.Add(line);
     }
 
     /// <summary>Adds a token, or fully replaces an existing one with the same Id (see RpcMethods.MapTokenUpsert).</summary>
@@ -360,6 +414,7 @@ public sealed partial class MapDisplayViewModel : ObservableObject
         CurrentFloorImageBitmap = floor.Image;
         RefreshMask();
         RefreshVisibleTokens();
+        RefreshVisibleLines();
     }
 
     private void RefreshMask()

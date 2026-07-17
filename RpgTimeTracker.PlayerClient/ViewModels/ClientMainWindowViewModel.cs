@@ -175,6 +175,11 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MapHideReceived += () => Dispatcher.UIThread.Post(OnMapHide);
         _client.MapTokenUpsertReceived += token => Dispatcher.UIThread.Post(() => MapDisplay.UpsertToken(token));
         _client.MapTokenRemoveReceived += tokenId => Dispatcher.UIThread.Post(() => MapDisplay.RemoveToken(tokenId));
+        _client.MapLineUpsertReceived += line => Dispatcher.UIThread.Post(() => MapDisplay.UpsertLine(line));
+        _client.MapLineRemoveReceived += remove =>
+            Dispatcher.UIThread.Post(() => MapDisplay.RemoveLine(remove.LineId));
+        _client.MapLineClearAllReceived += clearAll =>
+            Dispatcher.UIThread.Post(() => MapDisplay.ClearLinesForFloor(clearAll.FloorId));
         _client.MapRenderStyleChanged += style => Dispatcher.UIThread.Post(() => MapDisplay.ApplyRenderStyle(
             FogOverlayRenderer.BuildHiddenColor(style.ColorHex, style.OpacityPercent), style.BlurRadius,
             style.BlurEnabled));
@@ -387,6 +392,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _pendingFloorImagePaths.Clear();
         MapDisplay.ShowMap(mapShow.MapName, floors);
         foreach (var token in mapShow.Tokens) MapDisplay.UpsertToken(token);
+        MapDisplay.ReplaceAllLines(mapShow.Lines);
         MediaWindowShouldShow?.Invoke();
         Log.Information("Map shown: {MapName} ({FloorCount} floors, {TokenCount} tokens)", mapShow.MapName,
             floors.Count, mapShow.Tokens.Count);

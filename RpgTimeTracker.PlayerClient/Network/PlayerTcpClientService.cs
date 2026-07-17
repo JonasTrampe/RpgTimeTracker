@@ -122,6 +122,16 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action? MapHideReceived;
     public event Action<MapTokenSnapshotDto>? MapTokenUpsertReceived;
     public event Action<Guid>? MapTokenRemoveReceived;
+
+    /// <summary>A GM-drawn SemiPermanent/Permanent line was added/updated - see RpcMethods.MapLineUpsert.</summary>
+    public event Action<MapLineSnapshotDto>? MapLineUpsertReceived;
+
+    /// <summary>One line is gone (erased, or its SemiPermanent timer expired) - see RpcMethods.MapLineRemove.</summary>
+    public event Action<MapLineRemoveParams>? MapLineRemoveReceived;
+
+    /// <summary>GM's "Erase all" - every line on one floor is gone at once - see RpcMethods.MapLineClearAll.</summary>
+    public event Action<MapLineClearAllParams>? MapLineClearAllReceived;
+
     public event Action<MapRenderStyleChangedParams>? MapRenderStyleChanged;
     public event Action<MapAutoZoomChangedParams>? MapAutoZoomChanged;
 
@@ -616,6 +626,18 @@ public sealed class PlayerTcpClientService : IDisposable
                 case RpcMethods.MapTokenRemove:
                     var tokenRemove = raw.GetParams<MapTokenRemoveParams>();
                     if (tokenRemove is not null) MapTokenRemoveReceived?.Invoke(tokenRemove.TokenId);
+                    break;
+                case RpcMethods.MapLineUpsert:
+                    var lineUpsert = raw.GetParams<MapLineSnapshotDto>();
+                    if (lineUpsert is not null) MapLineUpsertReceived?.Invoke(lineUpsert);
+                    break;
+                case RpcMethods.MapLineRemove:
+                    var lineRemove = raw.GetParams<MapLineRemoveParams>();
+                    if (lineRemove is not null) MapLineRemoveReceived?.Invoke(lineRemove);
+                    break;
+                case RpcMethods.MapLineClearAll:
+                    var lineClearAll = raw.GetParams<MapLineClearAllParams>();
+                    if (lineClearAll is not null) MapLineClearAllReceived?.Invoke(lineClearAll);
                     break;
                 case RpcMethods.MapPing:
                     var ping = raw.GetParams<MapPingParams>();

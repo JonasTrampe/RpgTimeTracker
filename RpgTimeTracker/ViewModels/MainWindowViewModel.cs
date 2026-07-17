@@ -670,11 +670,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             {
                 if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
 
-                map.Floors.Add(new MapFloorItemViewModel(
+                var floor = new MapFloorItemViewModel(
                     floorEntry.Id, floorEntry.Name, floorEntry.ImagePath, floorEntry.FogPath,
                     floorEntry.CellSizePx, floorEntry.GridWidth, floorEntry.GridHeight,
                     LoadMapFloorThumbnail(floorEntry.ImagePath),
-                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
+                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings());
+                foreach (var line in floorEntry.Lines) floor.Lines.Add(line);
+                map.Floors.Add(floor);
             }
 
             LoadTokensIntoMap(map, mapEntry.Tokens);
@@ -1127,11 +1129,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             {
                 if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
 
-                map.Floors.Add(new MapFloorItemViewModel(
+                var floor = new MapFloorItemViewModel(
                     floorEntry.Id, floorEntry.Name, floorEntry.ImagePath, floorEntry.FogPath,
                     floorEntry.CellSizePx, floorEntry.GridWidth, floorEntry.GridHeight,
                     LoadMapFloorThumbnail(floorEntry.ImagePath),
-                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
+                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings());
+                foreach (var line in floorEntry.Lines) floor.Lines.Add(line);
+                map.Floors.Add(floor);
             }
 
             LoadTokensIntoMap(map, mapEntry.Tokens);

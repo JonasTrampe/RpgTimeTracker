@@ -16,6 +16,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using RpgTimeTracker.Models;
+using Persistence = RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Rpc;
 using RpgTimeTracker.Shared.Services.Visuals;
@@ -189,6 +190,21 @@ public partial class MapEditCanvasControl : UserControl
     ///     (see MainWindowViewModel.BroadcastMapPingAsync) and shows it locally too.
     /// </summary>
     public event Action<Guid, double, double>? PingRequested;
+
+    /// <summary>
+    ///     Fired when a Draw-tool stroke completes with real movement - image-space points plus
+    ///     the durability tier chosen in LineDurabilityCombo. The owner (MapLiveWindow/
+    ///     MapPrepareWindow) turns this into a MapLineDto and calls MainWindowViewModel.AddMapLine,
+    ///     then ShowPersistedLine to render it immediately on this same control.
+    /// </summary>
+    public event Action<Guid, IReadOnlyList<Point>, Persistence.MapLineDurability>? LineDrawn;
+
+    /// <summary>GM clicked "Erase all" - the owner clears the floor's persisted Lines and calls ClearPersistedLineVisuals.</summary>
+    public event Action<MapFloorItemViewModel>? EraseAllLinesRequested;
+
+    private List<Point>? _drawImagePoints;
+    private Polyline? _activeDrawVisual;
+    private readonly Dictionary<Guid, Polyline> _persistedLineVisuals = new();
 
     /// <summary>
     ///     Must be called once (any time before/after SetMap) - the resolver methods on
@@ -401,6 +417,7 @@ public partial class MapEditCanvasControl : UserControl
 
     private void LoadFloor(MapFloorItemViewModel? floor)
     {
+        ClearPersistedLineVisuals();
         CurrentFloor = floor;
         if (floor is null)
         {
@@ -421,6 +438,7 @@ public partial class MapEditCanvasControl : UserControl
         // default - the GM can then zoom in explicitly if they want to.
         _zoomIsFit = true;
         ApplyZoom(ComputeFitZoom(), true);
+        ShowAllPersistedLinesForCurrentFloor();
         FloorChanged?.Invoke(floor);
     }
 
@@ -539,6 +557,14 @@ public partial class MapEditCanvasControl : UserControl
             return;
         }
 
+        if (DrawModeToggle.IsChecked == true && CurrentFloor is not null)
+        {
+            BeginDrawStroke(e.GetPosition(EditorCanvas));
+            e.Pointer.Capture(EditorCanvas);
+            e.Handled = true;
+            return;
+        }
+
         _isPainting = true;
         PaintAt(e.GetPosition(EditorCanvas));
     }
@@ -549,6 +575,12 @@ public partial class MapEditCanvasControl : UserControl
         _lastPointerPosition = position;
         UpdateBrushCursor(position);
 
+        if (_drawImagePoints is not null && ReferenceEquals(e.Pointer.Captured, EditorCanvas))
+        {
+            AppendDrawPoint(position);
+            return;
+        }
+
         if (!_isPainting) return;
 
         PaintAt(position);
@@ -557,6 +589,106 @@ public partial class MapEditCanvasControl : UserControl
     private void OnCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         _isPainting = false;
+
+        if (_drawImagePoints is not null)
+        {
+            FinishDrawStroke();
+            e.Pointer.Capture(null);
+        }
+    }
+
+    /// <summary>
+    ///     Selected durability tier from LineDurabilityCombo - index 0/1/2 matches
+    ///     Temporary/SemiPermanent/Permanent (see the XAML's ComboBoxItem order).
+    /// </summary>
+    private Persistence.MapLineDurability SelectedLineDurability =>
+        (Persistence.MapLineDurability)Math.Max(0, LineDurabilityCombo.SelectedIndex);
+
+    private void BeginDrawStroke(Point firstPoint)
+    {
+        var imagePoint = new Point(firstPoint.X / _zoom, firstPoint.Y / _zoom);
+        _drawImagePoints = [imagePoint];
+        _activeDrawVisual = new Polyline
+        {
+            Points = [firstPoint],
+            Stroke = Brushes.Gold,
+            StrokeThickness = 4,
+            StrokeJoin = PenLineJoin.Round,
+            StrokeLineCap = PenLineCap.Round,
+            IsHitTestVisible = false
+        };
+        AnnotationLayer.Children.Add(_activeDrawVisual);
+    }
+
+    private void AppendDrawPoint(Point screenPosition)
+    {
+        if (_drawImagePoints is not { } points || _activeDrawVisual is not { } visual) return;
+
+        points.Add(new Point(screenPosition.X / _zoom, screenPosition.Y / _zoom));
+        visual.Points!.Add(screenPosition);
+    }
+
+    private void FinishDrawStroke()
+    {
+        if (_drawImagePoints is not { } points || _activeDrawVisual is not { } visual)
+        {
+            _drawImagePoints = null;
+            _activeDrawVisual = null;
+            return;
+        }
+
+        _drawImagePoints = null;
+        _activeDrawVisual = null;
+        AnnotationLayer.Children.Remove(visual);
+
+        if (points.Count < 2 || CurrentFloor is null) return;
+
+        LineDrawn?.Invoke(CurrentFloor.Id, points, SelectedLineDurability);
+    }
+
+    /// <summary>
+    ///     Renders a SemiPermanent/Permanent line that's already been added to the floor's Lines
+    ///     (see MainWindowViewModel.AddMapLine) - no fade, tracked by Id so RemovePersistedLine can
+    ///     take it down again later (erase, or SemiPermanent expiry).
+    /// </summary>
+    public void ShowPersistedLine(Persistence.MapLineDto line)
+    {
+        if (CurrentFloor is null || line.FloorId != CurrentFloor.Id) return;
+        if (_persistedLineVisuals.ContainsKey(line.Id)) return;
+
+        var polyline = new Polyline
+        {
+            Points = new Points(line.Points.Select(p => new Point(p.X * _zoom, p.Y * _zoom))),
+            Stroke = Brushes.Gold,
+            StrokeThickness = 4,
+            StrokeJoin = PenLineJoin.Round,
+            StrokeLineCap = PenLineCap.Round,
+            IsHitTestVisible = false
+        };
+        AnnotationLayer.Children.Add(polyline);
+        _persistedLineVisuals[line.Id] = polyline;
+    }
+
+    /// <summary>Redraws every persisted line for the current floor - called after LoadFloor and after ClearPersistedLineVisuals.</summary>
+    public void ShowAllPersistedLinesForCurrentFloor()
+    {
+        if (CurrentFloor is null) return;
+
+        foreach (var line in CurrentFloor.Lines) ShowPersistedLine(line);
+    }
+
+    public void ClearPersistedLineVisuals()
+    {
+        foreach (var visual in _persistedLineVisuals.Values) AnnotationLayer.Children.Remove(visual);
+        _persistedLineVisuals.Clear();
+    }
+
+    private void OnEraseAllLinesClick(object? sender, RoutedEventArgs e)
+    {
+        if (CurrentFloor is null) return;
+
+        EraseAllLinesRequested?.Invoke(CurrentFloor);
+        ClearPersistedLineVisuals();
     }
 
     private static readonly TimeSpan AnnotationFadeDuration = TimeSpan.FromSeconds(8);

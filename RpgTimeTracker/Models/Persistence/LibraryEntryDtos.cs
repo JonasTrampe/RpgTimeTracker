@@ -101,6 +101,59 @@ public sealed class MapFloorEntryDto
     ///     relying on implicit list order - see MapItemViewModel.MoveFloorUp/MoveFloorDown.
     /// </summary>
     public int Order { get; set; }
+
+    /// <summary>
+    ///     Semi-permanent and permanent map annotation lines (see MapLineDto) - Temporary lines
+    ///     (the original ephemeral stroke feature) are never persisted here, they only ever exist
+    ///     as a live RPC/fade animation. Belongs to the Floor (not the Map) since points are in
+    ///     that floor's own image-space coordinates.
+    /// </summary>
+    public List<MapLineDto> Lines { get; set; } = [];
+}
+
+/// <summary>How long a drawn map line should stick around - see MapLineDto.</summary>
+public enum MapLineDurability
+{
+    /// <summary>Fades after a few seconds, never persisted - the original ephemeral stroke feature.</summary>
+    Temporary,
+
+    /// <summary>Fades after several minutes (see MapDisplayView/MapEditCanvasControl's SemiPermanentFadeDuration) - persisted so it survives a reconnect while still active, but not written back once expired.</summary>
+    SemiPermanent,
+
+    /// <summary>Never fades - persisted with the floor like a token, until explicitly erased.</summary>
+    Permanent
+}
+
+/// <summary>
+///     One freehand line drawn on a map floor (see MapDisplayView/MapEditCanvasControl's Draw
+///     tool) - only SemiPermanent/Permanent lines are ever persisted (see MapFloorEntryDto.Lines);
+///     Temporary ones are purely a live, non-persisted RPC + fade animation.
+/// </summary>
+public sealed class MapLineDto
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid FloorId { get; set; }
+    public List<MapLinePointDto> Points { get; set; } = [];
+    public string ColorHex { get; set; } = "#FFD700";
+    public MapLineDurability Durability { get; set; } = MapLineDurability.Temporary;
+
+    /// <summary>
+    ///     GM-only per-line fog gate (defaults to visible, matching player-drawn lines - see
+    ///     MapTokenDto.RevealMode's similar "opt into hiding" convention): when true, this line is
+    ///     withheld from players entirely until the GM flips it back to false, rather than being
+    ///     resolved cell-by-cell against the floor's fog mask.
+    /// </summary>
+    public bool HiddenUntilRevealed { get; set; }
+
+    /// <summary>Empty for a GM-drawn line; otherwise the drawing player's ClientId (see PainterTagHelper), used for "players can only erase their own".</summary>
+    public string OwnerClientId { get; set; } = string.Empty;
+}
+
+/// <summary>Image-space point of a MapLineDto - kept separate from RpcParams.AnnotationPoint so this persistence-layer file has no dependency on the Shared RPC namespace.</summary>
+public sealed class MapLinePointDto
+{
+    public double X { get; set; }
+    public double Y { get; set; }
 }
 
 public sealed class MapLibraryEntryDto

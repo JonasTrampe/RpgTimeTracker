@@ -269,6 +269,7 @@ public partial class MapDisplayView : UserControl
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _viewModel.PingReceived -= OnPingReceived;
             _viewModel.AnnotationReceived -= OnAnnotationReceived;
+            _viewModel.VisibleLines.CollectionChanged -= OnVisibleLinesChanged;
         }
 
         _viewModel = DataContext as MapDisplayViewModel;
@@ -279,6 +280,47 @@ public partial class MapDisplayView : UserControl
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             _viewModel.PingReceived += OnPingReceived;
             _viewModel.AnnotationReceived += OnAnnotationReceived;
+            _viewModel.VisibleLines.CollectionChanged += OnVisibleLinesChanged;
+        }
+
+        _persistedLineVisuals.Clear();
+        RedrawPersistedLines();
+    }
+
+    private readonly Dictionary<Guid, Polyline> _persistedLineVisuals = new();
+
+    /// <summary>
+    ///     Keeps AnnotationOverlay's persisted-line polylines in sync with
+    ///     MapDisplayViewModel.VisibleLines (SemiPermanent/Permanent lines - see RpcMethods.MapLineUpsert/
+    ///     MapLineRemove/MapLineClearAll) - unlike the ephemeral player stroke (OnAnnotationReceived),
+    ///     these never fade on their own; they only disappear when explicitly removed/cleared or
+    ///     the floor changes.
+    /// </summary>
+    private void OnVisibleLinesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        RedrawPersistedLines();
+    }
+
+    private void RedrawPersistedLines()
+    {
+        foreach (var visual in _persistedLineVisuals.Values) AnnotationOverlay.Children.Remove(visual);
+        _persistedLineVisuals.Clear();
+
+        if (_viewModel is null) return;
+
+        foreach (var line in _viewModel.VisibleLines)
+        {
+            var polyline = new Polyline
+            {
+                Points = new Points(line.Points.Select(p => new Point(p.X, p.Y))),
+                Stroke = new SolidColorBrush(Color.Parse(line.ColorHex)),
+                StrokeThickness = 4,
+                StrokeJoin = PenLineJoin.Round,
+                StrokeLineCap = PenLineCap.Round,
+                IsHitTestVisible = false
+            };
+            AnnotationOverlay.Children.Add(polyline);
+            _persistedLineVisuals[line.Id] = polyline;
         }
     }
 
