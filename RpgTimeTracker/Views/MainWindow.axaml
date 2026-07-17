@@ -3230,6 +3230,10 @@
                                                                                             Margin="0,0,10,4"
                                                                                             Content="{DynamicResource MainWindow.Music.RoutingMapCheckbox}"
                                                                                             IsChecked="{Binding MapEnabled}" />
+                                                                                        <CheckBox
+                                                                                            Margin="0,0,10,4"
+                                                                                            Content="{DynamicResource MainWindow.Music.RoutingPaintCheckbox}"
+                                                                                            IsChecked="{Binding CanAnnotate}" />
                                                                                     </WrapPanel>
                                                                                 </StackPanel>
                                                                             </Border>

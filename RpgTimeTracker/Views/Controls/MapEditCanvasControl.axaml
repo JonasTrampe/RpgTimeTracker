@@ -64,6 +64,8 @@
                 <Image Name="FloorImageControl" Stretch="Uniform" />
                 <Image Name="FogOverlayControl" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
                 <Canvas Name="TokenLayer" Background="Transparent" />
+                <!-- Player annotation strokes render here, above tokens - see ShowAnnotationStroke. -->
+                <Canvas Name="AnnotationLayer" Background="Transparent" IsHitTestVisible="False" />
                 <Ellipse Name="BrushCursor"
                          IsHitTestVisible="False"
                          IsVisible="False"

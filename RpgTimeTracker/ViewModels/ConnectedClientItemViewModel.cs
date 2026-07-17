@@ -10,17 +10,21 @@ namespace RpgTimeTracker.ViewModels;
 ///     A connected player client in the GM-side list, with the ability to manually
 ///     disconnect it and to route whether this window's Music/Sound/Image/Video/Map broadcasts
 ///     are on (see TcpPlayerServerService.SetClientMusicEnabled/SetClientSoundEnabled/
-///     SetClientImageEnabled/SetClientVideoEnabled/SetClientMapEnabled).
+///     SetClientImageEnabled/SetClientVideoEnabled/SetClientMapEnabled), plus whether it's allowed
+///     to draw map annotation strokes (see SetClientCanAnnotate).
 /// </summary>
 public partial class ConnectedClientItemViewModel : ObservableObject
 {
     private readonly string _connectedSinceTime;
     private readonly Action<ConnectedClientItemViewModel> _onDisconnectRequested;
+    private readonly Action<ConnectedClientItemViewModel, bool> _onCanAnnotateChanged;
     private readonly Action<ConnectedClientItemViewModel, bool> _onImageEnabledChanged;
     private readonly Action<ConnectedClientItemViewModel, bool> _onMapEnabledChanged;
     private readonly Action<ConnectedClientItemViewModel, bool> _onMusicEnabledChanged;
     private readonly Action<ConnectedClientItemViewModel, bool> _onSoundEnabledChanged;
     private readonly Action<ConnectedClientItemViewModel, bool> _onVideoEnabledChanged;
+
+    [ObservableProperty] private bool _canAnnotate;
 
     [ObservableProperty] private bool _imageEnabled;
 
@@ -38,7 +42,8 @@ public partial class ConnectedClientItemViewModel : ObservableObject
         Action<ConnectedClientItemViewModel, bool> onSoundEnabledChanged,
         Action<ConnectedClientItemViewModel, bool> onImageEnabledChanged,
         Action<ConnectedClientItemViewModel, bool> onVideoEnabledChanged,
-        Action<ConnectedClientItemViewModel, bool> onMapEnabledChanged)
+        Action<ConnectedClientItemViewModel, bool> onMapEnabledChanged,
+        Action<ConnectedClientItemViewModel, bool> onCanAnnotateChanged)
     {
         RemoteEndpoint = info.RemoteEndpoint;
         _connectedSinceTime = info.ConnectedAtUtc.ToLocalTime().ToString("HH:mm:ss");
@@ -48,11 +53,13 @@ public partial class ConnectedClientItemViewModel : ObservableObject
         _onImageEnabledChanged = onImageEnabledChanged;
         _onVideoEnabledChanged = onVideoEnabledChanged;
         _onMapEnabledChanged = onMapEnabledChanged;
+        _onCanAnnotateChanged = onCanAnnotateChanged;
         _musicEnabled = info.MusicEnabled;
         _soundEnabled = info.SoundEnabled;
         _imageEnabled = info.ImageEnabled;
         _videoEnabled = info.VideoEnabled;
         _mapEnabled = info.MapEnabled;
+        _canAnnotate = info.CanAnnotate;
     }
 
     public string RemoteEndpoint { get; }
@@ -83,6 +90,11 @@ public partial class ConnectedClientItemViewModel : ObservableObject
     partial void OnMapEnabledChanged(bool value)
     {
         _onMapEnabledChanged(this, value);
+    }
+
+    partial void OnCanAnnotateChanged(bool value)
+    {
+        _onCanAnnotateChanged(this, value);
     }
 
     public void RefreshLocalizedText()

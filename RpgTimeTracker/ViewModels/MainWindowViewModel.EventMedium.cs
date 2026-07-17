@@ -448,7 +448,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         foreach (var info in clients)
             ConnectedClientItems.Add(new ConnectedClientItemViewModel(info, DisconnectClientRequested,
                 OnClientMusicEnabledChanged, OnClientSoundEnabledChanged, OnClientImageEnabledChanged,
-                OnClientVideoEnabledChanged, OnClientMapEnabledChanged));
+                OnClientVideoEnabledChanged, OnClientMapEnabledChanged, OnClientCanAnnotateChanged));
         OnPropertyChanged(nameof(HasNoConnectedClients));
     }
 
@@ -480,6 +480,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     private void OnClientMapEnabledChanged(ConnectedClientItemViewModel item, bool enabled)
     {
         _playerServer.SetClientMapEnabled(item.RemoteEndpoint, enabled);
+    }
+
+    private void OnClientCanAnnotateChanged(ConnectedClientItemViewModel item, bool enabled)
+    {
+        _playerServer.SetClientCanAnnotate(item.RemoteEndpoint, enabled);
     }
 
     private void ResolvePendingVideo(string mediaId)

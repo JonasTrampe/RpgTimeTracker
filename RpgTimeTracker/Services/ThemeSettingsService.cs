@@ -81,12 +81,74 @@ public static class ThemeSettingsService
         try
         {
             Directory.CreateDirectory(SettingsDirectory);
+
+            // Multiple app instances are an intentionally supported pattern (see Program.cs's
+            // --no-discovery flag), and each holds its own independently-loaded in-memory copy
+            // of this file. If a stale instance (e.g. one left open from an earlier test run,
+            // with an empty/outdated library) saves after a newer instance already wrote real
+            // data, it silently overwrites that data with no error - this has wiped the Map
+            // Library outright at least twice. Warn loudly whenever a save is about to shrink
+            // any library from non-empty to empty, and keep one rolling backup so that even an
+            // unnoticed wipe is always trivially recoverable instead of requiring forensic
+            // reconstruction from disk files.
+            WarnIfAnyLibraryShrankToEmpty(settings);
+
+            if (File.Exists(SettingsPath))
+            {
+                try
+                {
+                    File.Copy(SettingsPath, SettingsPath + ".bak", overwrite: true);
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug(ex, "Could not update settings backup ({BackupPath})", SettingsPath + ".bak");
+                }
+            }
+
             File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings, JsonOptions));
         }
         catch (Exception ex)
         {
             // Settings are a convenience; errors should not stop the app.
             Log.Warning(ex, "Settings could not be saved ({SettingsPath})", SettingsPath);
+        }
+    }
+
+    private static void WarnIfAnyLibraryShrankToEmpty(ThemeSettingsDto newSettings)
+    {
+        if (!File.Exists(SettingsPath)) return;
+
+        ThemeSettingsDto? onDisk;
+        try
+        {
+            onDisk = JsonSerializer.Deserialize<ThemeSettingsDto>(File.ReadAllText(SettingsPath));
+        }
+        catch
+        {
+            return;
+        }
+
+        if (onDisk is null) return;
+
+        WarnIfShrankToEmpty(nameof(ThemeSettingsDto.MapLibrary), onDisk.MapLibrary.Count, newSettings.MapLibrary.Count);
+        WarnIfShrankToEmpty(nameof(ThemeSettingsDto.NpcLibrary), onDisk.NpcLibrary.Count, newSettings.NpcLibrary.Count);
+        WarnIfShrankToEmpty(nameof(ThemeSettingsDto.PointOfInterestLibrary), onDisk.PointOfInterestLibrary.Count, newSettings.PointOfInterestLibrary.Count);
+        WarnIfShrankToEmpty(nameof(ThemeSettingsDto.MediaLibrary), onDisk.MediaLibrary.Count, newSettings.MediaLibrary.Count);
+        WarnIfShrankToEmpty(nameof(ThemeSettingsDto.SoundLibrary), onDisk.SoundLibrary.Count, newSettings.SoundLibrary.Count);
+        WarnIfShrankToEmpty(nameof(ThemeSettingsDto.MusicLibrary), onDisk.MusicLibrary.Count, newSettings.MusicLibrary.Count);
+        WarnIfShrankToEmpty(nameof(ThemeSettingsDto.SceneLibrary), onDisk.SceneLibrary.Count, newSettings.SceneLibrary.Count);
+        WarnIfShrankToEmpty(nameof(ThemeSettingsDto.Playlists), onDisk.Playlists.Count, newSettings.Playlists.Count);
+    }
+
+    private static void WarnIfShrankToEmpty(string libraryName, int onDiskCount, int newCount)
+    {
+        if (onDiskCount > 0 && newCount == 0)
+        {
+            Log.Warning(
+                "{Library} on disk currently has {OnDiskCount} entries but this save would overwrite it with 0 - " +
+                "likely a stale second app instance still holding old in-memory state (multiple instances are " +
+                "supported, see --no-discovery). Recover from {BackupPath} if this was not intentional",
+                libraryName, onDiskCount, SettingsPath + ".bak");
         }
     }
 
@@ -150,7 +212,7 @@ public static class ThemeSettingsService
     ///     client build that doesn't send one yet).
     /// </summary>
     public static void SaveClientRoutingPreference(string clientId, bool musicEnabled, bool soundEnabled,
-        bool imageEnabled, bool videoEnabled, bool mapEnabled)
+        bool imageEnabled, bool videoEnabled, bool mapEnabled, bool canAnnotate)
     {
         if (string.IsNullOrEmpty(clientId)) return;
 
@@ -163,13 +225,15 @@ public static class ThemeSettingsService
             existing.ImageEnabled = imageEnabled;
             existing.VideoEnabled = videoEnabled;
             existing.MapEnabled = mapEnabled;
+            existing.CanAnnotate = canAnnotate;
         }
         else
         {
             settings.ClientAudioPreferences.Add(new ClientRoutingPreferenceDto
             {
                 ClientId = clientId, MusicEnabled = musicEnabled, SoundEnabled = soundEnabled,
-                ImageEnabled = imageEnabled, VideoEnabled = videoEnabled, MapEnabled = mapEnabled
+                ImageEnabled = imageEnabled, VideoEnabled = videoEnabled, MapEnabled = mapEnabled,
+                CanAnnotate = canAnnotate
             });
         }
 
@@ -206,6 +270,9 @@ public static class ThemeSettingsService
         public bool ImageEnabled { get; set; } = true;
         public bool VideoEnabled { get; set; } = true;
         public bool MapEnabled { get; set; } = true;
+
+        /// <summary>Whether this player window is allowed to draw map annotation strokes (see TcpPlayerServerService.SetClientCanAnnotate).</summary>
+        public bool CanAnnotate { get; set; } = true;
     }
 
     public sealed class ThemeSettingsDto
@@ -245,6 +312,17 @@ public static class ThemeSettingsService
 
         /// <summary>Optional PIN for establishing a connection (see MainWindowViewModel.ConnectionPin); empty = no PIN.</summary>
         public string ConnectionPin { get; set; } = string.Empty;
+
+        /// <summary>Last port the network server was started on (see MainWindowViewModel.NetworkServerPort).</summary>
+        public int NetworkServerPort { get; set; }
+
+        /// <summary>
+        ///     Whether the network server was running when the app last closed - used by
+        ///     TryAutoStartNetworkServerOnStartup to bring it back up automatically on the next
+        ///     launch (only alongside AutoLoadOnStartupEnabled), so the GM doesn't have to
+        ///     remember to click "Start server" again every session.
+        /// </summary>
+        public bool NetworkServerWasRunning { get; set; }
 
         /// <summary>
         ///     Path of the last file written/read via the manual 💾/📂 buttons - updated on every

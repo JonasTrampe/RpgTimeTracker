@@ -185,18 +185,21 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         });
         _client.MapPingReceived += ping =>
             Dispatcher.UIThread.Post(() => MapDisplay.NotifyPingReceived(ping.FloorId, ping.X, ping.Y));
+        _client.MapAnnotationBroadcastReceived += annotation => Dispatcher.UIThread.Post(() =>
+            MapDisplay.NotifyAnnotationReceived(annotation.FloorId, annotation.Points, annotation.ClientId));
         _client.MusicTrackReceived += (header, path) => Dispatcher.UIThread.Post(() => PlayMusicTrack(path, header));
         _client.MusicStopRequested += () => Dispatcher.UIThread.Post(StopMusic);
         _client.MusicVolumeChangeRequested += volume => Dispatcher.UIThread.Post(() => ApplyMusicVolume(volume));
-        _client.AudioRoutingChanged += (musicEnabled, soundEnabled, imageEnabled, videoEnabled, mapEnabled) =>
-            Dispatcher.UIThread.Post(() =>
-            {
-                IsMusicMuted = !musicEnabled;
-                IsSoundMuted = !soundEnabled;
-                IsImageMuted = !imageEnabled;
-                IsVideoMuted = !videoEnabled;
-                IsMapMuted = !mapEnabled;
-            });
+        _client.AudioRoutingChanged += (musicEnabled, soundEnabled, imageEnabled, videoEnabled, mapEnabled,
+            canAnnotate) => Dispatcher.UIThread.Post(() =>
+        {
+            IsMusicMuted = !musicEnabled;
+            IsSoundMuted = !soundEnabled;
+            IsImageMuted = !imageEnabled;
+            IsVideoMuted = !videoEnabled;
+            IsMapMuted = !mapEnabled;
+            MapDisplay.CanAnnotate = canAnnotate;
+        });
         _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
         _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
@@ -219,6 +222,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
                 IsImageMuted = false;
                 IsVideoMuted = false;
                 IsMapMuted = false;
+                MapDisplay.CanAnnotate = true;
                 ClearGallery();
                 _calendarEntries.Clear();
                 PlayerCalendarDays.Clear();

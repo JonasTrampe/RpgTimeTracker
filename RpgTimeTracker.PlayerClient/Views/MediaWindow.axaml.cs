@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using RpgTimeTracker.PlayerClient.ViewModels;
+using RpgTimeTracker.PlayerClient.Services;
 using RpgTimeTracker.Shared.Models.Rpc;
 
 namespace RpgTimeTracker.PlayerClient.Views;
@@ -21,6 +22,9 @@ public partial class MediaWindow : Window
         KeyDown += OnKeyDown;
         MapDisplayControl.PingRequested += OnMapPingRequested;
         MapDisplayControl.AnnotationRequested += OnMapAnnotationRequested;
+        // So a stroke drawn locally here already uses the same color everyone else will see it in
+        // once it's broadcast back (see PainterTagHelper.ColorFor).
+        MapDisplayControl.SelfClientId = ClientSettingsService.GetOrCreateClientId();
     }
 
     /// <summary>Double-click on the map - reports it to the host, visible only to the GM.</summary>

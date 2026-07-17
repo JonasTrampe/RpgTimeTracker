@@ -153,6 +153,7 @@
   "MainWindow.Music.RoutingImageCheckbox": "Images",
   "MainWindow.Music.RoutingVideoCheckbox": "Videos",
   "MainWindow.Music.RoutingMapCheckbox": "Maps",
+  "MainWindow.Music.RoutingPaintCheckbox": "Paint",
   "MainWindow.Sounds.SettingsTooltip": "Sound settings",
   "MainWindow.Sounds.LoopCheckbox": "🔁 Endless loop",
   "MainWindow.Sounds.RepeatCountLabel": "Repeat count",

@@ -128,6 +128,9 @@ public sealed class PlayerTcpClientService : IDisposable
     /// <summary>GM double-clicked their own map - see RpcMethods.MapPing.</summary>
     public event Action<MapPingParams>? MapPingReceived;
 
+    /// <summary>Another player's freehand annotation stroke was relayed to us - see RpcMethods.MapAnnotationBroadcast.</summary>
+    public event Action<MapAnnotationBroadcastParams>? MapAnnotationBroadcastReceived;
+
     /// <summary>
     ///     A music track finished transferring (see MediaHeaderDto.LayerMusic) - kept as its
     ///     own event/temp file rather than routed through MediaCompleted, since music plays on
@@ -143,12 +146,12 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action<int>? MusicVolumeChangeRequested;
 
     /// <summary>
-    ///     This window's current Music/Sound/Image/Video/Map routing state, sent right after
+    ///     This window's current Music/Sound/Image/Video/Map/Paint routing state, sent right after
     ///     handshake and again whenever the GM changes it live (see
     ///     RpcMethods.AudioRoutingChanged). Args: musicEnabled, soundEnabled, imageEnabled,
-    ///     videoEnabled, mapEnabled.
+    ///     videoEnabled, mapEnabled, canAnnotate.
     /// </summary>
-    public event Action<bool, bool, bool, bool, bool>? AudioRoutingChanged;
+    public event Action<bool, bool, bool, bool, bool, bool>? AudioRoutingChanged;
 
     public event Action<string>? StatusChanged;
 
@@ -618,6 +621,10 @@ public sealed class PlayerTcpClientService : IDisposable
                     var ping = raw.GetParams<MapPingParams>();
                     if (ping is not null) MapPingReceived?.Invoke(ping);
                     break;
+                case RpcMethods.MapAnnotationBroadcast:
+                    var annotationBroadcast = raw.GetParams<MapAnnotationBroadcastParams>();
+                    if (annotationBroadcast is not null) MapAnnotationBroadcastReceived?.Invoke(annotationBroadcast);
+                    break;
                 case RpcMethods.MusicStop:
                     MusicStopRequested?.Invoke();
                     break;
@@ -629,7 +636,7 @@ public sealed class PlayerTcpClientService : IDisposable
                     var routing = raw.GetParams<DataRoutingChangedParams>();
                     if (routing is not null)
                         AudioRoutingChanged?.Invoke(routing.MusicEnabled, routing.SoundEnabled,
-                            routing.ImageEnabled, routing.VideoEnabled, routing.MapEnabled);
+                            routing.ImageEnabled, routing.VideoEnabled, routing.MapEnabled, routing.CanAnnotate);
                     break;
                 default:
                     Log.Debug("Unknown incoming RPC method {Method} ignored", raw.Method);

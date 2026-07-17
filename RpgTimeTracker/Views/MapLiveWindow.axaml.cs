@@ -217,12 +217,17 @@ public partial class MapLiveWindow : Window
         _previewDisplay.NotifyPingReceived(floorId, x, y);
     }
 
-    /// <summary>Same guard/purpose as OnPlayerMapPingReceived, for a player's freehand annotation stroke.</summary>
-    private void OnPlayerMapAnnotationReceived(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    /// <summary>
+    ///     Same guard/purpose as OnPlayerMapPingReceived, for a player's freehand annotation stroke
+    ///     - shown both on the mirrored preview AND directly on the GM's own main EditCanvas (the
+    ///     preview alone is easy to miss while actively working the big canvas).
+    /// </summary>
+    private void OnPlayerMapAnnotationReceived(Guid floorId, IReadOnlyList<AnnotationPoint> points, string clientId)
     {
         if (!ReferenceEquals(_vm.OpenMap, _map)) return;
 
-        _previewDisplay.NotifyAnnotationReceived(floorId, points);
+        _previewDisplay.NotifyAnnotationReceived(floorId, points, clientId);
+        EditCanvas.ShowAnnotationStroke(floorId, points, clientId);
     }
 
     protected override void OnClosed(EventArgs e)

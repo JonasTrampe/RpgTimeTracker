@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
@@ -11,6 +12,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using RpgTimeTracker.Shared.Models.Rpc;
+using RpgTimeTracker.Shared.Services.Visuals;
 using RpgTimeTracker.Shared.ViewModels;
 
 namespace RpgTimeTracker.Shared.Views;
@@ -51,6 +53,15 @@ public partial class MapDisplayView : UserControl
         get => GetValue(ShowZoomControlsProperty);
         set => SetValue(ShowZoomControlsProperty, value);
     }
+
+    /// <summary>
+    ///     This viewer's own ClientId (see ClientSettingsService.GetOrCreateClientId), set by the
+    ///     owner (MediaWindow, the real PlayerClient window) so a stroke drawn locally here uses
+    ///     the same color every other participant will see it in once it's broadcast back - empty
+    ///     on the GM's own views, which never draw strokes themselves (see PingRequested's doc
+    ///     comment: the GM has Ping instead).
+    /// </summary>
+    public string SelfClientId { get; set; } = string.Empty;
 
     private double _zoom = 1.0;
     private bool _zoomIsFit = true;
@@ -127,7 +138,8 @@ public partial class MapDisplayView : UserControl
             return;
         }
 
-        if (point.Properties.IsLeftButtonPressed && e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+        if (point.Properties.IsLeftButtonPressed && e.KeyModifiers.HasFlag(KeyModifiers.Shift) &&
+            _viewModel?.CanAnnotate != false)
         {
             BeginStroke(ToImagePoint(e.GetPosition(ScrollHost)));
             e.Pointer.Capture(ScrollHost);
@@ -160,11 +172,9 @@ public partial class MapDisplayView : UserControl
     }
 
     /// <summary>
-    ///     Starts capturing a freehand stroke, rendered live as the pointer moves - anchored
-    ///     Left/Top like the ping ring (see OnPingReceived's comment) since ImageContentPanel is a
-    ///     plain Panel, not a Canvas: without it, Polyline's own implicit size (from its Points'
-    ///     bounds) would get centered within the whole panel instead of rendering at its actual
-    ///     image-space coordinates.
+    ///     Starts capturing a freehand stroke, rendered live as the pointer moves, colored by this
+    ///     viewer's own SelfClientId so it already matches the color everyone else will see once
+    ///     it's broadcast back (see PainterTagHelper).
     /// </summary>
     private void BeginStroke(Point firstPoint)
     {
@@ -172,30 +182,45 @@ public partial class MapDisplayView : UserControl
         _activeStrokeVisual = new Polyline
         {
             Points = [firstPoint],
-            Stroke = Brushes.Gold,
+            Stroke = PainterTagHelper.BrushFor(SelfClientId),
             StrokeThickness = 4,
             StrokeJoin = PenLineJoin.Round,
             StrokeLineCap = PenLineCap.Round,
-            IsHitTestVisible = false,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top
+            IsHitTestVisible = false
         };
-        ImageContentPanel.Children.Add(_activeStrokeVisual);
+        AnnotationOverlay.Children.Add(_activeStrokeVisual);
     }
+
+    /// <summary>
+    ///     Minimum image-space distance (native map pixels) between two recorded stroke points -
+    ///     PointerMoved fires far more often than the line's visual shape needs, and without this
+    ///     a single few-second drag serializes to hundreds of points (each an
+    ///     AnnotationPoint {X,Y} in the wire payload), which can push map.annotationFromPlayer past
+    ///     TcpPlayerServerService.MaxInboundRpcPayloadBytes and silently kill the connection - a
+    ///     real bug hit in practice, not just a hypothetical. Filtering here keeps strokes visually
+    ///     identical while bounding their size regardless of how slowly/long someone drags.
+    /// </summary>
+    private const double MinStrokePointSpacing = 2.0;
 
     private void AppendStrokePoint(Point imagePoint)
     {
         if (_strokeImagePoints is not { } points || _activeStrokeVisual is not { } visual) return;
+
+        var last = points[^1];
+        var dx = imagePoint.X - last.X;
+        var dy = imagePoint.Y - last.Y;
+        if (dx * dx + dy * dy < MinStrokePointSpacing * MinStrokePointSpacing) return;
 
         points.Add(imagePoint);
         visual.Points!.Add(imagePoint);
     }
 
     /// <summary>
-    ///     Ends stroke capture - a completed stroke (real movement) fades out locally (matching
-    ///     the ping ripple's own fade) and is reported via AnnotationRequested; a stroke with no
-    ///     movement (a plain click that happened to also hold Shift) is discarded silently rather
-    ///     than sent as a meaningless one-point "stroke".
+    ///     Ends stroke capture - a completed stroke (real movement) fades out locally (see
+    ///     StrokeFadeDuration - strokes stay up much longer than the ping ripple, since the whole
+    ///     point is for others to have time to actually read what was drawn) and is reported via
+    ///     AnnotationRequested; a stroke with no movement (a plain click that happened to also hold
+    ///     Shift) is discarded silently rather than sent as a meaningless one-point "stroke".
     /// </summary>
     private async void FinishStroke()
     {
@@ -211,12 +236,12 @@ public partial class MapDisplayView : UserControl
 
         if (points.Count < 2)
         {
-            ImageContentPanel.Children.Remove(visual);
+            AnnotationOverlay.Children.Remove(visual);
             return;
         }
 
         AnnotationRequested?.Invoke(points);
-        await FadeOutAndRemoveAsync(visual);
+        await FadeOutAndRemoveAsync(visual, StrokeFadeDuration);
     }
 
     private void OnScrollHostPointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -257,6 +282,15 @@ public partial class MapDisplayView : UserControl
         }
     }
 
+    private static readonly TimeSpan PingFadeDuration = TimeSpan.FromSeconds(2.5);
+
+    /// <summary>
+    ///     Strokes stay up much longer than the ping ripple - a ping is a fleeting "look here"
+    ///     pointer, but a stroke is meant to be actually read (an arrow, a circled area, etc.), so
+    ///     it needs enough time for everyone else to notice and look at it before it's gone.
+    /// </summary>
+    private static readonly TimeSpan StrokeFadeDuration = TimeSpan.FromSeconds(8);
+
     /// <summary>
     ///     Renders a generic, un-attributed ripple at the given image-space point (#28's "map
     ///     ping") and removes it again once it's fully faded - fire-and-forget, not part of
@@ -273,49 +307,61 @@ public partial class MapDisplayView : UserControl
             Stroke = Brushes.Gold,
             StrokeThickness = 4,
             IsHitTestVisible = false,
-            // ImageContentPanel is a plain Panel (not a Canvas) - with the default Stretch
-            // alignment, a child that also has a fixed Width/Height gets CENTERED within the
-            // panel's arrange rect instead of anchored at (0,0), which silently threw the
-            // TranslateTransform offset below off by half the map image's size. Explicit
-            // Left/Top anchors it at (0,0) first, matching how the token markers rely on Canvas
-            // positioning instead.
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
             RenderTransform = new TranslateTransform(x - diameter / 2, y - diameter / 2)
         };
-        ImageContentPanel.Children.Add(ring);
-        await FadeOutAndRemoveAsync(ring);
+        AnnotationOverlay.Children.Add(ring);
+        await FadeOutAndRemoveAsync(ring, PingFadeDuration);
     }
 
     /// <summary>
-    ///     Renders a player's freehand annotation stroke, points already in image-space - same
-    ///     fade-and-remove treatment as the ping ripple, since it's equally ephemeral (see
-    ///     MapDisplayViewModel.NotifyAnnotationReceived). Only the GM's own views ever raise this
-    ///     (see RpcMethods.MapAnnotationFromPlayer's doc comment).
+    ///     Renders a player's freehand annotation stroke, points already in image-space, colored
+    ///     and labeled by the originating player's ClientId (see PainterTagHelper) - same
+    ///     fade-and-remove treatment as the ping ripple, just much longer (see StrokeFadeDuration).
+    ///     Reaches every connected view, not just the GM's (see RpcMethods.MapAnnotationBroadcast).
     /// </summary>
-    private async void OnAnnotationReceived(IReadOnlyList<AnnotationPoint> points)
+    private async void OnAnnotationReceived(IReadOnlyList<AnnotationPoint> points, string clientId)
     {
+        var color = PainterTagHelper.ColorFor(clientId);
+        var brush = new SolidColorBrush(color);
         var visual = new Polyline
         {
             Points = new Points(points.Select(p => new Point(p.X, p.Y))),
-            Stroke = Brushes.Gold,
+            Stroke = brush,
             StrokeThickness = 4,
             StrokeJoin = PenLineJoin.Round,
             StrokeLineCap = PenLineCap.Round,
-            IsHitTestVisible = false,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top
+            IsHitTestVisible = false
         };
-        ImageContentPanel.Children.Add(visual);
-        await FadeOutAndRemoveAsync(visual);
+        AnnotationOverlay.Children.Add(visual);
+
+        var firstPoint = points[0];
+        var label = new Border
+        {
+            Background = new SolidColorBrush(color, 0.85),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(6, 2),
+            IsHitTestVisible = false,
+            Child = new TextBlock
+            {
+                Text = PainterTagHelper.ShortTagFor(clientId),
+                Foreground = Brushes.White,
+                FontSize = 12,
+                FontWeight = FontWeight.SemiBold
+            },
+            RenderTransform = new TranslateTransform(firstPoint.X + 8, firstPoint.Y - 20)
+        };
+        AnnotationOverlay.Children.Add(label);
+
+        await Task.WhenAll(FadeOutAndRemoveAsync(visual, StrokeFadeDuration),
+            FadeOutAndRemoveAsync(label, StrokeFadeDuration));
     }
 
     /// <summary>Shared fade-out-then-remove for the ping ripple and both annotation-stroke paths (drawn locally and received).</summary>
-    private async System.Threading.Tasks.Task FadeOutAndRemoveAsync(Control visual)
+    private async Task FadeOutAndRemoveAsync(Control visual, TimeSpan duration)
     {
         var fadeOut = new Animation
         {
-            Duration = TimeSpan.FromSeconds(2.5),
+            Duration = duration,
             Easing = new CubicEaseOut(),
             FillMode = FillMode.Forward,
             Children =
@@ -331,7 +377,7 @@ public partial class MapDisplayView : UserControl
             }
         };
         await fadeOut.RunAsync(visual);
-        ImageContentPanel.Children.Remove(visual);
+        AnnotationOverlay.Children.Remove(visual);
     }
 
     /// <summary>

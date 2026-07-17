@@ -559,10 +559,10 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             PlayerMapPingReceived?.Invoke(floorId, x, y);
         });
         // Same shape as the ping wiring just above - a player's freehand annotation stroke.
-        _playerServer.ClientReportedMapAnnotation += (floorId, points) => Dispatcher.UIThread.Post(() =>
+        _playerServer.ClientReportedMapAnnotation += (floorId, points, clientId) => Dispatcher.UIThread.Post(() =>
         {
-            MapDisplay.NotifyAnnotationReceived(floorId, points);
-            PlayerMapAnnotationReceived?.Invoke(floorId, points);
+            MapDisplay.NotifyAnnotationReceived(floorId, points, clientId);
+            PlayerMapAnnotationReceived?.Invoke(floorId, points, clientId);
         });
         // Decisive for the playlist sequencer's "when does the current track end" tracking - see
         // BeginMusicTracking.
@@ -608,6 +608,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         MapDisplay.AutoZoomLevel = _autoZoomLevel;
         _serverName = string.IsNullOrWhiteSpace(settings.ServerName) ? "RpgTimeTracker" : settings.ServerName;
         _connectionPin = settings.ConnectionPin;
+        if (settings.NetworkServerPort is > 0 and <= 65535) _networkServerPort = settings.NetworkServerPort;
         _autoSaveOnCloseEnabled = settings.AutoSaveOnCloseEnabled;
         _autoLoadOnStartupEnabled = settings.AutoLoadOnStartupEnabled;
         _fogColorHex = string.IsNullOrWhiteSpace(settings.FogColorHex) ? "#0C0C0C" : settings.FogColorHex;
@@ -799,6 +800,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         LocalizationService.LanguageChanged += OnLanguageChanged;
 
         TryAutoLoadOnStartup(settings);
+        TryAutoStartNetworkServerOnStartup(settings);
     }
 
     /// <summary>

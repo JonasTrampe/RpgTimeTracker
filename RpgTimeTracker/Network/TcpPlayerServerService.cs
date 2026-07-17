@@ -28,7 +28,8 @@ public sealed record ConnectedClientInfo(
     bool SoundEnabled,
     bool ImageEnabled,
     bool VideoEnabled,
-    bool MapEnabled);
+    bool MapEnabled,
+    bool CanAnnotate);
 
 /// <summary>
 ///     Read-only TCP publisher for the player client. Sends only JSON-RPC
@@ -52,10 +53,15 @@ public sealed class TcpPlayerServerService : IDisposable
     private const int MediaChunkSize = 64 * 1024;
 
     /// <summary>
-    ///     The client only sends tiny playback status notifications back - generous enough, but small enough to
-    ///     limit a broken/malicious client.
+    ///     Sized for the biggest inbound message the client actually sends: a freehand map
+    ///     annotation stroke (map.annotationFromPlayer), which can run to several hundred points -
+    ///     a fast/long Shift-drag easily serializes past several KB of JSON. Everything else the
+    ///     client sends back (ping, playback status) is tiny in comparison. Still small enough to
+    ///     limit a broken/malicious client - a single stroke has no legitimate reason to approach
+    ///     this size (see MapDisplayView.MinStrokePointSpacing, which also caps point count from
+    ///     the sending side).
     /// </summary>
-    private const int MaxInboundRpcPayloadBytes = 4 * 1024;
+    private const int MaxInboundRpcPayloadBytes = 64 * 1024;
 
     /// <summary>
     ///     How often a heartbeat is sent, even without a content change. The client
@@ -159,8 +165,14 @@ public sealed class TcpPlayerServerService : IDisposable
     /// <summary>A player double-clicked the map, pinging the GM (background thread) - see RpcMethods.MapPingFromPlayer.</summary>
     public event Action<Guid, double, double>? ClientReportedMapPing;
 
-    /// <summary>A player Shift+left-drew a freehand annotation stroke (background thread) - see RpcMethods.MapAnnotationFromPlayer.</summary>
-    public event Action<Guid, IReadOnlyList<AnnotationPoint>>? ClientReportedMapAnnotation;
+    /// <summary>
+    ///     A player Shift+left-drew a freehand annotation stroke (background thread) - see
+    ///     RpcMethods.MapAnnotationFromPlayer. Carries the originating player's ClientId so the
+    ///     GM's own views can render it with the same color/tag every other player will see (see
+    ///     PainterTagHelper) - this event fires for the Host's own local render, the broadcast to
+    ///     other players is handled separately (see PublishMapAnnotationBroadcastAsync).
+    /// </summary>
+    public event Action<Guid, IReadOnlyList<AnnotationPoint>, string>? ClientReportedMapAnnotation;
 
     /// <summary>
     ///     A client reports that the currently playing music track has finished (background
@@ -479,13 +491,13 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     on every live toggle, so the client can show a "muted by GM" indicator.
     /// </summary>
     public Task PublishAudioRoutingChangedAsync(string remoteEndpoint, bool musicEnabled, bool soundEnabled,
-        bool imageEnabled, bool videoEnabled, bool mapEnabled)
+        bool imageEnabled, bool videoEnabled, bool mapEnabled, bool canAnnotate)
     {
         return BroadcastRpcAsync(RpcMethods.AudioRoutingChanged,
             new DataRoutingChangedParams
             {
                 MusicEnabled = musicEnabled, SoundEnabled = soundEnabled, ImageEnabled = imageEnabled,
-                VideoEnabled = videoEnabled, MapEnabled = mapEnabled
+                VideoEnabled = videoEnabled, MapEnabled = mapEnabled, CanAnnotate = canAnnotate
             },
             c => c.RemoteEndpoint == remoteEndpoint);
     }
@@ -668,6 +680,20 @@ public sealed class TcpPlayerServerService : IDisposable
     {
         return BroadcastRpcAsync(RpcMethods.MapPing, new MapPingParams { FloorId = floorId, X = x, Y = y },
             c => c.MapEnabled);
+    }
+
+    /// <summary>
+    ///     Relays a just-received player annotation stroke to every OTHER connected player - the
+    ///     originating connection already rendered its own local echo the instant it finished
+    ///     drawing, so it's excluded here to avoid a redundant second render of the identical
+    ///     stroke. See RpcMethods.MapAnnotationBroadcast's doc comment.
+    /// </summary>
+    private Task PublishMapAnnotationBroadcastAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points,
+        string originClientId, ClientConnection originConnection)
+    {
+        return BroadcastRpcAsync(RpcMethods.MapAnnotationBroadcast,
+            new MapAnnotationBroadcastParams { FloorId = floorId, Points = points.ToList(), ClientId = originClientId },
+            c => c.MapEnabled && !ReferenceEquals(c, originConnection));
     }
 
     private async Task SendMapShowToClientAsync(ClientConnection client, Guid mapId, string mapName,
@@ -861,6 +887,7 @@ public sealed class TcpPlayerServerService : IDisposable
             connection.ImageEnabled = routingPreference.ImageEnabled;
             connection.VideoEnabled = routingPreference.VideoEnabled;
             connection.MapEnabled = routingPreference.MapEnabled;
+            connection.CanAnnotate = routingPreference.CanAnnotate;
         }
 
         connection.IsAccepted = true;
@@ -876,7 +903,8 @@ public sealed class TcpPlayerServerService : IDisposable
         // "muted by GM" indicator is correct from the start rather than only updating on the
         // next live toggle.
         _ = PublishAudioRoutingChangedAsync(connection.RemoteEndpoint, connection.MusicEnabled,
-            connection.SoundEnabled, connection.ImageEnabled, connection.VideoEnabled, connection.MapEnabled);
+            connection.SoundEnabled, connection.ImageEnabled, connection.VideoEnabled, connection.MapEnabled,
+            connection.CanAnnotate);
 
         // _snapshotProvider()/sending the medium afterward reads UI-bound data,
         // so post to the UI thread instead of doing it directly from this background loop.
@@ -1070,11 +1098,18 @@ public sealed class TcpPlayerServerService : IDisposable
                     break;
                 case RpcMethods.MapAnnotationFromPlayer:
                     var annotation = raw.GetParams<MapAnnotationParams>();
-                    if (annotation is not null)
+                    if (annotation is not null && !connection.CanAnnotate)
+                    {
+                        Log.Debug("Ignored map annotation from {Client} - painting is disabled for this window",
+                            connection);
+                    }
+                    else if (annotation is not null)
                     {
                         Log.Debug("Client drew a map annotation on floor {FloorId} ({PointCount} points)",
                             annotation.FloorId, annotation.Points.Count);
-                        ClientReportedMapAnnotation?.Invoke(annotation.FloorId, annotation.Points);
+                        ClientReportedMapAnnotation?.Invoke(annotation.FloorId, annotation.Points, connection.ClientId);
+                        _ = PublishMapAnnotationBroadcastAsync(annotation.FloorId, annotation.Points,
+                            connection.ClientId, connection);
                     }
 
                     break;
@@ -1293,13 +1328,36 @@ public sealed class TcpPlayerServerService : IDisposable
     private static void SaveRoutingPreference(ClientConnection target)
     {
         ThemeSettingsService.SaveClientRoutingPreference(target.ClientId, target.MusicEnabled, target.SoundEnabled,
-            target.ImageEnabled, target.VideoEnabled, target.MapEnabled);
+            target.ImageEnabled, target.VideoEnabled, target.MapEnabled, target.CanAnnotate);
     }
 
     private Task PublishRoutingChanged(ClientConnection target)
     {
         return PublishAudioRoutingChangedAsync(target.RemoteEndpoint, target.MusicEnabled, target.SoundEnabled,
-            target.ImageEnabled, target.VideoEnabled, target.MapEnabled);
+            target.ImageEnabled, target.VideoEnabled, target.MapEnabled, target.CanAnnotate);
+    }
+
+    /// <summary>
+    ///     Toggles whether this client window is allowed to draw map annotation strokes (GM
+    ///     per-window routing control) - persisted by ClientId so it survives a reconnect. Unlike
+    ///     the Map/Image/Video toggles this doesn't gate anything sent TO the client; the Host
+    ///     simply drops any map.annotationFromPlayer from a client with this disabled (see
+    ///     HandleClientRpcFrame) - the notification just lets the client also grey out/skip the
+    ///     Shift-drag gesture locally instead of drawing a stroke that then silently goes nowhere.
+    /// </summary>
+    public void SetClientCanAnnotate(string remoteEndpoint, bool enabled)
+    {
+        ClientConnection? target;
+        lock (_gate)
+        {
+            target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
+            if (target is null) return;
+            target.CanAnnotate = enabled;
+        }
+
+        NotifyClientsChanged();
+        SaveRoutingPreference(target);
+        _ = PublishRoutingChanged(target);
     }
 
     /// <summary>
@@ -1326,7 +1384,7 @@ public sealed class TcpPlayerServerService : IDisposable
         {
             snapshot = _clients
                 .Select(c => new ConnectedClientInfo(c.RemoteEndpoint, c.ConnectedAtUtc, c.MusicEnabled,
-                    c.SoundEnabled, c.ImageEnabled, c.VideoEnabled, c.MapEnabled))
+                    c.SoundEnabled, c.ImageEnabled, c.VideoEnabled, c.MapEnabled, c.CanAnnotate))
                 .ToList();
         }
 
@@ -1472,6 +1530,9 @@ public sealed class TcpPlayerServerService : IDisposable
 
         public bool VideoEnabled { get; set; } = true;
         public bool MapEnabled { get; set; } = true;
+
+        /// <summary>Whether this window is allowed to draw map annotation strokes, set by the GM via SetClientCanAnnotate.</summary>
+        public bool CanAnnotate { get; set; } = true;
 
         /// <summary>
         ///     Stable per-installation id sent in session.hello (see

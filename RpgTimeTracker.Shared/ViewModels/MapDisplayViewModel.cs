@@ -74,6 +74,15 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     [ObservableProperty] private string _mapName = string.Empty;
     [ObservableProperty] private IBrush? _maskBrush;
 
+    /// <summary>
+    ///     Whether this player window is currently allowed to draw map annotation strokes (GM
+    ///     per-window toggle, see TcpPlayerServerService.SetClientCanAnnotate) - MapDisplayView.axaml.cs
+    ///     consults this before starting a Shift-drag stroke, so a disabled window doesn't draw a
+    ///     stroke locally that would then silently be dropped server-side. Always true on the GM's
+    ///     own views, which never draw strokes themselves anyway (see PingRequested's doc comment).
+    /// </summary>
+    [ObservableProperty] private bool _canAnnotate = true;
+
     /// <summary>Solid-color brush for the tint layer, kept in sync with HiddenColor.</summary>
     [ObservableProperty] private IBrush _tintBrush = new SolidColorBrush(FogOverlayRenderer.PlayerHiddenColor);
 
@@ -141,22 +150,24 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     /// <summary>
     ///     Fired from NotifyAnnotationReceived when a player's freehand stroke arrives for
     ///     whichever floor this view currently has displayed - MapDisplayView.axaml.cs subscribes
-    ///     to render it as a fading polyline. Only ever reaches the GM's own views (see
-    ///     RpcMethods.MapAnnotationFromPlayer), so this is only meaningfully raised on the Host
-    ///     side, but lives here rather than duplicated per-owner since MapDisplayViewModel already
-    ///     is that shared "what does this view show right now" state.
+    ///     to render it as a fading, per-painter-colored polyline. Reaches every connected view
+    ///     (GM and every other player - see RpcMethods.MapAnnotationBroadcast), not just the GM's
+    ///     own, but lives here rather than duplicated per-owner since MapDisplayViewModel already
+    ///     is that shared "what does this view show right now" state. The originating player's
+    ///     ClientId is carried alongside the points so the view can derive a color/tag for it (see
+    ///     PainterTagHelper) without the wire payload needing either.
     /// </summary>
-    public event Action<IReadOnlyList<AnnotationPoint>>? AnnotationReceived;
+    public event Action<IReadOnlyList<AnnotationPoint>, string>? AnnotationReceived;
 
     /// <summary>
     ///     A player's freehand annotation stroke arrived for the given floor - dropped silently
     ///     if that isn't the floor currently displayed here, same reasoning as NotifyPingReceived.
     /// </summary>
-    public void NotifyAnnotationReceived(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    public void NotifyAnnotationReceived(Guid floorId, IReadOnlyList<AnnotationPoint> points, string clientId)
     {
         if (CurrentFloorId != floorId) return;
 
-        AnnotationReceived?.Invoke(points);
+        AnnotationReceived?.Invoke(points, clientId);
     }
 
     partial void OnHiddenColorChanged(Color value)

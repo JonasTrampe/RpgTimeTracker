@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Shapes;
@@ -11,6 +14,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Styling;
 using RpgTimeTracker.Models;
 using RpgTimeTracker.Shared.Models;
 using RpgTimeTracker.Shared.Models.Rpc;
@@ -553,6 +557,51 @@ public partial class MapEditCanvasControl : UserControl
     private void OnCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         _isPainting = false;
+    }
+
+    private static readonly TimeSpan AnnotationFadeDuration = TimeSpan.FromSeconds(8);
+
+    /// <summary>
+    ///     Renders a player's freehand annotation stroke directly on the GM's main editing canvas
+    ///     (not just MapLiveWindow's small mirrored preview, which is easy to miss while actively
+    ///     working the big canvas) - dropped silently if it's for a different floor than the one
+    ///     currently shown. Points arrive in native image-space (see AnnotationPoint's doc comment)
+    ///     but this control's own coordinate space is already zoomed (see TokenLayer's
+    ///     token.X * _zoom convention), so every point is scaled the same way here.
+    /// </summary>
+    public void ShowAnnotationStroke(Guid floorId, IReadOnlyList<AnnotationPoint> points, string clientId)
+    {
+        if (CurrentFloor is null || CurrentFloor.Id != floorId || points.Count == 0) return;
+
+        var color = PainterTagHelper.ColorFor(clientId);
+        var polyline = new Polyline
+        {
+            Points = new Points(points.Select(p => new Point(p.X * _zoom, p.Y * _zoom))),
+            Stroke = new SolidColorBrush(color),
+            StrokeThickness = 4,
+            StrokeJoin = PenLineJoin.Round,
+            StrokeLineCap = PenLineCap.Round,
+            IsHitTestVisible = false
+        };
+        AnnotationLayer.Children.Add(polyline);
+        _ = FadeOutAndRemoveAnnotationAsync(polyline);
+    }
+
+    private async Task FadeOutAndRemoveAnnotationAsync(Control visual)
+    {
+        var fadeOut = new Animation
+        {
+            Duration = AnnotationFadeDuration,
+            Easing = new CubicEaseOut(),
+            FillMode = FillMode.Forward,
+            Children =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter(Visual.OpacityProperty, 1.0) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter(Visual.OpacityProperty, 0.0) } }
+            }
+        };
+        await fadeOut.RunAsync(visual);
+        AnnotationLayer.Children.Remove(visual);
     }
 
     private void OnCanvasPointerExited(object? sender, PointerEventArgs e)
