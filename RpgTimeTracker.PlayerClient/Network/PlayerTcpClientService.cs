@@ -126,6 +126,12 @@ public sealed class PlayerTcpClientService : IDisposable
     /// <summary>GM double-clicked their own map - see RpcMethods.MapPing.</summary>
     public event Action<MapPingParams>? MapPingReceived;
 
+    /// <summary>GM pushed a Markdown handout - see RpcMethods.HandoutShow.</summary>
+    public event Action<HandoutShowParams>? HandoutShowReceived;
+
+    /// <summary>GM closed the currently shown handout - see RpcMethods.HandoutHide.</summary>
+    public event Action? HandoutHideReceived;
+
     /// <summary>
     ///     A music track finished transferring (see MediaHeaderDto.LayerMusic) - kept as its
     ///     own event/temp file rather than routed through MediaCompleted, since music plays on
@@ -608,6 +614,13 @@ public sealed class PlayerTcpClientService : IDisposable
                 case RpcMethods.MapPing:
                     var ping = raw.GetParams<MapPingParams>();
                     if (ping is not null) MapPingReceived?.Invoke(ping);
+                    break;
+                case RpcMethods.HandoutShow:
+                    var handout = raw.GetParams<HandoutShowParams>();
+                    if (handout is not null) HandoutShowReceived?.Invoke(handout);
+                    break;
+                case RpcMethods.HandoutHide:
+                    HandoutHideReceived?.Invoke();
                     break;
                 case RpcMethods.MusicStop:
                     MusicStopRequested?.Invoke();

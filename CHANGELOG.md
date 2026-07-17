@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Handout**: a new tab lets the GM push a Markdown-authored text
+  handout to players in its own overlay window - separate from the
+  image/video gallery and the map, so sending one doesn't interrupt
+  whatever's currently shown. A newly (re)connecting client catches up
+  on whatever handout is currently shown, the same way it catches up on
+  the current image/video.
 - **Player info for Points of Interest**: POI library entries now have their
   own Markdown-authored player-facing bio field (previously only Characters
   had this), gated by its own player-visibility toggle - shown in a linked

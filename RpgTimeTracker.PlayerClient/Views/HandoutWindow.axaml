@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RpgTimeTracker.PlayerClient.ViewModels"
+        xmlns:mdxaml="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
+        x:Class="RpgTimeTracker.PlayerClient.Views.HandoutWindow"
+        x:DataType="vm:ClientMainWindowViewModel"
+        Title="{Binding HandoutTitle}"
+        Width="640" Height="720" MinWidth="360" MinHeight="280"
+        Background="{DynamicResource WindowBackgroundBrush}">
+    <Window.Styles>
+        <StyleInclude Source="avares://RpgTimeTracker.Shared/Styles/AppStyles.axaml" />
+    </Window.Styles>
+
+    <!-- Shown/hidden (never recreated) by ClientMainWindow, same convention as MediaWindow -
+         closing locally only hides this window, it reopens unchanged the next time the GM
+         sends a handout.show (see HandoutWindow.axaml.cs). -->
+    <DockPanel Margin="16">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
+            <TextBlock Classes="h2" Text="{Binding HandoutTitle}" VerticalAlignment="Center" />
+            <Button Click="OnCloseClick" Content="&#10005;" Width="28" Height="28" CornerRadius="14"
+                    FontSize="13" HorizontalAlignment="Right"
+                    ToolTip.Tip="{DynamicResource MediaWindow.CloseTooltip}" />
+        </StackPanel>
+        <mdxaml:MarkdownScrollViewer Markdown="{Binding HandoutMarkdown}" />
+    </DockPanel>
+</Window>

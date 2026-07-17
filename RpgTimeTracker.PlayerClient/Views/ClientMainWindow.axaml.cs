@@ -12,6 +12,7 @@ public partial class ClientMainWindow : Window
 {
     private bool _closeConfirmed;
     private MediaWindow? _mediaWindow;
+    private HandoutWindow? _handoutWindow;
 
     public ClientMainWindow()
     {
@@ -39,6 +40,8 @@ public partial class ClientMainWindow : Window
             vm.PropertyChanged += OnViewModelPropertyChanged;
             vm.MediaWindowShouldShow += OnMediaWindowShouldShow;
             vm.MediaWindowShouldHide += OnMediaWindowShouldHide;
+            vm.HandoutWindowShouldShow += OnHandoutWindowShouldShow;
+            vm.HandoutWindowShouldHide += OnHandoutWindowShouldHide;
             vm.RemoteFullscreenRequested += OnRemoteFullscreenRequested;
         }
     }
@@ -90,6 +93,27 @@ public partial class ClientMainWindow : Window
     private void OnMediaWindowShouldHide()
     {
         _mediaWindow?.Hide();
+    }
+
+    // Same lazy-create/Show/Hide (never recreate) convention as the media window - simpler
+    // since a handout doesn't need position/size syncing to the main window or fullscreen.
+    private void OnHandoutWindowShouldShow()
+    {
+        if (DataContext is not ClientMainWindowViewModel vm) return;
+
+        if (_handoutWindow is null)
+        {
+            _handoutWindow = new HandoutWindow { DataContext = vm };
+            _handoutWindow.Closed += (_, _) => _handoutWindow = null;
+        }
+
+        if (!_handoutWindow.IsVisible) _handoutWindow.Show();
+        _handoutWindow.Activate();
+    }
+
+    private void OnHandoutWindowShouldHide()
+    {
+        _handoutWindow?.Hide();
     }
 
     private void OnOpenAboutClick(object? sender, RoutedEventArgs e)
@@ -162,6 +186,7 @@ public partial class ClientMainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _mediaWindow?.Close();
+        _handoutWindow?.Close();
 
         if (DataContext is ClientMainWindowViewModel vm) vm.Dispose();
 

@@ -148,6 +148,13 @@ public sealed class MediaSlideshowIntervalParams
     public double Seconds { get; set; }
 }
 
+/// <summary>Server-to-client: shows a Markdown-authored text handout (see RpcMethods.HandoutShow).</summary>
+public sealed class HandoutShowParams
+{
+    public string Title { get; set; } = string.Empty;
+    public string Markdown { get; set; } = string.Empty;
+}
+
 /// <summary>Server-to-client: opens a map (see RpcMethods.MapShow).</summary>
 public sealed class MapShowParams
 {

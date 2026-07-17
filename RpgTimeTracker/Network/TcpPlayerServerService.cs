@@ -112,6 +112,9 @@ public sealed class TcpPlayerServerService : IDisposable
     /// </summary>
     private (MediaHeaderDto Header, byte[] FileBytes)? _lastMedia;
 
+    /// <summary>Currently shown handout, if any, for newly connecting clients - same "last one wins" caching as _lastMedia.</summary>
+    private HandoutShowParams? _lastHandout;
+
     private TcpListener? _listener;
 
     /// <summary>
@@ -667,6 +670,35 @@ public sealed class TcpPlayerServerService : IDisposable
             c => c.MapEnabled);
     }
 
+    /// <summary>
+    ///     GM pushes a Markdown handout to players (see RpcMethods.HandoutShow) - cached so a
+    ///     newly connecting/reconnecting client catches up on whatever's currently shown, same
+    ///     "last one wins" treatment as _lastMedia.
+    /// </summary>
+    public Task PublishHandoutShowAsync(string title, string markdown)
+    {
+        var handout = new HandoutShowParams { Title = title, Markdown = markdown };
+        lock (_mediaGate)
+        {
+            _lastHandout = handout;
+        }
+
+        Log.Information("Sending handout {Title} to connected clients", title);
+        return BroadcastRpcAsync(RpcMethods.HandoutShow, handout, c => c.ImageEnabled);
+    }
+
+    /// <summary>GM closes the currently shown handout for all clients.</summary>
+    public Task PublishHandoutHideAsync()
+    {
+        lock (_mediaGate)
+        {
+            _lastHandout = null;
+        }
+
+        Log.Debug("Handout hidden (handout.hide to all clients)");
+        return BroadcastRpcAsync(RpcMethods.HandoutHide, RpcEmptyParams.Instance, c => c.ImageEnabled);
+    }
+
     private async Task SendMapShowToClientAsync(ClientConnection client, Guid mapId, string mapName,
         List<OpenMapFloor> floors, List<MapTokenSnapshotDto> tokens)
     {
@@ -943,6 +975,18 @@ public sealed class TcpPlayerServerService : IDisposable
         if (cachedMedia is { } media &&
             (media.Header.Kind == MediaHeaderDto.MediaKindVideo ? connection.VideoEnabled : connection.ImageEnabled))
             await SendMediaToClientAsync(connection, media.Header, media.FileBytes).ConfigureAwait(false);
+
+        HandoutShowParams? cachedHandout;
+        lock (_mediaGate)
+        {
+            cachedHandout = _lastHandout;
+        }
+
+        if (cachedHandout is { } handout && connection.ImageEnabled)
+        {
+            var handoutPayload = RpcMessage.Serialize(RpcMethods.HandoutShow, handout);
+            await connection.TryWriteFrameAsync(NetworkFrame.TypeRpc, handoutPayload).ConfigureAwait(false);
+        }
 
         if (connection.MapEnabled)
         {

@@ -185,6 +185,18 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         });
         _client.MapPingReceived += ping =>
             Dispatcher.UIThread.Post(() => MapDisplay.NotifyPingReceived(ping.FloorId, ping.X, ping.Y));
+        _client.HandoutShowReceived += handout => Dispatcher.UIThread.Post(() =>
+        {
+            HandoutTitle = handout.Title;
+            HandoutMarkdown = handout.Markdown;
+            IsHandoutShown = true;
+            HandoutWindowShouldShow?.Invoke();
+        });
+        _client.HandoutHideReceived += () => Dispatcher.UIThread.Post(() =>
+        {
+            IsHandoutShown = false;
+            HandoutWindowShouldHide?.Invoke();
+        });
         _client.MusicTrackReceived += (header, path) => Dispatcher.UIThread.Post(() => PlayMusicTrack(path, header));
         _client.MusicStopRequested += () => Dispatcher.UIThread.Post(StopMusic);
         _client.MusicVolumeChangeRequested += volume => Dispatcher.UIThread.Post(() => ApplyMusicVolume(volume));
@@ -420,6 +432,15 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     public event Action? MediaWindowShouldShow;
 
     public event Action? MediaWindowShouldHide;
+
+    [ObservableProperty] private string _handoutTitle = string.Empty;
+    [ObservableProperty] private string _handoutMarkdown = string.Empty;
+    [ObservableProperty] private bool _isHandoutShown;
+
+    /// <summary>Same "always invoke, let the window decide" shape as MediaWindowShouldShow.</summary>
+    public event Action? HandoutWindowShouldShow;
+
+    public event Action? HandoutWindowShouldHide;
 
     partial void OnCurrentMediaKindChanged(MediaKind value)
     {

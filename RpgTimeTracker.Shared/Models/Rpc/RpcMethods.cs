@@ -96,6 +96,21 @@ public static class RpcMethods
     public const string MediaSlideshowInterval = "media.slideshowInterval";
 
     /// <summary>
+    ///     GM pushes a Markdown-authored text handout to players, shown in its own overlay
+    ///     window - deliberately outside the image/video gallery and map flows (no "current
+    ///     medium" slot, no gallery entry, doesn't interrupt/replace whatever's currently shown).
+    ///     Filtered by the same per-client ImageEnabled routing flag a plain image push uses (see
+    ///     TcpPlayerServerService.PublishHandoutShowAsync) - a handout is conceptually another
+    ///     kind of visual push, not a new routing category. Cached and resent to a newly
+    ///     connecting/reconnecting client the same way the current image/video medium is (see
+    ///     TcpPlayerServerService.SendCatchUpAsync), not via session.snapshot.
+    /// </summary>
+    public const string HandoutShow = "handout.show";
+
+    /// <summary>GM closes the currently shown handout for all clients.</summary>
+    public const string HandoutHide = "handout.hide";
+
+    /// <summary>
     ///     GM opens a map to players (replaces the gallery display). Floor images are announced/
     ///     streamed beforehand via the existing media.begin + TypeMediaChunk pipeline (one per
     ///     floor, MediaHeaderDto.Kind = MediaKindMapFloor), then this metadata message follows

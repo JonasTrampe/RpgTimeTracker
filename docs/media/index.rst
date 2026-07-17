@@ -10,3 +10,4 @@ Images, video, and the slideshow gallery.
    library
    gallery
    trigger-media
+   handout

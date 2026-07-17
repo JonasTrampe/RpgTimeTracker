@@ -2716,6 +2716,59 @@
                                         </ScrollViewer>
                                     </TabItem>
 
+                                    <TabItem Header="{DynamicResource MainWindow.Tabs.Handout}">
+                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
+                                                      VerticalScrollBarVisibility="Visible">
+                                            <Border Classes="settingsGroup" Margin="4,14,13,16" MaxWidth="620">
+                                                <StackPanel Spacing="14">
+                                                    <TextBlock Classes="settingsGroupTitle"
+                                                               Text="{DynamicResource MainWindow.Handout.Title}" />
+                                                    <TextBlock Classes="muted"
+                                                               Text="{DynamicResource MainWindow.Handout.Description}"
+                                                               TextWrapping="Wrap" />
+
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Classes="muted"
+                                                                   Text="{DynamicResource MainWindow.Handout.TitleLabel}" />
+                                                        <TextBox Text="{Binding HandoutTitle, Mode=TwoWay}" />
+                                                    </StackPanel>
+
+                                                    <StackPanel Spacing="4">
+                                                        <Grid ColumnDefinitions="*,Auto">
+                                                            <TextBlock Grid.Column="0" Classes="muted"
+                                                                       Text="{DynamicResource MainWindow.Handout.MarkdownLabel}"
+                                                                       VerticalAlignment="Center" />
+                                                            <Button Grid.Column="1" Classes="iconsquare"
+                                                                    Content="{Binding HandoutPreviewToggleIcon}"
+                                                                    Width="22" Height="22" FontSize="11"
+                                                                    Command="{Binding ToggleHandoutPreviewCommand}"
+                                                                    ToolTip.Tip="{DynamicResource MainWindow.Characters.TogglePreviewTooltip}" />
+                                                        </Grid>
+                                                        <TextBox Text="{Binding HandoutMarkdown, Mode=TwoWay}"
+                                                                 AcceptsReturn="True" TextWrapping="Wrap"
+                                                                 MinHeight="200"
+                                                                 IsVisible="{Binding !IsHandoutPreviewMode}" />
+                                                        <mdxaml:MarkdownScrollViewer Markdown="{Binding HandoutMarkdown}"
+                                                                                     MinHeight="200"
+                                                                                     IsVisible="{Binding IsHandoutPreviewMode}" />
+                                                    </StackPanel>
+
+                                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <Button Content="{DynamicResource MainWindow.Handout.SendButton}"
+                                                                Command="{Binding SendHandoutCommand}" />
+                                                        <Button Content="{DynamicResource MainWindow.Handout.RetractButton}"
+                                                                Command="{Binding RetractHandoutCommand}"
+                                                                IsEnabled="{Binding IsHandoutShown}" />
+                                                        <TextBlock Text="{DynamicResource MainWindow.Handout.ShownIndicator}"
+                                                                   Foreground="LimeGreen" FontWeight="Bold"
+                                                                   VerticalAlignment="Center"
+                                                                   IsVisible="{Binding IsHandoutShown}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </ScrollViewer>
+                                    </TabItem>
+
                                     <TabItem Header="{DynamicResource MainWindow.Tabs.Calendar}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" AllowAutoHide="false"
                                                       VerticalScrollBarVisibility="Visible">
