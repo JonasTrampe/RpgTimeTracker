@@ -1622,16 +1622,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             return;
         }
 
-        StartNetworkServer();
-    }
-
-    /// <summary>
-    ///     Extracted from ToggleNetworkServer's "currently off" branch so
-    ///     TryAutoStartNetworkServerOnStartup can start the server the same way without
-    ///     going through the toggle's on/off check.
-    /// </summary>
-    private void StartNetworkServer()
-    {
         try
         {
             var port = NetworkServerPort is > 0 and <= 65535

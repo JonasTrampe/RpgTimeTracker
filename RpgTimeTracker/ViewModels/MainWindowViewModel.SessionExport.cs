@@ -1550,10 +1550,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         OnPropertyChanged(nameof(CanToggleDisplayFullscreen));
         OnPropertyChanged(nameof(ToggleNetworkServerLabel));
         OnPropertyChanged(nameof(ServerStatusSummary));
-        // Persisted so TryAutoStartNetworkServerOnStartup can bring the server back up on next
-        // launch instead of always requiring a manual click, matching the same "resume where you
-        // left off" auto-load-on-startup already does for timers/alarms/calendar.
-        SaveUiSettings();
     }
 
     partial void OnSpeedMultiplierInputChanged(decimal value)
@@ -1652,8 +1648,6 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         settings.AmbienceAutomationEnabled = AmbienceAutomationEnabled;
         settings.ServerName = string.IsNullOrWhiteSpace(ServerName) ? "RpgTimeTracker" : ServerName;
         settings.ConnectionPin = ConnectionPin;
-        settings.NetworkServerPort = NetworkServerPort;
-        settings.NetworkServerWasRunning = IsNetworkServerRunning;
         settings.Language = LanguageCode(SelectedLanguageOption);
         settings.AutoSaveOnCloseEnabled = AutoSaveOnCloseEnabled;
         settings.AutoLoadOnStartupEnabled = AutoLoadOnStartupEnabled;
