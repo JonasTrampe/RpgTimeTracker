@@ -19,6 +19,12 @@ public sealed class PointOfInterestLibraryEntryDto
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
+    ///     Markdown-authored player-facing bio/lore, mirroring NpcVariantEntryDto.PlayerInfo -
+    ///     distinct from Description, which stays GM-only. See PlayerVisiblePlayerInfo.
+    /// </summary>
+    public string PlayerInfo { get; set; } = string.Empty;
+
+    /// <summary>
     ///     References a Media Library entry by Id (not an owned copy) - mutually exclusive with
     ///     IconGlyph, see PointOfInterestLibraryItemViewModel's doc comment.
     /// </summary>
@@ -28,14 +34,16 @@ public sealed class PointOfInterestLibraryEntryDto
     public string? IconGlyph { get; set; }
 
     /// <summary>
-    ///     GM-only in this pass - not yet transmitted to players over the network (see
-    ///     NpcVariantEntryDto.PlayerInfo's doc comment for the same "model now, wire later"
-    ///     convention). Groundwork for a future "reveal to players" mechanism separate from the
-    ///     per-map-token RevealMode a linked token gets.
+    ///     GM-only in this pass - not yet transmitted to players over the network. Groundwork for
+    ///     a future "reveal to players" mechanism separate from the per-map-token RevealMode a
+    ///     linked token gets.
     /// </summary>
     public bool PlayerVisibleName { get; set; }
 
     public bool PlayerVisibleDescription { get; set; }
+
+    /// <summary>Gates PlayerInfo the same way PlayerVisibleDescription gates Description.</summary>
+    public bool PlayerVisiblePlayerInfo { get; set; }
 
     /// <summary>Freeform Tag Ids attached to this entry (see Tag).</summary>
     public List<Guid> TagIds { get; set; } = [];

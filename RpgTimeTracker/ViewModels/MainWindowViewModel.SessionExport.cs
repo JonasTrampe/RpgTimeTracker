@@ -765,12 +765,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
                 Id = Guid.NewGuid(),
                 Name = poiEntry.Name,
                 Description = poiEntry.Description,
+                PlayerInfo = poiEntry.PlayerInfo,
                 IconImageId = poiEntry.IconImageId is { } imageId && mediaIdMap.TryGetValue(imageId, out var newImageId)
                     ? newImageId
                     : null,
                 IconGlyph = poiEntry.IconGlyph,
                 PlayerVisibleName = poiEntry.PlayerVisibleName,
                 PlayerVisibleDescription = poiEntry.PlayerVisibleDescription,
+                PlayerVisiblePlayerInfo = poiEntry.PlayerVisiblePlayerInfo,
                 TagIds = poiEntry.TagIds
             };
 

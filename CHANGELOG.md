@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Player info for Points of Interest**: POI library entries now have their
+  own Markdown-authored player-facing bio field (previously only Characters
+  had this), gated by its own player-visibility toggle - shown in a linked
+  map token's hover tooltip the same way a Character's does.
 - **Map ping**: a player double-clicking their map view pings only the GM;
   the GM pings every connected player (and the Host's own preview) by
   selecting the Ping tool, then double-clicking the map - rendered as a

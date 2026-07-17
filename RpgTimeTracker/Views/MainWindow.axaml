@@ -2641,6 +2641,13 @@
                                                                                  AcceptsReturn="True"
                                                                                  TextWrapping="Wrap"
                                                                                  MinHeight="50" />
+                                                                        <TextBlock Classes="muted"
+                                                                                   Text="{DynamicResource MainWindow.PointsOfInterest.PlayerInfoLabel}" />
+                                                                        <TextBox Text="{Binding PlayerInfo, Mode=TwoWay}"
+                                                                                 AcceptsReturn="True"
+                                                                                 TextWrapping="Wrap"
+                                                                                 MinHeight="50"
+                                                                                 PlaceholderText="{DynamicResource MainWindow.PointsOfInterest.PlayerInfoWatermark}" />
                                                                         <StackPanel Orientation="Horizontal" Spacing="14">
                                                                             <CheckBox
                                                                                 Content="{DynamicResource MainWindow.PointsOfInterest.PlayerVisibleNameLabel}"
@@ -2648,6 +2655,9 @@
                                                                             <CheckBox
                                                                                 Content="{DynamicResource MainWindow.PointsOfInterest.PlayerVisibleDescriptionLabel}"
                                                                                 IsChecked="{Binding PlayerVisibleDescription, Mode=TwoWay}" />
+                                                                            <CheckBox
+                                                                                Content="{DynamicResource MainWindow.PointsOfInterest.PlayerVisiblePlayerInfoLabel}"
+                                                                                IsChecked="{Binding PlayerVisiblePlayerInfo, Mode=TwoWay}" />
                                                                         </StackPanel>
                                                                     </StackPanel>
                                                                 </Border>
