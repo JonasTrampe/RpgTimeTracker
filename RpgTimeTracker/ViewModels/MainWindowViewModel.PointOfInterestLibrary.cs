@@ -133,6 +133,9 @@ public partial class MainWindowViewModel
             poi.PlayerVisibleName = entry.PlayerVisibleName;
             poi.PlayerVisibleDescription = entry.PlayerVisibleDescription;
             poi.PlayerVisiblePlayerInfo = entry.PlayerVisiblePlayerInfo;
+            // Loaded from disk starts in preview - see IsPlayerInfoPreviewMode's doc comment
+            // (matches NpcLibrary's identical convention for the same field).
+            poi.IsPlayerInfoPreviewMode = !string.IsNullOrWhiteSpace(entry.PlayerInfo);
             return poi;
         }
         finally

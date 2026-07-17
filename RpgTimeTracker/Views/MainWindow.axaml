@@ -2643,11 +2643,24 @@
                                                                                  MinHeight="50" />
                                                                         <TextBlock Classes="muted"
                                                                                    Text="{DynamicResource MainWindow.PointsOfInterest.PlayerInfoLabel}" />
-                                                                        <TextBox Text="{Binding PlayerInfo, Mode=TwoWay}"
-                                                                                 AcceptsReturn="True"
-                                                                                 TextWrapping="Wrap"
-                                                                                 MinHeight="50"
-                                                                                 PlaceholderText="{DynamicResource MainWindow.PointsOfInterest.PlayerInfoWatermark}" />
+                                                                        <Panel>
+                                                                            <TextBox Text="{Binding PlayerInfo, Mode=TwoWay}"
+                                                                                     AcceptsReturn="True" TextWrapping="Wrap"
+                                                                                     MinHeight="50"
+                                                                                     PlaceholderText="{DynamicResource MainWindow.PointsOfInterest.PlayerInfoWatermark}"
+                                                                                     IsVisible="{Binding !IsPlayerInfoPreviewMode}" />
+                                                                            <mdxaml:MarkdownScrollViewer Markdown="{Binding PlayerInfo}"
+                                                                                                         MinHeight="50"
+                                                                                                         IsVisible="{Binding IsPlayerInfoPreviewMode}" />
+                                                                            <Button Classes="iconsquare"
+                                                                                    Content="{Binding PlayerInfoPreviewToggleIcon}"
+                                                                                    Width="22" Height="22" FontSize="11"
+                                                                                    HorizontalAlignment="Right"
+                                                                                    VerticalAlignment="Top"
+                                                                                    Margin="0,2,2,0"
+                                                                                    Command="{Binding TogglePlayerInfoPreviewCommand}"
+                                                                                    ToolTip.Tip="{DynamicResource MainWindow.Characters.TogglePreviewTooltip}" />
+                                                                        </Panel>
                                                                         <StackPanel Orientation="Horizontal" Spacing="14">
                                                                             <CheckBox
                                                                                 Content="{DynamicResource MainWindow.PointsOfInterest.PlayerVisibleNameLabel}"

@@ -44,6 +44,12 @@ public sealed partial class PointOfInterestLibraryItemViewModel : ObservableObje
 
     [ObservableProperty] private bool _playerVisiblePlayerInfo;
 
+    /// <summary>
+    ///     Mirrors NpcVariantViewModel.IsPlayerInfoPreviewMode - whether the PlayerInfo editor
+    ///     shows the raw Markdown TextBox or the rendered MarkdownScrollViewer preview.
+    /// </summary>
+    [ObservableProperty] private bool _isPlayerInfoPreviewMode;
+
     [ObservableProperty] private LibraryScope _scope;
 
     /// <summary>
@@ -89,6 +95,8 @@ public sealed partial class PointOfInterestLibraryItemViewModel : ObservableObje
 
     public ObservableCollection<Guid> TagIds { get; } = [];
 
+    public string PlayerInfoPreviewToggleIcon => IsPlayerInfoPreviewMode ? "✎" : "👁";
+
     partial void OnNameChanged(string value)
     {
         OnPropertyChanged(nameof(ResolvedInitials));
@@ -131,6 +139,17 @@ public sealed partial class PointOfInterestLibraryItemViewModel : ObservableObje
     partial void OnPlayerVisiblePlayerInfoChanged(bool value)
     {
         NotifyChanged();
+    }
+
+    partial void OnIsPlayerInfoPreviewModeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(PlayerInfoPreviewToggleIcon));
+    }
+
+    [RelayCommand]
+    private void TogglePlayerInfoPreview()
+    {
+        IsPlayerInfoPreviewMode = !IsPlayerInfoPreviewMode;
     }
 
     partial void OnScopeChanged(LibraryScope value)
