@@ -83,6 +83,26 @@ public partial class MapEditCanvasControl : UserControl
         {
             if (_zoomIsFit) ApplyZoom(ComputeFitZoom(), true);
         };
+
+        // ApplyZoom/PanToPoint already raise ViewportChanged, but a plain scrollbar drag or
+        // trackpad scroll changes ScrollHost.Offset directly without going through either -
+        // without this, the mirrored preview (MapLiveWindow's "Vorschau") only ever updated on
+        // zoom, not on a pure scroll/pan.
+        ScrollHost.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == ScrollViewer.OffsetProperty) RaiseViewportChanged();
+        };
+    }
+
+    private void RaiseViewportChanged()
+    {
+        if (FloorImageControl.Source is not Bitmap) return;
+
+        var viewport = ScrollHost.Viewport;
+        var offset = ScrollHost.Offset;
+        var centerX = (offset.X + viewport.Width / 2) / _zoom;
+        var centerY = (offset.Y + viewport.Height / 2) / _zoom;
+        ViewportChanged?.Invoke(viewport.Width / _zoom, viewport.Height / _zoom, centerX, centerY);
     }
 
     public MapFloorItemViewModel? CurrentFloor { get; private set; }
@@ -142,6 +162,29 @@ public partial class MapEditCanvasControl : UserControl
 
     /// <summary>Fired after a token drag completes (position already applied to the model/network) - lets an owner refresh anything else that mirrors token positions, e.g. MapLiveWindow's own preview thumbnail.</summary>
     public event Action<MapTokenViewModel>? TokenMoved;
+
+    /// <summary>
+    ///     Fired whenever this canvas's own zoom or pan changes (ApplyZoom/PanToPoint) - lets an
+    ///     owner mirror the exact viewport elsewhere, e.g. MapLiveWindow's "Vorschau" thumbnail
+    ///     tracking whatever the GM is currently looking at rather than fitting/zooming
+    ///     independently. Carries the currently-visible image-space extent (width, height) and its
+    ///     center point - NOT the raw zoom factor, which is only meaningful relative to this
+    ///     control's own viewport size. A mirrored view almost always has a differently-sized (and
+    ///     usually much smaller) viewport; naively applying the same zoom% there shows a tiny sliver
+    ///     of the map at "true" pixel scale instead of the same field of view scaled down to fit -
+    ///     the whole point of a live minimap. The mirror instead fits this visible extent into its
+    ///     own viewport (see MapDisplayView.SetExternalViewport), which is exactly equivalent to
+    ///     this control's own ComputeFitZoom logic, just driven by an explicit rectangle instead of
+    ///     the whole image.
+    /// </summary>
+    public event Action<double, double, double, double>? ViewportChanged;
+
+    /// <summary>
+    ///     Fired when the GM double-clicks the canvas background (not a token marker) - image-
+    ///     space (x, y) on the given floor. The owner broadcasts this to every connected player
+    ///     (see MainWindowViewModel.BroadcastMapPingAsync) and shows it locally too.
+    /// </summary>
+    public event Action<Guid, double, double>? PingRequested;
 
     /// <summary>
     ///     Must be called once (any time before/after SetMap) - the resolver methods on
@@ -417,6 +460,7 @@ public partial class MapEditCanvasControl : UserControl
         UpdateZoomLabel();
         if (_lastPointerPosition is { } position) UpdateBrushCursor(position);
         RenderTokens();
+        ViewportChanged?.Invoke(viewport.Width / _zoom, viewport.Height / _zoom, imageCenterX, imageCenterY);
     }
 
     private void UpdateZoomLabel()
@@ -433,6 +477,7 @@ public partial class MapEditCanvasControl : UserControl
     {
         var viewport = ScrollHost.Viewport;
         ScrollHost.Offset = new Vector(imageX * _zoom - viewport.Width / 2, imageY * _zoom - viewport.Height / 2);
+        ViewportChanged?.Invoke(viewport.Width / _zoom, viewport.Height / _zoom, imageX, imageY);
     }
 
     private void OnZoomInClick(object? sender, RoutedEventArgs e)
@@ -463,9 +508,32 @@ public partial class MapEditCanvasControl : UserControl
         e.Handled = true;
     }
 
+    /// <summary>
+    ///     Pinging requires both PingModeToggle to be on AND a double-click - matching the
+    ///     player-facing gesture (double-click) while still needing the deliberate tool switch to
+    ///     avoid any ambiguity with painting. A single left-click while the toggle is on does
+    ///     nothing (not even a ping) rather than painting, since switching to the Ping tool signals
+    ///     "I'm done painting for now." Not offered while still in Paint mode (unlike an earlier
+    ///     iteration) - painting starts immediately on PointerPressed, so a double-click there would
+    ///     still paint one cell on its first press before the second press could be recognized as a
+    ///     double-click, and that inconsistent one-cell side effect wasn't worth keeping as a
+    ///     shortcut once a dedicated tool already exists.
+    /// </summary>
     private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(EditorCanvas).Properties.IsLeftButtonPressed) return;
+
+        if (PingModeToggle.IsChecked == true)
+        {
+            if (e.ClickCount == 2 && CurrentFloor is not null)
+            {
+                var pingPosition = e.GetPosition(EditorCanvas);
+                PingRequested?.Invoke(CurrentFloor.Id, pingPosition.X / _zoom, pingPosition.Y / _zoom);
+            }
+
+            e.Handled = true;
+            return;
+        }
 
         _isPainting = true;
         PaintAt(e.GetPosition(EditorCanvas));
@@ -505,7 +573,7 @@ public partial class MapEditCanvasControl : UserControl
     /// </summary>
     private void UpdateBrushCursor(Point position)
     {
-        if (CurrentFloor is null || FloorImageControl.Source is null)
+        if (CurrentFloor is null || FloorImageControl.Source is null || PingModeToggle.IsChecked == true)
         {
             BrushCursor.IsVisible = false;
             return;

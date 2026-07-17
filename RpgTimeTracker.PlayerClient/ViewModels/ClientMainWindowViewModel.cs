@@ -183,6 +183,8 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
             MapDisplay.AutoZoomEnabled = autoZoom.Enabled;
             MapDisplay.AutoZoomLevel = autoZoom.ZoomLevel;
         });
+        _client.MapPingReceived += ping =>
+            Dispatcher.UIThread.Post(() => MapDisplay.NotifyPingReceived(ping.FloorId, ping.X, ping.Y));
         _client.MusicTrackReceived += (header, path) => Dispatcher.UIThread.Post(() => PlayMusicTrack(path, header));
         _client.MusicStopRequested += () => Dispatcher.UIThread.Post(StopMusic);
         _client.MusicVolumeChangeRequested += volume => Dispatcher.UIThread.Post(() => ApplyMusicVolume(volume));
@@ -242,6 +244,12 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     public bool HasVideoMedia => CurrentMediaKind == MediaKind.Video;
 
     public MapDisplayViewModel MapDisplay { get; } = new();
+
+    /// <summary>Reports a double-click on the map (MediaWindow's PingRequested) to the host - visible only to the GM.</summary>
+    public Task SendMapPingAsync(Guid floorId, double x, double y)
+    {
+        return _client.SendMapPingFromPlayerAsync(floorId, x, y);
+    }
 
     public ObservableCollection<RemoteTimelineItemViewModel> Items { get; } = new();
     public ObservableCollection<PlayerCalendarDayViewModel> PlayerCalendarDays { get; } = new();

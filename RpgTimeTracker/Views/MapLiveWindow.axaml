@@ -44,7 +44,7 @@
                     <!-- A fixed, generous height (was Auto, which starved this to whatever its
                          minimum content size happened to be) - the preview needs real screen
                          space to actually be zoomable/pannable, not just a thumbnail. -->
-                    <sharedViews:MapDisplayView Grid.Row="1" x:Name="PreviewDisplay" />
+                    <sharedViews:MapDisplayView Grid.Row="1" x:Name="PreviewDisplay" ShowZoomControls="False" />
                     <Separator Grid.Row="2" Background="{DynamicResource BorderBrush}" Margin="0,10" />
                     <TabControl Grid.Row="3">
                         <TabItem Header="{DynamicResource MapEditor.TokensTitle}">

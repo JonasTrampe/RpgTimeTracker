@@ -156,6 +156,9 @@ public sealed class TcpPlayerServerService : IDisposable
     /// <summary>A client reports that a non-looping video has finished on its end (background thread).</summary>
     public event Action<string>? ClientReportedPlaybackEnded;
 
+    /// <summary>A player double-clicked the map, pinging the GM (background thread) - see RpcMethods.MapPingFromPlayer.</summary>
+    public event Action<Guid, double, double>? ClientReportedMapPing;
+
     /// <summary>
     ///     A client reports that the currently playing music track has finished (background
     ///     thread) - see RpcMethods.MusicTrackEnded.
@@ -654,6 +657,16 @@ public sealed class TcpPlayerServerService : IDisposable
             c => c.MapEnabled);
     }
 
+    /// <summary>
+    ///     GM double-clicked their own map - broadcast to every connected player. Ephemeral, no
+    ///     cached state to keep for a later map.show resync (see RpcMethods.MapPing).
+    /// </summary>
+    public Task PublishMapPingAsync(Guid floorId, double x, double y)
+    {
+        return BroadcastRpcAsync(RpcMethods.MapPing, new MapPingParams { FloorId = floorId, X = x, Y = y },
+            c => c.MapEnabled);
+    }
+
     private async Task SendMapShowToClientAsync(ClientConnection client, Guid mapId, string mapName,
         List<OpenMapFloor> floors, List<MapTokenSnapshotDto> tokens)
     {
@@ -1039,6 +1052,16 @@ public sealed class TcpPlayerServerService : IDisposable
                     {
                         Log.Information("Client reports playback ended for {MediaId}", ended.MediaId);
                         ClientReportedPlaybackEnded?.Invoke(ended.MediaId);
+                    }
+
+                    break;
+                case RpcMethods.MapPingFromPlayer:
+                    var ping = raw.GetParams<MapPingParams>();
+                    if (ping is not null)
+                    {
+                        Log.Debug("Client pinged the map at floor {FloorId} ({X}, {Y})", ping.FloorId, ping.X,
+                            ping.Y);
+                        ClientReportedMapPing?.Invoke(ping.FloorId, ping.X, ping.Y);
                     }
 
                     break;

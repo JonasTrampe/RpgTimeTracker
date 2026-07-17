@@ -47,6 +47,7 @@ public sealed partial class MapTokenViewModel : ObservableObject
     [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private bool _playerVisibleDetail;
     [ObservableProperty] private bool _playerVisibleName;
+    [ObservableProperty] private bool _playerVisiblePlayerInfo;
     [ObservableProperty] private bool _playerVisiblePortrait;
     [ObservableProperty] private TokenRevealMode _revealMode = TokenRevealMode.AlwaysVisible;
     [ObservableProperty] private double _x;
@@ -151,6 +152,11 @@ public sealed partial class MapTokenViewModel : ObservableObject
     }
 
     partial void OnPlayerVisibleDetailChanged(bool value)
+    {
+        NotifyChanged();
+    }
+
+    partial void OnPlayerVisiblePlayerInfoChanged(bool value)
     {
         NotifyChanged();
     }

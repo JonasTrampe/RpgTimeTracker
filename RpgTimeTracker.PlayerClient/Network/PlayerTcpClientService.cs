@@ -123,6 +123,9 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action<MapRenderStyleChangedParams>? MapRenderStyleChanged;
     public event Action<MapAutoZoomChangedParams>? MapAutoZoomChanged;
 
+    /// <summary>GM double-clicked their own map - see RpcMethods.MapPing.</summary>
+    public event Action<MapPingParams>? MapPingReceived;
+
     /// <summary>
     ///     A music track finished transferring (see MediaHeaderDto.LayerMusic) - kept as its
     ///     own event/temp file rather than routed through MediaCompleted, since music plays on
@@ -290,6 +293,12 @@ public sealed class PlayerTcpClientService : IDisposable
     public Task SendMusicTrackEndedAsync(string mediaId)
     {
         return SendRpcAsync(RpcMethods.MusicTrackEnded, new MusicTrackEndedParams { MediaId = mediaId });
+    }
+
+    /// <summary>Reports a player double-clicking the map, pointing at something for the GM only.</summary>
+    public Task SendMapPingFromPlayerAsync(Guid floorId, double x, double y)
+    {
+        return SendRpcAsync(RpcMethods.MapPingFromPlayer, new MapPingParams { FloorId = floorId, X = x, Y = y });
     }
 
     private async Task SendRpcAsync<TParams>(string method, TParams @params)
@@ -595,6 +604,10 @@ public sealed class PlayerTcpClientService : IDisposable
                 case RpcMethods.MapTokenRemove:
                     var tokenRemove = raw.GetParams<MapTokenRemoveParams>();
                     if (tokenRemove is not null) MapTokenRemoveReceived?.Invoke(tokenRemove.TokenId);
+                    break;
+                case RpcMethods.MapPing:
+                    var ping = raw.GetParams<MapPingParams>();
+                    if (ping is not null) MapPingReceived?.Invoke(ping);
                     break;
                 case RpcMethods.MusicStop:
                     MusicStopRequested?.Invoke();

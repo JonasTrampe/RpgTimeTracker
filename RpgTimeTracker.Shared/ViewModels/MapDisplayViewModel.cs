@@ -113,6 +113,31 @@ public sealed partial class MapDisplayViewModel : ObservableObject
     /// </summary>
     public event Action<double, double>? ActiveCharacterZoomRequested;
 
+    /// <summary>
+    ///     Fired from NotifyPingReceived when a ping arrives for whichever floor this view
+    ///     currently has displayed - MapDisplayView.axaml.cs subscribes to render the ripple
+    ///     animation at (x, y).
+    /// </summary>
+    public event Action<double, double>? PingReceived;
+
+    /// <summary>
+    ///     A map ping (#28's "point at something on the map") arrived for the given floor -
+    ///     dropped silently if that isn't the floor currently displayed here, since image-space
+    ///     (x, y) only means something relative to the floor it was captured on (see
+    ///     RpcMethods.MapPing's doc comment) and there's no sensible way to show a ping for a
+    ///     floor the viewer isn't looking at.
+    /// </summary>
+    public void NotifyPingReceived(Guid floorId, double x, double y)
+    {
+        if (CurrentFloorId != floorId) return;
+
+        PingReceived?.Invoke(x, y);
+    }
+
+    /// <summary>Id of the floor currently displayed, if any - for a caller sending a ping to tag with the right floor.</summary>
+    public Guid? CurrentFloorId =>
+        CurrentFloorIndex >= 0 && CurrentFloorIndex < _floors.Count ? _floors[CurrentFloorIndex].FloorId : null;
+
     partial void OnHiddenColorChanged(Color value)
     {
         TintBrush = new SolidColorBrush(value);

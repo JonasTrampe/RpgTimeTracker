@@ -8,3 +8,4 @@ Maps
    tokens
    initiative-tracker
    player-zoom
+   ping

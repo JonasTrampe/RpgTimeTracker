@@ -20,6 +20,14 @@
                           Content="{DynamicResource MapEditor.RevealToolButton}"
                           IsChecked="True" />
 
+            <!-- Left-click already paints fog continuously (down-to-up), so a double-click (the
+                 gesture the player-facing view uses to ping) would still paint one cell on its
+                 first click before the second click could be recognized - this toggle switches
+                 what a single left-click does instead of adding a new gesture. -->
+            <ToggleButton Name="PingModeToggle" Margin="0,0,10,6"
+                          Content="{DynamicResource MapEditor.PingToolButton}"
+                          ToolTip.Tip="{DynamicResource MapEditor.PingToolTooltip}" />
+
             <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" VerticalAlignment="Center"
                        Margin="0,0,6,6" />
             <Slider Name="BrushSizeSlider" Minimum="0" Maximum="40" Value="4" Width="140"
@@ -37,7 +45,15 @@
                     Click="OnZoomFitClick" />
         </WrapPanel>
 
-        <ScrollViewer Name="ScrollHost" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <!-- Explicit Left/Top content alignment - without it, once EditorCanvas (a fixed-size
+             Panel, sized to imageSize * zoom) is smaller than the viewport on an axis (zoomed
+             out/fit on a narrow map), the ScrollViewer's default Stretch alignment centers it
+             there instead of anchoring it at (0,0). ApplyZoom/PanToPoint/RaiseViewportChanged all
+             assume Offset=(0,0) means the panel's own origin sits at the viewport's top-left
+             corner - once it's centered instead, that assumption silently breaks and every
+             mirrored viewport (MapLiveWindow's preview) drifts by half the unused space. -->
+        <ScrollViewer Name="ScrollHost" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                      HorizontalContentAlignment="Left" VerticalContentAlignment="Top">
             <Panel Name="EditorCanvas"
                    Background="Transparent"
                    PointerPressed="OnCanvasPointerPressed"

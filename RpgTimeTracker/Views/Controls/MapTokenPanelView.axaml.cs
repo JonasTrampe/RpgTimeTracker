@@ -233,9 +233,20 @@ public partial class MapTokenPanelView : UserControl
             token.PlayerVisibleDetail = detailVisibleCheck.IsChecked == true;
             NotifyMutated();
         };
+        var playerInfoVisibleCheck = new CheckBox
+        {
+            Content = LocalizationService.Get("MapEditor.PlayerVisiblePlayerInfoLabel"),
+            IsChecked = token.PlayerVisiblePlayerInfo
+        };
+        playerInfoVisibleCheck.IsCheckedChanged += (_, _) =>
+        {
+            token.PlayerVisiblePlayerInfo = playerInfoVisibleCheck.IsChecked == true;
+            NotifyMutated();
+        };
         panel.Children.Add(nameVisibleCheck);
         panel.Children.Add(portraitVisibleCheck);
         panel.Children.Add(detailVisibleCheck);
+        panel.Children.Add(playerInfoVisibleCheck);
 
         var floorCombo = new ComboBox { ItemsSource = _map!.Floors, HorizontalAlignment = HorizontalAlignment.Stretch };
         floorCombo.SelectedItem = _map.Floors.FirstOrDefault(f => f.Id == token.FloorId);

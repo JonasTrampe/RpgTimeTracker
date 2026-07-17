@@ -462,6 +462,21 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         }
     }
 
+    /// <summary>
+    ///     The Character's player-facing Markdown bio (NpcVariantViewModel.PlayerInfo, via
+    ///     GetEffectivePlayerInfo's Default-variant fallback) - null for PointOfInterest/freeform
+    ///     tokens, which have no such field.
+    /// </summary>
+    public string? ResolvePlayerInfo(MapTokenViewModel token)
+    {
+        if (token.LinkKind != TokenLinkKind.Character) return null;
+
+        var npc = NpcLibrary.FirstOrDefault(n => n.Id == token.LinkedId);
+        if (npc is null) return null;
+        var variant = npc.Variants.FirstOrDefault(v => v.Id == token.LinkedVariantId) ?? npc.DefaultVariant;
+        return npc.GetEffectivePlayerInfo(variant);
+    }
+
     public MediaLibraryItemViewModel? ResolveTokenPortrait(MapTokenViewModel token)
     {
         switch (token.LinkKind)
@@ -540,6 +555,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             Name = token.PlayerVisibleName ? ResolveTokenName(token) : null,
             Detail = token.PlayerVisibleDetail ? ResolveTokenDetail(token) : null,
             IconGlyph = token.PlayerVisiblePortrait ? ResolveTokenIconGlyph(token) : null,
+            PlayerInfo = token.PlayerVisiblePlayerInfo ? ResolvePlayerInfo(token) : null,
             IsCurrentTurn = token.Id == GetCurrentTurnTokenId(map),
             FacingDegrees = token.LinkKind == TokenLinkKind.Character ? token.FacingDegrees : null
         };
@@ -685,6 +701,14 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     ///     a similar "the ViewModel changed something the window needs to react to" purpose.
     /// </summary>
     public event Action<MapItemViewModel, MapTokenViewModel?>? InitiativeTurnChanged;
+
+    /// <summary>
+    ///     A player pinged the map (floorId, x, y) - MapLiveWindow subscribes to show it on its
+    ///     mirrored preview, matching InitiativeTurnChanged's "broadcast, subscriber filters to
+    ///     its own map" pattern. Only one map can be open to players at a time, so there's no map
+    ///     identity to filter by beyond that.
+    /// </summary>
+    public event Action<Guid, double, double>? PlayerMapPingReceived;
 
     /// <summary>
     ///     Starts tracking initiative for this map from the top of the order - resets
@@ -1129,6 +1153,17 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     public Task BroadcastFogCellsAsync(Guid floorId, List<FogCellDto> cells)
     {
         return cells.Count == 0 ? Task.CompletedTask : _playerServer.PublishMapFogUpdateAsync(floorId, cells);
+    }
+
+    /// <summary>
+    ///     GM double-clicked the map (see MapEditCanvasControl.PingRequested) - broadcasts to
+    ///     every connected player and shows it on the Host's own local preview too, same "no
+    ///     network round-trip needed for our own state" pattern as RefreshTokenPlayerState.
+    /// </summary>
+    public Task BroadcastMapPingAsync(Guid floorId, double x, double y)
+    {
+        MapDisplay.NotifyPingReceived(floorId, x, y);
+        return _playerServer.PublishMapPingAsync(floorId, x, y);
     }
 
     /// <summary>
