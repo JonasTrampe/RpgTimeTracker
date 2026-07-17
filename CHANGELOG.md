@@ -18,8 +18,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   material (`architecture.md`, `design-decisions.md`, `protocol.md`,
   `legal-todo.md`) moved to `docs/internal/`, unchanged in content.
 
+### Fixed
+
+- **In-progress freehand strokes (Draw tool, player Shift+drag annotations)
+  rendering as an invisible single point**: confirmed via diagnostic logging
+  that a stroke's rendered Bounds always matched exactly the *first* point's
+  coordinates, no matter how far the drag actually went - `Polyline.Points`
+  was being mutated in place via `.Add()` as the drag progressed, but
+  Avalonia's Polyline only recomputes its rendered geometry when the
+  `Points` property itself is reassigned, not on in-place collection
+  mutation. Persisted lines (SemiPermanent/Permanent) never showed this
+  because they're rebuilt from scratch with the complete point list once
+  the stroke finishes; Temporary-tier lines and player-drawn annotation
+  strokes never get that "final rebuild" step, so they stayed stuck
+  showing only their first point the entire time. Both call sites
+  (MapEditCanvasControl's Draw tool, MapDisplayView's player-stroke
+  capture) now reassign `Points` on every appended point instead of
+  mutating the existing list.
+- **Map annotation strokes/pings never actually disappearing**: confirmed via
+  diagnostic logging that `AnnotationLayer.Children` grew monotonically
+  across an entire session on the GM's own canvas - `Animation.RunAsync`'s
+  returned Task was never completing, so the fade-then-remove logic never
+  reached the removal step; every Temporary-tier stroke and ping ripple
+  just piled up, fully opaque, forever instead of disappearing after a few
+  seconds. Both duplicate implementations (MapEditCanvasControl's GM
+  canvas, MapDisplayView's player-facing view) now drive the opacity
+  animation fire-and-forget and remove the visual on a plain timer instead
+  of awaiting the animation's own completion, so removal happens reliably
+  regardless of the animation clock.
+- **ColorPicker rendering completely blank everywhere it's used**: the real
+  root cause was that `App.axaml` never included Avalonia.Controls.
+  ColorPicker's own theme resources - `<FluentTheme/>` doesn't automatically
+  merge that separate NuGet package's control templates, so every
+  `<ColorPicker>` in the app (Draw-tool line color, fog color, item
+  appearance color) was a completely bare, unstyled control with zero
+  visual content. Added the missing `StyleInclude`, and additionally scoped
+  the app-wide `Button` style away from ColorPicker's own internal button
+  parts (`Button:not(ColorPicker):not(ColorPicker Button)`) since a bare
+  `Selector="Button"` also matches Buttons inside third-party controls'
+  templates, not just the app's own intentional buttons. Verified with a
+  headless Avalonia render: the ColorPicker now applies its real template
+  (previously zero-size, now a normal 64x32 swatch button) instead of
+  rendering nothing.
+
+### Changed
+
+- **Draw tool brush cursor**: hovering over the canvas with the Draw tool
+  selected now shows the same kind of visible brush-outline circle the
+  fog/erase tools already have, sized to the current line thickness (and
+  live-updating as you drag the thickness slider), instead of no cursor
+  feedback at all.
+- **Draw tool's line-thickness slider**: capped at 12px instead of 20px -
+  the fog/erase brush's own size slider goes much larger since it controls
+  an area radius in map cells, not a raw on-screen stroke width, so the
+  Draw tool's own slider didn't need nearly the same range.
+- **GM Draw tool color picker**: the GM can now pick any color for the next
+  line before drawing (previously fixed to Gold) - persisted lines keep
+  their own color from when they were drawn (SemiPermanent/Permanent), and
+  the ephemeral Temporary-tier stroke is broadcast/rendered in that same
+  picked color for every connected player instead of always Gold.
+- **Map editor toolbar**: Reveal/Hide fog are now one "Fog" tool with a
+  Reveal/Hide toggle beneath the shared brush-size slider, instead of two
+  separate ComboBox entries. The Erase tool gained its own toggle to
+  switch between erasing a whole touched line (default) and erasing only
+  the individual points a brush drag passes over, trimming the line down
+  instead of removing it outright (removing the line only once too few
+  points remain to still draw one). Erasing points out of the middle of a
+  line now splits it into separate lines instead of leaving a straight
+  line visually bridging the gap where the erased points used to be.
+
+### Fixed
+
+- **GM's Temporary-tier Draw stroke showing as a red "????" tag**: it was
+  reusing the player-stroke rendering path, which colors/labels a stroke by
+  the drawing player's ClientId (PainterTagHelper) - an empty ClientId (the
+  GM's own broadcast) fell into that helper's "unknown painter" fallback
+  (red, tagged "????") instead of being recognized as the GM. It's now
+  rendered Gold with no tag, matching the GM's other Draw-tool lines.
+- **Fog tool's Reveal/Hide toggle not showing on first open**: the toggle's
+  visibility was only synced from ToolCombo's SelectionChanged, which fires
+  once during control initialization before the toggle even exists, so the
+  default tool (Fog) never got its visibility set until the GM manually
+  switched tools away and back.
+- **Map editor sidebar layout**: the Fog/Erase mode toggles no longer overflow
+  the sidebar (German labels like "Verstecken" were getting clipped) - each
+  is now a single ToggleSwitch showing one label at a time instead of two
+  fixed labels flanking the switch.
+- **Persisted lines not rescaling with zoom**: SemiPermanent/Permanent lines
+  on the GM's own map canvas stayed at their old pixel positions after
+  zooming in/out (only the fog overlay and tokens were redrawn) - they're
+  now redrawn at the new zoom level along with everything else.
+- **GM map Draw tool**: a Temporary-tier line drawn with the GM's Draw tool
+  now actually fades out after a few seconds instead of sitting on the map
+  forever (it was being routed through the persisted-line path meant only
+  for SemiPermanent/Permanent lines). The Erase tool now supports
+  brush-drag erasing (reusing the same brush-size slider as the fog
+  tools) in addition to the existing "Erase all" button. The Draw tool
+  also gained its own brush-size slider to control line thickness,
+  instead of a hardcoded stroke width.
+
 ### Added
 
+- **Map annotation strokes**: a player can Shift+left-drag a freehand
+  stroke on their own map view to point something out in more detail
+  than a single ping - visible only to the GM, same one-way visibility
+  and fade-out-after-a-few-seconds treatment as map ping.
 - **Player info for Points of Interest**: POI library entries now have their
   own Markdown-authored player-facing bio field (previously only Characters
   had this), gated by its own player-visibility toggle - shown in a linked

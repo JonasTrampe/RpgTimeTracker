@@ -5,6 +5,11 @@
 
     <Application.Styles>
         <FluentTheme />
+        <!-- Avalonia.Controls.ColorPicker is a separate NuGet package - FluentTheme does not
+             automatically merge its control templates, so without this include every
+             <ColorPicker> in the app (Draw-tool line color, fog color, item appearance color) is a
+             completely bare/unstyled TemplatedControl with no visual content at all. -->
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
     </Application.Styles>
 
     <Application.Resources>

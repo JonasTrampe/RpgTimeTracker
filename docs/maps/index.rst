@@ -9,3 +9,4 @@ Maps
    initiative-tracker
    player-zoom
    ping
+   annotation

@@ -28,7 +28,8 @@ public sealed record ConnectedClientInfo(
     bool SoundEnabled,
     bool ImageEnabled,
     bool VideoEnabled,
-    bool MapEnabled);
+    bool MapEnabled,
+    bool CanAnnotate);
 
 /// <summary>
 ///     Read-only TCP publisher for the player client. Sends only JSON-RPC
@@ -52,10 +53,15 @@ public sealed class TcpPlayerServerService : IDisposable
     private const int MediaChunkSize = 64 * 1024;
 
     /// <summary>
-    ///     The client only sends tiny playback status notifications back - generous enough, but small enough to
-    ///     limit a broken/malicious client.
+    ///     Sized for the biggest inbound message the client actually sends: a freehand map
+    ///     annotation stroke (map.annotationFromPlayer), which can run to several hundred points -
+    ///     a fast/long Shift-drag easily serializes past several KB of JSON. Everything else the
+    ///     client sends back (ping, playback status) is tiny in comparison. Still small enough to
+    ///     limit a broken/malicious client - a single stroke has no legitimate reason to approach
+    ///     this size (see MapDisplayView.MinStrokePointSpacing, which also caps point count from
+    ///     the sending side).
     /// </summary>
-    private const int MaxInboundRpcPayloadBytes = 4 * 1024;
+    private const int MaxInboundRpcPayloadBytes = 64 * 1024;
 
     /// <summary>
     ///     How often a heartbeat is sent, even without a content change. The client
@@ -158,6 +164,15 @@ public sealed class TcpPlayerServerService : IDisposable
 
     /// <summary>A player double-clicked the map, pinging the GM (background thread) - see RpcMethods.MapPingFromPlayer.</summary>
     public event Action<Guid, double, double>? ClientReportedMapPing;
+
+    /// <summary>
+    ///     A player Shift+left-drew a freehand annotation stroke (background thread) - see
+    ///     RpcMethods.MapAnnotationFromPlayer. Carries the originating player's ClientId so the
+    ///     GM's own views can render it with the same color/tag every other player will see (see
+    ///     PainterTagHelper) - this event fires for the Host's own local render, the broadcast to
+    ///     other players is handled separately (see PublishMapAnnotationBroadcastAsync).
+    /// </summary>
+    public event Action<Guid, IReadOnlyList<AnnotationPoint>, string>? ClientReportedMapAnnotation;
 
     /// <summary>
     ///     A client reports that the currently playing music track has finished (background
@@ -476,13 +491,13 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     on every live toggle, so the client can show a "muted by GM" indicator.
     /// </summary>
     public Task PublishAudioRoutingChangedAsync(string remoteEndpoint, bool musicEnabled, bool soundEnabled,
-        bool imageEnabled, bool videoEnabled, bool mapEnabled)
+        bool imageEnabled, bool videoEnabled, bool mapEnabled, bool canAnnotate)
     {
         return BroadcastRpcAsync(RpcMethods.AudioRoutingChanged,
             new DataRoutingChangedParams
             {
                 MusicEnabled = musicEnabled, SoundEnabled = soundEnabled, ImageEnabled = imageEnabled,
-                VideoEnabled = videoEnabled, MapEnabled = mapEnabled
+                VideoEnabled = videoEnabled, MapEnabled = mapEnabled, CanAnnotate = canAnnotate
             },
             c => c.RemoteEndpoint == remoteEndpoint);
     }
@@ -518,13 +533,15 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     Caches the open state so later-connecting clients get the same full resync.
     /// </summary>
     public async Task PublishMapShowAsync(Guid mapId, string mapName, List<OpenMapFloor> floors,
-        List<MapTokenSnapshotDto> tokens)
+        List<MapTokenSnapshotDto> tokens, List<MapLineSnapshotDto>? lines = null)
     {
         if (!IsRunning) return;
 
+        lines ??= [];
+
         lock (_mediaGate)
         {
-            _openMap = new OpenMapState(mapId, mapName, floors, tokens.ToList());
+            _openMap = new OpenMapState(mapId, mapName, floors, tokens.ToList(), lines.ToList());
         }
 
         ClientConnection[] clients;
@@ -540,7 +557,7 @@ public sealed class TcpPlayerServerService : IDisposable
         try
         {
             foreach (var client in clients)
-                await SendMapShowToClientAsync(client, mapId, mapName, floors, tokens).ConfigureAwait(false);
+                await SendMapShowToClientAsync(client, mapId, mapName, floors, tokens, lines).ConfigureAwait(false);
         }
         finally
         {
@@ -667,8 +684,82 @@ public sealed class TcpPlayerServerService : IDisposable
             c => c.MapEnabled);
     }
 
+    /// <summary>
+    ///     Adds/fully updates one SemiPermanent/Permanent map line - caller (MainWindowViewModel)
+    ///     is responsible for never calling this for a HiddenUntilRevealed=true line, since unlike
+    ///     tokens there's no per-client filtering step here; a hidden line simply never reaches
+    ///     this method until the GM un-hides it. Updates the cached snapshot list (replacing any
+    ///     existing entry with the same Id) so a later-connecting client's map.show resync
+    ///     includes it, exactly like PublishMapTokenUpsertAsync.
+    /// </summary>
+    public Task PublishMapLineUpsertAsync(MapLineSnapshotDto line)
+    {
+        lock (_mediaGate)
+        {
+            if (_openMap is null) return Task.CompletedTask;
+
+            var index = _openMap.Lines.FindIndex(l => l.Id == line.Id);
+            if (index >= 0) _openMap.Lines[index] = line;
+            else _openMap.Lines.Add(line);
+        }
+
+        return BroadcastRpcAsync(RpcMethods.MapLineUpsert, line, c => c.MapEnabled);
+    }
+
+    /// <summary>One specific line is gone (erased, or its SemiPermanent timer expired) - see RpcMethods.MapLineRemove.</summary>
+    public Task PublishMapLineRemoveAsync(Guid floorId, Guid lineId)
+    {
+        lock (_mediaGate)
+        {
+            _openMap?.Lines.RemoveAll(l => l.Id == lineId);
+        }
+
+        return BroadcastRpcAsync(RpcMethods.MapLineRemove, new MapLineRemoveParams { FloorId = floorId, LineId = lineId },
+            c => c.MapEnabled);
+    }
+
+    /// <summary>GM's "Erase all" for one floor - see RpcMethods.MapLineClearAll.</summary>
+    public Task PublishMapLineClearAllAsync(Guid floorId)
+    {
+        lock (_mediaGate)
+        {
+            _openMap?.Lines.RemoveAll(l => l.FloorId == floorId);
+        }
+
+        return BroadcastRpcAsync(RpcMethods.MapLineClearAll, new MapLineClearAllParams { FloorId = floorId },
+            c => c.MapEnabled);
+    }
+
+    /// <summary>
+    ///     Relays a just-received player annotation stroke to every OTHER connected player - the
+    ///     originating connection already rendered its own local echo the instant it finished
+    ///     drawing, so it's excluded here to avoid a redundant second render of the identical
+    ///     stroke. See RpcMethods.MapAnnotationBroadcast's doc comment.
+    /// </summary>
+    private Task PublishMapAnnotationBroadcastAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points,
+        string originClientId, ClientConnection originConnection)
+    {
+        return BroadcastRpcAsync(RpcMethods.MapAnnotationBroadcast,
+            new MapAnnotationBroadcastParams { FloorId = floorId, Points = points.ToList(), ClientId = originClientId },
+            c => c.MapEnabled && !ReferenceEquals(c, originConnection));
+    }
+
+    /// <summary>
+    ///     Broadcasts the GM's own Temporary-tier Draw-tool stroke to every connected player - the
+    ///     GM isn't a ClientConnection (unlike a player's own stroke), so unlike
+    ///     PublishMapAnnotationBroadcastAsync there's no originating connection to exclude.
+    ///     clientId is a PainterTagHelper GM sentinel (see MainWindowViewModel.BroadcastGmAnnotationAsync),
+    ///     not a real player's ClientId.
+    /// </summary>
+    public Task PublishGmAnnotationAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points, string clientId)
+    {
+        return BroadcastRpcAsync(RpcMethods.MapAnnotationBroadcast,
+            new MapAnnotationBroadcastParams { FloorId = floorId, Points = points.ToList(), ClientId = clientId },
+            c => c.MapEnabled);
+    }
+
     private async Task SendMapShowToClientAsync(ClientConnection client, Guid mapId, string mapName,
-        List<OpenMapFloor> floors, List<MapTokenSnapshotDto> tokens)
+        List<OpenMapFloor> floors, List<MapTokenSnapshotDto> tokens, List<MapLineSnapshotDto>? lines = null)
     {
         foreach (var floor in floors)
         {
@@ -698,7 +789,8 @@ public sealed class TcpPlayerServerService : IDisposable
                 StartingFogBase64 = Convert.ToBase64String(FogMaskSerializer.Serialize(f.StartingFog)),
                 CurrentFogBase64 = Convert.ToBase64String(FogMaskSerializer.Serialize(f.CurrentFog))
             }).ToList(),
-            Tokens = tokens
+            Tokens = tokens,
+            Lines = lines ?? []
         };
 
         var payload = RpcMessage.Serialize(RpcMethods.MapShow, showParams);
@@ -858,6 +950,7 @@ public sealed class TcpPlayerServerService : IDisposable
             connection.ImageEnabled = routingPreference.ImageEnabled;
             connection.VideoEnabled = routingPreference.VideoEnabled;
             connection.MapEnabled = routingPreference.MapEnabled;
+            connection.CanAnnotate = routingPreference.CanAnnotate;
         }
 
         connection.IsAccepted = true;
@@ -873,7 +966,8 @@ public sealed class TcpPlayerServerService : IDisposable
         // "muted by GM" indicator is correct from the start rather than only updating on the
         // next live toggle.
         _ = PublishAudioRoutingChangedAsync(connection.RemoteEndpoint, connection.MusicEnabled,
-            connection.SoundEnabled, connection.ImageEnabled, connection.VideoEnabled, connection.MapEnabled);
+            connection.SoundEnabled, connection.ImageEnabled, connection.VideoEnabled, connection.MapEnabled,
+            connection.CanAnnotate);
 
         // _snapshotProvider()/sending the medium afterward reads UI-bound data,
         // so post to the UI thread instead of doing it directly from this background loop.
@@ -946,17 +1040,17 @@ public sealed class TcpPlayerServerService : IDisposable
 
         if (connection.MapEnabled)
         {
-            (OpenMapState State, List<MapTokenSnapshotDto> Tokens)? openMap;
+            (OpenMapState State, List<MapTokenSnapshotDto> Tokens, List<MapLineSnapshotDto> Lines)? openMap;
             lock (_mediaGate)
             {
-                openMap = _openMap is { } state ? (state, state.Tokens.ToList()) : null;
+                openMap = _openMap is { } state ? (state, state.Tokens.ToList(), state.Lines.ToList()) : null;
             }
 
             // Full resync (all floor images + current fog), never an incremental replay - a
             // reconnecting client must never end up with a fog state that's partially stale.
             if (openMap is { } mapSnapshot)
                 await SendMapShowToClientAsync(connection, mapSnapshot.State.MapId, mapSnapshot.State.MapName,
-                        mapSnapshot.State.Floors, mapSnapshot.Tokens)
+                        mapSnapshot.State.Floors, mapSnapshot.Tokens, mapSnapshot.Lines)
                     .ConfigureAwait(false);
         }
 
@@ -1062,6 +1156,23 @@ public sealed class TcpPlayerServerService : IDisposable
                         Log.Debug("Client pinged the map at floor {FloorId} ({X}, {Y})", ping.FloorId, ping.X,
                             ping.Y);
                         ClientReportedMapPing?.Invoke(ping.FloorId, ping.X, ping.Y);
+                    }
+
+                    break;
+                case RpcMethods.MapAnnotationFromPlayer:
+                    var annotation = raw.GetParams<MapAnnotationParams>();
+                    if (annotation is not null && !connection.CanAnnotate)
+                    {
+                        Log.Debug("Ignored map annotation from {Client} - painting is disabled for this window",
+                            connection);
+                    }
+                    else if (annotation is not null)
+                    {
+                        Log.Debug("Client drew a map annotation on floor {FloorId} ({PointCount} points)",
+                            annotation.FloorId, annotation.Points.Count);
+                        ClientReportedMapAnnotation?.Invoke(annotation.FloorId, annotation.Points, connection.ClientId);
+                        _ = PublishMapAnnotationBroadcastAsync(annotation.FloorId, annotation.Points,
+                            connection.ClientId, connection);
                     }
 
                     break;
@@ -1236,15 +1347,15 @@ public sealed class TcpPlayerServerService : IDisposable
 
         if (enabled)
         {
-            (OpenMapState State, List<MapTokenSnapshotDto> Tokens)? openMap;
+            (OpenMapState State, List<MapTokenSnapshotDto> Tokens, List<MapLineSnapshotDto> Lines)? openMap;
             lock (_mediaGate)
             {
-                openMap = _openMap is { } state ? (state, state.Tokens.ToList()) : null;
+                openMap = _openMap is { } state ? (state, state.Tokens.ToList(), state.Lines.ToList()) : null;
             }
 
             if (openMap is { } mapSnapshot)
                 _ = SendMapShowToClientAsync(target, mapSnapshot.State.MapId, mapSnapshot.State.MapName,
-                    mapSnapshot.State.Floors, mapSnapshot.Tokens);
+                    mapSnapshot.State.Floors, mapSnapshot.Tokens, mapSnapshot.Lines);
         }
         else
         {
@@ -1280,13 +1391,36 @@ public sealed class TcpPlayerServerService : IDisposable
     private static void SaveRoutingPreference(ClientConnection target)
     {
         ThemeSettingsService.SaveClientRoutingPreference(target.ClientId, target.MusicEnabled, target.SoundEnabled,
-            target.ImageEnabled, target.VideoEnabled, target.MapEnabled);
+            target.ImageEnabled, target.VideoEnabled, target.MapEnabled, target.CanAnnotate);
     }
 
     private Task PublishRoutingChanged(ClientConnection target)
     {
         return PublishAudioRoutingChangedAsync(target.RemoteEndpoint, target.MusicEnabled, target.SoundEnabled,
-            target.ImageEnabled, target.VideoEnabled, target.MapEnabled);
+            target.ImageEnabled, target.VideoEnabled, target.MapEnabled, target.CanAnnotate);
+    }
+
+    /// <summary>
+    ///     Toggles whether this client window is allowed to draw map annotation strokes (GM
+    ///     per-window routing control) - persisted by ClientId so it survives a reconnect. Unlike
+    ///     the Map/Image/Video toggles this doesn't gate anything sent TO the client; the Host
+    ///     simply drops any map.annotationFromPlayer from a client with this disabled (see
+    ///     HandleClientRpcFrame) - the notification just lets the client also grey out/skip the
+    ///     Shift-drag gesture locally instead of drawing a stroke that then silently goes nowhere.
+    /// </summary>
+    public void SetClientCanAnnotate(string remoteEndpoint, bool enabled)
+    {
+        ClientConnection? target;
+        lock (_gate)
+        {
+            target = _clients.Find(c => c.RemoteEndpoint == remoteEndpoint);
+            if (target is null) return;
+            target.CanAnnotate = enabled;
+        }
+
+        NotifyClientsChanged();
+        SaveRoutingPreference(target);
+        _ = PublishRoutingChanged(target);
     }
 
     /// <summary>
@@ -1313,7 +1447,7 @@ public sealed class TcpPlayerServerService : IDisposable
         {
             snapshot = _clients
                 .Select(c => new ConnectedClientInfo(c.RemoteEndpoint, c.ConnectedAtUtc, c.MusicEnabled,
-                    c.SoundEnabled, c.ImageEnabled, c.VideoEnabled, c.MapEnabled))
+                    c.SoundEnabled, c.ImageEnabled, c.VideoEnabled, c.MapEnabled, c.CanAnnotate))
                 .ToList();
         }
 
@@ -1398,7 +1532,7 @@ public sealed class TcpPlayerServerService : IDisposable
     }
 
     private sealed class OpenMapState(Guid mapId, string mapName, List<OpenMapFloor> floors,
-        List<MapTokenSnapshotDto> tokens)
+        List<MapTokenSnapshotDto> tokens, List<MapLineSnapshotDto>? lines = null)
     {
         public Guid MapId { get; } = mapId;
         public string MapName { get; } = mapName;
@@ -1411,6 +1545,13 @@ public sealed class TcpPlayerServerService : IDisposable
         ///     connected clients do.
         /// </summary>
         public List<MapTokenSnapshotDto> Tokens { get; } = tokens;
+
+        /// <summary>
+        ///     Every currently-active SemiPermanent/Permanent line visible to players (GM already
+        ///     excluded any HiddenUntilRevealed=true one before it ever reached PublishMapLineUpsertAsync)
+        ///     - kept in sync the same way Tokens is, for the same resync reason.
+        /// </summary>
+        public List<MapLineSnapshotDto> Lines { get; } = lines ?? [];
     }
 
     private sealed class ClientConnection : IDisposable
@@ -1459,6 +1600,9 @@ public sealed class TcpPlayerServerService : IDisposable
 
         public bool VideoEnabled { get; set; } = true;
         public bool MapEnabled { get; set; } = true;
+
+        /// <summary>Whether this window is allowed to draw map annotation strokes, set by the GM via SetClientCanAnnotate.</summary>
+        public bool CanAnnotate { get; set; } = true;
 
         /// <summary>
         ///     Stable per-installation id sent in session.hello (see

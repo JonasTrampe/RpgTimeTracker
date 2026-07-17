@@ -161,6 +161,59 @@ public sealed class MapShowParams
     ///     reconnect" rule as fog.
     /// </summary>
     public List<MapTokenSnapshotDto> Tokens { get; set; } = [];
+
+    /// <summary>
+    ///     Every currently-active SemiPermanent/Permanent line across all floors (each carries its
+    ///     own FloorId - see MapLineSnapshotDto), already filtered by the Host to exclude any
+    ///     HiddenUntilRevealed=true line - same full-resync rule as Tokens/fog. Temporary lines are
+    ///     never included here; they're purely a live map.lineUpsert + local fade, never resent.
+    /// </summary>
+    public List<MapLineSnapshotDto> Lines { get; set; } = [];
+}
+
+/// <summary>How long a drawn map line should stick around - mirrors RpgTimeTracker.Models.Persistence.MapLineDurability (kept separate so this Shared project has no dependency on the Host's persistence namespace).</summary>
+public enum MapLineDurability
+{
+    Temporary,
+    SemiPermanent,
+    Permanent
+}
+
+/// <summary>Image-space point of a map line - see MapLineSnapshotDto.</summary>
+public sealed class MapLinePoint
+{
+    public double X { get; set; }
+    public double Y { get; set; }
+}
+
+/// <summary>
+///     A SemiPermanent/Permanent map line, already filtered by the Host to exclude anything
+///     HiddenUntilRevealed=true (see RpcMethods.MapLineUpsert) - unlike the ephemeral
+///     map.annotationBroadcast stroke, this one carries an explicit color/durability/id so it can
+///     be tracked and later removed (see MapLineRemoveParams) rather than just fading out locally.
+/// </summary>
+public sealed class MapLineSnapshotDto
+{
+    public Guid Id { get; set; }
+    public Guid FloorId { get; set; }
+    public List<MapLinePoint> Points { get; set; } = [];
+    public string ColorHex { get; set; } = "#FFD700";
+    public MapLineDurability Durability { get; set; } = MapLineDurability.Temporary;
+    public double Thickness { get; set; } = 4;
+    public string OwnerClientId { get; set; } = string.Empty;
+}
+
+/// <summary>Server-to-client: a specific line is gone (erased, or its SemiPermanent timer expired) - see RpcMethods.MapLineRemove.</summary>
+public sealed class MapLineRemoveParams
+{
+    public Guid FloorId { get; set; }
+    public Guid LineId { get; set; }
+}
+
+/// <summary>Server-to-client: every line on this floor is gone at once (GM's "Erase all") - see RpcMethods.MapLineClearAll.</summary>
+public sealed class MapLineClearAllParams
+{
+    public Guid FloorId { get; set; }
 }
 
 /// <summary>
@@ -276,6 +329,36 @@ public sealed class MapPingParams
     public double Y { get; set; }
 }
 
+/// <summary>One point of a freehand annotation stroke, in image-space coordinates - see MapAnnotationParams.</summary>
+public sealed class AnnotationPoint
+{
+    public double X { get; set; }
+    public double Y { get; set; }
+}
+
+/// <summary>
+///     Shape for map.annotationFromPlayer (client-to-server). Points are in image-space
+///     coordinates on the given floor, sent as one message per completed stroke rather than per
+///     pointer-move.
+/// </summary>
+public sealed class MapAnnotationParams
+{
+    public Guid FloorId { get; set; }
+    public List<AnnotationPoint> Points { get; set; } = [];
+}
+
+/// <summary>
+///     Shape for map.annotationBroadcast (server-to-client) - same as MapAnnotationParams plus the
+///     originating player's ClientId, so every recipient can derive a consistent color/tag for the
+///     stroke (see PainterTagHelper).
+/// </summary>
+public sealed class MapAnnotationBroadcastParams
+{
+    public Guid FloorId { get; set; }
+    public List<AnnotationPoint> Points { get; set; } = [];
+    public string ClientId { get; set; } = string.Empty;
+}
+
 /// <summary>Server-to-client: adjusts the volume of the currently playing music track live (0-100).</summary>
 public sealed class MusicSetVolumeParams
 {
@@ -303,6 +386,17 @@ public sealed class DataRoutingChangedParams
     public bool ImageEnabled { get; set; } = true;
     public bool VideoEnabled { get; set; } = true;
     public bool MapEnabled { get; set; } = true;
+
+    /// <summary>
+    ///     Whether this player window is currently allowed to draw map annotation strokes (GM
+    ///     per-window toggle, see TcpPlayerServerService.SetClientCanAnnotate) - unlike the other
+    ///     flags above this doesn't gate anything the client RECEIVES, it gates whether the client
+    ///     should even try to send a stroke; the Host enforces it server-side regardless (see
+    ///     RpcMethods.MapAnnotationFromPlayer's handling), this is just so the client can also grey
+    ///     out/skip the Shift-drag gesture locally instead of drawing a stroke that then silently
+    ///     goes nowhere.
+    /// </summary>
+    public bool CanAnnotate { get; set; } = true;
 }
 
 /// <summary>

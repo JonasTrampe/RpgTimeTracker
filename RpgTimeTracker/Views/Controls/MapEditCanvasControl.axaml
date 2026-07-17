@@ -3,47 +3,98 @@
              xmlns:vm="using:RpgTimeTracker.ViewModels"
              x:Class="RpgTimeTracker.Views.Controls.MapEditCanvasControl">
     <DockPanel>
-        <!-- WrapPanel (not a horizontal StackPanel) so these wrap onto more than one line
-             instead of overflowing/squishing together when the window is resized narrower -
-             see the Maps tab's floor-action row for the same pattern. -->
-        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,10" VerticalAlignment="Center">
-            <ComboBox Name="FloorSelector" MinWidth="140" Margin="0,0,10,6"
-                      SelectionChanged="OnFloorSelectionChanged">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:MapFloorItemViewModel">
-                        <TextBlock Text="{Binding Name}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
+        <!-- Left sidebar (floor + tool selector + tool-specific config + zoom) - a single
+             ToolCombo replaces what used to be a row of separate toggle buttons (Reveal/Ping/
+             Draw), and each tool's own config panel is only shown while that tool is selected
+             (see OnToolChanged), so the sidebar only ever shows controls relevant to what's
+             currently active. -->
+        <Border DockPanel.Dock="Left" Width="210" Padding="12" BorderThickness="0,0,1,0"
+                BorderBrush="{DynamicResource InnerFrameBrush}">
+            <StackPanel Spacing="12">
+                <ComboBox Name="FloorSelector" HorizontalAlignment="Stretch"
+                          SelectionChanged="OnFloorSelectionChanged">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MapFloorItemViewModel">
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
 
-            <ToggleButton Name="RevealModeToggle" Margin="0,0,10,6"
-                          Content="{DynamicResource MapEditor.RevealToolButton}"
-                          IsChecked="True" />
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{DynamicResource MapEditor.ToolLabel}" FontWeight="SemiBold" />
+                    <ComboBox Name="ToolCombo" HorizontalAlignment="Stretch" SelectedIndex="0"
+                              SelectionChanged="OnToolChanged">
+                        <ComboBoxItem Content="{DynamicResource MapEditor.Tool.Fog}" />
+                        <ComboBoxItem Content="{DynamicResource MapEditor.Tool.Ping}"
+                                      ToolTip.Tip="{DynamicResource MapEditor.PingToolTooltip}" />
+                        <ComboBoxItem Content="{DynamicResource MapEditor.Tool.Draw}"
+                                      ToolTip.Tip="{DynamicResource MapEditor.DrawToolTooltip}" />
+                        <ComboBoxItem Content="{DynamicResource MapEditor.Tool.Erase}" />
+                    </ComboBox>
+                </StackPanel>
 
-            <!-- Left-click already paints fog continuously (down-to-up), so a double-click (the
-                 gesture the player-facing view uses to ping) would still paint one cell on its
-                 first click before the second click could be recognized - this toggle switches
-                 what a single left-click does instead of adding a new gesture. -->
-            <ToggleButton Name="PingModeToggle" Margin="0,0,10,6"
-                          Content="{DynamicResource MapEditor.PingToolButton}"
-                          ToolTip.Tip="{DynamicResource MapEditor.PingToolTooltip}" />
+                <!-- Fog/Erase config - brush size is shared by both (fog painting and the erase brush
+                     drag - see EraseAt), so it's one panel instead of two identical sliders. The
+                     Reveal/Hide toggle only matters for the Fog tool, so it's nested and hidden
+                     separately (see OnToolChanged) rather than living in its own panel. -->
+                <StackPanel Name="BrushConfigPanel" Spacing="4">
+                    <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" />
+                    <Slider Name="BrushSizeSlider" Minimum="0" Maximum="40" Value="4"
+                            HorizontalAlignment="Stretch" TickFrequency="1" IsSnapToTickEnabled="True" />
+                    <ToggleSwitch Name="FogModeToggle" IsChecked="True" IsVisible="False"
+                                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                  OnContent="{DynamicResource MapEditor.Tool.RevealFog}"
+                                  OffContent="{DynamicResource MapEditor.Tool.HideFog}" />
+                </StackPanel>
 
-            <TextBlock Text="{DynamicResource MapEditor.BrushSizeLabel}" VerticalAlignment="Center"
-                       Margin="0,0,6,6" />
-            <Slider Name="BrushSizeSlider" Minimum="0" Maximum="40" Value="4" Width="140"
-                    Margin="0,0,10,6" TickFrequency="1" IsSnapToTickEnabled="True" />
+                <!-- Draw config - durability tier + brush thickness for the next stroke. -->
+                <StackPanel Name="DrawConfigPanel" Spacing="4" IsVisible="False">
+                    <TextBlock Text="{DynamicResource MapEditor.LineDurabilityLabel}" />
+                    <ComboBox Name="LineDurabilityCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                        <ComboBoxItem Content="{DynamicResource MapEditor.LineDurability.Temporary}" />
+                        <ComboBoxItem Content="{DynamicResource MapEditor.LineDurability.SemiPermanent}" />
+                        <ComboBoxItem Content="{DynamicResource MapEditor.LineDurability.Permanent}" />
+                    </ComboBox>
+                    <TextBlock Text="{DynamicResource MapEditor.LineThicknessLabel}" />
+                    <Slider Name="LineThicknessSlider" Minimum="1" Maximum="12" Value="4"
+                            HorizontalAlignment="Stretch" TickFrequency="1" IsSnapToTickEnabled="True" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="{DynamicResource MapEditor.LineColorLabel}" VerticalAlignment="Center" />
+                        <ColorPicker Name="LineColorPicker" Color="Gold" VerticalAlignment="Center"
+                                     ToolTip.Tip="{DynamicResource MapEditor.LineColorTooltip}" />
+                    </StackPanel>
+                </StackPanel>
 
-            <Button Classes="iconsquare" Content="&#8722;" Width="24" Height="24" FontSize="14"
-                    Margin="0,0,4,6" Click="OnZoomOutClick"
-                    ToolTip.Tip="{DynamicResource MapEditor.ZoomOutTooltip}" />
-            <TextBlock Name="ZoomLabel" VerticalAlignment="Center" Width="42" TextAlignment="Center"
-                       Margin="0,0,4,6" />
-            <Button Classes="iconsquare" Content="&#43;" Width="24" Height="24" FontSize="14"
-                    Margin="0,0,10,6" Click="OnZoomInClick"
-                    ToolTip.Tip="{DynamicResource MapEditor.ZoomInTooltip}" />
-            <Button Content="{DynamicResource MapEditor.ZoomFitButton}" Margin="0,0,0,6"
-                    Click="OnZoomFitClick" />
-        </WrapPanel>
+                <!-- Erase config - brush-drag erase uses BrushConfigPanel's own slider as its radius
+                     (see EraseAt); the toggle switches between deleting only the points a drag
+                     actually touches (partial erase) and deleting the whole line the moment any part
+                     of it is touched. "Erase all" stays as a one-click fallback either way. -->
+                <StackPanel Name="EraseConfigPanel" Spacing="4" IsVisible="False">
+                    <ToggleSwitch Name="EraseModeToggle" IsChecked="False"
+                                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                  OnContent="{DynamicResource MapEditor.EraseMode.Points}"
+                                  OffContent="{DynamicResource MapEditor.EraseMode.WholeLine}" />
+                    <Button Name="EraseAllLinesButton" HorizontalAlignment="Stretch"
+                            Content="{DynamicResource MapEditor.EraseAllLinesButton}"
+                            Click="OnEraseAllLinesClick"
+                            ToolTip.Tip="{DynamicResource MapEditor.EraseAllLinesTooltip}" />
+                </StackPanel>
+
+                <Separator />
+
+                <StackPanel Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <Button Classes="iconsquare" Content="&#8722;" Width="24" Height="24" FontSize="14"
+                                Click="OnZoomOutClick" ToolTip.Tip="{DynamicResource MapEditor.ZoomOutTooltip}" />
+                        <TextBlock Name="ZoomLabel" VerticalAlignment="Center" Width="42" TextAlignment="Center" />
+                        <Button Classes="iconsquare" Content="&#43;" Width="24" Height="24" FontSize="14"
+                                Click="OnZoomInClick" ToolTip.Tip="{DynamicResource MapEditor.ZoomInTooltip}" />
+                    </StackPanel>
+                    <Button Content="{DynamicResource MapEditor.ZoomFitButton}" HorizontalAlignment="Stretch"
+                            Click="OnZoomFitClick" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
 
         <!-- Explicit Left/Top content alignment - without it, once EditorCanvas (a fixed-size
              Panel, sized to imageSize * zoom) is smaller than the viewport on an axis (zoomed
@@ -64,6 +115,8 @@
                 <Image Name="FloorImageControl" Stretch="Uniform" />
                 <Image Name="FogOverlayControl" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
                 <Canvas Name="TokenLayer" Background="Transparent" />
+                <!-- Player annotation strokes render here, above tokens - see ShowAnnotationStroke. -->
+                <Canvas Name="AnnotationLayer" Background="Transparent" IsHitTestVisible="False" />
                 <Ellipse Name="BrushCursor"
                          IsHitTestVisible="False"
                          IsVisible="False"

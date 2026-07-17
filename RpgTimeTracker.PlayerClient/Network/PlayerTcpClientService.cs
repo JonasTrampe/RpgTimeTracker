@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -120,11 +122,24 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action? MapHideReceived;
     public event Action<MapTokenSnapshotDto>? MapTokenUpsertReceived;
     public event Action<Guid>? MapTokenRemoveReceived;
+
+    /// <summary>A GM-drawn SemiPermanent/Permanent line was added/updated - see RpcMethods.MapLineUpsert.</summary>
+    public event Action<MapLineSnapshotDto>? MapLineUpsertReceived;
+
+    /// <summary>One line is gone (erased, or its SemiPermanent timer expired) - see RpcMethods.MapLineRemove.</summary>
+    public event Action<MapLineRemoveParams>? MapLineRemoveReceived;
+
+    /// <summary>GM's "Erase all" - every line on one floor is gone at once - see RpcMethods.MapLineClearAll.</summary>
+    public event Action<MapLineClearAllParams>? MapLineClearAllReceived;
+
     public event Action<MapRenderStyleChangedParams>? MapRenderStyleChanged;
     public event Action<MapAutoZoomChangedParams>? MapAutoZoomChanged;
 
     /// <summary>GM double-clicked their own map - see RpcMethods.MapPing.</summary>
     public event Action<MapPingParams>? MapPingReceived;
+
+    /// <summary>Another player's freehand annotation stroke was relayed to us - see RpcMethods.MapAnnotationBroadcast.</summary>
+    public event Action<MapAnnotationBroadcastParams>? MapAnnotationBroadcastReceived;
 
     /// <summary>
     ///     A music track finished transferring (see MediaHeaderDto.LayerMusic) - kept as its
@@ -141,12 +156,12 @@ public sealed class PlayerTcpClientService : IDisposable
     public event Action<int>? MusicVolumeChangeRequested;
 
     /// <summary>
-    ///     This window's current Music/Sound/Image/Video/Map routing state, sent right after
+    ///     This window's current Music/Sound/Image/Video/Map/Paint routing state, sent right after
     ///     handshake and again whenever the GM changes it live (see
     ///     RpcMethods.AudioRoutingChanged). Args: musicEnabled, soundEnabled, imageEnabled,
-    ///     videoEnabled, mapEnabled.
+    ///     videoEnabled, mapEnabled, canAnnotate.
     /// </summary>
-    public event Action<bool, bool, bool, bool, bool>? AudioRoutingChanged;
+    public event Action<bool, bool, bool, bool, bool, bool>? AudioRoutingChanged;
 
     public event Action<string>? StatusChanged;
 
@@ -299,6 +314,13 @@ public sealed class PlayerTcpClientService : IDisposable
     public Task SendMapPingFromPlayerAsync(Guid floorId, double x, double y)
     {
         return SendRpcAsync(RpcMethods.MapPingFromPlayer, new MapPingParams { FloorId = floorId, X = x, Y = y });
+    }
+
+    /// <summary>Reports a player's completed freehand annotation stroke, visible only to the GM.</summary>
+    public Task SendMapAnnotationFromPlayerAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    {
+        return SendRpcAsync(RpcMethods.MapAnnotationFromPlayer,
+            new MapAnnotationParams { FloorId = floorId, Points = points.ToList() });
     }
 
     private async Task SendRpcAsync<TParams>(string method, TParams @params)
@@ -605,9 +627,25 @@ public sealed class PlayerTcpClientService : IDisposable
                     var tokenRemove = raw.GetParams<MapTokenRemoveParams>();
                     if (tokenRemove is not null) MapTokenRemoveReceived?.Invoke(tokenRemove.TokenId);
                     break;
+                case RpcMethods.MapLineUpsert:
+                    var lineUpsert = raw.GetParams<MapLineSnapshotDto>();
+                    if (lineUpsert is not null) MapLineUpsertReceived?.Invoke(lineUpsert);
+                    break;
+                case RpcMethods.MapLineRemove:
+                    var lineRemove = raw.GetParams<MapLineRemoveParams>();
+                    if (lineRemove is not null) MapLineRemoveReceived?.Invoke(lineRemove);
+                    break;
+                case RpcMethods.MapLineClearAll:
+                    var lineClearAll = raw.GetParams<MapLineClearAllParams>();
+                    if (lineClearAll is not null) MapLineClearAllReceived?.Invoke(lineClearAll);
+                    break;
                 case RpcMethods.MapPing:
                     var ping = raw.GetParams<MapPingParams>();
                     if (ping is not null) MapPingReceived?.Invoke(ping);
+                    break;
+                case RpcMethods.MapAnnotationBroadcast:
+                    var annotationBroadcast = raw.GetParams<MapAnnotationBroadcastParams>();
+                    if (annotationBroadcast is not null) MapAnnotationBroadcastReceived?.Invoke(annotationBroadcast);
                     break;
                 case RpcMethods.MusicStop:
                     MusicStopRequested?.Invoke();
@@ -620,7 +658,7 @@ public sealed class PlayerTcpClientService : IDisposable
                     var routing = raw.GetParams<DataRoutingChangedParams>();
                     if (routing is not null)
                         AudioRoutingChanged?.Invoke(routing.MusicEnabled, routing.SoundEnabled,
-                            routing.ImageEnabled, routing.VideoEnabled, routing.MapEnabled);
+                            routing.ImageEnabled, routing.VideoEnabled, routing.MapEnabled, routing.CanAnnotate);
                     break;
                 default:
                     Log.Debug("Unknown incoming RPC method {Method} ignored", raw.Method);

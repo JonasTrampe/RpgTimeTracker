@@ -558,6 +558,12 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             MapDisplay.NotifyPingReceived(floorId, x, y);
             PlayerMapPingReceived?.Invoke(floorId, x, y);
         });
+        // Same shape as the ping wiring just above - a player's freehand annotation stroke.
+        _playerServer.ClientReportedMapAnnotation += (floorId, points, clientId) => Dispatcher.UIThread.Post(() =>
+        {
+            MapDisplay.NotifyAnnotationReceived(floorId, points, clientId);
+            PlayerMapAnnotationReceived?.Invoke(floorId, points, clientId);
+        });
         // Decisive for the playlist sequencer's "when does the current track end" tracking - see
         // BeginMusicTracking.
         _playerServer.ClientReportedMusicTrackEnded +=
@@ -602,6 +608,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         MapDisplay.AutoZoomLevel = _autoZoomLevel;
         _serverName = string.IsNullOrWhiteSpace(settings.ServerName) ? "RpgTimeTracker" : settings.ServerName;
         _connectionPin = settings.ConnectionPin;
+        if (settings.NetworkServerPort is > 0 and <= 65535) _networkServerPort = settings.NetworkServerPort;
         _autoSaveOnCloseEnabled = settings.AutoSaveOnCloseEnabled;
         _autoLoadOnStartupEnabled = settings.AutoLoadOnStartupEnabled;
         _fogColorHex = string.IsNullOrWhiteSpace(settings.FogColorHex) ? "#0C0C0C" : settings.FogColorHex;
@@ -663,11 +670,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             {
                 if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
 
-                map.Floors.Add(new MapFloorItemViewModel(
+                var floor = new MapFloorItemViewModel(
                     floorEntry.Id, floorEntry.Name, floorEntry.ImagePath, floorEntry.FogPath,
                     floorEntry.CellSizePx, floorEntry.GridWidth, floorEntry.GridHeight,
                     LoadMapFloorThumbnail(floorEntry.ImagePath),
-                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
+                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings());
+                foreach (var line in floorEntry.Lines) floor.Lines.Add(line);
+                map.Floors.Add(floor);
             }
 
             LoadTokensIntoMap(map, mapEntry.Tokens);
@@ -793,6 +802,7 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         LocalizationService.LanguageChanged += OnLanguageChanged;
 
         TryAutoLoadOnStartup(settings);
+        TryAutoStartNetworkServerOnStartup(settings);
     }
 
     /// <summary>
@@ -1119,11 +1129,13 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
             {
                 if (!File.Exists(floorEntry.ImagePath) || !File.Exists(floorEntry.FogPath)) continue;
 
-                map.Floors.Add(new MapFloorItemViewModel(
+                var floor = new MapFloorItemViewModel(
                     floorEntry.Id, floorEntry.Name, floorEntry.ImagePath, floorEntry.FogPath,
                     floorEntry.CellSizePx, floorEntry.GridWidth, floorEntry.GridHeight,
                     LoadMapFloorThumbnail(floorEntry.ImagePath),
-                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings()));
+                    f => RemoveFloorFromMap(map, f), _ => SaveMapLibrarySettings());
+                foreach (var line in floorEntry.Lines) floor.Lines.Add(line);
+                map.Floors.Add(floor);
             }
 
             LoadTokensIntoMap(map, mapEntry.Tokens);

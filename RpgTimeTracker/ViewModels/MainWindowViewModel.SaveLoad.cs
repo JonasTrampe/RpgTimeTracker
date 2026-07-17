@@ -43,6 +43,19 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     }
 
     /// <summary>
+    ///     Called once from the constructor, right after TryAutoLoadOnStartup. Brings the network
+    ///     server back up automatically if it was running when the app last closed, so the GM
+    ///     doesn't have to remember to click "Start server" again every session - gated behind the
+    ///     same AutoLoadOnStartupEnabled toggle as the rest of the restored state, since a GM who
+    ///     opted out of auto-restore presumably wants a blank, offline slate to start from too.
+    /// </summary>
+    private void TryAutoStartNetworkServerOnStartup(ThemeSettingsService.ThemeSettingsDto settings)
+    {
+        if (!settings.AutoLoadOnStartupEnabled || !settings.NetworkServerWasRunning) return;
+        StartNetworkServer();
+    }
+
+    /// <summary>
     ///     Called from MainWindow.OnClosing. Writes to ThemeSettingsDto.LastSaveFilePath if the
     ///     user opted into it and that path is known (i.e. at least one manual save/load already
     ///     happened) - silently does nothing otherwise, since there's no dialog to fall back to
@@ -219,7 +232,11 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
         CalendarSelectedDate = CalendarService.Active.DayStart(currentGameTime);
         RefreshCalendarViews();
 
-        if (dto.IsClockRunning) _clock.Start();
+        // Deliberately does NOT resume the clock even if dto.IsClockRunning was true - a GM
+        // (re)loading a session, including automatically on startup, should always get a moment
+        // to check the restored state before time starts moving again, rather than time silently
+        // ticking away in the background (see feature request "don't start time, but restore the
+        // server to its last state").
         IsClockRunning = _clock.IsRunning;
         ClockErrorMessage = null;
 

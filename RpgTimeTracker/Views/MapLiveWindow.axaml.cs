@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using Persistence = RpgTimeTracker.Models.Persistence;
 using RpgTimeTracker.Shared.Models.Rpc;
 using RpgTimeTracker.Shared.Services.Localization;
 using RpgTimeTracker.Shared.Services.Visuals;
@@ -69,6 +70,50 @@ public partial class MapLiveWindow : Window
             _ = _vm.BroadcastMapPingAsync(floorId, x, y);
             _previewDisplay.NotifyPingReceived(floorId, x, y);
         };
+        EditCanvas.LineDrawn += (floorId, points, durability) =>
+        {
+            var floor = EditCanvas.CurrentFloor!;
+            var line = new Persistence.MapLineDto
+            {
+                FloorId = floorId,
+                Points = points.Select(p => new Persistence.MapLinePointDto { X = p.X, Y = p.Y }).ToList(),
+                ColorHex = EditCanvas.SelectedLineColorHex,
+                Durability = durability,
+                Thickness = EditCanvas.SelectedLineThickness
+            };
+            _vm.AddMapLine(_map, floor, line);
+            EditCanvas.ShowPersistedLine(line);
+            _previewDisplay.UpsertLine(_vm.BuildLineSnapshot(floor, line));
+        };
+        EditCanvas.TemporaryLineDrawn += (floorId, points, colorHex) =>
+        {
+            var annotationPoints = points.Select(p => new AnnotationPoint { X = p.X, Y = p.Y }).ToList();
+            _ = _vm.BroadcastGmAnnotationAsync(floorId, annotationPoints, colorHex);
+            _previewDisplay.NotifyAnnotationReceived(floorId, annotationPoints,
+                RpgTimeTracker.Shared.Services.Visuals.PainterTagHelper.GmSentinelFor(colorHex));
+        };
+        EditCanvas.EraseAllLinesRequested += floor =>
+        {
+            _vm.ClearMapLines(_map, floor);
+            _previewDisplay.ClearLinesForFloor(floor.Id);
+        };
+        EditCanvas.LineEraseRequested += (floor, lineId) =>
+        {
+            _vm.RemoveMapLine(_map, floor, lineId);
+            _previewDisplay.RemoveLine(lineId);
+        };
+        EditCanvas.LinePointsErased += (floor, line) =>
+        {
+            _vm.UpdateMapLine(_map, floor, line);
+            _previewDisplay.UpsertLine(_vm.BuildLineSnapshot(floor, line));
+        };
+        EditCanvas.LineSplitCreated += (floor, newLine) =>
+        {
+            // EraseAt already rendered this split-off run on EditCanvas itself - AddMapLine adds
+            // it to the model/network, same as a freshly drawn line.
+            _vm.AddMapLine(_map, floor, newLine);
+            _previewDisplay.UpsertLine(_vm.BuildLineSnapshot(floor, newLine));
+        };
         TokenPanel.Configure(_vm, _map);
         TokenPanel.TokensMutated += EditCanvas.RefreshTokens;
         TokenPanel.TokensMutated += RefreshPreviewTokens;
@@ -76,6 +121,7 @@ public partial class MapLiveWindow : Window
         InitiativePanel.Configure(_vm, _map);
         _vm.InitiativeTurnChanged += OnInitiativeTurnChanged;
         _vm.PlayerMapPingReceived += OnPlayerMapPingReceived;
+        _vm.PlayerMapAnnotationReceived += OnPlayerMapAnnotationReceived;
 
         _flushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
         _flushTimer.Tick += (_, _) => _ = FlushPendingAsync();
@@ -216,11 +262,25 @@ public partial class MapLiveWindow : Window
         _previewDisplay.NotifyPingReceived(floorId, x, y);
     }
 
+    /// <summary>
+    ///     Same guard/purpose as OnPlayerMapPingReceived, for a player's freehand annotation stroke
+    ///     - shown both on the mirrored preview AND directly on the GM's own main EditCanvas (the
+    ///     preview alone is easy to miss while actively working the big canvas).
+    /// </summary>
+    private void OnPlayerMapAnnotationReceived(Guid floorId, IReadOnlyList<AnnotationPoint> points, string clientId)
+    {
+        if (!ReferenceEquals(_vm.OpenMap, _map)) return;
+
+        _previewDisplay.NotifyAnnotationReceived(floorId, points, clientId);
+        EditCanvas.ShowAnnotationStroke(floorId, points, clientId);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         _flushTimer.Stop();
         _vm.InitiativeTurnChanged -= OnInitiativeTurnChanged;
         _vm.PlayerMapPingReceived -= OnPlayerMapPingReceived;
+        _vm.PlayerMapAnnotationReceived -= OnPlayerMapAnnotationReceived;
         base.OnClosed(e);
     }
 }

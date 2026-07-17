@@ -97,6 +97,7 @@ it is **notification-only** — no request IDs, no responses:
 | `media.playbackStarted` | `{ mediaId, durationMs }` | The client's LibVLC player actually began playing a video, reporting the *real* duration it measured (not whatever the Host guessed) |
 | `media.playbackEnded` | `{ mediaId }` | A **non-looping** video reached its end on the client |
 | `map.pingFromPlayer` | `MapPingParams` (`floorId`, `x`, `y`) | A player double-clicked their own map view - visible only to the GM (rendered locally, never re-broadcast to other players), not a persisted or resyncable event |
+| `map.annotationFromPlayer` | `MapAnnotationParams` (`floorId`, `points: [{x, y}]`) | A player Shift+left-dragged a freehand stroke on their own map view - same one-way, GM-only visibility as `map.pingFromPlayer`, sent once per completed stroke (not per pointer-move). No server-to-client counterpart - only ever reaches the GM's own views |
 
 These two exist because the Host cannot otherwise know what actually happens
 on a remote screen — see [`design-decisions.md`](design-decisions.md) for why

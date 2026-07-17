@@ -175,6 +175,11 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _client.MapHideReceived += () => Dispatcher.UIThread.Post(OnMapHide);
         _client.MapTokenUpsertReceived += token => Dispatcher.UIThread.Post(() => MapDisplay.UpsertToken(token));
         _client.MapTokenRemoveReceived += tokenId => Dispatcher.UIThread.Post(() => MapDisplay.RemoveToken(tokenId));
+        _client.MapLineUpsertReceived += line => Dispatcher.UIThread.Post(() => MapDisplay.UpsertLine(line));
+        _client.MapLineRemoveReceived += remove =>
+            Dispatcher.UIThread.Post(() => MapDisplay.RemoveLine(remove.LineId));
+        _client.MapLineClearAllReceived += clearAll =>
+            Dispatcher.UIThread.Post(() => MapDisplay.ClearLinesForFloor(clearAll.FloorId));
         _client.MapRenderStyleChanged += style => Dispatcher.UIThread.Post(() => MapDisplay.ApplyRenderStyle(
             FogOverlayRenderer.BuildHiddenColor(style.ColorHex, style.OpacityPercent), style.BlurRadius,
             style.BlurEnabled));
@@ -185,18 +190,21 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         });
         _client.MapPingReceived += ping =>
             Dispatcher.UIThread.Post(() => MapDisplay.NotifyPingReceived(ping.FloorId, ping.X, ping.Y));
+        _client.MapAnnotationBroadcastReceived += annotation => Dispatcher.UIThread.Post(() =>
+            MapDisplay.NotifyAnnotationReceived(annotation.FloorId, annotation.Points, annotation.ClientId));
         _client.MusicTrackReceived += (header, path) => Dispatcher.UIThread.Post(() => PlayMusicTrack(path, header));
         _client.MusicStopRequested += () => Dispatcher.UIThread.Post(StopMusic);
         _client.MusicVolumeChangeRequested += volume => Dispatcher.UIThread.Post(() => ApplyMusicVolume(volume));
-        _client.AudioRoutingChanged += (musicEnabled, soundEnabled, imageEnabled, videoEnabled, mapEnabled) =>
-            Dispatcher.UIThread.Post(() =>
-            {
-                IsMusicMuted = !musicEnabled;
-                IsSoundMuted = !soundEnabled;
-                IsImageMuted = !imageEnabled;
-                IsVideoMuted = !videoEnabled;
-                IsMapMuted = !mapEnabled;
-            });
+        _client.AudioRoutingChanged += (musicEnabled, soundEnabled, imageEnabled, videoEnabled, mapEnabled,
+            canAnnotate) => Dispatcher.UIThread.Post(() =>
+        {
+            IsMusicMuted = !musicEnabled;
+            IsSoundMuted = !soundEnabled;
+            IsImageMuted = !imageEnabled;
+            IsVideoMuted = !videoEnabled;
+            IsMapMuted = !mapEnabled;
+            MapDisplay.CanAnnotate = canAnnotate;
+        });
         _client.StatusChanged += status => Dispatcher.UIThread.Post(() => ConnectionStatus = status);
         _client.ConnectionStateChanged += connected => Dispatcher.UIThread.Post(() =>
         {
@@ -219,6 +227,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
                 IsImageMuted = false;
                 IsVideoMuted = false;
                 IsMapMuted = false;
+                MapDisplay.CanAnnotate = true;
                 ClearGallery();
                 _calendarEntries.Clear();
                 PlayerCalendarDays.Clear();
@@ -249,6 +258,12 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
     public Task SendMapPingAsync(Guid floorId, double x, double y)
     {
         return _client.SendMapPingFromPlayerAsync(floorId, x, y);
+    }
+
+    /// <summary>Reports a completed freehand annotation stroke (MediaWindow's AnnotationRequested) to the host - visible only to the GM.</summary>
+    public Task SendMapAnnotationAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    {
+        return _client.SendMapAnnotationFromPlayerAsync(floorId, points);
     }
 
     public ObservableCollection<RemoteTimelineItemViewModel> Items { get; } = new();
@@ -377,6 +392,7 @@ public partial class ClientMainWindowViewModel : ObservableObject, IDisposable, 
         _pendingFloorImagePaths.Clear();
         MapDisplay.ShowMap(mapShow.MapName, floors);
         foreach (var token in mapShow.Tokens) MapDisplay.UpsertToken(token);
+        MapDisplay.ReplaceAllLines(mapShow.Lines);
         MediaWindowShouldShow?.Invoke();
         Log.Information("Map shown: {MapName} ({FloorCount} floors, {TokenCount} tokens)", mapShow.MapName,
             floors.Count, mapShow.Tokens.Count);

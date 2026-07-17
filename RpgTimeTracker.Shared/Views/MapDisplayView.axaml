@@ -125,6 +125,17 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <!-- Ping ripples and annotation strokes render here, above tokens. A Canvas
+                     (unlike ImageContentPanel's own default Panel arrangement) never repositions
+                     its children based on their own bounding box - a Polyline placed directly in a
+                     Stretch-arranged Panel gets shifted so ITS OWN geometry bounding box (which
+                     includes stroke-thickness padding) aligns to the panel's origin, not the raw
+                     image-space coordinates, which was the source of a slight but real rendering
+                     offset. Canvas.Left/Top default to 0, so children here sit at literal
+                     image-space (0,0) with no such shift. -->
+                <Canvas x:Name="AnnotationOverlay" Width="{Binding CurrentFloorImageBitmap.PixelSize.Width}"
+                        Height="{Binding CurrentFloorImageBitmap.PixelSize.Height}" IsHitTestVisible="False" />
                 </Panel>
             </LayoutTransformControl>
         </ScrollViewer>

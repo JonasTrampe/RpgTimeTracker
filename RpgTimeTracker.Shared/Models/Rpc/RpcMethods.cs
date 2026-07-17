@@ -171,6 +171,37 @@ public static class RpcMethods
     public const string MapPing = "map.ping";
 
     /// <summary>
+    ///     Client-to-server: a player Shift+left-drew a freehand stroke on their own map view.
+    ///     Unlike MapPingFromPlayer this IS rebroadcast (see MapAnnotationBroadcast) - annotation
+    ///     strokes are shared collaborative drawing, visible to the GM and every other connected
+    ///     player, not a private player-to-GM signal. Ephemeral - not persisted, not part of
+    ///     map.show's resync.
+    /// </summary>
+    public const string MapAnnotationFromPlayer = "map.annotationFromPlayer";
+
+    /// <summary>
+    ///     Server-to-client (and the Host's own local views): relays a just-received
+    ///     MapAnnotationFromPlayer stroke to every other connected player plus the GM, carrying the
+    ///     originating player's ClientId so every recipient can independently derive the same
+    ///     color/tag for it (see PainterTagHelper) without the payload needing to include either.
+    /// </summary>
+    public const string MapAnnotationBroadcast = "map.annotationBroadcast";
+
+    /// <summary>
+    ///     Server-to-client: a GM-drawn SemiPermanent/Permanent map line (see
+    ///     RpcMethods's MapLineDurability doc and MapLineSnapshotDto) - unlike map.annotationBroadcast
+    ///     this one persists (survives a reconnect) until explicitly removed (see MapLineRemove/
+    ///     MapLineClearAll), so it's tracked by Id rather than just fading out locally.
+    /// </summary>
+    public const string MapLineUpsert = "map.lineUpsert";
+
+    /// <summary>Server-to-client: one specific line is gone (erased, or its SemiPermanent timer expired) - see MapLineRemoveParams.</summary>
+    public const string MapLineRemove = "map.lineRemove";
+
+    /// <summary>Server-to-client: every line on one floor is gone at once (GM's "Erase all") - see MapLineClearAllParams.</summary>
+    public const string MapLineClearAll = "map.lineClearAll";
+
+    /// <summary>
     ///     GM stops the currently playing music track/playlist - independent of the image/video
     ///     "current medium" slot and of sound effects, see MediaHeaderDto.MediaKindMusic.
     /// </summary>
