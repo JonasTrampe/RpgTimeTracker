@@ -850,8 +850,12 @@ public partial class MapEditCanvasControl : UserControl
         };
         AnnotationLayer.Children.Add(_activeDrawVisual);
         Log.Debug(
-            "Draw stroke started: durability={Durability} color={Color} thickness={Thickness} AnnotationLayer.Children={Count}",
-            _activeDrawDurability, _activeDrawColor, SelectedLineThickness, AnnotationLayer.Children.Count);
+            "Draw stroke started: durability={Durability} color={Color} thickness={Thickness} firstPoint={FirstPoint} zoom={Zoom} " +
+            "AnnotationLayer[Children={Count} Bounds={LayerBounds} IsVisible={LayerVisible} ZIndex={LayerZIndex} Opacity={LayerOpacity}] " +
+            "EditorCanvas[Bounds={CanvasBounds} IsVisible={CanvasVisible}]",
+            _activeDrawDurability, _activeDrawColor, SelectedLineThickness, firstPoint, _zoom,
+            AnnotationLayer.Children.Count, AnnotationLayer.Bounds, AnnotationLayer.IsVisible, AnnotationLayer.ZIndex, AnnotationLayer.Opacity,
+            EditorCanvas.Bounds, EditorCanvas.IsVisible);
     }
 
     private void AppendDrawPoint(Point screenPosition)
@@ -859,7 +863,14 @@ public partial class MapEditCanvasControl : UserControl
         if (_drawImagePoints is not { } points || _activeDrawVisual is not { } visual) return;
 
         points.Add(new Point(screenPosition.X / _zoom, screenPosition.Y / _zoom));
-        visual.Points!.Add(screenPosition);
+
+        // Reassigning the Points property (not mutating the existing list via .Add) - diagnostic
+        // logging showed the Polyline's rendered geometry/Bounds stayed frozen at just the first
+        // point forever once .Add was used, since Avalonia's Polyline doesn't react to in-place
+        // collection mutation, only to the Points property itself changing. That's why every
+        // Temporary-tier stroke silently rendered as an invisible single-point "line" instead of
+        // the actual dragged path.
+        visual.Points = new Points(visual.Points!.Append(screenPosition));
     }
 
     private void FinishDrawStroke()
@@ -885,8 +896,15 @@ public partial class MapEditCanvasControl : UserControl
             // Never added to floor.Lines/persisted (see TemporaryLineDrawn's doc comment) - just
             // fades out locally like the original ephemeral stroke feature.
             Log.Debug(
-                "Draw stroke finished (Temporary): points={PointCount} color={Color} visual.Opacity={Opacity} visual.IsVisible={IsVisible} AnnotationLayer.Children={Count}",
-                points.Count, _activeDrawColor, visual.Opacity, visual.IsVisible, AnnotationLayer.Children.Count);
+                "Draw stroke finished (Temporary): points={PointCount} color={Color} thickness={Thickness} " +
+                "visual[Opacity={Opacity} IsVisible={IsVisible} Bounds={Bounds} ZIndex={ZIndex} Parent={ParentIsLayer} " +
+                "Points.Count={VisualPointCount} FirstScreenPoint={FirstScreenPoint} LastScreenPoint={LastScreenPoint}] " +
+                "AnnotationLayer.Children={Count}",
+                points.Count, _activeDrawColor, visual.StrokeThickness, visual.Opacity, visual.IsVisible, visual.Bounds, visual.ZIndex,
+                ReferenceEquals(visual.Parent, AnnotationLayer), visual.Points?.Count,
+                visual.Points is { Count: > 0 } ? visual.Points[0] : (Point?)null,
+                visual.Points is { Count: > 0 } ? visual.Points[^1] : (Point?)null,
+                AnnotationLayer.Children.Count);
             _ = FadeOutAndRemoveAnnotationAsync(visual);
             TemporaryLineDrawn?.Invoke(CurrentFloor.Id, points, _activeDrawColor.ToString());
             return;

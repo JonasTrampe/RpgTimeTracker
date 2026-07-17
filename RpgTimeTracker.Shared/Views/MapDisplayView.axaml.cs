@@ -212,7 +212,11 @@ public partial class MapDisplayView : UserControl
         if (dx * dx + dy * dy < MinStrokePointSpacing * MinStrokePointSpacing) return;
 
         points.Add(imagePoint);
-        visual.Points!.Add(imagePoint);
+        // Reassigning Points (not mutating the existing list via .Add) - Avalonia's Polyline
+        // doesn't react to in-place collection mutation, only to the Points property itself
+        // changing, so .Add left the rendered geometry frozen at just the first point (see the
+        // same fix in MapEditCanvasControl.AppendDrawPoint for the full diagnosis).
+        visual.Points = new Points(visual.Points!.Append(imagePoint));
     }
 
     /// <summary>

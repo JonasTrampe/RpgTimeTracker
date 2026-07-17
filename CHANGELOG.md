@@ -20,6 +20,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **In-progress freehand strokes (Draw tool, player Shift+drag annotations)
+  rendering as an invisible single point**: confirmed via diagnostic logging
+  that a stroke's rendered Bounds always matched exactly the *first* point's
+  coordinates, no matter how far the drag actually went - `Polyline.Points`
+  was being mutated in place via `.Add()` as the drag progressed, but
+  Avalonia's Polyline only recomputes its rendered geometry when the
+  `Points` property itself is reassigned, not on in-place collection
+  mutation. Persisted lines (SemiPermanent/Permanent) never showed this
+  because they're rebuilt from scratch with the complete point list once
+  the stroke finishes; Temporary-tier lines and player-drawn annotation
+  strokes never get that "final rebuild" step, so they stayed stuck
+  showing only their first point the entire time. Both call sites
+  (MapEditCanvasControl's Draw tool, MapDisplayView's player-stroke
+  capture) now reassign `Points` on every appended point instead of
+  mutating the existing list.
 - **Map annotation strokes/pings never actually disappearing**: confirmed via
   diagnostic logging that `AnnotationLayer.Children` grew monotonically
   across an entire session on the GM's own canvas - `Animation.RunAsync`'s
