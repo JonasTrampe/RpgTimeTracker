@@ -96,7 +96,18 @@
         <Setter Property="Margin" Value="0,0,0,10" />
     </Style>
 
-    <Style Selector="Button">
+    <!--
+        Scoped away from ColorPicker entirely, two ways: ":not(ColorPicker)" excludes the
+        ColorPicker element itself (Avalonia.Controls.ColorPicker's ColorPicker class derives from
+        Button/ColorPickerButton, so it directly matches a bare "Button" selector too, not just via
+        an internal template part), and ":not(ColorPicker Button)" excludes any Button nested inside
+        one (the flyout's OK/cancel buttons etc.). A bare "Button" selector matches any Button
+        anywhere in the visual tree, including third-party controls that happen to subclass Button,
+        not just the app's own intentional buttons - this app-wide style's fixed Height/Padding/
+        Background/BorderBrush were stomping ColorPicker's own template values, making its color
+        swatch render blank/invisible instead of showing the picked color.
+    -->
+    <Style Selector="Button:not(ColorPicker):not(ColorPicker Button)">
         <Setter Property="FontFamily" Value="Segoe UI,Arial,sans-serif" />
         <Setter Property="Background" Value="{DynamicResource ButtonBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource ButtonTextBrush}" />
@@ -108,11 +119,11 @@
         <Setter Property="FontWeight" Value="Bold" />
     </Style>
 
-    <Style Selector="Button:pointerover">
+    <Style Selector="Button:not(ColorPicker):not(ColorPicker Button):pointerover">
         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
 
-    <Style Selector="Button:pressed">
+    <Style Selector="Button:not(ColorPicker):not(ColorPicker Button):pressed">
         <Setter Property="Opacity" Value="0.88" />
     </Style>
 

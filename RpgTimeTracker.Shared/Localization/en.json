@@ -276,6 +276,8 @@
   "MapEditor.EraseMode.Points": "Points",
   "MapEditor.LineDurabilityLabel": "Durability",
   "MapEditor.LineThicknessLabel": "Brush size",
+  "MapEditor.LineColorLabel": "Color",
+  "MapEditor.LineColorTooltip": "Color for the next line you draw",
   "MapEditor.BrushSizeLabel": "Brush size",
   "MapEditor.PreviewTitle": "Preview (as players see it)",
   "MapEditor.ZoomOutTooltip": "Zoom out",

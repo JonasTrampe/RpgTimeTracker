@@ -748,11 +748,13 @@ public sealed class TcpPlayerServerService : IDisposable
     ///     Broadcasts the GM's own Temporary-tier Draw-tool stroke to every connected player - the
     ///     GM isn't a ClientConnection (unlike a player's own stroke), so unlike
     ///     PublishMapAnnotationBroadcastAsync there's no originating connection to exclude.
+    ///     clientId is a PainterTagHelper GM sentinel (see MainWindowViewModel.BroadcastGmAnnotationAsync),
+    ///     not a real player's ClientId.
     /// </summary>
-    public Task PublishGmAnnotationAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    public Task PublishGmAnnotationAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points, string clientId)
     {
         return BroadcastRpcAsync(RpcMethods.MapAnnotationBroadcast,
-            new MapAnnotationBroadcastParams { FloorId = floorId, Points = points.ToList(), ClientId = string.Empty },
+            new MapAnnotationBroadcastParams { FloorId = floorId, Points = points.ToList(), ClientId = clientId },
             c => c.MapEnabled);
     }
 

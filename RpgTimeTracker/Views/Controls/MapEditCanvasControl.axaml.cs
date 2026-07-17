@@ -210,10 +210,11 @@ public partial class MapEditCanvasControl : UserControl
     ///     Temporary line is never added to floor.Lines (see MainWindowViewModel.AddMapLine's doc
     ///     comment), so the owner doesn't build a MapLineDto for it at all; it just broadcasts these
     ///     raw image-space points via the same ephemeral fade-and-forget pipeline a player's own
-    ///     stroke uses (MainWindowViewModel.BroadcastGmAnnotationAsync). This control fades and
-    ///     removes its own local visual itself (see FinishDrawStroke) rather than asking the owner to.
+    ///     stroke uses (MainWindowViewModel.BroadcastGmAnnotationAsync), carrying the color picked
+    ///     in LineColorPicker at the time. This control fades and removes its own local visual itself
+    ///     (see FinishDrawStroke) rather than asking the owner to.
     /// </summary>
-    public event Action<Guid, IReadOnlyList<Point>>? TemporaryLineDrawn;
+    public event Action<Guid, IReadOnlyList<Point>, string>? TemporaryLineDrawn;
 
     /// <summary>GM clicked "Erase all" - the owner clears the floor's persisted Lines and calls ClearPersistedLineVisuals.</summary>
     public event Action<MapFloorItemViewModel>? EraseAllLinesRequested;
@@ -245,6 +246,7 @@ public partial class MapEditCanvasControl : UserControl
     private List<Point>? _drawImagePoints;
     private Polyline? _activeDrawVisual;
     private Persistence.MapLineDurability _activeDrawDurability;
+    private Color _activeDrawColor;
     private bool _isErasing;
     private readonly Dictionary<Guid, Polyline> _persistedLineVisuals = new();
 
@@ -823,18 +825,23 @@ public partial class MapEditCanvasControl : UserControl
     /// <summary>Stroke width for the next Draw-tool line, from LineThicknessSlider - same "brush size" convention as the fog tools' BrushSizeSlider.</summary>
     public double SelectedLineThickness => LineThicknessSlider.Value;
 
+    /// <summary>Hex color for the next Draw-tool line, from LineColorPicker.</summary>
+    public string SelectedLineColorHex => LineColorPicker.Color.ToString();
+
     private void BeginDrawStroke(Point firstPoint)
     {
         // Captured once at stroke start rather than re-read in FinishDrawStroke - the GM could
-        // otherwise flip LineDurabilityCombo mid-drag and have the stroke silently change tier.
+        // otherwise flip LineDurabilityCombo/LineColorPicker mid-drag and have the stroke silently
+        // change tier/color partway through.
         _activeDrawDurability = SelectedLineDurability;
+        _activeDrawColor = LineColorPicker.Color;
 
         var imagePoint = new Point(firstPoint.X / _zoom, firstPoint.Y / _zoom);
         _drawImagePoints = [imagePoint];
         _activeDrawVisual = new Polyline
         {
             Points = [firstPoint],
-            Stroke = Brushes.Gold,
+            Stroke = new SolidColorBrush(_activeDrawColor),
             StrokeThickness = SelectedLineThickness,
             StrokeJoin = PenLineJoin.Round,
             StrokeLineCap = PenLineCap.Round,
@@ -874,7 +881,7 @@ public partial class MapEditCanvasControl : UserControl
             // Never added to floor.Lines/persisted (see TemporaryLineDrawn's doc comment) - just
             // fades out locally like the original ephemeral stroke feature.
             _ = FadeOutAndRemoveAnnotationAsync(visual);
-            TemporaryLineDrawn?.Invoke(CurrentFloor.Id, points);
+            TemporaryLineDrawn?.Invoke(CurrentFloor.Id, points, _activeDrawColor.ToString());
             return;
         }
 
@@ -892,10 +899,11 @@ public partial class MapEditCanvasControl : UserControl
         if (CurrentFloor is null || line.FloorId != CurrentFloor.Id) return;
         if (_persistedLineVisuals.ContainsKey(line.Id)) return;
 
+        var lineColor = Color.TryParse(line.ColorHex, out var parsed) ? parsed : Colors.Gold;
         var polyline = new Polyline
         {
             Points = new Points(line.Points.Select(p => new Point(p.X * _zoom, p.Y * _zoom))),
-            Stroke = Brushes.Gold,
+            Stroke = new SolidColorBrush(lineColor),
             StrokeThickness = line.Thickness,
             StrokeJoin = PenLineJoin.Round,
             StrokeLineCap = PenLineCap.Round,

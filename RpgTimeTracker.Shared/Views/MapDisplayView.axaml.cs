@@ -358,18 +358,18 @@ public partial class MapDisplayView : UserControl
     /// <summary>
     ///     Renders a freehand annotation stroke, points already in image-space - same fade-and-remove
     ///     treatment as the ping ripple, just much longer (see StrokeFadeDuration). Reaches every
-    ///     connected view, not just the GM's (see RpcMethods.MapAnnotationBroadcast). An empty
-    ///     clientId is the GM's own Temporary-tier Draw-tool stroke (see MainWindowViewModel.
-    ///     BroadcastGmAnnotationAsync) - every real player has a persistent non-empty ClientId (see
-    ///     ClientSettingsService.GetOrCreateClientId), so this is an unambiguous signal, not a
-    ///     fallback. It's rendered Gold with no player-tag label to match the GM's Draw-tool color
-    ///     everywhere else, instead of falling into PainterTagHelper's "unknown painter" look
-    ///     (a red stroke labeled "????").
+    ///     connected view, not just the GM's (see RpcMethods.MapAnnotationBroadcast). The GM's own
+    ///     Temporary-tier Draw-tool stroke (see MainWindowViewModel.BroadcastGmAnnotationAsync) is
+    ///     identified via PainterTagHelper.TryGetGmColor rather than falling into ColorFor's "unknown
+    ///     painter" look (a red stroke labeled "????") - every real player has a persistent
+    ///     non-empty ClientId of a different shape (see ClientSettingsService.GetOrCreateClientId),
+    ///     so this is an unambiguous signal. Rendered in the GM's picked line color with no
+    ///     player-tag label.
     /// </summary>
     private async void OnAnnotationReceived(IReadOnlyList<AnnotationPoint> points, string clientId)
     {
-        var isGm = string.IsNullOrEmpty(clientId);
-        var color = isGm ? Colors.Gold : PainterTagHelper.ColorFor(clientId);
+        var isGm = PainterTagHelper.TryGetGmColor(clientId, out var gmColor);
+        var color = isGm ? gmColor : PainterTagHelper.ColorFor(clientId);
         var brush = new SolidColorBrush(color);
         var visual = new Polyline
         {

@@ -29,6 +29,37 @@ public static class PainterTagHelper
         Color.FromRgb(0x6D, 0x4C, 0x41) // brown
     ];
 
+    /// <summary>
+    ///     Prefix marking a ClientId string as the GM's own sentinel (see MainWindowViewModel.
+    ///     BroadcastGmAnnotationAsync) rather than a real player's persistent id - carries the GM's
+    ///     own picked line color inline so the wire format (MapAnnotationBroadcastParams.ClientId)
+    ///     doesn't need a dedicated color field just for this one case.
+    /// </summary>
+    private const string GmSentinelPrefix = "gm:";
+
+    /// <summary>Builds the ClientId sentinel for a GM-drawn Temporary line with the given hex color.</summary>
+    public static string GmSentinelFor(string colorHex) => GmSentinelPrefix + colorHex;
+
+    /// <summary>
+    ///     True (with the parsed color) if clientId is the GM's sentinel (see GmSentinelFor) or the
+    ///     legacy empty-string GM marker (defaults to Gold) - false for any real player's ClientId.
+    /// </summary>
+    public static bool TryGetGmColor(string clientId, out Color color)
+    {
+        if (string.IsNullOrEmpty(clientId))
+        {
+            color = Colors.Gold;
+            return true;
+        }
+
+        if (clientId.StartsWith(GmSentinelPrefix, StringComparison.Ordinal) &&
+            Color.TryParse(clientId[GmSentinelPrefix.Length..], out color))
+            return true;
+
+        color = default;
+        return false;
+    }
+
     public static Color ColorFor(string clientId)
     {
         if (string.IsNullOrEmpty(clientId)) return Palette[0];

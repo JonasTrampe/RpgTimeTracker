@@ -77,7 +77,7 @@ public partial class MapLiveWindow : Window
             {
                 FloorId = floorId,
                 Points = points.Select(p => new Persistence.MapLinePointDto { X = p.X, Y = p.Y }).ToList(),
-                ColorHex = "#FFD700",
+                ColorHex = EditCanvas.SelectedLineColorHex,
                 Durability = durability,
                 Thickness = EditCanvas.SelectedLineThickness
             };
@@ -85,11 +85,12 @@ public partial class MapLiveWindow : Window
             EditCanvas.ShowPersistedLine(line);
             _previewDisplay.UpsertLine(_vm.BuildLineSnapshot(floor, line));
         };
-        EditCanvas.TemporaryLineDrawn += (floorId, points) =>
+        EditCanvas.TemporaryLineDrawn += (floorId, points, colorHex) =>
         {
             var annotationPoints = points.Select(p => new AnnotationPoint { X = p.X, Y = p.Y }).ToList();
-            _ = _vm.BroadcastGmAnnotationAsync(floorId, annotationPoints);
-            _previewDisplay.NotifyAnnotationReceived(floorId, annotationPoints, string.Empty);
+            _ = _vm.BroadcastGmAnnotationAsync(floorId, annotationPoints, colorHex);
+            _previewDisplay.NotifyAnnotationReceived(floorId, annotationPoints,
+                RpgTimeTracker.Shared.Services.Visuals.PainterTagHelper.GmSentinelFor(colorHex));
         };
         EditCanvas.EraseAllLinesRequested += floor =>
         {

@@ -276,6 +276,8 @@
   "MapEditor.EraseMode.Points": "Punkte",
   "MapEditor.LineDurabilityLabel": "Haltbarkeit",
   "MapEditor.LineThicknessLabel": "Pinselgröße",
+  "MapEditor.LineColorLabel": "Farbe",
+  "MapEditor.LineColorTooltip": "Farbe für die nächste gezeichnete Linie",
   "MapEditor.BrushSizeLabel": "Pinselgröße",
   "MapEditor.PreviewTitle": "Vorschau (Spieleransicht)",
   "MapEditor.ZoomOutTooltip": "Verkleinern",

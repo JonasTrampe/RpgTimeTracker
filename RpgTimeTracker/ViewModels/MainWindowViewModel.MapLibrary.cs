@@ -1298,13 +1298,16 @@ public partial class MainWindowViewModel : ObservableObject, IPlayerDisplayConte
     ///     GM's Draw tool finished a Temporary-tier stroke (MapEditCanvasControl.TemporaryLineDrawn) -
     ///     unlike SemiPermanent/Permanent (AddMapLine), a Temporary line is never added to
     ///     floor.Lines/persisted at all; it's purely a live fade-and-forget stroke, reusing the exact
-    ///     same ephemeral pipeline a player's own Shift+drag stroke uses (empty ClientId marks it as
-    ///     the GM's, so PainterTagHelper still resolves a stable color/tag for it).
+    ///     same ephemeral pipeline a player's own Shift+drag stroke uses. colorHex (the GM's picked
+    ///     Draw-tool color) travels inline in a PainterTagHelper sentinel ClientId rather than a
+    ///     dedicated wire field, so every recipient can tell this apart from a real player's stroke
+    ///     and render it in that color with no player-tag label (see MapDisplayView.OnAnnotationReceived).
     /// </summary>
-    public Task BroadcastGmAnnotationAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points)
+    public Task BroadcastGmAnnotationAsync(Guid floorId, IReadOnlyList<AnnotationPoint> points, string colorHex)
     {
-        MapDisplay.NotifyAnnotationReceived(floorId, points, string.Empty);
-        return _playerServer.PublishGmAnnotationAsync(floorId, points);
+        var sentinel = PainterTagHelper.GmSentinelFor(colorHex);
+        MapDisplay.NotifyAnnotationReceived(floorId, points, sentinel);
+        return _playerServer.PublishGmAnnotationAsync(floorId, points, sentinel);
     }
 
     /// <summary>

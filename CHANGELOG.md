@@ -18,8 +18,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   material (`architecture.md`, `design-decisions.md`, `protocol.md`,
   `legal-todo.md`) moved to `docs/internal/`, unchanged in content.
 
+### Fixed
+
+- **ColorPicker rendering completely blank everywhere it's used**: the real
+  root cause was that `App.axaml` never included Avalonia.Controls.
+  ColorPicker's own theme resources - `<FluentTheme/>` doesn't automatically
+  merge that separate NuGet package's control templates, so every
+  `<ColorPicker>` in the app (Draw-tool line color, fog color, item
+  appearance color) was a completely bare, unstyled control with zero
+  visual content. Added the missing `StyleInclude`, and additionally scoped
+  the app-wide `Button` style away from ColorPicker's own internal button
+  parts (`Button:not(ColorPicker):not(ColorPicker Button)`) since a bare
+  `Selector="Button"` also matches Buttons inside third-party controls'
+  templates, not just the app's own intentional buttons. Verified with a
+  headless Avalonia render: the ColorPicker now applies its real template
+  (previously zero-size, now a normal 64x32 swatch button) instead of
+  rendering nothing.
+
 ### Changed
 
+- **GM Draw tool color picker**: the GM can now pick any color for the next
+  line before drawing (previously fixed to Gold) - persisted lines keep
+  their own color from when they were drawn (SemiPermanent/Permanent), and
+  the ephemeral Temporary-tier stroke is broadcast/rendered in that same
+  picked color for every connected player instead of always Gold.
 - **Map editor toolbar**: Reveal/Hide fog are now one "Fog" tool with a
   Reveal/Hide toggle beneath the shared brush-size slider, instead of two
   separate ComboBox entries. The Erase tool gained its own toggle to
