@@ -63,6 +63,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Draw tool brush cursor**: hovering over the canvas with the Draw tool
+  selected now shows the same kind of visible brush-outline circle the
+  fog/erase tools already have, sized to the current line thickness (and
+  live-updating as you drag the thickness slider), instead of no cursor
+  feedback at all.
 - **Draw tool's line-thickness slider**: capped at 12px instead of 20px -
   the fog/erase brush's own size slider goes much larger since it controls
   an area radius in map cells, not a raw on-screen stroke width, so the

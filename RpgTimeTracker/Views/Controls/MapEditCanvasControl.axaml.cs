@@ -85,6 +85,12 @@ public partial class MapEditCanvasControl : UserControl
                 UpdateBrushCursor(position);
         };
 
+        LineThicknessSlider.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == RangeBase.ValueProperty && _lastPointerPosition is { } position)
+                UpdateBrushCursor(position);
+        };
+
         ScrollHost.SizeChanged += (_, _) =>
         {
             if (_zoomIsFit) ApplyZoom(ComputeFitZoom(), true);
@@ -1043,14 +1049,20 @@ public partial class MapEditCanvasControl : UserControl
     private void UpdateBrushCursor(Point position)
     {
         if (CurrentFloor is null || FloorImageControl.Source is null ||
-            (ToolCombo.SelectedIndex != ToolFog && ToolCombo.SelectedIndex != ToolErase))
+            (ToolCombo.SelectedIndex != ToolFog && ToolCombo.SelectedIndex != ToolErase &&
+             ToolCombo.SelectedIndex != ToolDraw))
         {
             BrushCursor.IsVisible = false;
             return;
         }
 
-        var radiusCells = GetBrushRadiusCells(CurrentFloor);
-        var diameterPx = (2 * radiusCells + 1) * CurrentFloor.CellSizePx * _zoom;
+        // The Draw tool's "brush" is just the stroke width itself (a plain screen-pixel value,
+        // not zoom-scaled - see BeginDrawStroke/SelectedLineThickness), unlike Fog/Erase's brush
+        // which covers a radius of map cells and does scale with zoom.
+        var diameterPx = ToolCombo.SelectedIndex == ToolDraw
+            ? SelectedLineThickness
+            : (2 * GetBrushRadiusCells(CurrentFloor) + 1) * CurrentFloor.CellSizePx * _zoom;
+
         BrushCursor.Width = diameterPx;
         BrushCursor.Height = diameterPx;
         BrushCursor.RenderTransform = new TranslateTransform(position.X - diameterPx / 2, position.Y - diameterPx / 2);
