@@ -20,10 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Map ping**: double-clicking the map pings whoever's meant to see it - a
-  player's ping goes only to the GM, the GM's own ping broadcasts to every
-  connected player (and the Host's own preview) - rendered as a generic
-  ripple that fades on its own after a couple of seconds, never persisted.
+- **Map ping**: a player double-clicking their map view pings only the GM;
+  the GM pings every connected player (and the Host's own preview) by
+  selecting the Ping tool, then double-clicking the map - rendered as a
+  generic ripple that fades on its own after a couple of seconds, never
+  persisted.
 - **Player info in map tokens**: a Character's player-facing Markdown bio
   (previously authored but never transmitted) can now be shown in the map
   token's hover tooltip, gated by its own player-visibility toggle
