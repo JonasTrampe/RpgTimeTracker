@@ -31,8 +31,8 @@
         <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.1.0"/>
         <PackageReference Include="Avalonia.Diagnostics" Version="11.3.18" Condition="'$(Configuration)' == 'Debug'"/>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
-        <PackageReference Include="LibVLCSharp" Version="3.10.0"/>
-        <PackageReference Include="LibVLCSharp.Avalonia" Version="3.10.0"/>
+        <PackageReference Include="LibVLCSharp" Version="3.10.1"/>
+        <PackageReference Include="LibVLCSharp.Avalonia" Version="3.10.1"/>
         <PackageReference Include="System.Windows.Extensions" Version="10.0.10"/>
         <!-- Bündelt native libvlc-DLLs nur für Windows. Unter Linux wird die system-installierte
              VLC-Bibliothek verwendet (siehe README-Hinweis in ClientVideoService). -->
